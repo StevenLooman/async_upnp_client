@@ -46,6 +46,7 @@ setup(
     version='0.9.0',
     description='Async UPnP Client',
     long_description=LONG_DESCRIPTION,
+    url='https://github.com/StevenLooman/async_upnp_client',
     author='Steven Looman',
     author_email='steven.looman@gmail.com',
     packages=['async_upnp_client'],
