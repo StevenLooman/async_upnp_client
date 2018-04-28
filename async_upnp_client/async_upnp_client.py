@@ -401,7 +401,7 @@ class UpnpAction(object):
         # _LOGGER.debug('Status: %s Response_body: %s', status_code, response_body)
 
         if status_code != 200:
-            raise UpnpError('Error during async_call(), status: {}' % status_code)
+            raise UpnpError('Error during async_call(), status: %s, body: %s' % (status_code, response_body))
 
         # parse body
         response_args = self.parse_response(self.service.service_type,
