@@ -681,11 +681,16 @@ class UpnpFactory(object):
     # pylint: disable=no-self-use
     def _state_variable_parse_xml(self, state_variable_xml):
         info = {
-            'send_events': state_variable_xml.attrib['sendEvents'] == 'yes',
             'name': state_variable_xml.find('service:name', NS).text,
             'type_info': {}
         }
         type_info = info['type_info']
+
+        # send events
+        if 'sendEvents' in state_variable_xml.attrib:
+            info['send_events'] = state_variable_xml.attrib['sendEvents'] == 'yes'
+        else:
+            info['send_events'] = state_variable_xml.find('service:sendEventsAttribute', NS).text == 'yes'
 
         data_type = state_variable_xml.find('service:dataType', NS).text
         type_info['data_type'] = data_type

@@ -111,9 +111,10 @@
         <allowedValue>Master</allowedValue>
       </allowedValueList>
     </stateVariable>
-    <stateVariable sendEvents="no"> 
+    <stateVariable>
       <name>A_ARG_TYPE_InstanceID</name>  
       <dataType>ui4</dataType>
+      <sendEventsAttribute>no</sendEventsAttribute> <!-- 'old' style -->
     </stateVariable>
   </serviceStateTable>
 </scpd>

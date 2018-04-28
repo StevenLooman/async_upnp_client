@@ -156,6 +156,22 @@ class TestUpnpStateVariable:
         except vol.error.MultipleInvalid:
             pass
 
+    @pytest.mark.asyncio
+    def test_send_events(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+
+        sv = service.state_variable('A_ARG_TYPE_InstanceID')  # old style
+        assert sv.send_events == False
+
+        sv = service.state_variable('A_ARG_TYPE_Channel')  # new style
+        assert sv.send_events == False
+
+        sv = service.state_variable('LastChange')
+        assert sv.send_events == True
+
 
 class TestUpnpServiceAction:
 
