@@ -4,9 +4,9 @@
 import abc
 import asyncio
 import logging
-import pytz
 import urllib.parse
 from datetime import datetime
+from datetime import timezone
 from xml.etree import ElementTree as ET
 
 import voluptuous as vol
@@ -553,7 +553,7 @@ class UpnpStateVariable(object):
         """Set value, python typed."""
         self.validate_value(value)
         self._value = value
-        self._updated_at = datetime.now(pytz.utc)
+        self._updated_at = datetime.now(timezone.utc)
 
     @property
     def upnp_value(self):
