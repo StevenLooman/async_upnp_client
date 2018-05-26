@@ -9,7 +9,6 @@ import urllib.parse
 from datetime import datetime
 from xml.etree import ElementTree as ET
 
-import aiohttp
 import voluptuous as vol
 
 
@@ -219,7 +218,7 @@ class UpnpService(object):
                 yield from self._requester.async_http_request('UNSUBSCRIBE',
                                                               self.event_sub_url,
                                                               headers)
-        except (asyncio.TimeoutError, aiohttp.ClientError):
+        except asyncio.TimeoutError:
             if not force:
                 raise
             return

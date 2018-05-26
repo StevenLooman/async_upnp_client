@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""AIOHTTP module for use with UpnpFactory."""
+"""
+AIOHTTP module for use with UpnpFactory.
+
+This example requires aiohttp.
+"""
 
 import aiohttp
 import asyncio

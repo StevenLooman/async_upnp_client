@@ -29,7 +29,6 @@ with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 
 INSTALL_REQUIRES=[
-    'aiohttp==3.0.9',
     'pytz>=2018.03',
     'voluptuous>=0.11.1',
 ]
