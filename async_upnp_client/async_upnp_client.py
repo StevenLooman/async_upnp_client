@@ -8,6 +8,7 @@ import urllib.parse
 from datetime import datetime
 from datetime import timezone
 from xml.etree import ElementTree as ET
+from xml.sax.saxutils import escape, unescape
 
 import voluptuous as vol
 
@@ -438,7 +439,7 @@ class UpnpAction(object):
 
     def _format_request_args(self, **kwargs):
         self.validate_arguments(**kwargs)
-        arg_strs = ["<{0}>{1}</{0}>".format(arg.name, arg.coerce_upnp(kwargs[arg.name]))
+        arg_strs = ["<{0}>{1}</{0}>".format(arg.name, escape(arg.coerce_upnp(kwargs[arg.name])))
                     for arg in self.in_arguments()]
         return "\n".join(arg_strs)
 
@@ -463,7 +464,7 @@ class UpnpAction(object):
             name = arg_xml.tag
             arg = self.argument(name, 'out')
 
-            arg.upnp_value = arg_xml.text
+            arg.upnp_value = unescape(arg_xml.text)
             args[name] = arg.value
 
         return args

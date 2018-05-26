@@ -31,8 +31,6 @@ class UpnpTestRequester(UpnpRequester):
     def __init__(self, response_map):
         self._response_map = response_map
 
-        self.hass = None
-
     @asyncio.coroutine
     def async_http_request(self, method, url, headers=None, body=None):
         yield from asyncio.sleep(0.01)
@@ -226,6 +224,26 @@ class TestUpnpServiceAction:
         ns = {'rc_service': service_type}
         assert root.find('.//rc_service:SetVolume', ns) is not None
         assert root.find('.//DesiredVolume', ns) is not None
+
+    @pytest.mark.asyncio
+    def test_format_request_escape(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:AVTransport:1')
+        action = service.action('SetAVTransportURI')
+
+        service_type = 'urn:schemas-upnp-org:service:AVTransport:1'
+        metadata = '<item>test thing</item>'
+        url, headers, body = action.create_request(InstanceID=0, CurrentURI='http://example.org/file.mp3', CurrentURIMetaData=metadata)
+
+        root = ET.fromstring(body)
+        ns = {'avt_service': service_type}
+        assert root.find('.//avt_service:SetAVTransportURI', ns) is not None
+        assert root.find('.//CurrentURIMetaData', ns) is not None
+        #assert root.find('.//CurrentURIMetaData', ns).text == '&lt;item&gt;test thing&lt;/item&gt;'
+        assert root.find('.//CurrentURIMetaData', ns).text == '<item>test thing</item>'  # ET escapes for us...
+        assert root.find('.//CurrentURIMetaData', ns).findall('./') == []  # this shouldn't have any children, due to its contents being escaped
 
     @pytest.mark.asyncio
     def test_parse_response(self):
