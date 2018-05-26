@@ -24,6 +24,7 @@ NS = {
 
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER_TRAFFIC = logging.getLogger(__name__ + ".traffic")
 
 
 class UpnpRequester(object):
@@ -393,12 +394,18 @@ class UpnpAction(object):
         """Call an action with arguments"""
         # build request
         url, headers, body = self.create_request(**kwargs)
-        # _LOGGER.debug('Request_body: %s', body)
+        _LOGGER_TRAFFIC.debug('Sending request:\nPOST %s\n%s\n\n%s',
+                              url,
+                              '\n'.join([key + ": " + value for key, value in headers.items()]),
+                              body)
 
         # do request
         status_code, response_headers, response_body = \
             yield from self.service._requester.async_http_request('POST', url, headers, body)
-        # _LOGGER.debug('Status: %s Response_body: %s', status_code, response_body)
+        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
+                              status_code,
+                              '\n'.join([key + ": " + value for key, value in response_headers.items()]),
+                              response_body)
 
         if status_code != 200:
             raise UpnpError('Error during async_call(), status: %s, body: %s' % (status_code, response_body))
