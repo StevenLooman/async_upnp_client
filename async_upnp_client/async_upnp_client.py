@@ -607,12 +607,25 @@ class UpnpFactory(object):
     """
 
     STATE_VARIABLE_TYPE_MAPPING = {
-        'i2': int,
-        'i4': int,
+        'ui1': int,
         'ui2': int,
         'ui4': int,
+        'i1': int,
+        'i2': int,
+        'i4': int,
+        'int': int,
+        'r4': float,
+        'r8': float,
+        'number': float,
+        'fixed.14.4': float,
+        'float': float,
+        'char': chr,
         'string': str,
         'boolean': bool,
+        'bin.base64': str,
+        'bin.hex': str,
+        'uri': str,
+        'uuid': str,
     }
 
     def __init__(self, requester):
