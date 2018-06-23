@@ -244,7 +244,7 @@ class UpnpService(object):
 
         el_root = ET.fromstring(body)
         el_last_change = el_root.find('.//LastChange')
-        if el_last_change is None:
+        if el_last_change is None or el_last_change.text is None:
             _LOGGER.debug("Got NOTIFY without body, ignoring")
             return
 
