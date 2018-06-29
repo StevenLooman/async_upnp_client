@@ -649,13 +649,17 @@ class UpnpFactory(object):
 
     # pylint: disable=no-self-use
     def _device_parse_xml(self, device_description_xml):
-        return {
+        desc = {
             'device_type': device_description_xml.find('.//device:deviceType', NS).text,
             'friendly_name': device_description_xml.find('.//device:friendlyName', NS).text,
             'manufacturer': device_description_xml.find('.//device:manufacturer', NS).text,
-            'model_description': device_description_xml.find('.//device:modelDescription', NS).text,
             'model_name': device_description_xml.find('.//device:modelName', NS).text,
+            'udn': device_description_xml.find('.//device:UDN', NS).text,
         }
+        model_desc_el = device_description_xml.find('.//device:modelDescription', NS)
+        if model_desc_el is not None:
+            desc['model_description'] = model_desc_el.text
+        return desc
 
     @asyncio.coroutine
     def async_create_service(self, service_description_xml, base_url):
