@@ -1,7 +1,7 @@
 """Unit tests for upnp_client."""
 
-import os.path
 import asyncio
+import os.path
 
 import pytest
 import voluptuous as vol
@@ -31,9 +31,8 @@ class UpnpTestRequester(UpnpRequester):
     def __init__(self, response_map):
         self._response_map = response_map
 
-    @asyncio.coroutine
-    def async_http_request(self, method, url, headers=None, body=None):
-        yield from asyncio.sleep(0.01)
+    async def async_http_request(self, method, url, headers=None, body=None):
+        await asyncio.sleep(0.01)
 
         key = (method, url)
         if key not in self._response_map:
@@ -59,10 +58,10 @@ RESPONSE_MAP = {
 class TestUpnpStateVariable:
 
     @pytest.mark.asyncio
-    def test_init(self):
+    async def test_init(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         assert device
 
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
@@ -72,10 +71,10 @@ class TestUpnpStateVariable:
         assert state_var
 
     @pytest.mark.asyncio
-    def test_set_value_volume(self):
+    async def test_set_value_volume(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         sv = service.state_variable('Volume')
 
@@ -88,10 +87,10 @@ class TestUpnpStateVariable:
         assert sv.upnp_value == '20'
 
     @pytest.mark.asyncio
-    def test_set_value_mute(self):
+    async def test_set_value_mute(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         sv = service.state_variable('Mute')
 
@@ -112,10 +111,10 @@ class TestUpnpStateVariable:
         assert sv.upnp_value == '0'
 
     @pytest.mark.asyncio
-    def test_value_min_max(self):
+    async def test_value_min_max(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         sv = service.state_variable('Volume')
 
@@ -135,10 +134,10 @@ class TestUpnpStateVariable:
             pass
 
     @pytest.mark.asyncio
-    def test_value_allowed_value(self):
+    async def test_value_allowed_value(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         sv = service.state_variable('A_ARG_TYPE_Channel')
 
@@ -155,10 +154,10 @@ class TestUpnpStateVariable:
             pass
 
     @pytest.mark.asyncio
-    def test_send_events(self):
+    async def test_send_events(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
 
         sv = service.state_variable('A_ARG_TYPE_InstanceID')  # old style
@@ -174,10 +173,10 @@ class TestUpnpStateVariable:
 class TestUpnpServiceAction:
 
     @pytest.mark.asyncio
-    def test_init(self):
+    async def test_init(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         action = service.action('GetVolume')
 
@@ -185,10 +184,10 @@ class TestUpnpServiceAction:
         assert action.name == 'GetVolume'
 
     @pytest.mark.asyncio
-    def test_valid_arguments(self):
+    async def test_valid_arguments(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         action = service.action('SetVolume')
 
@@ -210,10 +209,10 @@ class TestUpnpServiceAction:
             pass
 
     @pytest.mark.asyncio
-    def test_format_request(self):
+    async def test_format_request(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         action = service.action('SetVolume')
 
@@ -226,10 +225,10 @@ class TestUpnpServiceAction:
         assert root.find('.//DesiredVolume', ns) is not None
 
     @pytest.mark.asyncio
-    def test_format_request_escape(self):
+    async def test_format_request_escape(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:AVTransport:1')
         action = service.action('SetAVTransportURI')
 
@@ -246,10 +245,10 @@ class TestUpnpServiceAction:
         assert root.find('.//CurrentURIMetaData', ns).findall('./') == []  # this shouldn't have any children, due to its contents being escaped
 
     @pytest.mark.asyncio
-    def test_parse_response(self):
+    async def test_parse_response(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         action = service.action('GetVolume')
 
@@ -259,10 +258,10 @@ class TestUpnpServiceAction:
         assert result == {'CurrentVolume': 3}
 
     @pytest.mark.asyncio
-    def test_parse_response_error(self):
+    async def test_parse_response_error(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         action = service.action('GetVolume')
 
@@ -278,10 +277,10 @@ class TestUpnpServiceAction:
 class TestUpnpService:
 
     @pytest.mark.asyncio
-    def test_init(self):
+    async def test_init(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
 
         base_url = 'http://localhost:1234'
@@ -292,10 +291,10 @@ class TestUpnpService:
         assert service.scpd_url == base_url + '/RenderingControl_1.xml'
 
     @pytest.mark.asyncio
-    def test_state_variables_actions(self):
+    async def test_state_variables_actions(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
 
         state_var = service.state_variable('Volume')
@@ -305,33 +304,33 @@ class TestUpnpService:
         assert action
 
     @pytest.mark.asyncio
-    def test_subscribe(self):
+    async def test_subscribe(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
 
         callback_uri = 'http://callback_uri'
         sid = 'uuid:dummy'
 
-        received_sid = yield from service.async_subscribe(callback_uri)
+        received_sid = await service.async_subscribe(callback_uri)
         assert sid == received_sid
         assert sid == service.subscription_sid
 
     @pytest.mark.asyncio
-    def test_unsubscribe(self):
+    async def test_unsubscribe(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         service._subscription_sid = 'uuid:dummy'
 
         assert service.subscription_sid == 'uuid:dummy'
-        yield from service.async_unsubscribe()
+        await service.async_unsubscribe()
         assert service.subscription_sid is None
 
     @pytest.mark.asyncio
-    def test_call_action(self):
+    async def test_call_action(self):
         responses = {
             ('POST', 'http://localhost:1234/upnp/control/RenderingControl1'):
                 (200, {}, read_file('action_GetVolume.xml'))
@@ -339,9 +338,9 @@ class TestUpnpService:
         responses.update(RESPONSE_MAP)
         r = UpnpTestRequester(responses)
         factory = UpnpFactory(r)
-        device = yield from factory.async_create_device('http://localhost:1234/dmr')
+        device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         action = service.action('GetVolume')
 
-        result = yield from service.async_call_action(action, InstanceID=0, Channel='Master')
+        result = await service.async_call_action(action, InstanceID=0, Channel='Master')
         assert result['CurrentVolume'] == 3

@@ -32,9 +32,8 @@ class UpnpRequester(object):
 
     # pylint: disable=too-few-public-methods
 
-    @asyncio.coroutine
     @abc.abstractmethod
-    def async_http_request(self, method, url, headers=None, body=None):
+    async def async_http_request(self, method, url, headers=None, body=None):
         """Do a HTTP request."""
         pass
 
@@ -80,10 +79,9 @@ class UpnpDevice(object):
         """Get device url."""
         return self._device_url
 
-    @asyncio.coroutine
-    def async_ping(self):
+    async def async_ping(self):
         """Ping the device."""
-        yield from self._requester.async_http_request('GET', self._device_url)
+        await self._requester.async_http_request('GET', self._device_url)
 
 
 class UpnpService(object):
@@ -169,8 +167,7 @@ class UpnpService(object):
         """Get UPnpAction by name."""
         return self.actions.get(name, None)
 
-    @asyncio.coroutine
-    def async_call_action(self, action, **kwargs):
+    async def async_call_action(self, action, **kwargs):
         """
         Call a UpnpAction.
 
@@ -179,7 +176,7 @@ class UpnpService(object):
         if isinstance(action, str):
             action = self.actions[action]
 
-        result = yield from action.async_call(**kwargs)
+        result = await action.async_call(**kwargs)
         return result
 
     @property
@@ -187,8 +184,7 @@ class UpnpService(object):
         """Return our current subscription ID for events."""
         return self._subscription_sid
 
-    @asyncio.coroutine
-    def async_subscribe(self, callback_uri):
+    async def async_subscribe(self, callback_uri):
         """SUBSCRIBE for events on StateVariables."""
         if self._subscription_sid:
             raise RuntimeError('Already subscribed, unsubscribe first')
@@ -200,7 +196,7 @@ class UpnpService(object):
             'CALLBACK': '<{}>'.format(callback_uri),
         }
         response_status, response_headers, _ = \
-            yield from self._requester.async_http_request('SUBSCRIBE', self.event_sub_url, headers)
+            await self._requester.async_http_request('SUBSCRIBE', self.event_sub_url, headers)
 
         if response_status != 200:
             _LOGGER.error('Did not receive 200, but %s', response_status)
@@ -215,8 +211,7 @@ class UpnpService(object):
         _LOGGER.debug('%s.subscribe(): Got SID: %s', self, subscription_sid)
         return subscription_sid
 
-    @asyncio.coroutine
-    def async_unsubscribe(self, force=False):
+    async def async_unsubscribe(self, force=False):
         """UNSUBSCRIBE from events on StateVariables."""
         if not force and not self._subscription_sid:
             raise RuntimeError('Cannot unsubscribed, subscribe first')
@@ -232,9 +227,9 @@ class UpnpService(object):
         }
         try:
             response_status, _, _ = \
-                yield from self._requester.async_http_request('UNSUBSCRIBE',
-                                                              self.event_sub_url,
-                                                              headers)
+                await self._requester.async_http_request('UNSUBSCRIBE',
+                                                         self.event_sub_url,
+                                                         headers)
         except asyncio.TimeoutError:
             if not force:
                 raise
@@ -413,8 +408,7 @@ class UpnpAction(object):
 
             return arg
 
-    @asyncio.coroutine
-    def async_call(self, **kwargs):
+    async def async_call(self, **kwargs):
         """Call an action with arguments."""
         # build request
         url, headers, body = self.create_request(**kwargs)
@@ -425,7 +419,7 @@ class UpnpAction(object):
 
         # do request
         status_code, response_headers, response_body = \
-            yield from self.service.requester.async_http_request('POST', url, headers, body)
+            await self.service.requester.async_http_request('POST', url, headers, body)
         _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
                               status_code,
                               '\n'.join([key + ": " + value
@@ -668,10 +662,9 @@ class UpnpFactory(object):
         """Initializer."""
         self.requester = requester
 
-    @asyncio.coroutine
-    def async_create_device(self, dmr_url):
+    async def async_create_device(self, dmr_url):
         """Create a UpnpDevice, with all of it UpnpServices."""
-        root = yield from self._async_fetch_device_description(dmr_url)
+        root = await self._async_fetch_device_description(dmr_url)
 
         # get name
         device_desc = self._device_parse_xml(root)
@@ -679,7 +672,7 @@ class UpnpFactory(object):
         # get services
         services = []
         for service_desc_xml in root.findall('.//device:serviceList/device:service', NS):
-            service = yield from self.async_create_service(service_desc_xml, dmr_url)
+            service = await self.async_create_service(service_desc_xml, dmr_url)
             services.append(service)
 
         return UpnpDevice(self.requester, dmr_url, device_desc, services)
@@ -699,12 +692,11 @@ class UpnpFactory(object):
             desc['model_description'] = model_desc_el.text
         return desc
 
-    @asyncio.coroutine
-    def async_create_service(self, service_description_xml, base_url):
+    async def async_create_service(self, service_description_xml, base_url):
         """Retrieve the SCPD for a service and create a UpnpService from it."""
         scpd_url = service_description_xml.find('device:SCPDURL', NS).text
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
-        scpd_xml = yield from self._async_fetch_scpd(scpd_url)
+        scpd_xml = await self._async_fetch_scpd(scpd_url)
         return self.create_service(service_description_xml, scpd_xml)
 
     def create_service(self, service_description_xml, scpd_xml):
@@ -850,9 +842,8 @@ class UpnpFactory(object):
             info['arguments'].append(argument)
         return info
 
-    @asyncio.coroutine
-    def _async_fetch_device_description(self, url):
-        status_code, _, response_body = yield from self.requester.async_http_request('GET', url)
+    async def _async_fetch_device_description(self, url):
+        status_code, _, response_body = await self.requester.async_http_request('GET', url)
 
         if status_code != 200:
             raise UpnpError
@@ -860,9 +851,8 @@ class UpnpFactory(object):
         root = ET.fromstring(response_body)
         return root
 
-    @asyncio.coroutine
-    def _async_fetch_scpd(self, url):
-        status_code, _, response_body = yield from self.requester.async_http_request('GET', url)
+    async def _async_fetch_scpd(self, url):
+        status_code, _, response_body = await self.requester.async_http_request('GET', url)
 
         if status_code != 200:
             raise UpnpError
