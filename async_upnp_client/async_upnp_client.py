@@ -30,6 +30,8 @@ _LOGGER_TRAFFIC = logging.getLogger(__name__ + ".traffic")
 class UpnpRequester(object):
     """Abstract base class used for performing async HTTP requests."""
 
+    # pylint: disable=too-few-public-methods
+
     @asyncio.coroutine
     @abc.abstractmethod
     def async_http_request(self, method, url, headers=None, body=None):
@@ -45,6 +47,7 @@ class UpnpDevice(object):
     """UPnP Device representation."""
 
     def __init__(self, requester, device_url, device_description, services):
+        """Initializer."""
         self._requester = requester
         self._device_url = device_url
         self._device_description = device_description
@@ -57,6 +60,11 @@ class UpnpDevice(object):
     def name(self):
         """Get the name of this device."""
         return self._device_description['friendly_name']
+
+    @property
+    def udn(self):
+        """Get UDN of this device."""
+        return self._device_description['udn']
 
     def service(self, service_type):
         """Get service by service_type."""
@@ -74,7 +82,7 @@ class UpnpDevice(object):
 
     @asyncio.coroutine
     def async_ping(self):
-        """Ping the device"""
+        """Ping the device."""
         yield from self._requester.async_http_request('GET', self._device_url)
 
 
@@ -82,6 +90,7 @@ class UpnpService(object):
     """UPnP Service representation."""
 
     def __init__(self, requester, service_description, state_variables, actions):
+        """Initializer."""
         self._requester = requester
         self._service_description = service_description
         self._state_variables = {sv.name: sv for sv in state_variables}
@@ -138,6 +147,11 @@ class UpnpService(object):
                                     self._service_description['event_sub_url'])
 
     @property
+    def requester(self):
+        """Get requester."""
+        return self._requester
+
+    @property
     def state_variables(self):
         """Get All UpnpStateVariables for this UpnpService."""
         return self._state_variables
@@ -159,6 +173,7 @@ class UpnpService(object):
     def async_call_action(self, action, **kwargs):
         """
         Call a UpnpAction.
+
         Parameters are in Python-values and coerced automatically to UPnP values.
         """
         if isinstance(action, str):
@@ -189,11 +204,11 @@ class UpnpService(object):
 
         if response_status != 200:
             _LOGGER.error('Did not receive 200, but %s', response_status)
-            return
+            return None
 
         if 'sid' not in response_headers:
             _LOGGER.error('Did not receive a "SID"')
-            return
+            return None
 
         subscription_sid = response_headers['sid']
         self._subscription_sid = subscription_sid
@@ -233,7 +248,8 @@ class UpnpService(object):
 
     def on_notify(self, headers, body):
         """
-        Callback for UpnpNotifyView.
+        Do callback for UpnpNotifyView.
+
         Parses the headers/body and sets UpnpStateVariables with new values.
         """
         notify_sid = headers.get('SID')
@@ -271,7 +287,7 @@ class UpnpService(object):
         self.notify_changed_state_variables(changed_state_variables)
 
     def notify_changed_state_variables(self, changed_state_variables):
-        """Callback on UpnpStateVariable.value changes."""
+        """Do callback on UpnpStateVariable.value changes."""
         if self._on_state_variable_change:
             self._on_state_variable_change(self, changed_state_variables)
 
@@ -286,19 +302,22 @@ class UpnpService(object):
         self._on_state_variable_change = callback
 
     def __str__(self):
+        """To string."""
         return "<UpnpService({0})>".format(self.service_id)
 
     def __repr__(self):
+        """To repr."""
         return "<UpnpService({0})>".format(self.service_id)
 
 
 class UpnpAction(object):
-    """Representation of an Action"""
+    """Representation of an Action."""
 
     class Argument(object):
-        """Representation of an Argument of an Action"""
+        """Representation of an Argument of an Action."""
 
         def __init__(self, name, direction, related_state_variable):
+            """Initializer."""
             self.name = name
             self.direction = direction
             self.related_state_variable = related_state_variable
@@ -338,6 +357,7 @@ class UpnpAction(object):
             return self.related_state_variable.coerce_upnp(value)
 
     def __init__(self, name, args):
+        """Initializer."""
         self._name = name
         self._args = args
 
@@ -362,11 +382,15 @@ class UpnpAction(object):
         return self._name
 
     def __str__(self):
+        """To string."""
         return "<UpnpService.Action({0})>".format(self.name)
 
     def validate_arguments(self, **kwargs):
-        """Validate arguments against in-arguments of self.
-        The python type is expected."""
+        """
+        Validate arguments against in-arguments of self.
+
+        The python type is expected.
+        """
         for arg in self.in_arguments():
             value = kwargs[arg.name]
             arg.validate_value(value)
@@ -380,7 +404,7 @@ class UpnpAction(object):
         return [arg for arg in self._args if arg.direction == 'out']
 
     def argument(self, name, direction=None):
-        """Get an UpnpAction.Argument by name (and possibliy direction.)"""
+        """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self._args:
             if arg.name != name:
                 continue
@@ -391,7 +415,7 @@ class UpnpAction(object):
 
     @asyncio.coroutine
     def async_call(self, **kwargs):
-        """Call an action with arguments"""
+        """Call an action with arguments."""
         # build request
         url, headers, body = self.create_request(**kwargs)
         _LOGGER_TRAFFIC.debug('Sending request:\nPOST %s\n%s\n\n%s',
@@ -401,14 +425,16 @@ class UpnpAction(object):
 
         # do request
         status_code, response_headers, response_body = \
-            yield from self.service._requester.async_http_request('POST', url, headers, body)
+            yield from self.service.requester.async_http_request('POST', url, headers, body)
         _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
                               status_code,
-                              '\n'.join([key + ": " + value for key, value in response_headers.items()]),
+                              '\n'.join([key + ": " + value
+                                         for key, value in response_headers.items()]),
                               response_body)
 
         if status_code != 200:
-            raise UpnpError('Error during async_call(), status: %s, body: %s' % (status_code, response_body))
+            raise UpnpError('Error during async_call(), status: %s, body: %s' %
+                            (status_code, response_body))
 
         # parse body
         response_args = self.parse_response(self.service.service_type,
@@ -425,7 +451,8 @@ class UpnpAction(object):
         service_type = self.service.service_type
         soap_args = self._format_request_args(**kwargs)
         body = """<?xml version="1.0"?>
-        <s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+        <s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+                    xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
           <s:Body>
             <u:{1} xmlns:u="{0}">
                 {2}
@@ -452,18 +479,20 @@ class UpnpAction(object):
 
     def parse_response(self, service_type, response_headers, response_body):
         """Parse response from called Action."""
+        # pylint: disable=unused-argument
         xml = ET.fromstring(response_body)
 
         query = './/soap_envelope:Body/soap_envelope:Fault'
         if xml.find(query, NS):
             error_code = xml.find('.//control:errorCode', NS).text
             error_description = xml.find('.//control:errorDescription', NS).text
-            raise UpnpError('Error during call_action, error_code: %s, error_description: %s',
-                            error_code, error_description)
+            raise UpnpError('Error during call_action, error_code: %s, error_description: %s' % (
+                error_code, error_description))
 
         return self._parse_response_args(service_type, xml)
 
     def _parse_response_args(self, service_type, xml):
+        """Parse response arguments."""
         args = {}
         query = ".//{{{0}}}{1}Response".format(service_type, self.name)
         response = xml.find(query, NS)
@@ -481,6 +510,7 @@ class UpnpStateVariable(object):
     """Representation of a State Variable."""
 
     def __init__(self, state_variable_info, schema):
+        """Initializer."""
         self._state_variable_info = state_variable_info
         self._schema = schema
 
@@ -509,6 +539,7 @@ class UpnpStateVariable(object):
         min_ = type_info.get('allowed_value_range', {}).get('min')
         if data_type == int and min_ is not None:
             return data_type(min_)
+        return None
 
     @property
     def max_value(self):
@@ -518,6 +549,7 @@ class UpnpStateVariable(object):
         max_ = type_info.get('allowed_value_range', {}).get('max')
         if data_type == int and max_ is not None:
             return data_type(max_)
+        return None
 
     @property
     def allowed_values(self):
@@ -526,7 +558,7 @@ class UpnpStateVariable(object):
 
     @property
     def send_events(self):
-        """Does this UpnpStatevariable send events?"""
+        """Check if this UpnpStatevariable send events."""
         return self._state_variable_info['send_events']
 
     @property
@@ -541,14 +573,15 @@ class UpnpStateVariable(object):
 
     @property
     def default_value(self):
-        """Default value for UpnpStateVariable, if defined."""
+        """Get default value for UpnpStateVariable, if defined."""
         data_type = self._state_variable_info['type_info']['data_type_python']
         default_value = self._state_variable_info['type_info'].get('default_value', None)
         if default_value:
             return data_type(default_value)
+        return None
 
     def validate_value(self, value):
-        """Validate value"""
+        """Validate value."""
         self._schema({'value': value})
 
     @property
@@ -591,17 +624,20 @@ class UpnpStateVariable(object):
     def updated_at(self):
         """
         Get timestamp at which this UpnpStateVariable was updated.
+
         Return time in UTC.
         """
         return self._updated_at
 
     def __str__(self):
+        """To string."""
         return "<StateVariable({0}, {1})>".format(self.name, self.data_type)
 
 
 class UpnpFactory(object):
     """
     Factory for UpnpService and friends.
+
     Use UpnpFactory.async_create_services() to instantiate UpnpServices from a device XML.
     You have probably received this URL from netdisco, for example.
     """
@@ -629,6 +665,7 @@ class UpnpFactory(object):
     }
 
     def __init__(self, requester):
+        """Initializer."""
         self.requester = requester
 
     @asyncio.coroutine
@@ -649,6 +686,7 @@ class UpnpFactory(object):
 
     # pylint: disable=no-self-use
     def _device_parse_xml(self, device_description_xml):
+        """Parse device description XML."""
         desc = {
             'device_type': device_description_xml.find('.//device:deviceType', NS).text,
             'friendly_name': device_description_xml.find('.//device:friendlyName', NS).text,
@@ -667,9 +705,9 @@ class UpnpFactory(object):
         scpd_url = service_description_xml.find('device:SCPDURL', NS).text
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
         scpd_xml = yield from self._async_fetch_scpd(scpd_url)
-        return self.create_service(service_description_xml, base_url, scpd_xml)
+        return self.create_service(service_description_xml, scpd_xml)
 
-    def create_service(self, service_description_xml, base_url, scpd_xml):
+    def create_service(self, service_description_xml, scpd_xml):
         """Create a UnpnpService, with UpnpActions and UpnpStateVariables from scpd_xml."""
         service_description = self._service_parse_xml(service_description_xml)
         state_vars = self.create_state_variables(scpd_xml)
@@ -677,8 +715,9 @@ class UpnpFactory(object):
 
         return UpnpService(self.requester, service_description, state_vars, actions)
 
-    # pylint: disable=no-self-use
     def _service_parse_xml(self, service_description_xml):
+        """Parse service description XML."""
+        # pylint: disable=no-self-use
         return {
             'service_id': service_description_xml.find('device:serviceId', NS).text,
             'service_type': service_description_xml.find('device:serviceType', NS).text,
@@ -696,14 +735,15 @@ class UpnpFactory(object):
         return state_vars
 
     def create_state_variable(self, state_variable_xml):
-        """Create UpnpStateVariable from state_variable_xml"""
+        """Create UpnpStateVariable from state_variable_xml."""
         state_variable_info = self._state_variable_parse_xml(state_variable_xml)
         type_info = state_variable_info['type_info']
         schema = self._state_variable_create_schema(type_info)
         return UpnpStateVariable(state_variable_info, schema)
 
-    # pylint: disable=no-self-use
     def _state_variable_parse_xml(self, state_variable_xml):
+        """Parse XML for state variable."""
+        # pylint: disable=no-self-use
         info = {
             'name': state_variable_xml.find('service:name', NS).text,
             'type_info': {}
@@ -714,7 +754,8 @@ class UpnpFactory(object):
         if 'sendEvents' in state_variable_xml.attrib:
             info['send_events'] = state_variable_xml.attrib['sendEvents'] == 'yes'
         else:
-            info['send_events'] = state_variable_xml.find('service:sendEventsAttribute', NS).text == 'yes'
+            info['send_events'] = \
+                state_variable_xml.find('service:sendEventsAttribute', NS).text == 'yes'
 
         data_type = state_variable_xml.find('service:dataType', NS).text
         type_info['data_type'] = data_type

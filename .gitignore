@@ -2,6 +2,7 @@
 *.egg*
 .cache
 .coverage
+.idea
 .pytest_cache
 .tox
 __pycache__
