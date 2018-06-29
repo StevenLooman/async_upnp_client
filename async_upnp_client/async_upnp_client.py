@@ -658,9 +658,12 @@ class UpnpFactory(object):
         'uuid': str,
     }
 
-    def __init__(self, requester):
+    def __init__(self, requester, ignore_state_variable_value_range=False):
         """Initializer."""
         self.requester = requester
+        self._properties = {
+            'ignore_state_variable_value_range': ignore_state_variable_value_range,
+        }
 
     async def async_create_device(self, dmr_url):
         """Create a UpnpDevice, with all of it UpnpServices."""
@@ -759,7 +762,8 @@ class UpnpFactory(object):
             type_info['default_type_coerced'] = data_type(default_value.text)
 
         allowed_value_range = state_variable_xml.find('service:allowedValueRange', NS)
-        if allowed_value_range:
+        if allowed_value_range and \
+           not self._properties['ignore_state_variable_value_range']:
             type_info['allowed_value_range'] = {
                 'min': allowed_value_range.find('service:minimum', NS).text,
                 'max': allowed_value_range.find('service:maximum', NS).text,

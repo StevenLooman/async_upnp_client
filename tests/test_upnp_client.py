@@ -121,6 +121,9 @@ class TestUpnpStateVariable:
         assert sv.min_value == 0
         assert sv.max_value == 100
 
+        sv.value = 10
+        assert sv.value == 10
+
         try:
             sv.value = -10
             assert False
@@ -132,6 +135,23 @@ class TestUpnpStateVariable:
             assert False
         except vol.error.MultipleInvalid:
             pass
+
+    @pytest.mark.asyncio
+    async def test_value_min_max_ignore(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r, ignore_state_variable_value_range=True)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        sv = service.state_variable('Volume')
+
+        assert sv.min_value is None
+        assert sv.max_value is None
+
+        sv.value = -10
+        assert sv.value == -10
+
+        sv.value = 110
+        assert sv.value == 110
 
     @pytest.mark.asyncio
     async def test_value_allowed_value(self):
