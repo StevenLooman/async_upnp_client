@@ -12,6 +12,7 @@ from async_upnp_client import (
     UpnpFactory,
     UpnpRequester
 )
+from async_upnp_client.utils import dlna_handle_notify_last_change
 
 
 NS = {
@@ -364,3 +365,85 @@ class TestUpnpService:
 
         result = await service.async_call_action(action, InstanceID=0, Channel='Master')
         assert result['CurrentVolume'] == 3
+
+    @pytest.mark.asyncio
+    async def test_on_notify_upnp_event(self):
+        changed_vars = []
+
+        def change_handler(self, changed_state_variables):
+            nonlocal changed_vars
+            changed_vars = changed_state_variables
+
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        service._subscription_sid = 'uuid:e540ce62-7be8-11e8-b1a6-a619ad6a4b38'
+        service.on_state_variable_change = change_handler
+
+        headers = {
+            'NT': 'upnp:event',
+            'NTS': 'upnp:propchange',
+            'SID': service._subscription_sid,
+        }
+        body = """
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+    <e:property>
+        <Volume>60</Volume>
+    </e:property>
+</e:propertyset>
+"""
+        result = service.on_notify(headers, body)
+        assert result == 200
+        assert changed_vars
+
+        state_var = service.state_variable('Volume')
+        assert state_var.value == 60
+
+    @pytest.mark.asyncio
+    async def test_on_notify_dlna_event(self):
+        changed_vars = []
+
+        def change_handler(self, changed_state_variables):
+            nonlocal changed_vars
+            changed_vars += changed_state_variables
+
+            assert changed_state_variables
+            if changed_state_variables[0].name == 'LastChange':
+                last_change = changed_state_variables[0]
+                assert last_change.name == 'LastChange'
+
+                dlna_handle_notify_last_change(last_change)
+
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        service._subscription_sid = 'uuid:e540ce62-7be8-11e8-b1a6-a619ad6a4b38'
+        service.on_state_variable_change = change_handler
+
+        headers = {
+            'NT': 'upnp:event',
+            'NTS': 'upnp:propchange',
+            'SID': service._subscription_sid,
+        }
+        body = """
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+    <e:property>
+        <LastChange>
+            &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/RCS/&quot;&gt;
+                &lt;InstanceID val=&quot;0&quot;&gt;
+                    &lt;Mute channel=&quot;Master&quot; val=&quot;0&quot;/&gt;
+                    &lt;Volume channel=&quot;Master&quot; val=&quot;50&quot;/&gt;
+                    &lt;/InstanceID&gt;
+            &lt;/Event&gt;
+        </LastChange>
+    </e:property>
+</e:propertyset>
+"""
+
+        result = service.on_notify(headers, body)
+        assert result == 200
+
+        state_var = service.state_variable('Volume')
+        assert state_var.value == 50

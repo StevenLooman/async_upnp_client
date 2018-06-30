@@ -27,6 +27,17 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC = logging.getLogger(__name__ + ".traffic")
 
 
+def _ns_tag(tag: str) -> str:
+    """Expand namespace-alias to url."""
+    if ':' not in tag:
+        return tag
+
+    namespace, tag = tag.split(':')
+    namespace_uri = NS[namespace]
+    return '{{{0}}}{1}'.format(namespace_uri, tag)
+
+
+
 class UpnpRequester(object):
     """Abstract base class used for performing async HTTP requests."""
 
@@ -42,7 +53,7 @@ class UpnpError(Exception):
     """UpnpError."""
 
 
-class UpnpDevice(object):
+class UpnpDevice:
     """UPnP Device representation."""
 
     def __init__(self, requester, device_url, device_description, services):
@@ -56,12 +67,12 @@ class UpnpDevice(object):
             service.device = self
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Get the name of this device."""
         return self._device_description['friendly_name']
 
     @property
-    def udn(self):
+    def udn(self) -> str:
         """Get UDN of this device."""
         return self._device_description['udn']
 
@@ -84,7 +95,7 @@ class UpnpDevice(object):
         await self._requester.async_http_request('GET', self._device_url)
 
 
-class UpnpService(object):
+class UpnpService:
     """UPnP Service representation."""
 
     def __init__(self, requester, service_description, state_variables, actions):
@@ -247,39 +258,36 @@ class UpnpService(object):
 
         Parses the headers/body and sets UpnpStateVariables with new values.
         """
-        notify_sid = headers.get('SID')
-        if notify_sid != self._subscription_sid:
-            # _LOGGER.debug('Received NOTIFY for unknown SID: %s, known SID: %s',
-            #               notify_sid, self._subscription_sid)
-            return
+        _LOGGER_TRAFFIC.debug('Incoming request:\nNOTIFY\n%s\n\n%s',
+                              '\n'.join([key + ": " + value for key, value in headers.items()]),
+                              body)
+        if 'NT' not in headers or \
+           'NTS' not in headers:
+            return 400
 
-        el_root = ET.fromstring(body)
-        el_last_change = el_root.find('.//LastChange')
-        if el_last_change is None or el_last_change.text is None:
-            _LOGGER.debug("Got NOTIFY without body, ignoring")
-            return
+        if headers['NT'] != 'upnp:event' or \
+           headers['NTS'] != 'upnp:propchange' or \
+           headers.get('SID') != self._subscription_sid:
+            return 412
 
         changed_state_variables = []
-        el_event = ET.fromstring(el_last_change.text)
-        for el_instance_id in el_event.findall('./'):
-            for el_state_var in el_instance_id .findall('./'):
-                name = el_state_var.tag.split('}')[1]
-                value = el_state_var.get('val')
 
+        el_root = ET.fromstring(body)
+        for el_property in el_root.findall('./event:property', NS):
+            for el_state_var in el_property:
+                name = el_state_var.tag
                 state_var = self.state_variable(name)
-                if not state_var:
-                    continue
 
+                value = el_state_var.text
                 try:
                     state_var.upnp_value = value
                 except vol.error.MultipleInvalid:
                     _LOGGER.error('Got invalid value for %s: %s', state_var, value)
-
                 changed_state_variables.append(state_var)
 
-                _LOGGER.debug('%s.on_notify(): set state var %s to %s', self, name, value)
-
         self.notify_changed_state_variables(changed_state_variables)
+
+        return 200
 
     def notify_changed_state_variables(self, changed_state_variables):
         """Do callback on UpnpStateVariable.value changes."""
@@ -305,10 +313,10 @@ class UpnpService(object):
         return "<UpnpService({0})>".format(self.service_id)
 
 
-class UpnpAction(object):
+class UpnpAction:
     """Representation of an Action."""
 
-    class Argument(object):
+    class Argument:
         """Representation of an Argument of an Action."""
 
         def __init__(self, name, direction, related_state_variable):
@@ -500,7 +508,7 @@ class UpnpAction(object):
         return args
 
 
-class UpnpStateVariable(object):
+class UpnpStateVariable:
     """Representation of a State Variable."""
 
     def __init__(self, state_variable_info, schema):
@@ -628,7 +636,7 @@ class UpnpStateVariable(object):
         return "<StateVariable({0}, {1})>".format(self.name, self.data_type)
 
 
-class UpnpFactory(object):
+class UpnpFactory:
     """
     Factory for UpnpService and friends.
 
@@ -680,9 +688,9 @@ class UpnpFactory(object):
 
         return UpnpDevice(self.requester, dmr_url, device_desc, services)
 
-    # pylint: disable=no-self-use
     def _device_parse_xml(self, device_description_xml):
         """Parse device description XML."""
+        # pylint: disable=no-self-use
         desc = {
             'device_type': device_description_xml.find('.//device:deviceType', NS).text,
             'friendly_name': device_description_xml.find('.//device:friendlyName', NS).text,
@@ -779,9 +787,10 @@ class UpnpFactory(object):
 
         return info
 
-    # pylint: disable=no-self-use
     def _state_variable_create_schema(self, type_info):
+        """Create schema."""
         # construct validators
+        # pylint: disable=no-self-use
         validators = []
 
         data_type = type_info['data_type_python']
@@ -847,6 +856,7 @@ class UpnpFactory(object):
         return info
 
     async def _async_fetch_device_description(self, url):
+        """Fetch device description."""
         status_code, _, response_body = await self.requester.async_http_request('GET', url)
 
         if status_code != 200:
@@ -856,10 +866,11 @@ class UpnpFactory(object):
         return root
 
     async def _async_fetch_scpd(self, url):
+        """Fetch SCDP."""
         status_code, _, response_body = await self.requester.async_http_request('GET', url)
 
         if status_code != 200:
-            raise UpnpError
+            raise UpnpError()
 
         root = ET.fromstring(response_body)
         return root
