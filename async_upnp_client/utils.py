@@ -28,6 +28,7 @@ def dlna_handle_notify_last_change(state_var):
     changed_state_variables = []
 
     el_event = ET.fromstring(state_var.value)
+    _LOGGER.debug("Event payload: %s" % state_var.value)
     for el_instance in el_event:
         if not el_instance.tag.endswith("}InstanceID"):
             continue
@@ -39,6 +40,9 @@ def dlna_handle_notify_last_change(state_var):
         for el_state_var in el_instance:
             name = el_state_var.tag.split('}')[1]
             state_var = service.state_variable(name)
+            if state_var is None:
+                _LOGGER.debug("State variable %s does not exist, ignoring", name)
+                continue
 
             value = el_state_var.attrib['val']
             try:
