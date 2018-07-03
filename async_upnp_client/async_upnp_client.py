@@ -682,11 +682,11 @@ class UpnpFactory:
         'uuid': str,
     }
 
-    def __init__(self, requester, ignore_state_variable_value_range=False):
+    def __init__(self, requester, disable_state_variable_validation=False):
         """Initializer."""
         self.requester = requester
         self._properties = {
-            'ignore_state_variable_value_range': ignore_state_variable_value_range,
+            'disable_state_variable_validation': disable_state_variable_validation,
         }
 
     async def async_create_device(self, dmr_url):
@@ -787,7 +787,7 @@ class UpnpFactory:
 
         allowed_value_range = state_variable_xml.find('service:allowedValueRange', NS)
         if allowed_value_range and \
-           not self._properties['ignore_state_variable_value_range']:
+           not self._properties['disable_state_variable_validation']:
             type_info['allowed_value_range'] = {
                 'min': allowed_value_range.find('service:minimum', NS).text,
                 'max': allowed_value_range.find('service:maximum', NS).text,
@@ -797,7 +797,8 @@ class UpnpFactory:
                     allowed_value_range.find('service:step', NS).text
 
         allowed_value_list = state_variable_xml.find('service:allowedValueList', NS)
-        if allowed_value_list:
+        if allowed_value_list and \
+           not self._properties['disable_state_variable_validation']:
             type_info['allowed_values'] = \
                 [v.text for v in allowed_value_list.findall('service:allowedValue', NS)]
 

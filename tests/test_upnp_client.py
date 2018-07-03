@@ -138,9 +138,9 @@ class TestUpnpStateVariable:
             pass
 
     @pytest.mark.asyncio
-    async def test_value_min_max_ignore(self):
+    async def test_value_min_max_validation_disable(self):
         r = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(r, ignore_state_variable_value_range=True)
+        factory = UpnpFactory(r, disable_state_variable_validation=True)
         device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         sv = service.state_variable('Volume')
