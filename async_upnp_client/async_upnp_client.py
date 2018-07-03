@@ -7,6 +7,10 @@ import logging
 import urllib.parse
 from datetime import datetime
 from datetime import timezone
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Mapping
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
@@ -56,7 +60,8 @@ class UpnpError(Exception):
 class UpnpDevice:
     """UPnP Device representation."""
 
-    def __init__(self, requester, device_url, device_description, services):
+    def __init__(self, requester: UpnpRequester, device_url: str,
+                 device_description: Mapping, services: List['UpnpService']):
         """Initializer."""
         self._requester = requester
         self._device_url = device_url
@@ -76,21 +81,21 @@ class UpnpDevice:
         """Get UDN of this device."""
         return self._device_description['udn']
 
-    def service(self, service_type):
+    def service(self, service_type: str):
         """Get service by service_type."""
         return self._services.get(service_type)
 
     @property
-    def services(self):
+    def services(self) -> List['UpnpService']:
         """Get all services."""
         return self._services
 
     @property
-    def device_url(self):
+    def device_url(self) -> str:
         """Get device url."""
         return self._device_url
 
-    async def async_ping(self):
+    async def async_ping(self) -> None:
         """Ping the device."""
         await self._requester.async_http_request('GET', self._device_url)
 
@@ -98,7 +103,8 @@ class UpnpDevice:
 class UpnpService:
     """UPnP Service representation."""
 
-    def __init__(self, requester, service_description, state_variables, actions):
+    def __init__(self, requester: UpnpRequester, service_description: Mapping,
+                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']):
         """Initializer."""
         self._requester = requester
         self._service_description = service_description
@@ -115,12 +121,12 @@ class UpnpService:
             action.service = self
 
     @property
-    def device(self):
+    def device(self) -> UpnpDevice:
         """Get parent UpnpDevice."""
         return self._device
 
     @device.setter
-    def device(self, device):
+    def device(self, device) -> None:
         """Set parent UpnpDevice."""
         if self._device:
             raise UpnpError('UpnpService already bound to UpnpDevice')
@@ -128,57 +134,57 @@ class UpnpService:
         self._device = device
 
     @property
-    def service_type(self):
+    def service_type(self) -> str:
         """Get service type for this UpnpService."""
         return self._service_description['service_type']
 
     @property
-    def service_id(self):
+    def service_id(self) -> str:
         """Get service ID for this UpnpService."""
         return self._service_description['service_id']
 
     @property
-    def scpd_url(self):
+    def scpd_url(self) -> str:
         """Get full SCPD-url for this UpnpService."""
         return urllib.parse.urljoin(self.device.device_url,
                                     self._service_description['scpd_url'])
 
     @property
-    def control_url(self):
+    def control_url(self) -> str:
         """Get full control-url for this UpnpService."""
         return urllib.parse.urljoin(self.device.device_url,
                                     self._service_description['control_url'])
 
     @property
-    def event_sub_url(self):
+    def event_sub_url(self) -> str:
         """Get full event sub-url for this UpnpService."""
         return urllib.parse.urljoin(self.device.device_url,
                                     self._service_description['event_sub_url'])
 
     @property
-    def requester(self):
+    def requester(self) -> UpnpRequester:
         """Get requester."""
         return self._requester
 
     @property
-    def state_variables(self):
+    def state_variables(self) -> List['UpnpStateVariable']:
         """Get All UpnpStateVariables for this UpnpService."""
         return self._state_variables
 
-    def state_variable(self, name):
+    def state_variable(self, name) -> 'UpnpStateVariable':
         """Get UPnpStateVariable by name."""
         return self.state_variables.get(name, None)
 
     @property
-    def actions(self):
+    def actions(self) -> List['UpnpAction']:
         """Get All UpnpActions for this UpnpService."""
         return self._actions
 
-    def action(self, name):
+    def action(self, name) -> 'UpnpAction':
         """Get UPnpAction by name."""
         return self.actions.get(name, None)
 
-    async def async_call_action(self, action, **kwargs):
+    async def async_call_action(self, action: 'UpnpAction', **kwargs) -> None:
         """
         Call a UpnpAction.
 
@@ -191,11 +197,11 @@ class UpnpService:
         return result
 
     @property
-    def subscription_sid(self):
+    def subscription_sid(self) -> str:
         """Return our current subscription ID for events."""
         return self._subscription_sid
 
-    async def async_subscribe(self, callback_uri):
+    async def async_subscribe(self, callback_uri: str) -> str:
         """SUBSCRIBE for events on StateVariables."""
         if self._subscription_sid:
             raise RuntimeError('Already subscribed, unsubscribe first')
@@ -252,11 +258,12 @@ class UpnpService:
 
         self._subscription_sid = None
 
-    def on_notify(self, headers, body):
+    def on_notify(self, headers, body) -> int:
         """
         Do callback for UpnpNotifyView.
 
         Parses the headers/body and sets UpnpStateVariables with new values.
+        Return HTTP status code to respond with.
         """
         _LOGGER_TRAFFIC.debug('Incoming request:\nNOTIFY\n%s\n\n%s',
                               '\n'.join([key + ": " + value for key, value in headers.items()]),
@@ -289,26 +296,27 @@ class UpnpService:
 
         return 200
 
-    def notify_changed_state_variables(self, changed_state_variables):
+    def notify_changed_state_variables(self,
+                                       changed_state_variables: List['UpnpStateVariable']) -> None:
         """Do callback on UpnpStateVariable.value changes."""
         if self._on_state_variable_change:
             self._on_state_variable_change(self, changed_state_variables)
 
     @property
-    def on_state_variable_change(self):
+    def on_state_variable_change(self) -> Callable[[List['UpnpStateVariable']], None]:
         """Get callback for value changes."""
         return self._on_state_variable_change
 
     @on_state_variable_change.setter
-    def on_state_variable_change(self, callback):
+    def on_state_variable_change(self, callback: Callable[[List['UpnpStateVariable']], None]):
         """Set callback for value changes."""
         self._on_state_variable_change = callback
 
-    def __str__(self):
+    def __str__(self) -> str:
         """To string."""
         return "<UpnpService({0})>".format(self.service_id)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """To repr."""
         return "<UpnpService({0})>".format(self.service_id)
 
@@ -319,7 +327,7 @@ class UpnpAction:
     class Argument:
         """Representation of an Argument of an Action."""
 
-        def __init__(self, name, direction, related_state_variable):
+        def __init__(self, name: str, direction: str, related_state_variable: 'UpnpStateVariable'):
             """Initializer."""
             self.name = name
             self.direction = direction
@@ -367,12 +375,12 @@ class UpnpAction:
         self._service = None
 
     @property
-    def service(self):
+    def service(self) -> UpnpService:
         """Get parent UpnpService."""
         return self._service
 
     @service.setter
-    def service(self, service):
+    def service(self, service: UpnpService):
         """Set parent UpnpService."""
         if self.service:
             raise UpnpError('UpnpAction already bound to UpnpService')
@@ -380,11 +388,11 @@ class UpnpAction:
         self._service = service
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Get name of this UpnpAction."""
         return self._name
 
-    def __str__(self):
+    def __str__(self) -> str:
         """To string."""
         return "<UpnpService.Action({0})>".format(self.name)
 
@@ -398,15 +406,15 @@ class UpnpAction:
             value = kwargs[arg.name]
             arg.validate_value(value)
 
-    def in_arguments(self):
+    def in_arguments(self) -> List[Argument]:
         """Get all in-arguments."""
         return [arg for arg in self._args if arg.direction == 'in']
 
-    def out_arguments(self):
+    def out_arguments(self) -> List[Argument]:
         """Get all out-arguments."""
         return [arg for arg in self._args if arg.direction == 'out']
 
-    def argument(self, name, direction=None):
+    def argument(self, name: str, direction=None):
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self._args:
             if arg.name != name:
@@ -444,7 +452,7 @@ class UpnpAction:
                                             response_body)
         return response_args
 
-    def create_request(self, **kwargs):
+    def create_request(self, **kwargs) -> [str, Dict, str]:
         """Create headers and headers for this to-be-called UpnpAction."""
         # build URL
         control_url = self.service.control_url
@@ -491,7 +499,11 @@ class UpnpAction:
             raise UpnpError('Error during call_action, error_code: %s, error_description: %s' % (
                 error_code, error_description))
 
-        return self._parse_response_args(service_type, xml)
+        try:
+            return self._parse_response_args(service_type, xml)
+        except AttributeError:
+            _LOGGER.debug("Error during unescape of: %s", response_body)
+            raise
 
     def _parse_response_args(self, service_type, xml):
         """Parse response arguments."""
@@ -502,7 +514,11 @@ class UpnpAction:
             name = arg_xml.tag
             arg = self.argument(name, 'out')
 
-            arg.upnp_value = unescape(arg_xml.text)
+            try:
+                arg.upnp_value = unescape(arg_xml.text or '')
+            except AttributeError:
+                _LOGGER.debug("Error during unescape of: %s", arg_xml.text)
+                raise
             args[name] = arg.value
 
         return args
@@ -521,12 +537,12 @@ class UpnpStateVariable:
         self._updated_at = None
 
     @property
-    def service(self):
+    def service(self) -> UpnpService:
         """Get parent UpnpService."""
         return self._service
 
     @service.setter
-    def service(self, service):
+    def service(self, service: UpnpService):
         """Set parent UpnpService."""
         if self.service:
             raise UpnpError('UpnpStateVariable already bound to UpnpService')
@@ -554,7 +570,7 @@ class UpnpStateVariable:
         return None
 
     @property
-    def allowed_values(self):
+    def allowed_values(self) -> List:
         """List with allowed values for this UpnpStateVariable, if defined."""
         return self._state_variable_info['type_info'].get('allowed_values', [])
 
@@ -623,7 +639,7 @@ class UpnpStateVariable:
         return str(value)
 
     @property
-    def updated_at(self):
+    def updated_at(self) -> datetime:
         """
         Get timestamp at which this UpnpStateVariable was updated.
 
