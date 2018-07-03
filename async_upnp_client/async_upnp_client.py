@@ -41,7 +41,6 @@ def _ns_tag(tag: str) -> str:
     return '{{{0}}}{1}'.format(namespace_uri, tag)
 
 
-
 class UpnpRequester(object):
     """Abstract base class used for performing async HTTP requests."""
 
@@ -284,6 +283,9 @@ class UpnpService:
             for el_state_var in el_property:
                 name = el_state_var.tag
                 state_var = self.state_variable(name)
+                if state_var is None:
+                    _LOGGER.debug("State variable %s does not exist, ignoring", name)
+                    continue
 
                 value = el_state_var.text
                 try:
@@ -406,11 +408,11 @@ class UpnpAction:
             value = kwargs[arg.name]
             arg.validate_value(value)
 
-    def in_arguments(self) -> List[Argument]:
+    def in_arguments(self) -> List['UpnpAction.Argument']:
         """Get all in-arguments."""
         return [arg for arg in self._args if arg.direction == 'in']
 
-    def out_arguments(self) -> List[Argument]:
+    def out_arguments(self) -> List['UpnpAction.Argument']:
         """Get all out-arguments."""
         return [arg for arg in self._args if arg.direction == 'out']
 

@@ -28,7 +28,7 @@ def dlna_handle_notify_last_change(state_var):
     changed_state_variables = []
 
     el_event = ET.fromstring(state_var.value)
-    _LOGGER.debug("Event payload: %s" % state_var.value)
+    _LOGGER.debug("Event payload: %s", state_var.value)
     for el_instance in el_event:
         if not el_instance.tag.endswith("}InstanceID"):
             continue
