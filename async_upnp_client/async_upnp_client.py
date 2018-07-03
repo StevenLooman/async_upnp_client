@@ -693,7 +693,7 @@ class UpnpFactory:
 
     async def async_create_device(self, dmr_url):
         """Create a UpnpDevice, with all of it UpnpServices."""
-        root = await self._async_fetch_device_description(dmr_url)
+        root = await self._async_get_url_xml(dmr_url)
 
         # get name
         device_desc = self._device_parse_xml(root)
@@ -725,7 +725,7 @@ class UpnpFactory:
         """Retrieve the SCPD for a service and create a UpnpService from it."""
         scpd_url = service_description_xml.find('device:SCPDURL', NS).text
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
-        scpd_xml = await self._async_fetch_scpd(scpd_url)
+        scpd_xml = await self._async_get_url_xml(scpd_url)
         return self.create_service(service_description_xml, scpd_xml)
 
     def create_service(self, service_description_xml, scpd_xml):
@@ -874,19 +874,16 @@ class UpnpFactory:
             info['arguments'].append(argument)
         return info
 
-    async def _async_fetch_device_description(self, url):
+    async def _async_get_url_xml(self, url):
         """Fetch device description."""
-        status_code, _, response_body = await self.requester.async_http_request('GET', url)
-
-        if status_code != 200:
-            raise UpnpError
-
-        root = ET.fromstring(response_body)
-        return root
-
-    async def _async_fetch_scpd(self, url):
-        """Fetch SCDP."""
-        status_code, _, response_body = await self.requester.async_http_request('GET', url)
+        _LOGGER_TRAFFIC.debug('Sending request:\nGET %s', url)
+        status_code, response_headers, response_body = \
+            await self.requester.async_http_request('GET', url)
+        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
+                              status_code,
+                              '\n'.join([key + ": " + value
+                                         for key, value in response_headers.items()]),
+                              response_body)
 
         if status_code != 200:
             raise UpnpError()
