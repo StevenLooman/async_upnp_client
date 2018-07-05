@@ -4,6 +4,7 @@ Changes
 0.11.1 (unreleased)
 
 - Log getting initial description XMLs with traffic logger as well
+- Improve SUBSCRIBE and implement SUBSCRIBE-renew
 
 
 0.11.0 (2018-07-03)

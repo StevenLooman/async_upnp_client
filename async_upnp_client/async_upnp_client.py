@@ -102,6 +102,8 @@ class UpnpDevice:
 class UpnpService:
     """UPnP Service representation."""
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self, requester: UpnpRequester, service_description: Mapping,
                  state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']):
         """Initializer."""
@@ -200,22 +202,81 @@ class UpnpService:
         """Return our current subscription ID for events."""
         return self._subscription_sid
 
-    async def async_subscribe(self, callback_uri: str) -> str:
-        """SUBSCRIBE for events on StateVariables."""
+    async def async_subscribe(self, callback_uri: str, timeout: int = 1800) -> str:
+        """
+        SUBSCRIBE for events on StateVariables.
+
+        :param str allback_uri Callback URI
+        :param int timeout Timeout in seconds
+        :return: SID (Subscription Identifier)
+
+        It is up to the user to renew the subscription in time!
+        """
         if self._subscription_sid:
             raise RuntimeError('Already subscribed, unsubscribe first')
 
         headers = {
             'NT': 'upnp:event',
-            'TIMEOUT': 'Second-infinite',
+            'TIMEOUT': 'Second-' + str(timeout),
             'Host': urllib.parse.urlparse(self.event_sub_url).netloc,
             'CALLBACK': '<{}>'.format(callback_uri),
         }
-        response_status, response_headers, _ = \
+        _LOGGER_TRAFFIC.debug('Sending request:\nSUBSCRIBE %s\n%s',
+                              self.event_sub_url,
+                              '\n'.join([key + ": " + value for key, value in headers.items()]))
+        response_status, response_headers, response_body = \
             await self._requester.async_http_request('SUBSCRIBE', self.event_sub_url, headers)
+        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
+                              response_status,
+                              '\n'.join([key + ": " + value
+                                         for key, value in response_headers.items()]),
+                              response_body)
 
         if response_status != 200:
             _LOGGER.error('Did not receive 200, but %s', response_status)
+            self.subscription_sid = None
+            return None
+
+        if 'sid' not in response_headers:
+            _LOGGER.error('Did not receive a "SID"')
+            return None
+
+        subscription_sid = response_headers['sid']
+        self._subscription_sid = subscription_sid
+        _LOGGER.debug('%s.subscribe(): Got SID: %s', self, subscription_sid)
+        return subscription_sid
+
+    async def async_subscribe_renew(self, timeout: int = 1800) -> str:
+        """
+        Renew SUBSCRIBE for events on StateVariables.
+
+        :param int timeout Timeout in seconds
+        :return: SID (Subscription Identifier)
+
+        It is up to the user to renew the subscription when needed!
+        """
+        if not self._subscription_sid:
+            raise RuntimeError('Not subscribed yet, subscribe first')
+
+        headers = {
+            'Host': urllib.parse.urlparse(self.event_sub_url).netloc,
+            'SID': self._subscription_sid,
+            'TIMEOUT': 'Second-' + str(timeout),
+        }
+        _LOGGER_TRAFFIC.debug('Sending request:\nSUBSCRIBE %s\n%s',
+                              self.event_sub_url,
+                              '\n'.join([key + ": " + value for key, value in headers.items()]))
+        response_status, response_headers, response_body = \
+            await self._requester.async_http_request('SUBSCRIBE', self.event_sub_url, headers)
+        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
+                              response_status,
+                              '\n'.join([key + ": " + value
+                                         for key, value in response_headers.items()]),
+                              response_body)
+
+        if response_status != 200:
+            _LOGGER.error('Did not receive 200, but %s', response_status)
+            self.subscription_sid = None
             return None
 
         if 'sid' not in response_headers:
@@ -241,11 +302,19 @@ class UpnpService:
             'Host': urllib.parse.urlparse(self.event_sub_url).netloc,
             'SID': subscription_sid,
         }
+        _LOGGER_TRAFFIC.debug('Sending request:\nUNSUBSCRIBE %s\n%s',
+                              self.event_sub_url,
+                              '\n'.join([key + ": " + value for key, value in headers.items()]))
         try:
-            response_status, _, _ = \
+            response_status, response_headers, response_body = \
                 await self._requester.async_http_request('UNSUBSCRIBE',
                                                          self.event_sub_url,
                                                          headers)
+            _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
+                                  response_status,
+                                  '\n'.join([key + ": " + value
+                                             for key, value in response_headers.items()]),
+                                  response_body)
         except asyncio.TimeoutError:
             if not force:
                 raise
@@ -269,11 +338,13 @@ class UpnpService:
                               body)
         if 'NT' not in headers or \
            'NTS' not in headers:
+            _LOGGER_TRAFFIC.debug('Sending reponse: %s', 400)
             return 400
 
         if headers['NT'] != 'upnp:event' or \
            headers['NTS'] != 'upnp:propchange' or \
            headers.get('SID') != self._subscription_sid:
+            _LOGGER_TRAFFIC.debug('Sending reponse: %s', 412)
             return 412
 
         changed_state_variables = []
@@ -296,6 +367,7 @@ class UpnpService:
 
         self.notify_changed_state_variables(changed_state_variables)
 
+        _LOGGER_TRAFFIC.debug('Sending reponse: %s', 200)
         return 200
 
     def notify_changed_state_variables(self,

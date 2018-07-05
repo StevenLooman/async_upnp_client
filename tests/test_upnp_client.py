@@ -2,6 +2,7 @@
 
 import asyncio
 import os.path
+from copy import copy
 
 import pytest
 import voluptuous as vol
@@ -30,7 +31,8 @@ def read_file(filename):
 class UpnpTestRequester(UpnpRequester):
 
     def __init__(self, response_map):
-        self._response_map = response_map
+        self._response_map = copy(response_map)
+        self._received_requests = {}
 
     async def async_http_request(self, method, url, headers=None, body=None):
         await asyncio.sleep(0.01)
@@ -39,7 +41,13 @@ class UpnpTestRequester(UpnpRequester):
         if key not in self._response_map:
             raise Exception('Request not in response map')
 
+        self._received_requests[key] = (headers, body)
+
         return self._response_map[key]
+
+    def headers(self, method, url):
+        key = (method, url)
+        return self._received_requests[key]
 
 
 RESPONSE_MAP = {
@@ -337,6 +345,40 @@ class TestUpnpService:
         received_sid = await service.async_subscribe(callback_uri)
         assert sid == received_sid
         assert sid == service.subscription_sid
+
+        headers, body = r.headers('SUBSCRIBE',
+                                  'http://localhost:1234/upnp/event/RenderingControl1')
+        assert headers == {
+            'NT': 'upnp:event',
+            'TIMEOUT': 'Second-1800',
+            'Host': 'localhost:1234',
+            'CALLBACK': '<http://callback_uri>',
+        }
+        assert body == None
+
+    @pytest.mark.asyncio
+    async def test_subscribe_renew(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+
+        callback_uri = 'http://callback_uri'
+        sid = 'uuid:dummy'
+
+        received_sid = await service.async_subscribe(callback_uri)
+        received_sid = await service.async_subscribe_renew()
+        assert sid == received_sid
+        assert sid == service.subscription_sid
+
+        headers, body = r.headers('SUBSCRIBE',
+                                  'http://localhost:1234/upnp/event/RenderingControl1')
+        assert headers == {
+            'Host': 'localhost:1234',
+            'TIMEOUT': 'Second-1800',
+            'SID': 'uuid:dummy',
+        }
+        assert body == None
 
     @pytest.mark.asyncio
     async def test_unsubscribe(self):
