@@ -5,6 +5,7 @@ Changes
 
 - Log getting initial description XMLs with traffic logger as well
 - Improve SUBSCRIBE and implement SUBSCRIBE-renew
+- Add more type hints
 
 
 0.11.0 (2018-07-03)

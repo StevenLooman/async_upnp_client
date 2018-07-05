@@ -763,7 +763,7 @@ class UpnpFactory:
             'disable_state_variable_validation': disable_state_variable_validation,
         }
 
-    async def async_create_device(self, dmr_url):
+    async def async_create_device(self, dmr_url) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         root = await self._async_get_url_xml(dmr_url)
 
@@ -778,7 +778,7 @@ class UpnpFactory:
 
         return UpnpDevice(self.requester, dmr_url, device_desc, services)
 
-    def _device_parse_xml(self, device_description_xml):
+    def _device_parse_xml(self, device_description_xml) -> Dict:
         """Parse device description XML."""
         # pylint: disable=no-self-use
         desc = {
@@ -793,14 +793,14 @@ class UpnpFactory:
             desc['model_description'] = model_desc_el.text
         return desc
 
-    async def async_create_service(self, service_description_xml, base_url):
+    async def async_create_service(self, service_description_xml, base_url) -> UpnpService:
         """Retrieve the SCPD for a service and create a UpnpService from it."""
         scpd_url = service_description_xml.find('device:SCPDURL', NS).text
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
         scpd_xml = await self._async_get_url_xml(scpd_url)
         return self.create_service(service_description_xml, scpd_xml)
 
-    def create_service(self, service_description_xml, scpd_xml):
+    def create_service(self, service_description_xml, scpd_xml) -> UpnpService:
         """Create a UnpnpService, with UpnpActions and UpnpStateVariables from scpd_xml."""
         service_description = self._service_parse_xml(service_description_xml)
         state_vars = self.create_state_variables(scpd_xml)
@@ -808,7 +808,7 @@ class UpnpFactory:
 
         return UpnpService(self.requester, service_description, state_vars, actions)
 
-    def _service_parse_xml(self, service_description_xml):
+    def _service_parse_xml(self, service_description_xml) -> Dict:
         """Parse service description XML."""
         # pylint: disable=no-self-use
         return {
@@ -819,7 +819,7 @@ class UpnpFactory:
             'scpd_url': service_description_xml.find('device:SCPDURL', NS).text,
         }
 
-    def create_state_variables(self, scpd_xml):
+    def create_state_variables(self, scpd_xml) -> List[UpnpStateVariable]:
         """Create UpnpStateVariables from scpd_xml."""
         state_vars = []
         for state_var_xml in scpd_xml.findall('.//service:stateVariable', NS):
@@ -827,14 +827,14 @@ class UpnpFactory:
             state_vars.append(state_var)
         return state_vars
 
-    def create_state_variable(self, state_variable_xml):
+    def create_state_variable(self, state_variable_xml) -> UpnpStateVariable:
         """Create UpnpStateVariable from state_variable_xml."""
         state_variable_info = self._state_variable_parse_xml(state_variable_xml)
         type_info = state_variable_info['type_info']
         schema = self._state_variable_create_schema(type_info)
         return UpnpStateVariable(state_variable_info, schema)
 
-    def _state_variable_parse_xml(self, state_variable_xml):
+    def _state_variable_parse_xml(self, state_variable_xml) -> Dict:
         """Parse XML for state variable."""
         # pylint: disable=no-self-use
         info = {
@@ -878,7 +878,7 @@ class UpnpFactory:
 
         return info
 
-    def _state_variable_create_schema(self, type_info):
+    def _state_variable_create_schema(self, type_info) -> vol.Schema:
         """Create schema."""
         # construct validators
         # pylint: disable=no-self-use
@@ -913,7 +913,7 @@ class UpnpFactory:
 
         return vol.Schema({key: vol.All(*validators)})
 
-    def create_actions(self, scpd_xml, state_variables):
+    def create_actions(self, scpd_xml, state_variables) -> List[UpnpAction]:
         """Create UpnpActions from scpd_xml."""
         actions = []
         for action_xml in scpd_xml.findall('.//service:action', NS):
@@ -921,7 +921,7 @@ class UpnpFactory:
             actions.append(action)
         return actions
 
-    def create_action(self, action_xml, state_variables):
+    def create_action(self, action_xml, state_variables) -> UpnpAction:
         """Create a UpnpAction from action_xml."""
         action_info = self._action_parse_xml(action_xml, state_variables)
         args = [UpnpAction.Argument(arg_info['name'],
@@ -930,7 +930,9 @@ class UpnpFactory:
                 for arg_info in action_info['arguments']]
         return UpnpAction(action_info['name'], args)
 
-    def _action_parse_xml(self, action_xml, state_variables):  # pylint: disable=no-self-use
+    def _action_parse_xml(self, action_xml, state_variables) -> Dict:
+        """Parse XML for action."""
+        # pylint: disable=no-self-use
         svs = {sv.name: sv for sv in state_variables}
         info = {
             'name': action_xml.find('service:name', NS).text,
@@ -946,7 +948,7 @@ class UpnpFactory:
             info['arguments'].append(argument)
         return info
 
-    async def _async_get_url_xml(self, url):
+    async def _async_get_url_xml(self, url) -> ET.Element:
         """Fetch device description."""
         _LOGGER_TRAFFIC.debug('Sending request:\nGET %s', url)
         status_code, response_headers, response_body = \
