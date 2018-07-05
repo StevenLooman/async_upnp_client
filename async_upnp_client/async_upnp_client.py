@@ -285,7 +285,7 @@ class UpnpService:
 
         subscription_sid = response_headers['sid']
         self._subscription_sid = subscription_sid
-        _LOGGER.debug('%s.subscribe(): Got SID: %s', self, subscription_sid)
+        _LOGGER.debug('%s.subscribe_renew(): Got SID: %s', self, subscription_sid)
         return subscription_sid
 
     async def async_unsubscribe(self, force=False):

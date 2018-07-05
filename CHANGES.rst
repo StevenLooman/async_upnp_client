@@ -1,7 +1,12 @@
 Changes
 =======
 
-0.11.1 (unreleased)
+0.11.2 (2018-07-05)
+
+- Fix log message
+
+
+0.11.1 (2018-07-05)
 
 - Log getting initial description XMLs with traffic logger as well
 - Improve SUBSCRIBE and implement SUBSCRIBE-renew
