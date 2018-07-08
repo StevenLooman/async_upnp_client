@@ -4,6 +4,7 @@ Changes
 0.11.2 (2018-07-05)
 
 - Fix log message
+- Fix typo in case of failed subscription (@yottatsa)
 
 
 0.11.1 (2018-07-05)
