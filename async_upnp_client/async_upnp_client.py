@@ -234,7 +234,7 @@ class UpnpService:
 
         if response_status != 200:
             _LOGGER.error('Did not receive 200, but %s', response_status)
-            self.subscription_sid = None
+            self._subscription_sid = None
             return None
 
         if 'sid' not in response_headers:
@@ -276,7 +276,7 @@ class UpnpService:
 
         if response_status != 200:
             _LOGGER.error('Did not receive 200, but %s', response_status)
-            self.subscription_sid = None
+            self._subscription_sid = None
             return None
 
         if 'sid' not in response_headers:
