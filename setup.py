@@ -29,6 +29,7 @@ with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 INSTALL_REQUIRES=[
     'voluptuous>=0.11.1',
+    'aiohttp>=3.3.2',
 ]
 
 
@@ -58,4 +59,7 @@ setup(
     install_requires=INSTALL_REQUIRES,
     tests_require=TEST_REQUIRES,
     cmdclass={'test': PyTest},
+    scripts=[
+        'bin/upnp-client',
+    ]
 )

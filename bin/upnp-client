@@ -1,0 +1,282 @@
+# -*- coding: utf-8 -*-
+"""CLI UPnP client module."""
+
+import argparse
+import asyncio
+import json
+import logging
+import sys
+import time
+
+import aiohttp
+import aiohttp.web
+
+from async_upnp_client import UpnpDevice
+from async_upnp_client import UpnpFactory
+from async_upnp_client import UpnpRequester
+from async_upnp_client import UpnpService
+from async_upnp_client.utils import dlna_handle_notify_last_change
+
+
+logging.basicConfig()
+_LOGGER = logging.getLogger('upnp_client')
+_LOGGER.setLevel(logging.ERROR)
+_LOGGER_TRAFFIC = logging.getLogger('async_upnp_client.traffic')
+_LOGGER_TRAFFIC.setLevel(logging.ERROR)
+
+DEFAULT_PORT = 11302
+
+
+parser = argparse.ArgumentParser(description='upnp_client')
+parser.add_argument('--device', required=True, help='URL to device description XML')
+parser.add_argument('--debug', action='store_true', help='Show debug messages')
+parser.add_argument('--debug-traffic', action='store_true', help='Show network traffic')
+parser.add_argument('--pprint', action='store_true', help='Pretty-print (indent) JSON output')
+
+subparsers = parser.add_subparsers(title='Subcommands')
+subparser = subparsers.add_parser('call-action', help='Call an action')
+subparser.add_argument('call-action', nargs='+', help='service/action param1=val1 param2=val2')
+subparser = subparsers.add_parser('subscribe', help='Subscribe to services')
+subparser.add_argument('service', nargs='+', help='service type or part or abbreviation')
+subparser.add_argument('--bind', required=True, help='ip[:port], e.g., 192.168.0.10:8090')
+
+args = parser.parse_args()
+pprint_indent = 4 if args.pprint else None
+
+
+def bind_host_port():
+    """Determine listening host/port."""
+    bind = args.bind
+    if ':' not in bind:
+        bind = bind + ':' + str(DEFAULT_PORT)
+    return bind.split(':')
+
+
+def service_from_device(device: UpnpDevice, service_name: str) -> UpnpService:
+    """Get UpnpService from UpnpDevice by name or part or abbreviation."""
+    for service in device.services.values():
+        part = service.service_id.split(':')[-1]
+        abbr = ''.join([c for c in part if c.isupper()])
+        if service_name == service.service_type or service_name == part or service_name == abbr:
+            return service
+
+
+def handle_state_variable_change(service, service_variables):
+    """"""
+    _LOGGER.debug('State variable change for %s, variables: %s',
+                  service,
+                  ','.join([sv.name for sv in service_variables]))
+    obj = {
+        'timestamp': time.time(),
+        'service_id': service.service_id,
+        'service_type': service.service_type,
+        'state_variables': {sv.name: sv.value for sv in service_variables},
+    }
+    print(json.dumps(obj, indent=pprint_indent))
+
+    # do some additional handling for DLNA LastChange state variable
+    if len(service_variables) == 1 and \
+       service_variables[0].name == 'LastChange':
+        last_change = service_variables[0]
+        dlna_handle_notify_last_change(last_change)
+
+
+class AioHttpRequester(UpnpRequester):
+    """Aiohttp requester."""
+
+    async def async_http_request(self, method: str, url: str, headers=None, body=None):
+        """Do a HTTP request."""
+        async with aiohttp.ClientSession() as session:
+            response = await session.request(method, url, headers=headers, data=body)
+            response_body = await response.text()
+        return response.status, response.headers, response_body
+
+
+class NotifyHandler:
+    """Class to handle Upnp eventing."""
+
+    subscriptions = {}
+    backlog = {}
+
+    @staticmethod
+    def callback_url():
+        """Callback URL for services."""
+        host, port = bind_host_port()
+        return 'http://{}:{}/'.format(host, port)
+
+    @staticmethod
+    async def handle_notify(request):
+        """Handle incoming request."""
+        headers = request.headers
+        body = await request.text()
+
+        # ensure NOTIFY
+        if request.method != 'NOTIFY':
+            return aiohttp.web.Response(status=405)
+
+        # ensure SID was sent
+        if 'SID' not in request.headers:
+            return aiohttp.web.Resource(status=412)
+        sid = request.headers['SID']
+        _LOGGER.debug('NOTIFY for SID: %s', sid)
+
+        # SID not known yet? store it in the backlog
+        # Some devices don't behave nicely, and send events before the SUBSCRIBE call is done.
+        if sid not in NotifyHandler.subscriptions:
+            _LOGGER.debug('Storing NOTIFY in backlog for SID: %s', sid)
+            NotifyHandler.backlog[sid] = {'headers': request.headers, 'body': await request.text()}
+            return aiohttp.web.Response(status=202)
+
+        # Save the subscription
+        service = NotifyHandler.subscriptions[sid]
+        service.subscription_id = sid
+        service.on_notify(headers, body)
+
+        return aiohttp.web.Response(status=200)
+
+    @staticmethod
+    async def subscribe(service):
+        """Subscription to a UpnpService."""
+        _LOGGER.debug('Subscribing to: %s, callback URL: %s',
+                      service,
+                      NotifyHandler.callback_url())
+        sid = await service.async_subscribe(NotifyHandler.callback_url())
+        NotifyHandler.subscriptions[sid] = service
+
+        # replay any backlog we have for this service
+        if sid in NotifyHandler.backlog:
+            _LOGGER.debug('Re-playing backlogged NOTIFY for SID: %s', sid)
+            item = NotifyHandler.backlog[sid]
+            service.on_notify(item['headers'], item['body'])
+            del NotifyHandler.backlog[sid]
+
+    @staticmethod
+    async def resubscribe(service):
+        """Renew subscription to a UpnpService."""
+        _LOGGER.debug('Resubscribing to: %s', service)
+        await service.async_subscribe_renew()
+
+    @staticmethod
+    async def resubscribe_all():
+        """Renew all current subscription."""
+        for service in NotifyHandler.subscriptions.values():
+            await NotifyHandler.resubscribe(service)
+
+    @staticmethod
+    async def unsubscribe(service):
+        """Unsubscribe from a UpnpService."""
+        if not hasattr(service, 'subscription_id') or \
+           not service.subscription_id:
+            _LOGGER.debug('No SID for %s, not unsubscribing', service)
+            return
+
+        _LOGGER.debug('Unsubscribing from: %s', service)
+        await service.async_unsubscribe()
+        sid = service.subscription_id
+        del NotifyHandler.subscriptions[sid]
+
+    @staticmethod
+    async def unsubscribe_all():
+        """Unsubscribe all subscriptions."""
+        services = NotifyHandler.subscriptions.copy()
+        for service in services.values():
+            await NotifyHandler.unsubscribe(service)
+
+
+async def call_action(device: UpnpDevice, call_action_args):
+    """Call an action and show results."""
+    service_name, action_name = call_action_args[0].split('/')
+    args = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in call_action_args[1:]}
+
+    service = service_from_device(device, service_name)
+    if not service:
+        print('Unknown service: %s' % (service_name, ))
+        sys.exit(1)
+    action = service.action(action_name)
+    if not action:
+        print('Unknown action: %s' % (action_name, ))
+        sys.exit(1)
+
+    coerced_args = {}
+    for key, value in args.items():
+        in_arg = action.argument(key)
+        if not in_arg:
+            print('Unknown argument: %s, known arguments: %s' % (
+                  key,
+                  ','.join([a.name for a in action.in_arguments()])))
+            sys.exit(1)
+        coerced_args[key] = in_arg.coerce_python(value)
+
+    _LOGGER.debug('Calling %s.%s, parameters:\n%s',
+                  service.service_id, action.name,
+                  '\n'.join(['%s:%s' % (key, value) for key, value in coerced_args.items()]))
+    result = await action.async_call(**coerced_args)
+
+    _LOGGER.debug('Results:\n%s',
+                  '\n'.join(['%s:%s' % (key, value) for key, value in coerced_args.items()]))
+
+    obj = {
+        'timestamp': time.time(),
+        'service_id': service.service_id,
+        'service_type': service.service_type,
+        'action': action.name,
+        'in_parameters': coerced_args,
+        'out_parameters': result,
+    }
+    print(json.dumps(obj, indent=pprint_indent))
+
+
+async def subscribe(device: UpnpDevice, subscribe_args):
+    """Subscribe to service(s) and output updates."""
+    server = aiohttp.web.Server(NotifyHandler.handle_notify)
+    host, port = bind_host_port()
+    await loop.create_server(server, host, port)
+
+    # gather all services
+    services = []
+    for service_name in subscribe_args:
+        if service_name == '*':
+            services += device.services
+            continue
+
+        service = service_from_device(device, service_name)
+        service.on_state_variable_change = handle_state_variable_change
+        services.append(service)
+
+    for service in services:
+        await NotifyHandler.subscribe(service)
+
+    # keep the webservice running
+    while True:
+        await asyncio.sleep(1500)
+        NotifyHandler.resubscribe_all()
+
+
+async def async_main():
+    """Main."""
+    if args.debug:
+        _LOGGER.setLevel(logging.DEBUG)
+    if args.debug_traffic:
+        _LOGGER_TRAFFIC.setLevel(logging.DEBUG)
+
+    requester = AioHttpRequester()
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device(args.device)
+
+    if hasattr(args, 'call-action'):
+        await call_action(device, getattr(args, 'call-action'))
+    elif hasattr(args, 'service'):
+        await subscribe(device, args.service)
+    else:
+        parser.print_usage()
+
+
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+
+    try:
+        loop.run_until_complete(async_main())
+    except KeyboardInterrupt:
+        loop.run_until_complete(NotifyHandler.unsubscribe_all())
+    finally:
+        loop.close()
