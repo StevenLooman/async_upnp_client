@@ -56,6 +56,14 @@ class UpnpError(Exception):
     """UpnpError."""
 
 
+class UpnpValueError(UpnpError):
+    """Invalid value error."""
+
+    def __init__(self, name, value):
+        """Initializer."""
+        super().__init__("Invalid value for %s: '%s'" % (name, value))
+
+
 class UpnpDevice:
     """UPnP Device representation."""
 
@@ -678,7 +686,10 @@ class UpnpStateVariable:
 
     def validate_value(self, value):
         """Validate value."""
-        self._schema({'value': value})
+        try:
+            self._schema({'value': value})
+        except vol.error.MultipleInvalid:
+            raise UpnpValueError(self.name, value)
 
     @property
     def value(self):

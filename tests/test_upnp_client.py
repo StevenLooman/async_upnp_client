@@ -5,11 +5,11 @@ import os.path
 from copy import copy
 
 import pytest
-import voluptuous as vol
 import xml.etree.ElementTree as ET
 
 from async_upnp_client import (
     UpnpError,
+    UpnpValueError,
     UpnpFactory,
     UpnpRequester
 )
@@ -136,13 +136,13 @@ class TestUpnpStateVariable:
         try:
             sv.value = -10
             assert False
-        except vol.error.MultipleInvalid:
+        except UpnpValueError:
             pass
 
         try:
             sv.value = 110
             assert False
-        except vol.error.MultipleInvalid:
+        except UpnpValueError:
             pass
 
     @pytest.mark.asyncio
@@ -179,7 +179,7 @@ class TestUpnpStateVariable:
         try:
             sv.value = 'Left'
             assert False
-        except vol.error.MultipleInvalid:
+        except UpnpValueError:
             pass
 
     @pytest.mark.asyncio
@@ -227,14 +227,14 @@ class TestUpnpServiceAction:
         try:
             action.validate_arguments(InstanceID='0', Channel='Master', DesiredVolume=10)
             assert False
-        except vol.error.MultipleInvalid:
+        except UpnpValueError:
             pass
 
         # missing DesiredVolume
         try:
             action.validate_arguments(InstanceID='0', Channel='Master')
             assert False
-        except vol.error.MultipleInvalid:
+        except UpnpValueError:
             pass
 
     @pytest.mark.asyncio

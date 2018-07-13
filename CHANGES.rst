@@ -4,6 +4,7 @@ Changes
 0.12.0 (unreleased)
 
 - Add upnp-client, move async_upnp_client.async_upnp_client to async_upnp_client.__init__
+- Hide voluptuous errors, raise UpnpValueError
 
 0.11.2 (2018-07-05)
 
