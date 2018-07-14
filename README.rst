@@ -8,7 +8,7 @@ Written initially for use in `Home Assistant <https://github.com/home-assistant/
 Usage
 -----
 
-See `examples/` for examples on how to use this.
+See `examples/` for examples on how to use async_upnp_client.
 
 
 upnp-client

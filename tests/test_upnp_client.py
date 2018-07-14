@@ -9,9 +9,10 @@ import xml.etree.ElementTree as ET
 
 from async_upnp_client import (
     UpnpError,
+    UpnpEventHandler,
     UpnpValueError,
     UpnpFactory,
-    UpnpRequester
+    UpnpRequester,
 )
 from async_upnp_client.utils import dlna_handle_notify_last_change
 
@@ -333,66 +334,6 @@ class TestUpnpService:
         assert action
 
     @pytest.mark.asyncio
-    async def test_subscribe(self):
-        r = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(r)
-        device = await factory.async_create_device('http://localhost:1234/dmr')
-        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-
-        callback_uri = 'http://callback_uri'
-        sid = 'uuid:dummy'
-
-        received_sid = await service.async_subscribe(callback_uri)
-        assert sid == received_sid
-        assert sid == service.subscription_sid
-
-        headers, body = r.headers('SUBSCRIBE',
-                                  'http://localhost:1234/upnp/event/RenderingControl1')
-        assert headers == {
-            'NT': 'upnp:event',
-            'TIMEOUT': 'Second-1800',
-            'Host': 'localhost:1234',
-            'CALLBACK': '<http://callback_uri>',
-        }
-        assert body == None
-
-    @pytest.mark.asyncio
-    async def test_subscribe_renew(self):
-        r = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(r)
-        device = await factory.async_create_device('http://localhost:1234/dmr')
-        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-
-        callback_uri = 'http://callback_uri'
-        sid = 'uuid:dummy'
-
-        received_sid = await service.async_subscribe(callback_uri)
-        received_sid = await service.async_subscribe_renew()
-        assert sid == received_sid
-        assert sid == service.subscription_sid
-
-        headers, body = r.headers('SUBSCRIBE',
-                                  'http://localhost:1234/upnp/event/RenderingControl1')
-        assert headers == {
-            'Host': 'localhost:1234',
-            'TIMEOUT': 'Second-1800',
-            'SID': 'uuid:dummy',
-        }
-        assert body == None
-
-    @pytest.mark.asyncio
-    async def test_unsubscribe(self):
-        r = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(r)
-        device = await factory.async_create_device('http://localhost:1234/dmr')
-        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        service._subscription_sid = 'uuid:dummy'
-
-        assert service.subscription_sid == 'uuid:dummy'
-        await service.async_unsubscribe()
-        assert service.subscription_sid is None
-
-    @pytest.mark.asyncio
     async def test_call_action(self):
         responses = {
             ('POST', 'http://localhost:1234/upnp/control/RenderingControl1'):
@@ -408,11 +349,52 @@ class TestUpnpService:
         result = await service.async_call_action(action, InstanceID=0, Channel='Master')
         assert result['CurrentVolume'] == 3
 
+
+class TestUpnpEventHandler:
+
+    @pytest.mark.asyncio
+    async def test_subscribe(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        event_handler = UpnpEventHandler('http://localhost:11302', r)
+
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        await event_handler.async_subscribe(service)
+        assert event_handler.service_for_sid('uuid:dummy') == service
+
+    @pytest.mark.asyncio
+    async def test_subscribe_renew(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        event_handler = UpnpEventHandler('http://localhost:11302', r)
+
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        await event_handler.async_subscribe(service)
+        assert event_handler.service_for_sid('uuid:dummy') == service
+
+        await event_handler.async_resubscribe(service)
+
+    @pytest.mark.asyncio
+    async def test_unsubscribe(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        event_handler = UpnpEventHandler('http://localhost:11302', r)
+
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        await event_handler.async_subscribe(service)
+        assert event_handler.service_for_sid('uuid:dummy') == service
+
+        await event_handler.async_unsubscribe(service)
+        assert event_handler.service_for_sid('uuid:dummy') is None
+
     @pytest.mark.asyncio
     async def test_on_notify_upnp_event(self):
         changed_vars = []
 
-        def change_handler(self, changed_state_variables):
+        def on_event(self, changed_state_variables):
             nonlocal changed_vars
             changed_vars = changed_state_variables
 
@@ -420,13 +402,14 @@ class TestUpnpService:
         factory = UpnpFactory(r)
         device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        service._subscription_sid = 'uuid:e540ce62-7be8-11e8-b1a6-a619ad6a4b38'
-        service.on_state_variable_change = change_handler
+        service.on_event = on_event
+        event_handler = UpnpEventHandler('http://localhost:11302', r)
+        await event_handler.async_subscribe(service)
 
         headers = {
             'NT': 'upnp:event',
             'NTS': 'upnp:propchange',
-            'SID': service._subscription_sid,
+            'SID': 'uuid:dummy',
         }
         body = """
 <e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
@@ -435,9 +418,11 @@ class TestUpnpService:
     </e:property>
 </e:propertyset>
 """
-        result = service.on_notify(headers, body)
+
+        result = await event_handler.handle_notify(headers, body)
         assert result == 200
-        assert changed_vars
+
+        assert len(changed_vars) == 1
 
         state_var = service.state_variable('Volume')
         assert state_var.value == 60
@@ -446,7 +431,7 @@ class TestUpnpService:
     async def test_on_notify_dlna_event(self):
         changed_vars = []
 
-        def change_handler(self, changed_state_variables):
+        def on_event(self, changed_state_variables):
             nonlocal changed_vars
             changed_vars += changed_state_variables
 
@@ -461,13 +446,14 @@ class TestUpnpService:
         factory = UpnpFactory(r)
         device = await factory.async_create_device('http://localhost:1234/dmr')
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        service._subscription_sid = 'uuid:e540ce62-7be8-11e8-b1a6-a619ad6a4b38'
-        service.on_state_variable_change = change_handler
+        service.on_event = on_event
+        event_handler = UpnpEventHandler('http://localhost:11302', r)
+        await event_handler.async_subscribe(service)
 
         headers = {
             'NT': 'upnp:event',
             'NTS': 'upnp:propchange',
-            'SID': service._subscription_sid,
+            'SID': 'uuid:dummy',
         }
         body = """
 <e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
@@ -484,8 +470,10 @@ class TestUpnpService:
 </e:propertyset>
 """
 
-        result = service.on_notify(headers, body)
+        result = await event_handler.handle_notify(headers, body)
         assert result == 200
+
+        assert len(changed_vars) == 3
 
         state_var = service.state_variable('Volume')
         assert state_var.value == 50

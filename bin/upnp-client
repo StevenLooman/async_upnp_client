@@ -13,6 +13,7 @@ import aiohttp.web
 
 from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpFactory
+from async_upnp_client import UpnpEventHandler
 from async_upnp_client import UpnpRequester
 from async_upnp_client import UpnpService
 from async_upnp_client.utils import dlna_handle_notify_last_change
@@ -43,6 +44,8 @@ subparser.add_argument('--bind', required=True, help='ip[:port], e.g., 192.168.0
 args = parser.parse_args()
 pprint_indent = 4 if args.pprint else None
 
+event_handler = None
+
 
 def bind_host_port():
     """Determine listening host/port."""
@@ -61,7 +64,7 @@ def service_from_device(device: UpnpDevice, service_name: str) -> UpnpService:
             return service
 
 
-def handle_state_variable_change(service, service_variables):
+def on_event(service, service_variables):
     """"""
     _LOGGER.debug('State variable change for %s, variables: %s',
                   service,
@@ -92,95 +95,21 @@ class AioHttpRequester(UpnpRequester):
         return response.status, response.headers, response_body
 
 
-class NotifyHandler:
-    """Class to handle Upnp eventing."""
+async def handle_notify_request(request):
+    global event_handler
 
-    subscriptions = {}
-    backlog = {}
+    _LOGGER.debug('Received NOTIFY: %s', request)
+    headers = request.headers
+    body = await request.text()
 
-    @staticmethod
-    def callback_url():
-        """Callback URL for services."""
-        host, port = bind_host_port()
-        return 'http://{}:{}/'.format(host, port)
+    # ensure NOTIFY
+    if request.method != 'NOTIFY':
+        _LOGGER.debug('Not notify')
+        return aiohttp.web.Response(status=405)
 
-    @staticmethod
-    async def handle_notify(request):
-        """Handle incoming request."""
-        headers = request.headers
-        body = await request.text()
-
-        # ensure NOTIFY
-        if request.method != 'NOTIFY':
-            return aiohttp.web.Response(status=405)
-
-        # ensure SID was sent
-        if 'SID' not in request.headers:
-            return aiohttp.web.Resource(status=412)
-        sid = request.headers['SID']
-        _LOGGER.debug('NOTIFY for SID: %s', sid)
-
-        # SID not known yet? store it in the backlog
-        # Some devices don't behave nicely, and send events before the SUBSCRIBE call is done.
-        if sid not in NotifyHandler.subscriptions:
-            _LOGGER.debug('Storing NOTIFY in backlog for SID: %s', sid)
-            NotifyHandler.backlog[sid] = {'headers': request.headers, 'body': await request.text()}
-            return aiohttp.web.Response(status=202)
-
-        # Save the subscription
-        service = NotifyHandler.subscriptions[sid]
-        service.subscription_id = sid
-        service.on_notify(headers, body)
-
-        return aiohttp.web.Response(status=200)
-
-    @staticmethod
-    async def subscribe(service):
-        """Subscription to a UpnpService."""
-        _LOGGER.debug('Subscribing to: %s, callback URL: %s',
-                      service,
-                      NotifyHandler.callback_url())
-        sid = await service.async_subscribe(NotifyHandler.callback_url())
-        NotifyHandler.subscriptions[sid] = service
-
-        # replay any backlog we have for this service
-        if sid in NotifyHandler.backlog:
-            _LOGGER.debug('Re-playing backlogged NOTIFY for SID: %s', sid)
-            item = NotifyHandler.backlog[sid]
-            service.on_notify(item['headers'], item['body'])
-            del NotifyHandler.backlog[sid]
-
-    @staticmethod
-    async def resubscribe(service):
-        """Renew subscription to a UpnpService."""
-        _LOGGER.debug('Resubscribing to: %s', service)
-        await service.async_subscribe_renew()
-
-    @staticmethod
-    async def resubscribe_all():
-        """Renew all current subscription."""
-        for service in NotifyHandler.subscriptions.values():
-            await NotifyHandler.resubscribe(service)
-
-    @staticmethod
-    async def unsubscribe(service):
-        """Unsubscribe from a UpnpService."""
-        if not hasattr(service, 'subscription_id') or \
-           not service.subscription_id:
-            _LOGGER.debug('No SID for %s, not unsubscribing', service)
-            return
-
-        _LOGGER.debug('Unsubscribing from: %s', service)
-        await service.async_unsubscribe()
-        sid = service.subscription_id
-        del NotifyHandler.subscriptions[sid]
-
-    @staticmethod
-    async def unsubscribe_all():
-        """Unsubscribe all subscriptions."""
-        services = NotifyHandler.subscriptions.copy()
-        for service in services.values():
-            await NotifyHandler.unsubscribe(service)
+    status = await event_handler.handle_notify(headers, body)
+    _LOGGER.debug('NOTIFY response status: %s', status)
+    return aiohttp.web.Response(status=status)
 
 
 async def call_action(device: UpnpDevice, call_action_args):
@@ -228,8 +157,13 @@ async def call_action(device: UpnpDevice, call_action_args):
 
 async def subscribe(device: UpnpDevice, subscribe_args):
     """Subscribe to service(s) and output updates."""
-    server = aiohttp.web.Server(NotifyHandler.handle_notify)
+    global event_handler
+
+    server = aiohttp.web.Server(handle_notify_request)
     host, port = bind_host_port()
+    callback_url = 'http://%s:%s/' % (host, port)
+    _LOGGER.debug('Listening on: %s', callback_url)
+    event_handler = UpnpEventHandler(callback_url, device.requester)
     await loop.create_server(server, host, port)
 
     # gather all services
@@ -240,16 +174,16 @@ async def subscribe(device: UpnpDevice, subscribe_args):
             continue
 
         service = service_from_device(device, service_name)
-        service.on_state_variable_change = handle_state_variable_change
+        service.on_event = on_event
         services.append(service)
 
     for service in services:
-        await NotifyHandler.subscribe(service)
+        await event_handler.async_subscribe(service)
 
     # keep the webservice running
     while True:
-        await asyncio.sleep(1500)
-        NotifyHandler.resubscribe_all()
+        await asyncio.sleep(120)
+        await event_handler.async_resubscribe_all()
 
 
 async def async_main():
@@ -277,6 +211,6 @@ if __name__ == '__main__':
     try:
         loop.run_until_complete(async_main())
     except KeyboardInterrupt:
-        loop.run_until_complete(NotifyHandler.unsubscribe_all())
+        loop.run_until_complete(event_handler.async_unsubscribe_all())
     finally:
         loop.close()
