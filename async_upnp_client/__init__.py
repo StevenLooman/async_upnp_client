@@ -40,11 +40,15 @@ def _ns_tag(tag: str) -> str:
 
 
 class UpnpRequester:
-    """Abstract base class used for performing async HTTP requests."""
+    """
+    Abstract base class used for performing async HTTP requests.
+
+    Implement method async_do_http_request() in your concrete class.
+    """
 
     # pylint: disable=too-few-public-methods
 
-    async def async_http_request(self, method, url, headers=None, body=None) \
+    async def async_http_request(self, method, url, headers=None, body=None, body_type='text') \
             -> (int, Mapping, str):
         """
         Do a HTTP request.
@@ -53,9 +57,47 @@ class UpnpRequester:
         :param url URL to call
         :param headers Headers to send
         :param body Body to send
+        :param body_type How to interpret body: 'text', 'raw', 'ignore'
 
         :return status code, headers, body
         """
+        # pylint: disable=too-many-arguments
+        _LOGGER_TRAFFIC.debug('Sending request:\n%s %s\n%s\n%s\n',
+                              method,
+                              url,
+                              '\n'.join([key + ": " + value
+                                         for key, value in (headers or {}).items()]),
+                              body or '')
+        response_status, response_headers, response_body = \
+            await self.async_do_http_request(method,
+                                             url,
+                                             headers=headers,
+                                             body=body,
+                                             body_type=body_type)
+
+        log_response_body = response_body if body_type == 'text' \
+            else 'async_upnp_client: OMITTING BODY'
+        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
+                              response_status,
+                              '\n'.join([key + ": " + value
+                                         for key, value in response_headers.items()]),
+                              log_response_body)
+
+        return response_status, response_headers, response_body
+
+    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
+        """
+        Actually do a HTTP request.
+
+        :param method HTTP Method
+        :param url URL to call
+        :param headers Headers to send
+        :param body Body to send
+        :param body_type How to interpret body: 'text', 'raw', 'ignore'
+
+        :return status code, headers, body
+        """
+        # pylint: disable=too-many-arguments
         raise NotImplementedError()
 
 
@@ -159,16 +201,10 @@ class UpnpEventHandler:
             'Host': urllib.parse.urlparse(service.event_sub_url).netloc,
             'CALLBACK': '<{}>'.format(self.callback_url),
         }
-        _LOGGER_TRAFFIC.debug('Sending request:\nSUBSCRIBE %s\n%s',
-                              service.event_sub_url,
-                              '\n'.join([key + ": " + value for key, value in headers.items()]))
-        response_status, response_headers, response_body = \
-            await self._requester.async_http_request('SUBSCRIBE', service.event_sub_url, headers)
-        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
-                              response_status,
-                              '\n'.join([key + ": " + value
-                                         for key, value in response_headers.items()]),
-                              response_body)
+        response_status, response_headers, _ = \
+            await self._requester.async_http_request('SUBSCRIBE',
+                                                     service.event_sub_url,
+                                                     headers)
 
         # check results
         if response_status != 200:
@@ -201,16 +237,8 @@ class UpnpEventHandler:
             'SID': self.sid_for_service(service),
             'TIMEOUT': 'Second-' + str(timeout),
         }
-        _LOGGER_TRAFFIC.debug('Sending request:\nSUBSCRIBE %s\n%s',
-                              service.event_sub_url,
-                              '\n'.join([key + ": " + value for key, value in headers.items()]))
-        response_status, response_headers, response_body = \
+        response_status, response_headers, _ = \
             await self._requester.async_http_request('SUBSCRIBE', service.event_sub_url, headers)
-        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
-                              response_status,
-                              '\n'.join([key + ": " + value
-                                         for key, value in response_headers.items()]),
-                              response_body)
 
         # check results
         if response_status != 200:
@@ -238,18 +266,10 @@ class UpnpEventHandler:
             'Host': urllib.parse.urlparse(service.event_sub_url).netloc,
             'SID': sid,
         }
-        _LOGGER_TRAFFIC.debug('Sending request:\nUNSUBSCRIBE %s\n%s',
-                              service.event_sub_url,
-                              '\n'.join([key + ": " + value for key, value in headers.items()]))
-        response_status, response_headers, response_body = \
+        response_status, _, _ = \
             await self._requester.async_http_request('UNSUBSCRIBE',
                                                      service.event_sub_url,
                                                      headers)
-        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
-                              response_status,
-                              '\n'.join([key + ": " + value
-                                         for key, value in response_headers.items()]),
-                              response_body)
 
         # check results
         if response_status != 200:
@@ -552,21 +572,10 @@ class UpnpAction:
 
     async def async_call(self, **kwargs):
         """Call an action with arguments."""
-        # build request
-        url, headers, body = self.create_request(**kwargs)
-        _LOGGER_TRAFFIC.debug('Sending request:\nPOST %s\n%s\n\n%s',
-                              url,
-                              '\n'.join([key + ": " + value for key, value in headers.items()]),
-                              body)
-
         # do request
+        url, headers, body = self.create_request(**kwargs)
         status_code, response_headers, response_body = \
             await self.service.requester.async_http_request('POST', url, headers, body)
-        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
-                              status_code,
-                              '\n'.join([key + ": " + value
-                                         for key, value in response_headers.items()]),
-                              response_body)
 
         if status_code != 200:
             raise UpnpError('Error during async_call(), status: %s, body: %s' %
@@ -1012,14 +1021,8 @@ class UpnpFactory:
 
     async def _async_get_url_xml(self, url: str) -> ET.Element:
         """Fetch device description."""
-        _LOGGER_TRAFFIC.debug('Sending request:\nGET %s', url)
-        status_code, response_headers, response_body = \
+        status_code, _, response_body = \
             await self.requester.async_http_request('GET', url)
-        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
-                              status_code,
-                              '\n'.join([key + ": " + value
-                                         for key, value in response_headers.items()]),
-                              response_body)
 
         if status_code != 200:
             raise UpnpError()

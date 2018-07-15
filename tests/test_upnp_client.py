@@ -35,7 +35,7 @@ class UpnpTestRequester(UpnpRequester):
         self._response_map = copy(response_map)
         self._received_requests = {}
 
-    async def async_http_request(self, method, url, headers=None, body=None):
+    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
         await asyncio.sleep(0.01)
 
         key = (method, url)
