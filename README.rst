@@ -65,3 +65,8 @@ $ upnp-client --device http://192.168.178.10:49152/description.xml --pprint subs
 }
 ...
 ```
+
+DLNA
+----
+
+An abstraction has been added for `DLNA Digital Media Renderer` devices. Primarily built for use with `Home Assistant <https://github.com/home-assistant/home-assistant>`, but might be useful in other projects too.

@@ -109,8 +109,6 @@ class UpnpEventHandler:
     subscribe/resubscribe/unsubscribe handle subscriptions.
     """
 
-    # store [SID, service] here, UpnpService does not store SID
-
     def __init__(self, callback_url: str, requester: UpnpRequester):
         """Initializer."""
         self._callback_url = callback_url
@@ -258,7 +256,7 @@ class UpnpEventHandler:
 
     async def async_unsubscribe(self, service: 'UpnpService'):
         """Unsubscribe from a UpnpService."""
-        _LOGGER.debug('Unsubscribing from: %s', service)
+        _LOGGER.debug('Unsubscribing from: %s, device: %s', service, service.device)
 
         # do UNSUBSCRIBE request
         sid = self.sid_for_service(service)
@@ -277,7 +275,9 @@ class UpnpEventHandler:
             return None
 
         # remove registration
-        del self._subscriptions[sid]
+        if sid in self._subscriptions:
+            del self._subscriptions[sid]
+        return sid
 
     async def async_unsubscribe_all(self):
         """Unsubscribe all subscriptions."""

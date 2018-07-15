@@ -7,6 +7,7 @@ Changes
 - Hide voluptuous errors, raise UpnpValueError
 - Move UPnP eventing to UpnpEventHandler
 - Do traffic logging in UpnpRequester
+- Add DLNA DMR implementation/abstraction
 
 
 0.11.2 (2018-07-05)

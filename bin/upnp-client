@@ -16,7 +16,7 @@ from async_upnp_client import UpnpFactory
 from async_upnp_client import UpnpEventHandler
 from async_upnp_client import UpnpRequester
 from async_upnp_client import UpnpService
-from async_upnp_client.utils import dlna_handle_notify_last_change
+from async_upnp_client.dlna import dlna_handle_notify_last_change
 
 
 logging.basicConfig()
@@ -87,11 +87,17 @@ def on_event(service, service_variables):
 class AioHttpRequester(UpnpRequester):
     """Aiohttp requester."""
 
-    async def async_http_request(self, method: str, url: str, headers=None, body=None):
+    async def async_do_http_request(self, method: str, url: str, headers=None, body=None, body_type='text'):
         """Do a HTTP request."""
         async with aiohttp.ClientSession() as session:
             response = await session.request(method, url, headers=headers, data=body)
-            response_body = await response.text()
+            if body_type == 'text':
+                response_body = await response.text()
+            elif body_type == 'raw':
+                response_body = await response.read()
+            elif body_type == 'ignore':
+                response_body = None
+
         return response.status, response.headers, response_body
 
 

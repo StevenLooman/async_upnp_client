@@ -14,7 +14,7 @@ from async_upnp_client import (
     UpnpFactory,
     UpnpRequester,
 )
-from async_upnp_client.utils import dlna_handle_notify_last_change
+from async_upnp_client.dlna import dlna_handle_notify_last_change
 
 
 NS = {
