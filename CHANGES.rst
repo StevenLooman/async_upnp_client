@@ -3,6 +3,8 @@ Changes
 
 0.12.1 (unreleased)
 
+- Fix examples/get_volume.py
+
 
 0.12.0 (2018-07-15)
 
