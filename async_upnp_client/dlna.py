@@ -61,7 +61,6 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
     changes = {}
 
     el_event = ET.fromstring(state_var.value)
-    _LOGGER.debug("Event payload: %s", state_var.value)
     for el_instance in el_event:
         if not el_instance.tag.endswith("}InstanceID"):
             continue
@@ -410,7 +409,7 @@ class DmrDevice:
     async def async_set_transport_uri(self, media_url, media_title, mime_type, upnp_class):
         """Play a piece of media."""
         # escape media_url
-        _LOGGER.debug('URL: %s', media_url)
+        _LOGGER.debug('Set transport uri: %s', media_url)
         media_url_parts = urlparse(media_url)
         media_url = urlunparse([
             media_url_parts.scheme,
@@ -419,7 +418,6 @@ class DmrDevice:
             None,
             quote_plus(media_url_parts.query),
             None])
-        _LOGGER.debug('Unparsed URL: %s', media_url)
 
         # queue media
         meta_data = await self._construct_play_media_metadata(media_url,

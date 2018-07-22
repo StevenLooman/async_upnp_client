@@ -20,7 +20,7 @@ from async_upnp_client.dlna import dlna_handle_notify_last_change
 
 
 logging.basicConfig()
-_LOGGER = logging.getLogger('upnp_client')
+_LOGGER = logging.getLogger('upnp-client')
 _LOGGER.setLevel(logging.ERROR)
 _LOGGER_TRAFFIC = logging.getLogger('async_upnp_client.traffic')
 _LOGGER_TRAFFIC.setLevel(logging.ERROR)

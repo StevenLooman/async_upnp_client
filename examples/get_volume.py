@@ -13,10 +13,8 @@ You can run contrib/dummy_tv.py locally to emulate a TV.
 import asyncio
 import logging
 
-import aiohttp
-
 from async_upnp_client import UpnpFactory
-from async_upnp_client import UpnpRequester
+from async_upnp_client.aiohttp import AiohttpRequester
 
 
 logging.basicConfig(level=logging.INFO)
@@ -25,29 +23,12 @@ logging.basicConfig(level=logging.INFO)
 target = 'http://192.168.178.11:49152/description.xml'
 
 
-class AioHttpRequester(UpnpRequester):
-    """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
-
-    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
-        """Do a HTTP request."""
-        async with aiohttp.ClientSession() as session:
-            async with session.request(method, url, headers=headers, data=body) as response:
-                status = response.status
-                headers = response.headers
-
-                if body_type == 'text':
-                    body = await response.text()
-                elif body_type == 'raw':
-                    body = await response.read()
-                elif body_type == 'ignore':
-                    body = None
-
-        return status, headers, body
-
-
 async def main():
-    requester = AioHttpRequester()
+    # create the factory
+    requester = AiohttpRequester()
     factory = UpnpFactory(requester)
+
+    # create a device
     device = await factory.async_create_device(target)
     print("Device: {}".format(device))
 

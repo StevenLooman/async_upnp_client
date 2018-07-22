@@ -139,8 +139,6 @@ class UpnpEventHandler:
 
     async def handle_notify(self, headers: Mapping, body: str) -> int:
         """Handle a NOTIFY request."""
-        _LOGGER.debug('handle_notify')
-
         # ensure valid request
         _LOGGER_TRAFFIC.debug('Incoming request:\nNOTIFY\n%s\n\n%s',
                               '\n'.join([key + ": " + value for key, value in headers.items()]),
