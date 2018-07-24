@@ -1,10 +1,14 @@
 Changes
 =======
 
-0.12.1 (unreleased)
+0.12.2 (unreleased)
+
+
+0.12.1 (2018-07-22)
 
 - Fix examples/get_volume.py
 - Fix README.rst
+- Add aiohttp utility classes
 
 
 0.12.0 (2018-07-15)
