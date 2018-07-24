@@ -230,7 +230,7 @@ class DmrDevice:
         state_value = (state_var.value or '').strip().lower()
         if state_value == 'playing':
             return STATE_PLAYING
-        elif state_value == 'paused':
+        if state_value == 'paused':
             return STATE_PAUSED
 
         return STATE_IDLE

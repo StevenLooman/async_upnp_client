@@ -13,6 +13,8 @@ class AiohttpRequester(UpnpRequester):
 
     async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
         """Do a HTTP request."""
+        # pylint: disable=too-many-arguments
+
         async with aiohttp.ClientSession() as session:
             async with session.request(method, url, headers=headers, data=body) as response:
                 status = response.status
@@ -29,14 +31,20 @@ class AiohttpRequester(UpnpRequester):
 
 
 class AiohttpSessionRequester(UpnpRequester):
-    """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
+    """
+    Standard AiohttpSessionRequester, to be used with UpnpFactory.
+
+    With pluggable session.
+    """
 
     def __init__(self, session, with_sleep=False):
+        """Initializer."""
         self._session = session
         self._with_sleep = with_sleep
 
     async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
         """Do a HTTP request."""
+        # pylint: disable=too-many-arguments
 
         if self._with_sleep:
             await asyncio.sleep(0.01)
