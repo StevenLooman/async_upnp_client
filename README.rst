@@ -5,6 +5,13 @@ Asyncio UPnP Client library for Python/asyncio.
 
 Written initially for use in `Home Assistant <https://github.com/home-assistant/home-assistant>`_ to drive `DLNA DMR`-capable devices, but useful for other projects as well.
 
+Status
+------
+
+.. image:: https://img.shields.io/travis/StevenLooman/async_upnp_client.svg
+   :target: https://travis-ci.org/StevenLooman/async_upnp_client/branches
+
+
 Usage
 -----
 

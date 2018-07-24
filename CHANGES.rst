@@ -3,6 +3,8 @@ Changes
 
 0.12.2 (unreleased)
 
+- Add TravisCI build
+
 
 0.12.1 (2018-07-22)
 
