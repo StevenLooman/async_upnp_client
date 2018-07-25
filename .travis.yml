@@ -1,5 +1,6 @@
 language: python
 sudo: false
+dist: xenial
 matrix:
   fast_finish: true
   include:
@@ -7,6 +8,8 @@ matrix:
       env: TOXENV=py35
     - python: "3.6"
       env: TOXENV=py36
+    - python: "3.7"
+      env: TOXENV=py37
     - python: "3.6"
       env: TOXENV=flake8
     - python: "3.6"
@@ -15,3 +18,5 @@ matrix:
       env: TOXENV=pydocstyle
 install: pip install -U tox
 script: tox
+services:
+  - docker
