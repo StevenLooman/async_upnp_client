@@ -496,6 +496,9 @@ class DmrDevice:
     def media_title(self):
         """Title of current playing media."""
         state_var = self._state_variable('AVT', 'CurrentTrackMetaData')
+        if state_var is None:
+            return None
+
         xml = state_var.value
         if not xml or xml == 'NOT_IMPLEMENTED':
             return None
@@ -511,6 +514,9 @@ class DmrDevice:
     def media_image_url(self):
         """Image url of current playing media."""
         state_var = self._state_variable('AVT', 'CurrentTrackMetaData')
+        if state_var is None:
+            return None
+
         xml = state_var.value
         if not xml or xml == 'NOT_IMPLEMENTED':
             return None
@@ -561,5 +567,8 @@ class DmrDevice:
         Returns value from homeassistant.util.dt.utcnow().
         """
         state_var = self._state_variable('AVT', 'RelativeTimePosition')
+        if state_var is None:
+            return None
+
         return state_var.updated_at
 # endregion

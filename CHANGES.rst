@@ -5,6 +5,7 @@ Changes
 
 - Add TravisCI build
 - Add AiohttpNotifyServer
+- More robustness in DmrDevice.media_*
 
 
 0.12.1 (2018-07-22)
