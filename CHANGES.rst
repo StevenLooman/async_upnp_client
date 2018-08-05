@@ -1,7 +1,10 @@
 Changes
 =======
 
-0.12.2 (unreleased)
+0.12.3 (unreleased)
+
+
+0.12.2 (2018-08-05)
 
 - Add TravisCI build
 - Add AiohttpNotifyServer
