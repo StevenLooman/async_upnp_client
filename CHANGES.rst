@@ -6,6 +6,7 @@ Changes
 - Add TravisCI build
 - Add AiohttpNotifyServer
 - More robustness in DmrDevice.media_*
+- Report service with device UDN
 
 
 0.12.1 (2018-07-22)

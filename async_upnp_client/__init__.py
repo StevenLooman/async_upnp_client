@@ -458,11 +458,13 @@ class UpnpService:
 
     def __str__(self) -> str:
         """To string."""
-        return "<UpnpService({0})>".format(self.service_id)
+        udn = self._device.udn if self._device else 'unbound'
+        return "<UpnpService({}, {})>".format(self.service_id, udn)
 
     def __repr__(self) -> str:
         """To repr."""
-        return "<UpnpService({0})>".format(self.service_id)
+        udn = self._device.udn if self._device else 'unbound'
+        return "<UpnpService({}, {})>".format(self.service_id, udn)
 
 
 class UpnpAction:
