@@ -185,7 +185,7 @@ async def async_main():
         parser.print_usage()
 
 
-if __name__ == '__main__':
+def main():
     loop = asyncio.get_event_loop()
 
     try:
@@ -194,3 +194,7 @@ if __name__ == '__main__':
         loop.run_until_complete(event_handler.async_unsubscribe_all())
     finally:
         loop.close()
+
+
+if __name__ == '__main__':
+    main()
