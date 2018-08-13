@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CLI UPnP client module."""
+# pylint: disable=invalid-name
 
 import argparse
 import asyncio
@@ -137,7 +138,7 @@ async def call_action(device: UpnpDevice, call_action_args):
 
 async def subscribe(device: UpnpDevice, subscribe_args):
     """Subscribe to service(s) and output updates."""
-    global event_handler
+    global event_handler  # pylint: disable=global-statement
 
     # start notify server/event handler
     host, port = bind_host_port()
