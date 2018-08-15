@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """CLI UPnP client module."""
+# pylint: disable=invalid-name
 
 import argparse
 import asyncio
@@ -67,8 +68,9 @@ def service_from_device(device: UpnpDevice, service_name: str) -> UpnpService:
     for service in device.services.values():
         part = service.service_id.split(':')[-1]
         abbr = ''.join([c for c in part if c.isupper()])
-        if service_name == service.service_type or service_name == part or service_name == abbr:
+        if service_name in (service.service_type, part, abbr):
             return service
+    return None
 
 
 def on_event(service, service_variables):
@@ -94,7 +96,7 @@ def on_event(service, service_variables):
 async def call_action(device: UpnpDevice, call_action_args):
     """Call an action and show results."""
     service_name, action_name = call_action_args[0].split('/')
-    args = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in call_action_args[1:]}
+    action_args = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in call_action_args[1:]}
 
     service = service_from_device(device, service_name)
     if not service:
@@ -106,12 +108,12 @@ async def call_action(device: UpnpDevice, call_action_args):
         sys.exit(1)
 
     coerced_args = {}
-    for key, value in args.items():
+    for key, value in action_args.items():
         in_arg = action.argument(key)
         if not in_arg:
             print('Unknown argument: %s, known arguments: %s' % (
-                  key,
-                  ','.join([a.name for a in action.in_arguments()])))
+                key,
+                ','.join([a.name for a in action.in_arguments()])))
             sys.exit(1)
         coerced_args[key] = in_arg.coerce_python(value)
 
@@ -136,7 +138,7 @@ async def call_action(device: UpnpDevice, call_action_args):
 
 async def subscribe(device: UpnpDevice, subscribe_args):
     """Subscribe to service(s) and output updates."""
-    global event_handler
+    global event_handler  # pylint: disable=global-statement
 
     # start notify server/event handler
     host, port = bind_host_port()
@@ -167,7 +169,7 @@ async def subscribe(device: UpnpDevice, subscribe_args):
 
 
 async def async_main():
-    """Main."""
+    """Asunc main."""
     if args.debug:
         _LOGGER.setLevel(logging.DEBUG)
     if args.debug_traffic:
@@ -185,7 +187,8 @@ async def async_main():
         parser.print_usage()
 
 
-if __name__ == '__main__':
+def main():
+    """Main."""
     loop = asyncio.get_event_loop()
 
     try:
@@ -194,3 +197,7 @@ if __name__ == '__main__':
         loop.run_until_complete(event_handler.async_unsubscribe_all())
     finally:
         loop.close()
+
+
+if __name__ == '__main__':
+    main()

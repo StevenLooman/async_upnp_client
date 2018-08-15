@@ -61,7 +61,7 @@ setup(
     install_requires=INSTALL_REQUIRES,
     tests_require=TEST_REQUIRES,
     cmdclass={'test': PyTest},
-    scripts=[
-        'bin/upnp-client',
-    ]
+    entry_points={
+        'console_scripts': ['upnp-client=async_upnp_client.cli:main']
+    },
 )
