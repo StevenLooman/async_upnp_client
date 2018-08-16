@@ -3,6 +3,7 @@ Changes
 
 0.12.3 (unreleased)
 
+- Install the command line tool via setuptools' console_scripts entrypoint (@mineo)
 - Show available services/actions when unknown service/action is called
 - Add configurable timeout to aiohttp requesters
 - Add IGD device + refactoring common code to async_upnp_client.profile
