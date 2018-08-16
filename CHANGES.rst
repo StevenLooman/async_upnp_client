@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.12.3 (unreleased)
+0.12.3 (2018-08-16)
 
 - Install the command line tool via setuptools' console_scripts entrypoint (@mineo)
 - Show available services/actions when unknown service/action is called
