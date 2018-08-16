@@ -220,7 +220,7 @@ class UpnpEventHandler:
         if sid in self._backlog:
             _LOGGER.debug('Re-playing backlogged NOTIFY for SID: %s', sid)
             item = self._backlog[sid]
-            self.handle_notify(item['headers'], item['body'])
+            await self.handle_notify(item['headers'], item['body'])
             del self._backlog[sid]
 
     async def async_resubscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)):
@@ -413,7 +413,15 @@ class UpnpService:
 
     def state_variable(self, name: str) -> 'UpnpStateVariable':
         """Get UPnpStateVariable by name."""
-        return self.state_variables.get(name, None)
+        state_var = self.state_variables.get(name, None)
+
+        # possibly messed up namespaces, try again without namespace
+        if not state_var and \
+           '}' in name:
+            name = name.split('}')[1]
+            state_var = self.state_variables.get(name, None)
+
+        return state_var
 
     @property
     def actions(self) -> List['UpnpAction']:
@@ -443,7 +451,7 @@ class UpnpService:
         for name, value in changes.items():
             state_var = self.state_variable(name)
             if not state_var:
-                _LOGGER.debug("State variable %s does not exist, ignoring", name)
+                _LOGGER.debug('State variable %s does not exist, ignoring', name)
                 continue
 
             try:

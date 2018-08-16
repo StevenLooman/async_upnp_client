@@ -22,6 +22,8 @@ from async_upnp_client.dlna import dlna_handle_notify_last_change
 logging.basicConfig()
 _LOGGER = logging.getLogger('upnp-client')
 _LOGGER.setLevel(logging.ERROR)
+_LOGGER_LIB = logging.getLogger('async_upnp_client')
+_LOGGER_LIB.setLevel(logging.ERROR)
 _LOGGER_TRAFFIC = logging.getLogger('async_upnp_client.traffic')
 _LOGGER_TRAFFIC.setLevel(logging.ERROR)
 
@@ -157,7 +159,7 @@ async def subscribe(device: UpnpDevice, subscribe_args):
     services = []
     for service_name in subscribe_args:
         if service_name == '*':
-            services += device.services
+            services += device.services.values()
             continue
 
         service = service_from_device(device, service_name)
@@ -179,6 +181,7 @@ async def async_main():
     """Asunc main."""
     if args.debug:
         _LOGGER.setLevel(logging.DEBUG)
+        _LOGGER_LIB.setLevel(logging.DEBUG)
     if args.debug_traffic:
         _LOGGER_TRAFFIC.setLevel(logging.DEBUG)
 
