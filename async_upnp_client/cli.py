@@ -101,10 +101,17 @@ async def call_action(device: UpnpDevice, call_action_args):
     service = service_from_device(device, service_name)
     if not service:
         print('Unknown service: %s' % (service_name, ))
+        print('Known services:\n%s' % (
+            '\n'.join(['  ' + service.service_id.split(':')[-1]
+                       for service in device.services.values()])
+        ))
         sys.exit(1)
     action = service.action(action_name)
     if not action:
         print('Unknown action: %s' % (action_name, ))
+        print('Known actions:\n%s' % (
+            '\n'.join(['  ' + action for action in service.actions])
+        ))
         sys.exit(1)
 
     coerced_args = {}

@@ -3,6 +3,7 @@ Changes
 
 0.12.3 (unreleased)
 
+- Show available services/actions when unknown service/action is called
 - Add configurable timeout to aiohttp requesters
 
 0.12.2 (2018-08-05)
