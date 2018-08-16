@@ -30,6 +30,7 @@ with open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 INSTALL_REQUIRES=[
     'voluptuous>=0.11.1',
     'aiohttp>=3.3.2',
+    'async-timeout>=3.0.0',
     'python-didl-lite==1.0.1',
 ]
 

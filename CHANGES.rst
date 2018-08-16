@@ -3,6 +3,7 @@ Changes
 
 0.12.3 (unreleased)
 
+- Add configurable timeout to aiohttp requesters
 
 0.12.2 (2018-08-05)
 
