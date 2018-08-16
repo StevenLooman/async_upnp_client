@@ -5,6 +5,7 @@ Changes
 
 - Show available services/actions when unknown service/action is called
 - Add configurable timeout to aiohttp requesters
+- Add IGD device + refactoring common code to async_upnp_client.profile
 
 0.12.2 (2018-08-05)
 

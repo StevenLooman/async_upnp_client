@@ -15,29 +15,15 @@ from xml.etree import ElementTree as ET
 
 from didl_lite import didl_lite
 
-from async_upnp_client import UpnpAction
-from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpError
-from async_upnp_client import UpnpEventHandler
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
+from async_upnp_client.profile import UpnpProfileDevice
 
 
 _LOGGER = logging.getLogger(__name__)
 
 
-SERVICE_TYPES = {
-    'RC': {
-        'urn:schemas-upnp-org:service:RenderingControl:3',
-        'urn:schemas-upnp-org:service:RenderingControl:2',
-        'urn:schemas-upnp-org:service:RenderingControl:1',
-    },
-    'AVT': {
-        'urn:schemas-upnp-org:service:AVTransport:3',
-        'urn:schemas-upnp-org:service:AVTransport:2',
-        'urn:schemas-upnp-org:service:AVTransport:1',
-    },
-}
 SUBSCRIBE_TIMEOUT = timedelta(seconds=30 * 60)
 STATE_ON = 'ON'
 STATE_PLAYING = 'PLAYING'
@@ -77,65 +63,29 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
     service.notify_changed_state_variables(changes)
 
 
-class DmrDevice:
+class DmrDevice(UpnpProfileDevice):
     """Representation of a DLNA DMR device."""
 
     # pylint: disable=too-many-public-methods
 
-    def __init__(self,
-                 device: UpnpDevice,
-                 event_handler: UpnpEventHandler):
-        """Initializer."""
-        self._device = device
-        self._event_handler = event_handler
-        self.on_event = None
-
-    @property
-    def name(self) -> str:
-        """Get the name of the device."""
-        return self._device.name
-
-    @property
-    def udn(self) -> str:
-        """Get the UDN of the device."""
-        return self._device.udn
-
-    def _service(self, service_type_abbreviation: str) -> UpnpService:
-        """Get UpnpService by service_type or alias."""
-        if not self._device:
-            return None
-
-        if service_type_abbreviation not in SERVICE_TYPES:
-            return None
-
-        for service_type in SERVICE_TYPES[service_type_abbreviation]:
-            service = self._device.service(service_type)
-            if service:
-                return service
-
-        return None
-
-    def _state_variable(self, service_name: str, state_variable_name: str) -> UpnpStateVariable:
-        """Check if service has state_variable."""
-        service = self._service(service_name)
-        if not service:
-            return None
-
-        return service.state_variable(state_variable_name)
-
-    def _action(self, service_name: str, action_name: str) -> UpnpAction:
-        """Check if service has action."""
-        service = self._service(service_name)
-        if not service:
-            return None
-
-        return service.action(action_name)
+    _SERVICE_TYPES = {
+        'RC': {
+            'urn:schemas-upnp-org:service:RenderingControl:3',
+            'urn:schemas-upnp-org:service:RenderingControl:2',
+            'urn:schemas-upnp-org:service:RenderingControl:1',
+        },
+        'AVT': {
+            'urn:schemas-upnp-org:service:AVTransport:3',
+            'urn:schemas-upnp-org:service:AVTransport:2',
+            'urn:schemas-upnp-org:service:AVTransport:1',
+        },
+    }
 
     def _interesting_service(self, service: UpnpService) -> bool:
         """Check if service is a service we're interested in."""
         # pylint: disable=no-self-use
         service_type = service.service_type
-        for service_types in SERVICE_TYPES.values():
+        for service_types in self._SERVICE_TYPES.values():
             if service_type in service_types:
                 return True
 
