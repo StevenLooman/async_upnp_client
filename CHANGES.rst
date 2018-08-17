@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.12.4 (unreleased)
+0.12.4 (2018-08-17)
 
 - Upgrade python-didl-lite to 1.1.0
 
