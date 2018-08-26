@@ -1,6 +1,10 @@
 Changes
 =======
 
+0.12.5 (unreleased)
+
+- Prevent error when not subscribed
+
 0.12.4 (2018-08-17)
 
 - Upgrade python-didl-lite to 1.1.0

@@ -204,7 +204,8 @@ def main():
     try:
         loop.run_until_complete(async_main())
     except KeyboardInterrupt:
-        loop.run_until_complete(event_handler.async_unsubscribe_all())
+        if event_handler:
+            loop.run_until_complete(event_handler.async_unsubscribe_all())
     finally:
         loop.close()
 
