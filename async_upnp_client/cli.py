@@ -6,6 +6,7 @@ import argparse
 import asyncio
 import json
 import logging
+import operator
 import sys
 import time
 import urllib.parse
@@ -97,34 +98,52 @@ def on_event(service, service_variables):
 
 async def call_action(device: UpnpDevice, call_action_args):
     """Call an action and show results."""
-    service_name, action_name = call_action_args[0].split('/')
+    if '/' in call_action_args[0]:
+        service_name, action_name = call_action_args[0].split('/')
+    else:
+        service_name = call_action_args[0]
+        action_name = ''
     action_args = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in call_action_args[1:]}
 
+    # get service
     service = service_from_device(device, service_name)
     if not service:
         print('Unknown service: %s' % (service_name, ))
-        print('Known services:\n%s' % (
+        print('Available services:\n%s' % (
             '\n'.join(['  ' + service.service_id.split(':')[-1]
                        for service in device.services.values()])
         ))
         sys.exit(1)
+
+    # get action
     action = service.action(action_name)
     if not action:
-        print('Unknown action: %s' % (action_name, ))
-        print('Known actions:\n%s' % (
-            '\n'.join(['  ' + action for action in service.actions])
+        print('Available actions:\n%s' % (
+            '\n'.join(['  ' + name for name in sorted(service.actions)])
         ))
         sys.exit(1)
 
+    # get in variables
     coerced_args = {}
     for key, value in action_args.items():
         in_arg = action.argument(key)
         if not in_arg:
-            print('Unknown argument: %s, known arguments: %s' % (
-                key,
+            print('Unknown argument: %s', (key, ))
+            print('Available arguments: %s' % (
                 ','.join([a.name for a in action.in_arguments()])))
             sys.exit(1)
         coerced_args[key] = in_arg.coerce_python(value)
+
+    # ensure all in variables given
+    for in_arg in action.in_arguments():
+        if in_arg.name not in action_args:
+            print('Missing in-arguments')
+            print('Known in-arguments:\n%s' % (
+                '\n'.join(['  ' + in_arg.name
+                           for in_arg in sorted(action.in_arguments(),
+                                                key=operator.attrgetter('name'))])
+            ))
+            sys.exit(1)
 
     _LOGGER.debug('Calling %s.%s, parameters:\n%s',
                   service.service_id, action.name,
