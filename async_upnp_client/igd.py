@@ -51,6 +51,21 @@ class IgdDevice(UpnpProfileDevice):
         result = await action.async_call()
         return result['NewTotalPacketsSent']
 
+    async def async_get_enabled_for_internet(self) -> bool:
+        """Get internet access enabled state."""
+        action = self._action('WANCIC', 'GetEnabledForInternet')
+        result = await action.async_call()
+        return result['NewEnabledForInternet']
+
+    async def async_set_enabled_for_internet(self, enabled: bool) -> None:
+        """
+        Set internet access enabled state.
+
+        :param enabled whether access should be enabled
+        """
+        action = self._action('WANCIC', 'SetEnabledForInternet')
+        await action.async_call(NewEnabledForInternet=enabled)
+
     async def async_get_external_ip_address(self):
         """Get the external IP address."""
         action = self._action('WANIPC', 'GetExternalIPAddress')
