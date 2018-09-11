@@ -43,7 +43,10 @@ class IgdDevice(UpnpProfileDevice):
         },
         'WANCIC': {
             'urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1',
-        }
+        },
+        'L3FWD': {
+            'urn:schemas-upnp-org:service:Layer3Forwarding:1',
+        },
     }
 
     async def async_get_total_bytes_received(self):
@@ -189,3 +192,18 @@ class IgdDevice(UpnpProfileDevice):
         action = self._action('WANIPC', 'GetNATRSIPStatus')
         result = await action.async_call()
         return result['NewNATEnabled'], result['NewRSIPAvailable']
+
+    async def async_get_default_connection_service(self) -> str:
+        """Get default connection service."""
+        action = self._action('L3FWD', 'GetDefaultConnectionService')
+        result = await action.async_call()
+        return result['NewDefaultConnectionService']
+
+    async def async_set_default_connection_service(self, service: str) -> None:
+        """
+        Set default connection service.
+
+        :param service default connection service
+        """
+        action = self._action('L3FWD', 'SetDefaultConnectionService')
+        await action.async_call(NewDefaultConnectionService=service)
