@@ -19,6 +19,11 @@ CommonLinkProperties = NamedTuple(
         ('layer1_downstream_max_bit_rate', int),
         ('physical_link_status', str)])
 
+ConnectionTypeInfo = NamedTuple(
+    'ConnectionTypeInfo', [
+        ('connection_type', str),
+        ('possible_connection_types', str)])
+
 
 class IgdDevice(UpnpProfileDevice):
     """Representation of a IGD device."""
@@ -140,3 +145,11 @@ class IgdDevice(UpnpProfileDevice):
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
             NewProtocol=protocol)
+
+    async def async_get_connection_type_info(self) -> ConnectionTypeInfo:
+        """Get connection type info."""
+        action = self._action('WANIPC', 'GetConnectionTypeInfo')
+        result = await action.async_call()
+        return ConnectionTypeInfo(
+            result['NewConnectionType'],
+            result['NewPossibleConnectionTypes'])
