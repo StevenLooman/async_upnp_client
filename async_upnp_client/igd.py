@@ -4,11 +4,20 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
+from typing import NamedTuple
 
 from async_upnp_client.profile import UpnpProfileDevice
 
 
 _LOGGER = logging.getLogger(__name__)
+
+
+CommonLinkProperties = NamedTuple(
+    'CommonLinkProperties', [
+        ('wan_access_type', str),
+        ('layer1_upstream_max_bit_rate', int),
+        ('layer1_downstream_max_bit_rate', int),
+        ('physical_link_status', str)])
 
 
 class IgdDevice(UpnpProfileDevice):
@@ -65,6 +74,16 @@ class IgdDevice(UpnpProfileDevice):
         """
         action = self._action('WANCIC', 'SetEnabledForInternet')
         await action.async_call(NewEnabledForInternet=enabled)
+
+    async def async_get_common_link_properties(self) -> CommonLinkProperties:
+        """Get common link properties."""
+        action = self._action('WANCIC', 'GetCommonLinkProperties')
+        result = await action.async_call()
+        return CommonLinkProperties(
+            result['NewWANAccessType'],
+            result['NewLayer1UpstreamMaxBitRate'],
+            result['NewLayer1DownstreamMaxBitRate'],
+            result['NewPhysicalLinkStatus'])
 
     async def async_get_external_ip_address(self):
         """Get the external IP address."""
