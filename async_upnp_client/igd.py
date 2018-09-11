@@ -177,3 +177,9 @@ class IgdDevice(UpnpProfileDevice):
             result['NewConnectionStatus'],
             result['NewLastConnectionError'],
             result['NewUptime'])
+
+    async def async_get_port_mapping_number_of_entries(self) -> int:
+        """Get number of port mapping entries."""
+        action = self._action('WANIPC', 'GetPortMappingNumberOfEntries')
+        result = await action.async_call()
+        return result['NewPortMappingNumberOfEntries']
