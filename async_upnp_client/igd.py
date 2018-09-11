@@ -24,6 +24,12 @@ ConnectionTypeInfo = NamedTuple(
         ('connection_type', str),
         ('possible_connection_types', str)])
 
+StatusInfo = NamedTuple(
+    'StatusInfo', [
+        ('connection_status', str),
+        ('last_connection_error', str),
+        ('uptime', int)])
+
 
 class IgdDevice(UpnpProfileDevice):
     """Representation of a IGD device."""
@@ -153,3 +159,12 @@ class IgdDevice(UpnpProfileDevice):
         return ConnectionTypeInfo(
             result['NewConnectionType'],
             result['NewPossibleConnectionTypes'])
+
+    async def async_get_status_info(self) -> StatusInfo:
+        """Get status info."""
+        action = self._action('WANIPC', 'GetStatusInfo')
+        result = await action.async_call()
+        return StatusInfo(
+            result['NewConnectionStatus'],
+            result['NewLastConnectionError'],
+            result['NewUptime'])
