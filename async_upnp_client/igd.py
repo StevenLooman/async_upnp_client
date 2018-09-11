@@ -160,6 +160,15 @@ class IgdDevice(UpnpProfileDevice):
             result['NewConnectionType'],
             result['NewPossibleConnectionTypes'])
 
+    async def async_set_connection_type(self, connection_type: str) -> None:
+        """
+        Set connection type.
+
+        :param connection_type connection type
+        """
+        action = self._action('WANIPC', 'SetConnectionType')
+        await action.async_call(NewConnectionType=connection_type)
+
     async def async_get_status_info(self) -> StatusInfo:
         """Get status info."""
         action = self._action('WANIPC', 'GetStatusInfo')
