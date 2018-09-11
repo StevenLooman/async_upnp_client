@@ -4,7 +4,7 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 from async_upnp_client.profile import UpnpProfileDevice
 
@@ -183,3 +183,9 @@ class IgdDevice(UpnpProfileDevice):
         action = self._action('WANIPC', 'GetPortMappingNumberOfEntries')
         result = await action.async_call()
         return result['NewPortMappingNumberOfEntries']
+
+    async def async_get_nat_rsip_status(self) -> Tuple[bool, bool]:
+        """Get NAT enabled and RSIP availability statuses."""
+        action = self._action('WANIPC', 'GetNATRSIPStatus')
+        result = await action.async_call()
+        return result['NewNATEnabled'], result['NewRSIPAvailable']
