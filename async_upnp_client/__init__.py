@@ -175,7 +175,7 @@ class UpnpEventHandler:
         service = self._subscriptions[sid]['service']
         service.notify_changed_state_variables(changes)
 
-        _LOGGER_TRAFFIC.debug('Sending reponse: %s', 200)
+        _LOGGER_TRAFFIC.debug('Sending response: %s', 200)
         return 200  # ok
 
     async def async_subscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
