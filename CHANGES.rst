@@ -6,6 +6,8 @@ Changes
 - Prevent error when not subscribed
 - upnp-client is more friendly towards user/missing arguments
 - Debug log spelling fix (@scop)
+- Add some more IGD methods (@scop)
+
 
 0.12.4 (2018-08-17)
 

@@ -86,4 +86,10 @@ An example of subscribing to a service, note that the program stays running unti
 DLNA
 ----
 
-An abstraction has been added for `DLNA Digital Media Renderer` devices. Primarily built for use with `Home Assistant <https://github.com/home-assistant/home-assistant>`, but might be useful in other projects too.
+An abstraction has been added for `DLNA Digital Media Renderer` (DLNA DMR) devices. Primarily built for use with `Home Assistant <https://github.com/home-assistant/home-assistant>`, but might be useful in other projects too.
+
+
+IGD
+---
+
+An abstraction has also been added for `Internet Gateway Devices` (IGD).
