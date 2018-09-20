@@ -4,7 +4,7 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
-from typing import NamedTuple, Tuple
+from typing import NamedTuple
 
 from async_upnp_client.profile import UpnpProfileDevice
 
@@ -34,7 +34,7 @@ NatRsipStatusInfo = NamedTuple(
     'NatRsipStatusInfo', [
         ('new_nat_enabled', bool),
         ('new_rsip_available', int)])
-    
+
 
 class IgdDevice(UpnpProfileDevice):
     """Representation of a IGD device."""
