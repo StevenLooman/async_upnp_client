@@ -30,6 +30,11 @@ StatusInfo = NamedTuple(
         ('last_connection_error', str),
         ('uptime', int)])
 
+NatRsipStatusInfo = NamedTuple(
+    'NatRsipStatusInfo', [
+        ('new_nat_enabled', bool),
+        ('new_rsip_available', int)])
+    
 
 class IgdDevice(UpnpProfileDevice):
     """Representation of a IGD device."""
@@ -187,11 +192,13 @@ class IgdDevice(UpnpProfileDevice):
         result = await action.async_call()
         return result['NewPortMappingNumberOfEntries']
 
-    async def async_get_nat_rsip_status(self) -> Tuple[bool, bool]:
+    async def async_get_nat_rsip_status(self) -> NatRsipStatusInfo:
         """Get NAT enabled and RSIP availability statuses."""
         action = self._action('WANIPC', 'GetNATRSIPStatus')
         result = await action.async_call()
-        return result['NewNATEnabled'], result['NewRSIPAvailable']
+        return NatRsipStatusInfo(
+            result['NewNATEnabled'],
+            result['NewRSIPAvailable'])
 
     async def async_get_default_connection_service(self) -> str:
         """Get default connection service."""
