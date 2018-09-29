@@ -32,8 +32,8 @@ StatusInfo = NamedTuple(
 
 NatRsipStatusInfo = NamedTuple(
     'NatRsipStatusInfo', [
-        ('new_nat_enabled', bool),
-        ('new_rsip_available', int)])
+        ('nat_enabled', bool),
+        ('rsip_available', bool)])
 
 
 class IgdDevice(UpnpProfileDevice):
