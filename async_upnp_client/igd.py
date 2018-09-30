@@ -4,7 +4,7 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
-from typing import NamedTuple
+from typing import NamedTuple, Optional
 
 from async_upnp_client.profile import UpnpProfileDevice
 
@@ -35,9 +35,22 @@ NatRsipStatusInfo = NamedTuple(
         ('new_nat_enabled', bool),
         ('new_rsip_available', int)])
 
+PortMappingEntry = NamedTuple(
+    'PortMappingEntry', [
+        ('remote_host', Optional[IPv4Address]),
+        ('external_port', int),
+        ('protocol', str),
+        ('internal_port', int),
+        ('internal_client', IPv4Address),
+        ('enabled', bool),
+        ('description', str),
+        ('lease_duration', Optional[timedelta])])
+
 
 class IgdDevice(UpnpProfileDevice):
     """Representation of a IGD device."""
+
+    # pylint: disable=too-many-public-methods
 
     _SERVICE_TYPES = {
         'WANPPPC': {
@@ -110,6 +123,52 @@ class IgdDevice(UpnpProfileDevice):
         result = await action.async_call()
         return result['NewExternalIPAddress']
 
+    async def async_get_generic_port_mapping_entry(self,
+                                                   port_mapping_index: int) -> PortMappingEntry:
+        """
+        Get generic port mapping entry.
+
+        :param port_mapping_index Index of port mapping entry
+        """
+        action = self._action('WANIPC', 'GetGenericPortMappingEntry')
+        result = await action.async_call(
+            NewPortMappingIndex=port_mapping_index)
+        return PortMappingEntry(
+            IPv4Address(result['NewRemoteHost']) if result['NewRemoteHost'] else None,
+            result['NewExternalPort'],
+            result['NewProtocol'],
+            result['NewInternalPort'],
+            IPv4Address(result['NewInternalClient']),
+            result['NewEnabled'],
+            result['NewPortMappingDescription'],
+            timedelta(seconds=result['NewLeaseDuration']) if result['NewLeaseDuration'] else None)
+
+    async def async_get_specific_port_mapping_entry(self,
+                                                    remote_host: Optional[IPv4Address],
+                                                    external_port: int,
+                                                    protocol: str) -> PortMappingEntry:
+        """
+        Get specific port mapping entry.
+
+        :param remote_host Address of remote host or None
+        :param external_port External port
+        :param protocol Protocol, 'TCP' or 'UDP'
+        """
+        action = self._action('WANIPC', 'GetSpecificPortMappingEntry')
+        result = await action.async_call(
+            NewRemoteHost=remote_host.exploded if remote_host else '',
+            NewExternalPort=external_port,
+            NewProtocol=protocol)
+        return PortMappingEntry(
+            remote_host,
+            external_port,
+            protocol,
+            result['NewInternalPort'],
+            IPv4Address(result['NewInternalClient']),
+            result['NewEnabled'],
+            result['NewPortMappingDescription'],
+            timedelta(seconds=result['NewLeaseDuration']) if result['NewLeaseDuration'] else None)
+
     async def async_add_port_mapping(self,
                                      remote_host: IPv4Address,
                                      external_port: int,
@@ -176,6 +235,21 @@ class IgdDevice(UpnpProfileDevice):
         """
         action = self._action('WANIPC', 'SetConnectionType')
         await action.async_call(NewConnectionType=connection_type)
+
+    async def async_request_connection(self) -> None:
+        """Request connection."""
+        action = self._action('WANIPC', 'RequestConnection')
+        await action.async_call()
+
+    async def async_request_termination(self) -> None:
+        """Request connection termination."""
+        action = self._action('WANIPC', 'RequestTermination')
+        await action.async_call()
+
+    async def async_force_termination(self) -> None:
+        """Force connection termination."""
+        action = self._action('WANIPC', 'ForceTermination')
+        await action.async_call()
 
     async def async_get_status_info(self) -> StatusInfo:
         """Get status info."""
