@@ -7,6 +7,8 @@ Changes
 - upnp-client is more friendly towards user/missing arguments
 - Debug log spelling fix (@scop)
 - Add some more IGD methods (@scop)
+- Add some more IGD WANIPConnection methods (@scop)
+- Remove new_ prefix from NatRsipStatusInfo fields, fix rsip_available type (@scop)
 
 
 0.12.4 (2018-08-17)
