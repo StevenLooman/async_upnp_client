@@ -220,6 +220,64 @@ class DmrDevice(UpnpProfileDevice):
 
         await action.async_call(InstanceID=0, **args)
 
+# region RC/Picture
+    @property
+    def has_brightness_level(self) -> bool:
+        """Check if device has brightness level controls."""
+        return self._supports('Brightness')
+
+    @property
+    def brightness_level(self) -> Optional[float]:
+        """Brightness level of the media player (0..1)."""
+        return self._level('Brightness')
+
+    async def async_set_brightness_level(self, brightness: float) -> None:
+        """Set brightness level, range 0..1."""
+        await self._async_set_level('Brightness', brightness)
+
+    @property
+    def has_contrast_level(self) -> bool:
+        """Check if device has contrast level controls."""
+        return self._supports('Contrast')
+
+    @property
+    def contrast_level(self) -> Optional[float]:
+        """Contrast level of the media player (0..1)."""
+        return self._level('Contrast')
+
+    async def async_set_contrast_level(self, contrast: float) -> None:
+        """Set contrast level, range 0..1."""
+        await self._async_set_level('Contrast', contrast)
+
+    @property
+    def has_sharpness_level(self) -> bool:
+        """Check if device has sharpness level controls."""
+        return self._supports('Sharpness')
+
+    @property
+    def sharpness_level(self) -> Optional[float]:
+        """Sharpness level of the media player (0..1)."""
+        return self._level('Sharpness')
+
+    async def async_set_sharpness_level(self, sharpness: float) -> None:
+        """Set sharpness level, range 0..1."""
+        await self._async_set_level('Sharpness', sharpness)
+
+    @property
+    def has_color_temperature_level(self) -> bool:
+        """Check if device has color temperature level controls."""
+        return self._supports('ColorTemperature')
+
+    @property
+    def color_temperature_level(self) -> Optional[float]:
+        """Color temperature level of the media player (0..1)."""
+        return self._level('ColorTemperature')
+
+    async def async_set_color_temperature_level(self, color_temperature: float):
+        """Set color temperature level, range 0..1."""
+        await self._async_set_level('ColorTemperature', color_temperature)
+# endregion
+
 # region RC/Volume
     @property
     def has_volume_level(self):
