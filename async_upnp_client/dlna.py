@@ -9,8 +9,11 @@ from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 from datetime import timedelta
+from typing import Any
+from typing import Dict
 from typing import List
 from typing import Mapping
+from typing import Optional
 from xml.etree import ElementTree as ET
 
 from didl_lite import didl_lite
@@ -191,43 +194,109 @@ class DmrDevice(UpnpProfileDevice):
         transport_actions = (state_var.value or '').split(',')
         return [a.lower().strip() for a in transport_actions]
 
-# region RC/Volume
-    @property
-    def has_volume_level(self):
-        """Check if device has Volume level controls."""
-        return self._state_variable('RC', 'Volume') is not None and \
-            self._action('RC', 'SetVolume') is not None
+    def _supports(self, var_name: str) -> bool:
+        return self._state_variable('RC', var_name) is not None and \
+            self._action('RC', 'Set%s' % var_name) is not None
 
-    @property
-    def volume_level(self):
-        """Volume level of the media player (0..1)."""
-        state_var = self._state_variable('RC', 'Volume')
+    def _level(self, var_name: str) -> Optional[float]:
+        state_var = self._state_variable('RC', var_name)
         value = state_var.value
         if value is None:
-            _LOGGER.debug('Got no value for volume_level')
+            _LOGGER.debug('Got no value for %s', var_name)
             return None
 
         max_value = state_var.max_value or 100
         return min(value / max_value, 1.0)
 
-    async def async_set_volume_level(self, volume: float):
-        """Set volume level, range 0..1."""
-        action = self._action('RC', 'SetVolume')
-        argument = action.argument('DesiredVolume')
+    async def _async_set_level(self, var_name: str, level: float, **kwargs: Dict[str, Any]) -> None:
+        action = self._action('RC', 'Set%s' % var_name)
+        argument = action.argument('Desired%s' % var_name)
         state_variable = argument.related_state_variable
         min_ = state_variable.min_value or 0
         max_ = state_variable.max_value or 100
-        desired_volume = int(min_ + volume * (max_ - min_))
+        desired_level = int(min_ + level * (max_ - min_))
+        args = kwargs.copy()
+        args.update({'Desired%s' % var_name: desired_level})
 
-        await action.async_call(InstanceID=0,
-                                Channel='Master',
-                                DesiredVolume=desired_volume)
+        await action.async_call(InstanceID=0, **args)
+
+# region RC/Picture
+    @property
+    def has_brightness_level(self) -> bool:
+        """Check if device has brightness level controls."""
+        return self._supports('Brightness')
+
+    @property
+    def brightness_level(self) -> Optional[float]:
+        """Brightness level of the media player (0..1)."""
+        return self._level('Brightness')
+
+    async def async_set_brightness_level(self, brightness: float) -> None:
+        """Set brightness level, range 0..1."""
+        await self._async_set_level('Brightness', brightness)
+
+    @property
+    def has_contrast_level(self) -> bool:
+        """Check if device has contrast level controls."""
+        return self._supports('Contrast')
+
+    @property
+    def contrast_level(self) -> Optional[float]:
+        """Contrast level of the media player (0..1)."""
+        return self._level('Contrast')
+
+    async def async_set_contrast_level(self, contrast: float) -> None:
+        """Set contrast level, range 0..1."""
+        await self._async_set_level('Contrast', contrast)
+
+    @property
+    def has_sharpness_level(self) -> bool:
+        """Check if device has sharpness level controls."""
+        return self._supports('Sharpness')
+
+    @property
+    def sharpness_level(self) -> Optional[float]:
+        """Sharpness level of the media player (0..1)."""
+        return self._level('Sharpness')
+
+    async def async_set_sharpness_level(self, sharpness: float) -> None:
+        """Set sharpness level, range 0..1."""
+        await self._async_set_level('Sharpness', sharpness)
+
+    @property
+    def has_color_temperature_level(self) -> bool:
+        """Check if device has color temperature level controls."""
+        return self._supports('ColorTemperature')
+
+    @property
+    def color_temperature_level(self) -> Optional[float]:
+        """Color temperature level of the media player (0..1)."""
+        return self._level('ColorTemperature')
+
+    async def async_set_color_temperature_level(self, color_temperature: float):
+        """Set color temperature level, range 0..1."""
+        await self._async_set_level('ColorTemperature', color_temperature)
+# endregion
+
+# region RC/Volume
+    @property
+    def has_volume_level(self):
+        """Check if device has Volume level controls."""
+        return self._supports('Volume')
+
+    @property
+    def volume_level(self):
+        """Volume level of the media player (0..1)."""
+        return self._level('Volume')
+
+    async def async_set_volume_level(self, volume: float):
+        """Set volume level, range 0..1."""
+        await self._async_set_level('Volume', volume, Channel='Master')
 
     @property
     def has_volume_mute(self):
         """Check if device has Volume mute controls."""
-        return self._state_variable('RC', 'Mute') is not None and \
-            self._action('RC', 'SetMute') is not None
+        return self._supports('Mute')
 
     @property
     def is_volume_muted(self):
