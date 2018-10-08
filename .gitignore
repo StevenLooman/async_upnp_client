@@ -3,6 +3,7 @@
 .cache
 .coverage
 .idea
+.mypy_cache
 .pytest_cache
 .tox
 __pycache__
