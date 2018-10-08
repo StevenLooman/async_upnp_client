@@ -10,6 +10,8 @@ from datetime import timezone
 from typing import Dict
 from typing import List
 from typing import Mapping
+from typing import Optional
+from typing import Tuple
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
@@ -49,7 +51,7 @@ class UpnpRequester:
     # pylint: disable=too-few-public-methods
 
     async def async_http_request(self, method, url, headers=None, body=None, body_type='text') \
-            -> (int, Mapping, str):
+            -> Tuple[int, Mapping, str]:
         """
         Do a HTTP request.
 
@@ -122,7 +124,7 @@ class UpnpEventHandler:
         """Return callback URL on which we are callable."""
         return self._callback_url
 
-    def sid_for_service(self, service: 'UpnpService') -> str:
+    def sid_for_service(self, service: 'UpnpService') -> Optional[str]:
         """Get the service connected to SID."""
         for sid, entry in self._subscriptions.items():
             if entry['service'] == service:
@@ -130,7 +132,7 @@ class UpnpEventHandler:
 
         return None
 
-    def service_for_sid(self, sid: str) -> 'UpnpService':
+    def service_for_sid(self, sid: str) -> Optional['UpnpService']:
         """Get a UpnpService for SID."""
         if sid not in self._subscriptions:
             return None
@@ -321,7 +323,7 @@ class UpnpDevice:
         """Get UDN of this device."""
         return self._device_description['udn']
 
-    def service(self, service_type: str) -> 'UpnpService':
+    def service(self, service_type: str) -> Optional['UpnpService']:
         """Get service by service_type."""
         return self._services.get(service_type)
 

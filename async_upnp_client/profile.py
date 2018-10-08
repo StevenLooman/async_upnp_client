@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """UPnP base-profile module."""
 
+from typing import Optional
+
 from async_upnp_client import UpnpAction
 from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpEventHandler
@@ -35,7 +37,7 @@ class UpnpProfileDevice:
         """Get the UDN of the device."""
         return self._device.udn
 
-    def _service(self, service_type_abbreviation: str) -> UpnpService:
+    def _service(self, service_type_abbreviation: str) -> Optional[UpnpService]:
         """Get UpnpService by service_type or alias."""
         if not self._device:
             return None
@@ -50,7 +52,8 @@ class UpnpProfileDevice:
 
         return None
 
-    def _state_variable(self, service_name: str, state_variable_name: str) -> UpnpStateVariable:
+    def _state_variable(self, service_name: str,
+                        state_variable_name: str) -> Optional[UpnpStateVariable]:
         """Get state_variable from service."""
         service = self._service(service_name)
         if not service:
@@ -58,7 +61,7 @@ class UpnpProfileDevice:
 
         return service.state_variable(state_variable_name)
 
-    def _action(self, service_name: str, action_name: str) -> UpnpAction:
+    def _action(self, service_name: str, action_name: str) -> Optional[UpnpAction]:
         """Check if service has action."""
         service = self._service(service_name)
         if not service:
