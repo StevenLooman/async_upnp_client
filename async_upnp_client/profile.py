@@ -19,7 +19,7 @@ class UpnpProfileDevice:
 
     def __init__(self,
                  device: UpnpDevice,
-                 event_handler: UpnpEventHandler):
+                 event_handler: UpnpEventHandler) -> None:
         """Initializer."""
         self._device = device
         self._event_handler = event_handler

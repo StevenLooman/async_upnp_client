@@ -109,7 +109,7 @@ class UpnpEventHandler:
     subscribe/resubscribe/unsubscribe handle subscriptions.
     """
 
-    def __init__(self, callback_url: str, requester: UpnpRequester):
+    def __init__(self, callback_url: str, requester: UpnpRequester) -> None:
         """Initializer."""
         self._callback_url = callback_url
         self._requester = requester
@@ -292,7 +292,7 @@ class UpnpError(Exception):
 class UpnpValueError(UpnpError):
     """Invalid value error."""
 
-    def __init__(self, name, value):
+    def __init__(self, name, value) -> None:
         """Initializer."""
         super().__init__("Invalid value for %s: '%s'" % (name, value))
 
@@ -301,7 +301,7 @@ class UpnpDevice:
     """UPnP Device representation."""
 
     def __init__(self, requester: UpnpRequester, device_url: str,
-                 device_description: Mapping, services: List['UpnpService']):
+                 device_description: Mapping, services: List['UpnpService']) -> None:
         """Initializer."""
         self.requester = requester
         self.device_url = device_url
@@ -345,7 +345,7 @@ class UpnpService:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, requester: UpnpRequester, service_description: Mapping,
-                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']):
+                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']) -> None:
         """Initializer."""
         self._requester = requester
         self._service_description = service_description
@@ -481,7 +481,8 @@ class UpnpAction:
     class Argument:
         """Representation of an Argument of an Action."""
 
-        def __init__(self, name: str, direction: str, related_state_variable: 'UpnpStateVariable'):
+        def __init__(self, name: str, direction: str,
+                     related_state_variable: 'UpnpStateVariable') -> None:
             """Initializer."""
             self.name = name
             self.direction = direction
@@ -521,7 +522,7 @@ class UpnpAction:
             """Coerce Python value to UPnP value."""
             return self.related_state_variable.coerce_upnp(value)
 
-    def __init__(self, name: str, args):
+    def __init__(self, name: str, args) -> None:
         """Initializer."""
         self._name = name
         self._args = args
@@ -670,7 +671,7 @@ class UpnpAction:
 class UpnpStateVariable:
     """Representation of a State Variable."""
 
-    def __init__(self, state_variable_info: Mapping, schema):
+    def __init__(self, state_variable_info: Mapping, schema) -> None:
         """Initializer."""
         self._state_variable_info = state_variable_info
         self._schema = schema

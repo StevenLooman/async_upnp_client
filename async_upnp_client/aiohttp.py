@@ -32,7 +32,7 @@ def get_local_ip(target_host=None) -> str:
 class AiohttpRequester(UpnpRequester):
     """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
 
-    def __init__(self, timeout=5):
+    def __init__(self, timeout=5) -> None:
         """Initializer."""
         self._timeout = timeout
 
@@ -63,7 +63,7 @@ class AiohttpSessionRequester(UpnpRequester):
     With pluggable session.
     """
 
-    def __init__(self, session, with_sleep=False, timeout=5):
+    def __init__(self, session, with_sleep=False, timeout=5) -> None:
         """Initializer."""
         self._session = session
         self._with_sleep = with_sleep
@@ -94,7 +94,7 @@ class AiohttpSessionRequester(UpnpRequester):
 class AiohttpNotifyServer:
     """AIO HTTP Server to handle incoming events."""
 
-    def __init__(self, requester, listen_port, listen_host=None, loop=None):
+    def __init__(self, requester, listen_port, listen_host=None, loop=None) -> None:
         """Initializer."""
         self._listen_port = listen_port
         self._listen_host = listen_host or get_local_ip()
