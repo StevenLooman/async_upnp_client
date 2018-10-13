@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.12.5 (unreleased)
+0.12.5 (2018-10-13)
 
 - Prevent error when not subscribed
 - upnp-client is more friendly towards user/missing arguments
