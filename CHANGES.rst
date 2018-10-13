@@ -11,6 +11,7 @@ Changes
 - Remove new_ prefix from NatRsipStatusInfo fields, fix rsip_available type (@scop)
 - Add DLNA RC picture controls + refactoring (@scop)
 - Typing improvements (@scop)
+- Add change to @scop to CHANGES.rst (@scop)
 
 
 0.12.4 (2018-08-17)
