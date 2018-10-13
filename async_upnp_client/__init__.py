@@ -914,7 +914,8 @@ class UpnpFactory:
         """Parse XML for state variable."""
         # pylint: disable=no-self-use
         info = {
-            'name': state_variable_xml.find('service:name', NS).text,
+            # Some buggy implementations have whitespace around var names
+            'name': state_variable_xml.find('service:name', NS).text.strip(),
             'type_info': {}
         }
         type_info = info['type_info']
