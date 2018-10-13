@@ -67,26 +67,26 @@ class IgdDevice(UpnpProfileDevice):
         },
     }
 
-    async def async_get_total_bytes_received(self):
+    async def async_get_total_bytes_received(self) -> int:
         """Get total bytes received."""
         action = self._action('WANCIC', 'GetTotalBytesReceived')
         result = await action.async_call()
         return result['NewTotalBytesReceived']
 
-    async def async_get_total_bytes_sent(self):
+    async def async_get_total_bytes_sent(self) -> int:
         """Get total bytes sent."""
         action = self._action('WANCIC', 'GetTotalBytesSent')
         result = await action.async_call()
         return result['NewTotalBytesSent']
 
-    async def async_get_total_packets_received(self):
+    async def async_get_total_packets_received(self) -> int:
         """Get total packets received."""
         # pylint: disable=invalid-name
         action = self._action('WANCIC', 'GetTotalPacketsReceived')
         result = await action.async_call()
         return result['NewTotalPacketsReceived']
 
-    async def async_get_total_packets_sent(self):
+    async def async_get_total_packets_sent(self) -> int:
         """Get total packets sent."""
         action = self._action('WANCIC', 'GetTotalPacketsSent')
         result = await action.async_call()
@@ -117,7 +117,7 @@ class IgdDevice(UpnpProfileDevice):
             result['NewLayer1DownstreamMaxBitRate'],
             result['NewPhysicalLinkStatus'])
 
-    async def async_get_external_ip_address(self):
+    async def async_get_external_ip_address(self) -> str:
         """Get the external IP address."""
         action = self._action('WANIPC', 'GetExternalIPAddress')
         result = await action.async_call()

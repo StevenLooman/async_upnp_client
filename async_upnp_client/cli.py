@@ -10,6 +10,7 @@ import operator
 import sys
 import time
 import urllib.parse
+from typing import Optional
 
 from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpFactory
@@ -66,7 +67,7 @@ def bind_host_port():
     return bind.split(':')
 
 
-def service_from_device(device: UpnpDevice, service_name: str) -> UpnpService:
+def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpService]:
     """Get UpnpService from UpnpDevice by name or part or abbreviation."""
     for service in device.services.values():
         part = service.service_id.split(':')[-1]

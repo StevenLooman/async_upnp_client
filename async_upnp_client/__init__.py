@@ -10,6 +10,8 @@ from datetime import timezone
 from typing import Dict
 from typing import List
 from typing import Mapping
+from typing import Optional
+from typing import Tuple
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
@@ -49,7 +51,7 @@ class UpnpRequester:
     # pylint: disable=too-few-public-methods
 
     async def async_http_request(self, method, url, headers=None, body=None, body_type='text') \
-            -> (int, Mapping, str):
+            -> Tuple[int, Mapping, str]:
         """
         Do a HTTP request.
 
@@ -109,7 +111,7 @@ class UpnpEventHandler:
     subscribe/resubscribe/unsubscribe handle subscriptions.
     """
 
-    def __init__(self, callback_url: str, requester: UpnpRequester):
+    def __init__(self, callback_url: str, requester: UpnpRequester) -> None:
         """Initializer."""
         self._callback_url = callback_url
         self._requester = requester
@@ -122,7 +124,7 @@ class UpnpEventHandler:
         """Return callback URL on which we are callable."""
         return self._callback_url
 
-    def sid_for_service(self, service: 'UpnpService') -> str:
+    def sid_for_service(self, service: 'UpnpService') -> Optional[str]:
         """Get the service connected to SID."""
         for sid, entry in self._subscriptions.items():
             if entry['service'] == service:
@@ -130,7 +132,7 @@ class UpnpEventHandler:
 
         return None
 
-    def service_for_sid(self, sid: str) -> 'UpnpService':
+    def service_for_sid(self, sid: str) -> Optional['UpnpService']:
         """Get a UpnpService for SID."""
         if sid not in self._subscriptions:
             return None
@@ -292,7 +294,7 @@ class UpnpError(Exception):
 class UpnpValueError(UpnpError):
     """Invalid value error."""
 
-    def __init__(self, name, value):
+    def __init__(self, name, value) -> None:
         """Initializer."""
         super().__init__("Invalid value for %s: '%s'" % (name, value))
 
@@ -301,7 +303,7 @@ class UpnpDevice:
     """UPnP Device representation."""
 
     def __init__(self, requester: UpnpRequester, device_url: str,
-                 device_description: Mapping, services: List['UpnpService']):
+                 device_description: Mapping, services: List['UpnpService']) -> None:
         """Initializer."""
         self.requester = requester
         self.device_url = device_url
@@ -321,7 +323,7 @@ class UpnpDevice:
         """Get UDN of this device."""
         return self._device_description['udn']
 
-    def service(self, service_type: str) -> 'UpnpService':
+    def service(self, service_type: str) -> Optional['UpnpService']:
         """Get service by service_type."""
         return self._services.get(service_type)
 
@@ -345,7 +347,7 @@ class UpnpService:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, requester: UpnpRequester, service_description: Mapping,
-                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']):
+                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']) -> None:
         """Initializer."""
         self._requester = requester
         self._service_description = service_description
@@ -481,7 +483,8 @@ class UpnpAction:
     class Argument:
         """Representation of an Argument of an Action."""
 
-        def __init__(self, name: str, direction: str, related_state_variable: 'UpnpStateVariable'):
+        def __init__(self, name: str, direction: str,
+                     related_state_variable: 'UpnpStateVariable') -> None:
             """Initializer."""
             self.name = name
             self.direction = direction
@@ -521,7 +524,7 @@ class UpnpAction:
             """Coerce Python value to UPnP value."""
             return self.related_state_variable.coerce_upnp(value)
 
-    def __init__(self, name: str, args):
+    def __init__(self, name: str, args) -> None:
         """Initializer."""
         self._name = name
         self._args = args
@@ -670,7 +673,7 @@ class UpnpAction:
 class UpnpStateVariable:
     """Representation of a State Variable."""
 
-    def __init__(self, state_variable_info: Mapping, schema):
+    def __init__(self, state_variable_info: Mapping, schema) -> None:
         """Initializer."""
         self._state_variable_info = state_variable_info
         self._schema = schema
