@@ -95,7 +95,7 @@
       <name>Mute</name>  
       <dataType>boolean</dataType>
     </stateVariable>
-    <stateVariable sendEvents="no"> 
+    <stateVariable> <!-- no sendEvents/sendEventsAttribute set -->
       <name>Volume</name>  
       <dataType>ui2</dataType>
       <allowedValueRange>

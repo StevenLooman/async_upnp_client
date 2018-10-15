@@ -196,6 +196,9 @@ class TestUpnpStateVariable:
         sv = service.state_variable('A_ARG_TYPE_Channel')  # new style
         assert sv.send_events == False
 
+        sv = service.state_variable('Volume')  # broken/none given
+        assert sv.send_events == False
+
         sv = service.state_variable('LastChange')
         assert sv.send_events == True
 
