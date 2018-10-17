@@ -1,6 +1,10 @@
 Changes
 =======
 
+0.12.7 (unreleased)
+
+
+
 0.12.6 (2018-10-17)
 
 - Handle cases where a stateVariable has no sendEvents/sendEventsAttribute set
