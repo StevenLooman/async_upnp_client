@@ -930,8 +930,8 @@ class UpnpFactory:
             info['send_events'] = \
                 state_variable_xml.find('service:sendEventsAttribute', NS).text == 'yes'
         else:
-            _LOGGER.warning('Invalid XML for state variable/send events:\n%s',
-                            ET.tostring(state_variable_xml, encoding='unicode'))
+            _LOGGER.debug('Invalid XML for state variable/send events:\n%s',
+                          ET.tostring(state_variable_xml, encoding='unicode'))
             info['send_events'] = False
 
         data_type = state_variable_xml.find('service:dataType', NS).text
