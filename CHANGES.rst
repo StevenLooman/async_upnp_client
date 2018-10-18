@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.12.8 (unreleased)
+
+
 0.12.7 (2018-10-18)
 
 - Log cases where a stateVariable has no sendEvents/sendEventsAttribute set at debug level, instead of warning
