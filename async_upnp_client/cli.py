@@ -19,6 +19,8 @@ from async_upnp_client.aiohttp import AiohttpRequester
 from async_upnp_client.aiohttp import AiohttpNotifyServer
 from async_upnp_client.aiohttp import get_local_ip
 from async_upnp_client.dlna import dlna_handle_notify_last_change
+from async_upnp_client.discovery import discover as ssdp_discover
+from async_upnp_client.discovery import SSDP_ST_ALL
 
 
 logging.basicConfig()
@@ -33,22 +35,34 @@ DEFAULT_PORT = 11302
 
 
 parser = argparse.ArgumentParser(description='upnp_client')
-parser.add_argument('--device', required=True, help='URL to device description XML')
 parser.add_argument('--debug', action='store_true', help='Show debug messages')
 parser.add_argument('--debug-traffic', action='store_true', help='Show network traffic')
 parser.add_argument('--pprint', action='store_true', help='Pretty-print (indent) JSON output')
+subparsers = parser.add_subparsers(title='Command', dest='command')
+subparsers.required = True
 
-subparsers = parser.add_subparsers(title='Subcommands')
 subparser = subparsers.add_parser('call-action', help='Call an action')
+subparser.add_argument('device', help='URL to device description XML')
 subparser.add_argument('call-action', nargs='+', help='service/action param1=val1 param2=val2')
 subparser = subparsers.add_parser('subscribe', help='Subscribe to services')
+subparser.add_argument('device', help='URL to device description XML')
 subparser.add_argument('service', nargs='+', help='service type or part or abbreviation')
 subparser.add_argument('--bind', help='ip[:port], e.g., 192.168.0.10:8090')
+subparser = subparsers.add_parser('discover', help='Subscribe to services')
+subparser.add_argument('--bind', help='ip, e.g., 192.168.0.10')
+subparser.add_argument('--service_type', help='service type to discover', default=SSDP_ST_ALL)
 
 args = parser.parse_args()
 pprint_indent = 4 if args.pprint else None
 
 event_handler = None
+
+
+async def create_device(description_url):
+    """Create UpnpDevice."""
+    requester = AiohttpRequester()
+    factory = UpnpFactory(requester)
+    return await factory.async_create_device(description_url)
 
 
 def bind_host_port():
@@ -97,8 +111,10 @@ def on_event(service, service_variables):
         dlna_handle_notify_last_change(last_change)
 
 
-async def call_action(device: UpnpDevice, call_action_args):
+async def call_action(description_url, call_action_args):
     """Call an action and show results."""
+    device = await create_device(description_url)
+
     if '/' in call_action_args[0]:
         service_name, action_name = call_action_args[0].split('/')
     else:
@@ -165,9 +181,11 @@ async def call_action(device: UpnpDevice, call_action_args):
     print(json.dumps(obj, indent=pprint_indent))
 
 
-async def subscribe(device: UpnpDevice, subscribe_args):
+async def subscribe(description_url, service_names):
     """Subscribe to service(s) and output updates."""
     global event_handler  # pylint: disable=global-statement
+
+    device = await create_device(description_url)
 
     # start notify server/event handler
     host, port = bind_host_port()
@@ -177,7 +195,7 @@ async def subscribe(device: UpnpDevice, subscribe_args):
 
     # gather all wanted services
     services = []
-    for service_name in subscribe_args:
+    for service_name in service_names:
         if service_name == '*':
             services += device.services.values()
             continue
@@ -197,6 +215,16 @@ async def subscribe(device: UpnpDevice, subscribe_args):
         await event_handler.async_resubscribe_all()
 
 
+async def discover(discover_args):
+    """Discover devices."""
+    service_type = discover_args.service_type
+    source_ip = discover_args.bind
+    responses = ssdp_discover(service_type=service_type, source_ip=source_ip)
+    for response in responses:
+        response['_timestamp'] = str(response['_timestamp'])
+        print(json.dumps(response, indent=pprint_indent))
+
+
 async def async_main():
     """Asunc main."""
     if args.debug:
@@ -205,16 +233,12 @@ async def async_main():
     if args.debug_traffic:
         _LOGGER_TRAFFIC.setLevel(logging.DEBUG)
 
-    requester = AiohttpRequester()
-    factory = UpnpFactory(requester)
-    device = await factory.async_create_device(args.device)
-
-    if hasattr(args, 'call-action'):
-        await call_action(device, getattr(args, 'call-action'))
-    elif hasattr(args, 'service'):
-        await subscribe(device, args.service)
-    else:
-        parser.print_usage()
+    if args.command == 'call-action':
+        await call_action(args.device, getattr(args, 'call-action'))
+    elif args.command == 'subscribe':
+        await subscribe(args.device, args.service)
+    elif args.command == 'discover':
+        await discover(args)
 
 
 def main():

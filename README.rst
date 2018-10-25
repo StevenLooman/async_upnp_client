@@ -39,12 +39,13 @@ A command line interface is provided via the `upnp-client` script. This script c
 - subscribe to services and listen for events
 - show UPnP traffic (--debug-traffic) from and to the device
 - show pretty printed JSON (--pprint) for human readability
+- discover devices
 
 The output of the script is a single line of JSON for each action-call or subscription-event. See the programs help for more information.
 
 An example of calling an action::
 
-    $ upnp-client --device http://192.168.178.10:49152/description.xml --pprint call-action RC/GetVolume InstanceID=0 Channel=Master
+    $ upnp-client --pprint call-action http://192.168.178.10:49152/description.xml RC/GetVolume InstanceID=0 Channel=Master
     {
         "timestamp": 1531482271.5603056,
         "service_id": "urn:upnp-org:serviceId:RenderingControl",
@@ -62,7 +63,7 @@ An example of calling an action::
 
 An example of subscribing to a service, note that the program stays running until you stop it (ctrl-c)::
 
-    $ upnp-client --device http://192.168.178.10:49152/description.xml --pprint subscribe --bind 192.168.178.72 RC
+    $ upnp-client --pprint subscribe http://192.168.178.10:49152/description.xml RC
     {
         "timestamp": 1531482518.3663802,
         "service_id": "urn:upnp-org:serviceId:RenderingControl",
@@ -81,6 +82,24 @@ An example of subscribing to a service, note that the program stays running unti
         }
     }
     ...
+
+An example of discovering devices::
+
+    $ upnp-client --pprint discover
+    {
+        "cache-control": "max-age=3600",
+        "date": "Sat, 27 Oct 2018 10:43:42 GMT",
+        "ext": "",
+        "location": "http://192.168.178.1:49152/description.xml",
+        "opt": "\"http://schemas.upnp.org/upnp/1/0/\"; ns=01",
+        "01-nls": "906ad736-cfc4-11e8-9c22-8bb67c653324",
+        "server": "Linux/4.14.26+, UPnP/1.0, Portable SDK for UPnP devices/1.6.20.jfd5",
+        "x-user-agent": "redsonic",
+        "st": "upnp:rootdevice",
+        "usn": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72::upnp:rootdevice",
+        "_timestamp": "2018-10-27 12:43:09.125408"
+    }
+
 
 
 Abstractions

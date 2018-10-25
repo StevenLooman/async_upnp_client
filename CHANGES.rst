@@ -3,6 +3,8 @@ Changes
 
 0.12.8 (unreleased)
 
+- Add support for discovery via SSDP
+
 
 0.12.7 (2018-10-18)
 
