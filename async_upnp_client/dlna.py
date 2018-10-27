@@ -275,6 +275,7 @@ class DmrDevice(UpnpProfileDevice):
 
     async def async_set_color_temperature_level(self, color_temperature: float):
         """Set color temperature level, range 0..1."""
+        # pylint: disable=invalid-name
         await self._async_set_level('ColorTemperature', color_temperature)
 # endregion
 

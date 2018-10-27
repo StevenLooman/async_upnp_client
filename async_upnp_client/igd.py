@@ -4,7 +4,7 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
-from typing import NamedTuple, Optional
+from typing import List, NamedTuple, Optional
 
 from async_upnp_client.profile import UpnpProfileDevice
 
@@ -67,6 +67,13 @@ class IgdDevice(UpnpProfileDevice):
         },
     }
 
+    def _any_action(self, service_names: List[str], action_name: str):
+        for service_name in service_names:
+            action = self._action(service_name, action_name)
+            if action is not None:
+                return action
+        return None
+
     async def async_get_total_bytes_received(self) -> int:
         """Get total bytes received."""
         action = self._action('WANCIC', 'GetTotalBytesReceived')
@@ -109,6 +116,7 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_common_link_properties(self) -> CommonLinkProperties:
         """Get common link properties."""
+        # pylint: disable=invalid-name
         action = self._action('WANCIC', 'GetCommonLinkProperties')
         result = await action.async_call()
         return CommonLinkProperties(
@@ -117,20 +125,29 @@ class IgdDevice(UpnpProfileDevice):
             result['NewLayer1DownstreamMaxBitRate'],
             result['NewPhysicalLinkStatus'])
 
-    async def async_get_external_ip_address(self) -> str:
-        """Get the external IP address."""
-        action = self._action('WANIPC', 'GetExternalIPAddress')
+    async def async_get_external_ip_address(self, services: List = None) -> str:
+        """
+        Get the external IP address.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetExternalIPAddress')
         result = await action.async_call()
         return result['NewExternalIPAddress']
 
     async def async_get_generic_port_mapping_entry(self,
-                                                   port_mapping_index: int) -> PortMappingEntry:
+                                                   port_mapping_index: int,
+                                                   services: List = None) -> PortMappingEntry:
         """
         Get generic port mapping entry.
 
         :param port_mapping_index Index of port mapping entry
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        action = self._action('WANIPC', 'GetGenericPortMappingEntry')
+        # pylint: disable=invalid-name
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetGenericPortMappingEntry')
         result = await action.async_call(
             NewPortMappingIndex=port_mapping_index)
         return PortMappingEntry(
@@ -146,15 +163,19 @@ class IgdDevice(UpnpProfileDevice):
     async def async_get_specific_port_mapping_entry(self,
                                                     remote_host: Optional[IPv4Address],
                                                     external_port: int,
-                                                    protocol: str) -> PortMappingEntry:
+                                                    protocol: str,
+                                                    services: List = None) -> PortMappingEntry:
         """
         Get specific port mapping entry.
 
         :param remote_host Address of remote host or None
         :param external_port External port
         :param protocol Protocol, 'TCP' or 'UDP'
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        action = self._action('WANIPC', 'GetSpecificPortMappingEntry')
+        # pylint: disable=invalid-name
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetSpecificPortMappingEntry')
         result = await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
@@ -177,7 +198,8 @@ class IgdDevice(UpnpProfileDevice):
                                      internal_client: IPv4Address,
                                      enabled: bool,
                                      description: str,
-                                     lease_duration: timedelta):
+                                     lease_duration: timedelta,
+                                     services: List = None):
         """
         Add a port mapping.
 
@@ -189,9 +211,11 @@ class IgdDevice(UpnpProfileDevice):
         :param enabled Port mapping enabled
         :param description Description for port mapping
         :param lease_duration Lease duration
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
         # pylint: disable=too-many-arguments
-        action = self._action('WANIPC', 'AddPortMapping')
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'AddPortMapping')
         await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
@@ -205,70 +229,111 @@ class IgdDevice(UpnpProfileDevice):
     async def async_delete_port_mapping(self,
                                         remote_host: IPv4Address,
                                         external_port: int,
-                                        protocol: str):
+                                        protocol: str,
+                                        services: List = None):
         """
         Delete an existing port mapping.
 
         :param remote_host Address of remote host or None
         :param external_port External port
         :param protocol Protocol, 'TCP' or 'UDP'
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        action = self._action('WANIPC', 'DeletePortMapping')
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'DeletePortMapping')
         await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
             NewProtocol=protocol)
 
-    async def async_get_connection_type_info(self) -> ConnectionTypeInfo:
-        """Get connection type info."""
-        action = self._action('WANIPC', 'GetConnectionTypeInfo')
+    async def async_get_connection_type_info(self, services: List = None) -> ConnectionTypeInfo:
+        """
+        Get connection type info.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetConnectionTypeInfo')
         result = await action.async_call()
         return ConnectionTypeInfo(
             result['NewConnectionType'],
             result['NewPossibleConnectionTypes'])
 
-    async def async_set_connection_type(self, connection_type: str) -> None:
+    async def async_set_connection_type(self, connection_type: str, services: List = None) -> None:
         """
         Set connection type.
 
         :param connection_type connection type
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        action = self._action('WANIPC', 'SetConnectionType')
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'SetConnectionType')
         await action.async_call(NewConnectionType=connection_type)
 
-    async def async_request_connection(self) -> None:
-        """Request connection."""
-        action = self._action('WANIPC', 'RequestConnection')
+    async def async_request_connection(self, services: List = None) -> None:
+        """
+        Request connection.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'RequestConnection')
         await action.async_call()
 
-    async def async_request_termination(self) -> None:
-        """Request connection termination."""
-        action = self._action('WANIPC', 'RequestTermination')
+    async def async_request_termination(self, services: List = None) -> None:
+        """
+        Request connection termination.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'RequestTermination')
         await action.async_call()
 
-    async def async_force_termination(self) -> None:
-        """Force connection termination."""
-        action = self._action('WANIPC', 'ForceTermination')
+    async def async_force_termination(self, services: List = None) -> None:
+        """
+        Force connection termination.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._action(services, 'ForceTermination')
         await action.async_call()
 
-    async def async_get_status_info(self) -> StatusInfo:
-        """Get status info."""
-        action = self._action('WANIPC', 'GetStatusInfo')
+    async def async_get_status_info(self, services: List = None) -> StatusInfo:
+        """
+        Get status info.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetStatusInfo')
         result = await action.async_call()
         return StatusInfo(
             result['NewConnectionStatus'],
             result['NewLastConnectionError'],
             result['NewUptime'])
 
-    async def async_get_port_mapping_number_of_entries(self) -> int:
-        """Get number of port mapping entries."""
-        action = self._action('WANIPC', 'GetPortMappingNumberOfEntries')
+    async def async_get_port_mapping_number_of_entries(self, services: List = None) -> int:
+        """
+        Get number of port mapping entries.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        # pylint: disable=invalid-name
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetPortMappingNumberOfEntries')
         result = await action.async_call()
         return result['NewPortMappingNumberOfEntries']
 
-    async def async_get_nat_rsip_status(self) -> NatRsipStatusInfo:
-        """Get NAT enabled and RSIP availability statuses."""
-        action = self._action('WANIPC', 'GetNATRSIPStatus')
+    async def async_get_nat_rsip_status(self, services: List = None) -> NatRsipStatusInfo:
+        """
+        Get NAT enabled and RSIP availability statuses.
+
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        """
+        services = services or ['WANIPC', 'WANPPP']
+        action = self._any_action(services, 'GetNATRSIPStatus')
         result = await action.async_call()
         return NatRsipStatusInfo(
             result['NewNATEnabled'],
@@ -276,6 +341,7 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_default_connection_service(self) -> str:
         """Get default connection service."""
+        # pylint: disable=invalid-name
         action = self._action('L3FWD', 'GetDefaultConnectionService')
         result = await action.async_call()
         return result['NewDefaultConnectionService']
@@ -286,5 +352,6 @@ class IgdDevice(UpnpProfileDevice):
 
         :param service default connection service
         """
+        # pylint: disable=invalid-name
         action = self._action('L3FWD', 'SetDefaultConnectionService')
         await action.async_call(NewDefaultConnectionService=service)
