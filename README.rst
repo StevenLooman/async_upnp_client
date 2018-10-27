@@ -114,6 +114,6 @@ Abstractions
 ------------
 
 - `DLNA Digital Media Renderer` (DLNA DMR) devices
-  - Primarily built for use with `Home Assistant <https://github.com/home-assistant/home-assistant>`, but might be useful in other projects too.
+  - Primarily built for use with `Home Assistant <https://github.com/home-assistant/home-assistant>`_, but might be useful in other projects too.
 - `Internet Gateway Devices` (IGD)
 - Printers
