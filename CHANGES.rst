@@ -1,7 +1,10 @@
 Changes
 =======
 
-0.12.8 (2018-10-27)
+0.13.1 (unreleased)
+
+
+0.13.0 (2018-10-27)
 
 - Add support for discovery via SSDP
 - Make IGD aware that certain actions live on WANPPP or WANIPC service
