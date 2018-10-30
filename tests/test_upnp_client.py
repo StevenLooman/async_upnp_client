@@ -363,8 +363,10 @@ class TestUpnpEventHandler:
         event_handler = UpnpEventHandler('http://localhost:11302', r)
 
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        await event_handler.async_subscribe(service)
+        ok, sid = await event_handler.async_subscribe(service)
         assert event_handler.service_for_sid('uuid:dummy') == service
+        assert ok is True
+        assert sid == 'uuid:dummy'
 
     @pytest.mark.asyncio
     async def test_subscribe_renew(self):
@@ -374,10 +376,15 @@ class TestUpnpEventHandler:
         event_handler = UpnpEventHandler('http://localhost:11302', r)
 
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        await event_handler.async_subscribe(service)
+        ok, sid = await event_handler.async_subscribe(service)
+        assert ok is True
+        assert sid == 'uuid:dummy'
         assert event_handler.service_for_sid('uuid:dummy') == service
 
-        await event_handler.async_resubscribe(service)
+        ok, sid = await event_handler.async_resubscribe(service)
+        assert event_handler.service_for_sid('uuid:dummy') == service
+        assert ok is True
+        assert sid == 'uuid:dummy'
 
     @pytest.mark.asyncio
     async def test_unsubscribe(self):
@@ -387,11 +394,15 @@ class TestUpnpEventHandler:
         event_handler = UpnpEventHandler('http://localhost:11302', r)
 
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        await event_handler.async_subscribe(service)
+        ok, sid = await event_handler.async_subscribe(service)
         assert event_handler.service_for_sid('uuid:dummy') == service
+        assert ok is True
+        assert sid == 'uuid:dummy'
 
-        await event_handler.async_unsubscribe(service)
+        ok, old_sid = await event_handler.async_unsubscribe(service)
         assert event_handler.service_for_sid('uuid:dummy') is None
+        assert ok is True
+        assert old_sid == 'uuid:dummy'
 
     @pytest.mark.asyncio
     async def test_on_notify_upnp_event(self):

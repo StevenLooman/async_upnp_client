@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 """UPnP base-profile module."""
 
+import logging
+
+from datetime import timedelta
+from typing import List
 from typing import Optional
 
 from async_upnp_client import UpnpAction
@@ -8,6 +12,12 @@ from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpEventHandler
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
+
+
+_LOGGER = logging.getLogger(__name__)
+
+
+SUBSCRIBE_TIMEOUT = timedelta(seconds=30 * 60)
 
 
 class UpnpProfileDevice:
@@ -68,3 +78,56 @@ class UpnpProfileDevice:
             return None
 
         return service.action(action_name)
+
+    def _interesting_service(self, service: UpnpService) -> bool:
+        """Check if service is a service we're interested in."""
+        service_type = service.service_type
+        for service_types in self._SERVICE_TYPES.values():
+            if service_type in service_types:
+                return True
+
+        return False
+
+    async def async_subscribe_services(self) -> timedelta:
+        """(Re-)Subscribe to services."""
+        for service in self._device.services.values():
+            # ensure we are interested in this service_type
+            if not self._interesting_service(service):
+                continue
+
+            service.on_event = self._on_event
+            if self._event_handler.sid_for_service(service) is None:
+                _LOGGER.debug('Subscribing to service: %s', service)
+                success, _ = \
+                    await self._event_handler.async_subscribe(service, timeout=SUBSCRIBE_TIMEOUT)
+                if not success:
+                    _LOGGER.debug('Failed subscribing to: %s', service)
+            else:
+                _LOGGER.debug('Resubscribing to service: %s', service)
+                success, _ = \
+                    await self._event_handler.async_resubscribe(service, timeout=SUBSCRIBE_TIMEOUT)
+
+                # could not renew subscription, try subscribing again
+                if not success:
+                    _LOGGER.debug('Failed resubscribing to: %s', service)
+
+                    success, _ = \
+                        await self._event_handler.async_subscribe(service,
+                                                                  timeout=SUBSCRIBE_TIMEOUT)
+                    if not success:
+                        _LOGGER.debug('Failed subscribing to: %s', service)
+
+        return SUBSCRIBE_TIMEOUT
+
+    async def async_unsubscribe_services(self):
+        """Unsubscribe from all subscribed services."""
+        await self._event_handler.async_unsubscribe_all()
+
+    def _on_event(self, service: UpnpService, state_variables: List[UpnpStateVariable]):
+        """
+        State variable(s) changed. Override to handle events.
+
+        :param service Service which sent the event.
+        :param state_variables State variables which have been changed.
+        """
+        pass

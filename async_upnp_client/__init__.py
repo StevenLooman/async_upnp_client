@@ -181,7 +181,7 @@ class UpnpEventHandler:
         return 200  # ok
 
     async def async_subscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
-            -> None:
+            -> [bool, str]:
         """
         Subscription to a UpnpService.
 
@@ -206,8 +206,8 @@ class UpnpEventHandler:
 
         # check results
         if response_status != 200:
-            _LOGGER.error('Did not receive 200, but %s', response_status)
-            return None
+            _LOGGER.debug('Did not receive 200, but %s', response_status)
+            return False, None
 
         sid = response_headers['sid']
         renewal_time = datetime.now() + timeout
@@ -225,7 +225,10 @@ class UpnpEventHandler:
             await self.handle_notify(item['headers'], item['body'])
             del self._backlog[sid]
 
-    async def async_resubscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)):
+        return True, sid
+
+    async def async_resubscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
+            -> [bool, str]:
         """Renew subscription to a UpnpService."""
         _LOGGER.debug('Resubscribing to: %s', service)
 
@@ -240,13 +243,15 @@ class UpnpEventHandler:
 
         # check results
         if response_status != 200:
-            _LOGGER.error('Did not receive 200, but %s', response_status)
-            return None
+            _LOGGER.debug('Did not receive 200, but %s', response_status)
+            return False, None
 
         sid = response_headers['sid']
         renewal_time = datetime.now() + timeout
         self._subscriptions[sid] = {'service': service, 'renewal_time': renewal_time}
         _LOGGER.debug('Got SID: %s, renewal_time: %s', sid, renewal_time)
+
+        return True, sid
 
     async def async_resubscribe_all(self):
         """Renew all current subscription."""
@@ -271,13 +276,13 @@ class UpnpEventHandler:
 
         # check results
         if response_status != 200:
-            _LOGGER.error('Did not receive 200, but %s', response_status)
-            return None
+            _LOGGER.debug('Did not receive 200, but %s', response_status)
+            return False, None
 
         # remove registration
         if sid in self._subscriptions:
             del self._subscriptions[sid]
-        return sid
+        return True, sid
 
     async def async_unsubscribe_all(self):
         """Unsubscribe all subscriptions."""

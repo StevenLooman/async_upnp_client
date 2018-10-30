@@ -27,7 +27,6 @@ from async_upnp_client.profile import UpnpProfileDevice
 _LOGGER = logging.getLogger(__name__)
 
 
-SUBSCRIBE_TIMEOUT = timedelta(seconds=30 * 60)
 STATE_ON = 'ON'
 STATE_PLAYING = 'PLAYING'
 STATE_PAUSED = 'PAUSED'
@@ -84,37 +83,6 @@ class DmrDevice(UpnpProfileDevice):
         },
     }
 
-    def _interesting_service(self, service: UpnpService) -> bool:
-        """Check if service is a service we're interested in."""
-        # pylint: disable=no-self-use
-        service_type = service.service_type
-        for service_types in self._SERVICE_TYPES.values():
-            if service_type in service_types:
-                return True
-
-        return False
-
-    async def async_subscribe_services(self) -> timedelta:
-        """(Re-)Subscribe to services."""
-        for service in self._device.services.values():
-            # ensure we are interested in this service_type
-            if not self._interesting_service(service):
-                continue
-
-            service.on_event = self._on_event
-            if self._event_handler.sid_for_service(service) is None:
-                _LOGGER.debug('Subscribing to service: %s', service)
-                await self._event_handler.async_subscribe(service, timeout=SUBSCRIBE_TIMEOUT)
-            else:
-                _LOGGER.debug('Resubscribing to service: %s', service)
-                await self._event_handler.async_resubscribe(service, timeout=SUBSCRIBE_TIMEOUT)
-
-        return SUBSCRIBE_TIMEOUT
-
-    async def async_unsubscribe_services(self):
-        """Unsubscribe from all subscribed services."""
-        await self._event_handler.async_unsubscribe_all()
-
     async def async_update(self):
         """Retrieve the latest data."""
         # call GetTransportInfo/GetPositionInfo regularly
@@ -165,6 +133,7 @@ class DmrDevice(UpnpProfileDevice):
 
     def _on_event(self, service: UpnpService, state_variables: List[UpnpStateVariable]):
         """State variable(s) changed, let home-assistant know."""
+        # handle DLNA specific event
         for state_variable in state_variables:
             if state_variable.name == 'LastChange':
                 dlna_handle_notify_last_change(state_variable)
@@ -511,7 +480,9 @@ class DmrDevice(UpnpProfileDevice):
                               restricted="1", resources=[resource])
 
         return didl_lite.to_xml_string(item).decode('utf-8')
+# endregion
 
+# region AVT/Media info
     @property
     def media_title(self):
         """Title of current playing media."""
