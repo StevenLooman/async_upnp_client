@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.13.1 (unreleased)
+0.13.1 (2018-11-03)
 
 - Try to subscribe if re-subscribe didn't work + push subscribe-related methods upwards to UpnpProfileDevice
 - Do store min/max/allowed values at stateVariable even when disable_state_variable_validation has been enabled
