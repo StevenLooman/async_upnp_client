@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.13.2 (unreleased)
+
+
 0.13.1 (2018-11-03)
 
 - Try to subscribe if re-subscribe didn't work + push subscribe-related methods upwards to UpnpProfileDevice
