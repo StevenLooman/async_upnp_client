@@ -154,9 +154,11 @@ class TestUpnpStateVariable:
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
         sv = service.state_variable('Volume')
 
-        assert sv.min_value is None
-        assert sv.max_value is None
+        # min/max are set
+        assert sv.min_value == 0
+        assert sv.max_value == 100
 
+        # min/max are not validated
         sv.value = -10
         assert sv.value == -10
 

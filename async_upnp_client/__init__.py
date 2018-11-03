@@ -949,8 +949,7 @@ class UpnpFactory:
             type_info['default_type_coerced'] = data_type(default_value.text)
 
         allowed_value_range = state_variable_xml.find('service:allowedValueRange', NS)
-        if allowed_value_range and \
-           not self._properties['disable_state_variable_validation']:
+        if allowed_value_range:
             type_info['allowed_value_range'] = {
                 'min': allowed_value_range.find('service:minimum', NS).text,
                 'max': allowed_value_range.find('service:maximum', NS).text,
@@ -960,8 +959,7 @@ class UpnpFactory:
                     allowed_value_range.find('service:step', NS).text
 
         allowed_value_list = state_variable_xml.find('service:allowedValueList', NS)
-        if allowed_value_list and \
-           not self._properties['disable_state_variable_validation']:
+        if allowed_value_list:
             type_info['allowed_values'] = \
                 [v.text for v in allowed_value_list.findall('service:allowedValue', NS)]
 
@@ -976,18 +974,19 @@ class UpnpFactory:
         data_type = type_info['data_type_python']
         validators.append(data_type)
 
-        if 'allowed_values' in type_info:
-            allowed_values = type_info['allowed_values']
-            in_ = vol.In(allowed_values)  # coerce allowed values? assume always string for now
-            validators.append(in_)
+        if not self._properties['disable_state_variable_validation']:
+            if 'allowed_values' in type_info:
+                allowed_values = type_info['allowed_values']
+                in_ = vol.In(allowed_values)  # coerce allowed values? assume always string for now
+                validators.append(in_)
 
-        if 'allowed_value_range' in type_info:
-            min_ = type_info['allowed_value_range'].get('min', None)
-            max_ = type_info['allowed_value_range'].get('max', None)
-            min_ = data_type(min_)
-            max_ = data_type(max_)
-            range_ = vol.Range(min=min_, max=max_)
-            validators.append(range_)
+            if 'allowed_value_range' in type_info:
+                min_ = type_info['allowed_value_range'].get('min', None)
+                max_ = type_info['allowed_value_range'].get('max', None)
+                min_ = data_type(min_)
+                max_ = data_type(max_)
+                range_ = vol.Range(min=min_, max=max_)
+                validators.append(range_)
 
         # construct key
         key = vol.Required('value')
