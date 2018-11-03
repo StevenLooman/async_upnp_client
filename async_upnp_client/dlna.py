@@ -33,6 +33,18 @@ STATE_PAUSED = 'PAUSED'
 STATE_IDLE = 'IDLE'
 
 
+def _time_to_str(time: timedelta):
+    """Convert timedelta to str/units."""
+    total_seconds = abs(time.total_seconds())
+    target = {
+        'sign': '-' if time.total_seconds() < 0 else '',
+        'hours': int(total_seconds // 3600),
+        'minutes': int(total_seconds // 60),
+        'seconds': int(total_seconds % 60),
+    }
+    return '{sign}{hours}:{minutes}:{seconds}'.format(**target)
+
+
 def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
     """
     Handle changes to LastChange state variable.
@@ -389,6 +401,59 @@ class DmrDevice(UpnpProfileDevice):
 
         action = self._action('AVT', 'Next')
         await action.async_call(InstanceID=0)
+
+    def _has_seek_with_mode(self, mode: str):
+        """Check if device has Seek mode."""
+        action = self._action('AVT', 'Seek')
+        state_var = self._state_variable('AVT', 'A_ARG_TYPE_SeekMode')
+        if action is None or state_var is None:
+            return False
+
+        seek_modes = [mode.lower().strip()
+                      for mode in self._state_variable('AVT', 'A_ARG_TYPE_SeekMode').allowed_values]
+        return mode.lower() in seek_modes
+
+    @property
+    def has_seek_abs_time(self):
+        """Check if device has Seek controls, by ABS_TIME."""
+        return self._has_seek_with_mode('ABS_TIME')
+
+    @property
+    def can_seek_abs_time(self):
+        """Check if the device can currently Seek with ABS_TIME."""
+        return self.has_seek_abs_time and \
+            'seek' in self._current_transport_actions
+
+    async def async_seek_abs_time(self, time: timedelta):
+        """Send seek command with ABS_TIME."""
+        if 'seek' not in self._current_transport_actions:
+            _LOGGER.debug('Cannot do Seek by ABS_TIME')
+            return
+
+        target = _time_to_str(time)
+        action = self._action('AVT', 'Seek')
+        await action.async_call(InstanceID=0, Unit='ABS_TIME', Target=target)
+
+    @property
+    def has_seek_rel_time(self):
+        """Check if device has Seek controls, by REL_TIME."""
+        return self._has_seek_with_mode('REL_TIME')
+
+    @property
+    def can_seek_rel_time(self):
+        """Check if the device can currently Seek with REL_TIME."""
+        return self.has_seek_rel_time and \
+            'seek' in self._current_transport_actions
+
+    async def async_seek_rel_time(self, time: timedelta):
+        """Send seek command with REL_TIME."""
+        if 'seek' not in self._current_transport_actions:
+            _LOGGER.debug('Cannot do Seek by REL_TIME')
+            return
+
+        target = _time_to_str(time)
+        action = self._action('AVT', 'Seek')
+        await action.async_call(InstanceID=0, Unit='REL_TIME', Target=target)
 
     @property
     def has_play_media(self):
