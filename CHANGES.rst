@@ -6,6 +6,7 @@ Changes
 - Try to subscribe if re-subscribe didn't work + push subscribe-related methods upwards to UpnpProfileDevice
 - Do store min/max/allowed values at stateVariable even when disable_state_variable_validation has been enabled
 - Add relative and absolute Seek commands to DLNA DMR profile
+- Try harder to get a artwork picture for DLNA DMR Profile
 
 
 0.13.0 (2018-10-27)
