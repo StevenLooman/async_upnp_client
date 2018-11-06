@@ -33,7 +33,7 @@ STATE_PAUSED = 'PAUSED'
 STATE_IDLE = 'IDLE'
 
 
-def _time_to_str(time: timedelta):
+def _time_to_str(time: timedelta) -> str:
     """Convert timedelta to str/units."""
     total_seconds = abs(time.total_seconds())
     target = {
@@ -43,6 +43,24 @@ def _time_to_str(time: timedelta):
         'seconds': int(total_seconds % 60),
     }
     return '{sign}{hours}:{minutes}:{seconds}'.format(**target)
+
+
+def _str_to_time(string: str) -> timedelta:
+    """Convert a string to timedelta."""
+    regexp = r"(?P<sign>[-+])?(?P<h>\d+):(?P<m>\d+):(?P<s>\d+)\.?(?P<ms>\d+)?"
+    match = re.match(regexp, string)
+    if not match:
+        return None
+
+    sign = -1 if match.group('sign') == '-' else 1
+    hours = int(match.group('h'))
+    minutes = int(match.group('m'))
+    seconds = int(match.group('s'))
+    if match.group('ms'):
+        msec = int(match.group('ms'))
+    else:
+        msec = 0
+    return sign * timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec)
 
 
 def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
@@ -603,9 +621,11 @@ class DmrDevice(UpnpProfileDevice):
            state_var.value == 'NOT_IMPLEMENTED':
             return None
 
-        split = [int(v) for v in re.findall(r"[\w']+", state_var.value)]
-        delta = timedelta(hours=split[0], minutes=split[1], seconds=split[2])
-        return delta.seconds
+        time = _str_to_time(state_var.value)
+        if time is None:
+            return None
+
+        return time.seconds
 
     @property
     def media_position(self):
@@ -616,9 +636,11 @@ class DmrDevice(UpnpProfileDevice):
            state_var.value == 'NOT_IMPLEMENTED':
             return None
 
-        split = [int(v) for v in re.findall(r"[\w']+", state_var.value)]
-        delta = timedelta(hours=split[0], minutes=split[1], seconds=split[2])
-        return delta.seconds
+        time = _str_to_time(state_var.value)
+        if time is None:
+            return None
+
+        return time.seconds
 
     @property
     def media_position_updated_at(self):

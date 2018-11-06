@@ -3,6 +3,8 @@ Changes
 
 0.13.2 (unreleased)
 
+- Better parsing + robustness for media_duration/media_position in dlna-profile
+
 
 0.13.1 (2018-11-03)
 
