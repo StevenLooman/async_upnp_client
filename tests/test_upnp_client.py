@@ -10,9 +10,10 @@ import xml.etree.ElementTree as ET
 from async_upnp_client import (
     UpnpError,
     UpnpEventHandler,
-    UpnpValueError,
     UpnpFactory,
     UpnpRequester,
+    UpnpStateVariable,
+    UpnpValueError,
 )
 from async_upnp_client.dlna import dlna_handle_notify_last_change
 
@@ -184,6 +185,23 @@ class TestUpnpStateVariable:
             assert False
         except UpnpValueError:
             pass
+
+    @pytest.mark.asyncio
+    async def test_value_upnp_value_error(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r, disable_state_variable_validation=True)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        sv = service.state_variable('Volume')
+
+        # should be ok
+        sv.upnp_value = '50'
+        assert sv.value == 50
+
+        # should set UpnpStateVariable.UPNP_VALUE_ERROR
+        sv.upnp_value = 'abc'
+        assert sv.value is None
+        assert sv.value_unchecked is UpnpStateVariable.UPNP_VALUE_ERROR
 
     @pytest.mark.asyncio
     async def test_send_events(self):

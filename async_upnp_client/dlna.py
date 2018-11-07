@@ -320,7 +320,7 @@ class DmrDevice(UpnpProfileDevice):
         state_var = self._state_variable('RC', 'Mute')
         value = state_var.value
         if value is None:
-            _LOGGER.debug('Got no value for volume_mute')
+            _LOGGER.debug('Got no value for Volume_mute')
             return None
 
         return value

@@ -678,6 +678,8 @@ class UpnpAction:
 class UpnpStateVariable:
     """Representation of a State Variable."""
 
+    UPNP_VALUE_ERROR = object()
+
     def __init__(self, state_variable_info: Mapping, schema) -> None:
         """Initializer."""
         self._state_variable_info = state_variable_info
@@ -758,7 +760,14 @@ class UpnpStateVariable:
 
     @property
     def value(self):
-        """Get the value, python typed."""
+        """
+        Get the value, python typed.
+
+        Invalid values are returned as None.
+        """
+        if self._value is UpnpStateVariable.UPNP_VALUE_ERROR:
+            return None
+
         return self._value
 
     @value.setter
@@ -769,6 +778,17 @@ class UpnpStateVariable:
         self._updated_at = datetime.now(timezone.utc)
 
     @property
+    def value_unchecked(self):
+        """
+        Get the value, python typed.
+
+        If an event was received with an invalid value for this StateVariable
+        (e.g., 'abc' for a 'ui4' StateVariable), then this will return
+        UpnpStateVariable.UPNP_VALUE_ERROR.
+        """
+        return self._value
+
+    @property
     def upnp_value(self) -> str:
         """Get the value, UPnP typed."""
         return self.coerce_upnp(self.value)
@@ -776,7 +796,11 @@ class UpnpStateVariable:
     @upnp_value.setter
     def upnp_value(self, upnp_value):
         """Set the value, UPnP typed."""
-        self.value = self.coerce_python(upnp_value)
+        try:
+            self.value = self.coerce_python(upnp_value)
+        except ValueError as err:
+            _LOGGER.debug('Error setting upnp_value "%s", error: %s', upnp_value, err)
+            self._value = self.UPNP_VALUE_ERROR
 
     def coerce_python(self, upnp_value):
         """Coerce value from UPNP to python."""
@@ -939,15 +963,18 @@ class UpnpFactory:
                           ET.tostring(state_variable_xml, encoding='unicode'))
             info['send_events'] = False
 
+        # data type
         data_type = state_variable_xml.find('service:dataType', NS).text
         type_info['data_type'] = data_type
         type_info['data_type_python'] = UpnpFactory.STATE_VARIABLE_TYPE_MAPPING[data_type]
 
+        # default value
         default_value = state_variable_xml.find('service:defaultValue', NS)
         if default_value:
             type_info['default_value'] = default_value.text
             type_info['default_type_coerced'] = data_type(default_value.text)
 
+        # allowed value ranges
         allowed_value_range = state_variable_xml.find('service:allowedValueRange', NS)
         if allowed_value_range:
             type_info['allowed_value_range'] = {
@@ -958,6 +985,7 @@ class UpnpFactory:
                 type_info['allowed_value_range']['step'] = \
                     allowed_value_range.find('service:step', NS).text
 
+        # allowed value list
         allowed_value_list = state_variable_xml.find('service:allowedValueList', NS)
         if allowed_value_list:
             type_info['allowed_values'] = \
