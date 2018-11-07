@@ -4,6 +4,7 @@ Changes
 0.13.2 (unreleased)
 
 - Better parsing + robustness for media_duration/media_position in dlna-profile
+- Ensure absolute URL in case a relative URL is returned for DmrDevice.media_image_url
 
 
 0.13.1 (2018-11-03)

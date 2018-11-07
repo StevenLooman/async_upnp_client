@@ -5,6 +5,7 @@ import asyncio
 import logging
 import re
 from urllib.parse import quote_plus
+from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
@@ -18,6 +19,7 @@ from xml.etree import ElementTree as ET
 
 from didl_lite import didl_lite
 
+from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpError
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
@@ -61,6 +63,20 @@ def _str_to_time(string: str) -> timedelta:
     else:
         msec = 0
     return sign * timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec)
+
+
+def _absolute_url(device: UpnpDevice, url: str) -> str:
+    """
+    Convert a relative URL to an absolute URL pointing at device.
+
+    If url is already an absolute url (i.e., starts with http:/https:),
+    then the url itself is returned.
+    """
+    if url.startswith('http:') or \
+       url.startswith('https:'):
+        return url
+
+    return urljoin(device.base_url, url)
 
 
 def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
@@ -603,12 +619,12 @@ class DmrDevice(UpnpProfileDevice):
             # Some players use Item.albumArtURI,
             # though not found in the UPnP-av-ConnectionManager-v1-Service spec.
             if hasattr(item, 'album_art_uri'):
-                return item.album_art_uri
+                return _absolute_url(self._device, item.album_art_uri)
 
             for res in item.resources:
                 protocol_info = res.protocol_info
                 if protocol_info.startswith('http-get:*:image/'):
-                    return res.url
+                    return _absolute_url(self._device, res.url)
 
         return None
 
