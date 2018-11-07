@@ -194,12 +194,11 @@ async def subscribe(description_url, service_names):
     _LOGGER.debug('Listening on: %s', server.callback_url)
 
     # gather all wanted services
+    if '*' in service_names:
+        service_names = device.services.keys()
+
     services = []
     for service_name in service_names:
-        if service_name == '*':
-            services += device.services.values()
-            continue
-
         service = service_from_device(device, service_name)
         service.on_event = on_event
         services.append(service)

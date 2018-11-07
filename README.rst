@@ -69,9 +69,9 @@ An example of calling an action::
     }
 
 
-An example of subscribing to a service, note that the program stays running until you stop it (ctrl-c)::
+An example of subscribing to all services, note that the program stays running until you stop it (ctrl-c)::
 
-    $ upnp-client --pprint subscribe http://192.168.178.10:49152/description.xml RC
+    $ upnp-client --pprint subscribe http://192.168.178.10:49152/description.xml \*
     {
         "timestamp": 1531482518.3663802,
         "service_id": "urn:upnp-org:serviceId:RenderingControl",
@@ -90,6 +90,11 @@ An example of subscribing to a service, note that the program stays running unti
         }
     }
     ...
+
+You can subscribe to list of services by providing these names or abbreviated names, such as::
+
+    $ upnp-client --pprint subscribe http://192.168.178.10:49152/description.xml RC AVTransport
+
 
 An example of discovering devices::
 
