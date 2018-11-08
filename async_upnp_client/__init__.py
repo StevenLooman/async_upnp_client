@@ -209,6 +209,10 @@ class UpnpEventHandler:
             _LOGGER.debug('Did not receive 200, but %s', response_status)
             return False, None
 
+        if 'sid' not in response_headers:
+            _LOGGER.debug('No SID received, aborting subscription')
+            return False, None
+
         sid = response_headers['sid']
         renewal_time = datetime.now() + timeout
         self._subscriptions[sid] = {
@@ -233,9 +237,10 @@ class UpnpEventHandler:
         _LOGGER.debug('Resubscribing to: %s', service)
 
         # do SUBSCRIBE request
+        sid = self.sid_for_service(service)
         headers = {
             'Host': urllib.parse.urlparse(service.event_sub_url).netloc,
-            'SID': self.sid_for_service(service),
+            'SID': sid,
             'TIMEOUT': 'Second-' + str(timeout),
         }
         response_status, response_headers, _ = \
@@ -246,7 +251,11 @@ class UpnpEventHandler:
             _LOGGER.debug('Did not receive 200, but %s', response_status)
             return False, None
 
-        sid = response_headers['sid']
+        # devices should return the SID when re-subscribe,
+        # but in case it doesn't, assume the same SID
+        if 'sid' in response_headers:
+            sid = response_headers['sid']
+
         renewal_time = datetime.now() + timeout
         self._subscriptions[sid] = {'service': service, 'renewal_time': renewal_time}
         _LOGGER.debug('Got SID: %s, renewal_time: %s', sid, renewal_time)

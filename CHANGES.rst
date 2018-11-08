@@ -7,6 +7,7 @@ Changes
 - Ensure absolute URL in case a relative URL is returned for DmrDevice.media_image_url
 - Fix events not being handled when subscribing to all services ('*')
 - Gracefully handle invalid values from events by setting None/UpnpStateVariable.UPNP_VALUE_ERROR/None as value/value_unchecked (with fix by @rytilahti)
+- Work-around for devices which don't send the SID upon re-subscribing
 
 
 0.13.1 (2018-11-03)
