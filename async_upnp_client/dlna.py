@@ -76,7 +76,7 @@ def _absolute_url(device: UpnpDevice, url: str) -> str:
        url.startswith('https:'):
         return url
 
-    return urljoin(device.base_url, url)
+    return urljoin(device.device_url, url)
 
 
 def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
