@@ -4,9 +4,9 @@ Changes
 0.13.2 (unreleased)
 
 - Better parsing + robustness for media_duration/media_position in dlna-profile
-- Ensure absolute URL in case a relative URL is returned for DmrDevice.media_image_url
+- Ensure absolute URL in case a relative URL is returned for DmrDevice.media_image_url (with fix by @rytilahti)
 - Fix events not being handled when subscribing to all services ('*')
-- Gracefully handle invalid values from events by setting None/UpnpStateVariable.UPNP_VALUE_ERROR/None as value/value_unchecked (with fix by @rytilahti)
+- Gracefully handle invalid values from events by setting None/UpnpStateVariable.UPNP_VALUE_ERROR/None as value/value_unchecked
 - Work-around for devices which don't send the SID upon re-subscribing
 
 
