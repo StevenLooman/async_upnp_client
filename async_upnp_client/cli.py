@@ -39,6 +39,7 @@ parser.add_argument('--debug', action='store_true', help='Show debug messages')
 parser.add_argument('--debug-traffic', action='store_true', help='Show network traffic')
 parser.add_argument('--pprint', action='store_true', help='Pretty-print (indent) JSON output')
 parser.add_argument('--timeout', type=int, help='Timeout for connection', default=5)
+parser.add_argument('--strict', action='store_true', help='Be strict about invalid data received')
 subparsers = parser.add_subparsers(title='Command', dest='command')
 subparsers.required = True
 
@@ -63,7 +64,8 @@ async def create_device(description_url):
     """Create UpnpDevice."""
     timeout = args.timeout
     requester = AiohttpRequester(timeout)
-    factory = UpnpFactory(requester)
+    disable_validation = not args.strict
+    factory = UpnpFactory(requester, disable_state_variable_validation=disable_validation)
     return await factory.async_create_device(description_url)
 
 
