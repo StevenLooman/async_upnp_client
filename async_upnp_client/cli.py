@@ -38,6 +38,7 @@ parser = argparse.ArgumentParser(description='upnp_client')
 parser.add_argument('--debug', action='store_true', help='Show debug messages')
 parser.add_argument('--debug-traffic', action='store_true', help='Show network traffic')
 parser.add_argument('--pprint', action='store_true', help='Pretty-print (indent) JSON output')
+parser.add_argument('--timeout', type=int, help='Timeout for connection', default=5)
 subparsers = parser.add_subparsers(title='Command', dest='command')
 subparsers.required = True
 
@@ -60,7 +61,8 @@ event_handler = None
 
 async def create_device(description_url):
     """Create UpnpDevice."""
-    requester = AiohttpRequester()
+    timeout = args.timeout
+    requester = AiohttpRequester(timeout)
     factory = UpnpFactory(requester)
     return await factory.async_create_device(description_url)
 
@@ -216,9 +218,12 @@ async def subscribe(description_url, service_names):
 
 async def discover(discover_args):
     """Discover devices."""
+    timeout = args.timeout
     service_type = discover_args.service_type
     source_ip = discover_args.bind
-    responses = ssdp_discover(service_type=service_type, source_ip=source_ip)
+    responses = ssdp_discover(service_type=service_type,
+                              source_ip=source_ip,
+                              timeout=timeout)
     for response in responses:
         response['_timestamp'] = str(response['_timestamp'])
         print(json.dumps(response, indent=pprint_indent))

@@ -3,6 +3,8 @@ Changes
 
 0.13.3 (unreleased)
 
+- Add option to `upnp-client` to set timeout for device communication/discovery
+
 
 0.13.2 (2018-11-11)
 
