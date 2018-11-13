@@ -124,6 +124,13 @@ async def call_action(description_url, call_action_args):
     else:
         service_name = call_action_args[0]
         action_name = ''
+
+    for action_arg in call_action_args[1:]:
+        if '=' not in action_arg:
+            print('Invalid argument value: %s' % (action_arg, ))
+            print('Use: Argument=value')
+            sys.exit(1)
+
     action_args = {a.split('=', 1)[0]: a.split('=', 1)[1] for a in call_action_args[1:]}
 
     # get service
@@ -139,6 +146,7 @@ async def call_action(description_url, call_action_args):
     # get action
     action = service.action(action_name)
     if not action:
+        print('Unknown action: %s' % (action_name, ))
         print('Available actions:\n%s' % (
             '\n'.join(['  ' + name for name in sorted(service.actions)])
         ))
@@ -149,7 +157,7 @@ async def call_action(description_url, call_action_args):
     for key, value in action_args.items():
         in_arg = action.argument(key)
         if not in_arg:
-            print('Unknown argument: %s', (key, ))
+            print('Unknown argument: %s' % (key, ))
             print('Available arguments: %s' % (
                 ','.join([a.name for a in action.in_arguments()])))
             sys.exit(1)
@@ -204,6 +212,9 @@ async def subscribe(description_url, service_names):
     services = []
     for service_name in service_names:
         service = service_from_device(device, service_name)
+        if not service:
+            print('Unknown service: %s' % (service_name, ))
+            sys.exit(1)
         service.on_event = on_event
         services.append(service)
 
