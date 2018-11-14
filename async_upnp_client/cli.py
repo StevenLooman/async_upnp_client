@@ -19,7 +19,7 @@ from async_upnp_client.aiohttp import AiohttpRequester
 from async_upnp_client.aiohttp import AiohttpNotifyServer
 from async_upnp_client.aiohttp import get_local_ip
 from async_upnp_client.dlna import dlna_handle_notify_last_change
-from async_upnp_client.discovery import discover as ssdp_discover
+from async_upnp_client.discovery import async_discover as async_ssdp_discover
 from async_upnp_client.discovery import SSDP_ST_ALL
 
 
@@ -234,12 +234,15 @@ async def discover(discover_args):
     timeout = args.timeout
     service_type = discover_args.service_type
     source_ip = discover_args.bind
-    responses = ssdp_discover(service_type=service_type,
-                              source_ip=source_ip,
-                              timeout=timeout)
-    for response in responses:
+
+    async def response_received(response):
         response['_timestamp'] = str(response['_timestamp'])
         print(json.dumps(response, indent=pprint_indent))
+
+    await async_ssdp_discover(service_type=service_type,
+                              source_ip=source_ip,
+                              timeout=timeout,
+                              async_callback=response_received)
 
 
 async def async_main():
