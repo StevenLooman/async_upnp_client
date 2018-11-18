@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.13.3 (unreleased)
+0.13.3 (2018-11-18)
 
 - Add option to `upnp-client` to set timeout for device communication/discovery
 - Add option to be strict (default false) with regard to invalid data
