@@ -7,6 +7,7 @@ Changes
 - Add option to be strict (default false) with regard to invalid data
 - Add more error handling to `upnp-client`
 - Add async_discovery
+- Fix discovery-traffic not being logged to async_upnp_client.traffic-logger
 
 
 0.13.2 (2018-11-11)

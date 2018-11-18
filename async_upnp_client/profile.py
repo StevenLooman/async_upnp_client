@@ -17,7 +17,7 @@ from async_upnp_client import UpnpStateVariable
 _LOGGER = logging.getLogger(__name__)
 
 
-SUBSCRIBE_TIMEOUT = timedelta(seconds=30 * 60)
+SUBSCRIBE_TIMEOUT = timedelta(minutes=30)
 
 
 class UpnpProfileDevice:

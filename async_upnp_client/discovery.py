@@ -9,7 +9,7 @@ from ipaddress import IPv4Address
 
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC = logging.getLogger(__name__ + ".traffic")
+_LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 
 SSDP_TARGET = ('239.255.255.250', 1900)
 SSDP_ST_ALL = 'ssdp:all'
