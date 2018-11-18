@@ -4,6 +4,7 @@
 import logging
 
 from datetime import timedelta
+from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -12,6 +13,7 @@ from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpEventHandler
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
+from async_upnp_client.discovery import async_discover
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,7 +29,24 @@ class UpnpProfileDevice:
     Override _SERVICE_TYPES for aliases.
     """
 
+    DEVICE_TYPES = []
+
     _SERVICE_TYPES = {}
+
+    @classmethod
+    async def async_discover(cls) -> Dict:
+        """
+        Discovery this device type.
+
+        This only return discovery info, not a profile itself.
+
+        :return:
+        """
+        return [
+            device
+            for device in await async_discover()
+            if device['st'] in cls.DEVICE_TYPES
+        ]
 
     def __init__(self,
                  device: UpnpDevice,

@@ -21,6 +21,10 @@ PrinterAttributes = NamedTuple(
 class PrinterDevice(UpnpProfileDevice):
     """Representation of a printer device."""
 
+    DEVICE_TYPES = [
+        'urn:schemas-upnp-org:device:printer:1',
+    ]
+
     _SERVICE_TYPES = {
         'BASIC': {
             'urn:schemas-upnp-org:service:PrintBasic:1',

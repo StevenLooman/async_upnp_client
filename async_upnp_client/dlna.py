@@ -116,6 +116,12 @@ class DmrDevice(UpnpProfileDevice):
 
     # pylint: disable=too-many-public-methods
 
+    DEVICE_TYPES = [
+        'urn:schemas-upnp-org:device:MediaRenderer:1',
+        'urn:schemas-upnp-org:device:MediaRenderer:2',
+        'urn:schemas-upnp-org:device:MediaRenderer:3',
+    ]
+
     _SERVICE_TYPES = {
         'RC': {
             'urn:schemas-upnp-org:service:RenderingControl:3',

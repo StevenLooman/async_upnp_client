@@ -8,6 +8,7 @@ Changes
 - Add more error handling to `upnp-client`
 - Add async_discovery
 - Fix discovery-traffic not being logged to async_upnp_client.traffic-logger
+- Add discover devices specific from/for Profile
 
 
 0.13.2 (2018-11-11)
