@@ -4,18 +4,23 @@
 import asyncio
 import logging
 import re
-from urllib.parse import quote_plus
-from urllib.parse import urljoin
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
 
 from datetime import timedelta
+
 from typing import Any
 from typing import Dict
 from typing import List
 from typing import Mapping
 from typing import Optional
-from xml.etree import ElementTree as ET
+
+from xml.sax import parseString
+from xml.sax.handler import ContentHandler
+from xml.sax.handler import ErrorHandler
+
+from urllib.parse import quote_plus
+from urllib.parse import urljoin
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 from didl_lite import didl_lite
 
@@ -79,6 +84,60 @@ def _absolute_url(device: UpnpDevice, url: str) -> str:
     return urljoin(device.device_url, url)
 
 
+class DlnaDmrEventContentHandler(ContentHandler):
+    """Content Handler to parse DLNA DMR Event data."""
+
+    def __init__(self):
+        """Initializer."""
+        super().__init__()
+        self.changes = {}
+        self._current_instance = None
+
+    def startElement(self, name, attrs):
+        """Handle startElement."""
+        if 'val' not in attrs:
+            return
+
+        if name == 'InstanceID':
+            self._current_instance = attrs.get('val', '0')
+        else:
+            current_instance = self._current_instance or "0"  # safety
+            if current_instance not in self.changes:
+                self.changes[current_instance] = {}
+
+            self.changes[current_instance][name] = attrs.get('val')
+
+    def endElement(self, name):
+        """Handle endElement."""
+        self._current_instance = None
+
+
+class DlnaDmrEventErrorHandler(ErrorHandler):
+    """Error handler which ignores errors."""
+
+    def error(self, exception):
+        """Handle error."""
+        _LOGGER.debug("Error during parsing: %s", exception)
+
+    def fatalError(self, exception):
+        """Handle error."""
+        _LOGGER.debug("Fatal error during parsing: %s", exception)
+
+
+def _parse_last_change_event(text: str) -> Dict[str, Dict[str, str]]:
+    """
+    Parse a LastChange event.
+
+    :param text Text to parse.
+
+    :return Dict per Instance, containing changed state variables with values.
+    """
+    content_handler = DlnaDmrEventContentHandler()
+    error_handler = DlnaDmrEventErrorHandler()
+    parseString(text, content_handler, error_handler)
+    return content_handler.changes
+
+
 def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
     """
     Handle changes to LastChange state variable.
@@ -92,23 +151,14 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
         raise UpnpError('Call this only on state variable LastChange')
 
     service = state_var.service
-    changes = {}
+    event_data = state_var.value
+    changes = _parse_last_change_event(event_data)
+    if '0' not in changes:
+        _LOGGER.warning('Only InstanceID 0 is supported')
+        return
 
-    el_event = ET.fromstring(state_var.value)
-    for el_instance in el_event:
-        if not el_instance.tag.endswith("}InstanceID"):
-            continue
-
-        if el_instance.attrib['val'] != '0':
-            _LOGGER.warning('Only InstanceID 0 is supported')
-            continue
-
-        for el_state_var in el_instance:
-            name = el_state_var.tag.split('}')[1]
-            value = el_state_var.attrib['val']
-            changes[name] = value
-
-    service.notify_changed_state_variables(changes)
+    changes_0 = changes['0']
+    service.notify_changed_state_variables(changes_0)
 
 
 class DmrDevice(UpnpProfileDevice):

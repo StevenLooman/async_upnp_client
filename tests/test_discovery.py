@@ -19,7 +19,7 @@ def test_parse_response():
           b'Location: http://192.168.1.1:80/RootDevice.xml\r\n' \
           b'Server: UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0\r\n' \
           b'ST:urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1\r\n' \
-          b'USN: uuid:...:WANCommonInterfaceConfig:1\r\n' \
+          b'USN: uuid:...::WANCommonInterfaceConfig:1\r\n' \
           b'EXT:\r\n\r\n'
     response = _parse_response(msg)
 
@@ -31,6 +31,6 @@ def test_parse_response():
         'location': 'http://192.168.1.1:80/RootDevice.xml',
         'server': 'UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0',
         'st': 'urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1',
-        'usn': 'uuid:...:WANCommonInterfaceConfig:1',
+        'usn': 'uuid:...::WANCommonInterfaceConfig:1',
         'ext': '',
     }

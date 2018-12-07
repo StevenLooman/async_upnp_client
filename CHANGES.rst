@@ -4,6 +4,7 @@ Changes
 0.13.4 (unreleased)
 
 - Show a bit more information on unexpected status from HTTP GET
+- Try to handle invalid XML from LastChange event
 
 
 0.13.3 (2018-11-18)
