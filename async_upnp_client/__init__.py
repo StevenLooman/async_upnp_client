@@ -1082,7 +1082,7 @@ class UpnpFactory:
             await self.requester.async_http_request('GET', url)
 
         if status_code != 200:
-            raise UpnpError()
+            raise UpnpError("Received status code: {}".format(status_code))
 
         root = ET.fromstring(response_body)
         return root
