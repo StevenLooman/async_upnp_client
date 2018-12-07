@@ -153,4 +153,3 @@ class SsdpDiscoveryProtocol:
 
     def connection_lost(self, exc):
         """Handle connection lost."""
-        pass

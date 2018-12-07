@@ -149,4 +149,3 @@ class UpnpProfileDevice:
         :param service Service which sent the event.
         :param state_variables State variables which have been changed.
         """
-        pass
