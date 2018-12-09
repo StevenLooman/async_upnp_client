@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.13.5 (unreleased)
+0.13.5 (2018-12-09)
 
 - Minor refactorings: less private variables which are actually public (through properties) anyway
 - Store XML-node at UpnpDevice/UpnpService/UpnpAction/UpnpAction.Argument/UpnpStateVariable
