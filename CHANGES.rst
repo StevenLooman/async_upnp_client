@@ -3,6 +3,8 @@ Changes
 
 0.13.5 (unreleased)
 
+- Minor refactorings: less private variables which are actually public (through properties) anyway
+
 
 0.13.4 (2018-12-07)
 

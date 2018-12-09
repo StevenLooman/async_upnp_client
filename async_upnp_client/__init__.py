@@ -316,14 +316,14 @@ class UpnpValueError(UpnpError):
 class UpnpDevice:
     """UPnP Device representation."""
 
-    def __init__(self, requester: UpnpRequester, device_url: str,
-                 device_description: Mapping, services: List['UpnpService']) -> None:
+    def __init__(self, requester: UpnpRequester, device_description: Mapping,
+                 services: List['UpnpService']) -> None:
         """Initializer."""
         self.requester = requester
-        self.device_url = device_url
         self._device_description = device_description
-        self._services = {service.service_type: service for service in services}
+        self.services = {service.service_type: service for service in services}
 
+        # bind services to ourselves
         for service in services:
             service.device = self
 
@@ -337,14 +337,14 @@ class UpnpDevice:
         """Get UDN of this device."""
         return self._device_description['udn']
 
+    @property
+    def device_url(self) -> str:
+        """Get the URL of this device."""
+        return self._device_description['url']
+
     def service(self, service_type: str) -> Optional['UpnpService']:
         """Get service by service_type."""
-        return self._services.get(service_type)
-
-    @property
-    def services(self) -> Dict[str, 'UpnpService']:
-        """Get all services."""
-        return self._services
+        return self.services.get(service_type)
 
     async def async_ping(self) -> None:
         """Ping the device."""
@@ -363,16 +363,20 @@ class UpnpService:
     def __init__(self, requester: UpnpRequester, service_description: Mapping,
                  state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']) -> None:
         """Initializer."""
-        self._requester = requester
+        # pylint: disable=too-many-arguments
+        self.requester = requester
         self._service_description = service_description
-        self._state_variables = {sv.name: sv for sv in state_variables}
-        self._actions = {ac.name: ac for ac in actions}
+        self.state_variables = {sv.name: sv for sv in state_variables}
+        self.actions = {ac.name: ac for ac in actions}
 
         self.on_event = None
         self._device = None
 
+        # bind state variables to ourselves
         for state_var in state_variables:
             state_var.service = self
+
+        # bind actions to ourselves
         for action in actions:
             action.service = self
 
@@ -417,16 +421,6 @@ class UpnpService:
         return urllib.parse.urljoin(self.device.device_url,
                                     self._service_description['event_sub_url'])
 
-    @property
-    def requester(self) -> UpnpRequester:
-        """Get requester."""
-        return self._requester
-
-    @property
-    def state_variables(self) -> List['UpnpStateVariable']:
-        """Get All UpnpStateVariables for this UpnpService."""
-        return self._state_variables
-
     def state_variable(self, name: str) -> 'UpnpStateVariable':
         """Get UPnpStateVariable by name."""
         state_var = self.state_variables.get(name, None)
@@ -438,11 +432,6 @@ class UpnpService:
             state_var = self.state_variables.get(name, None)
 
         return state_var
-
-    @property
-    def actions(self) -> List['UpnpAction']:
-        """Get All UpnpActions for this UpnpService."""
-        return self._actions
 
     def action(self, name: str) -> 'UpnpAction':
         """Get UPnpAction by name."""
@@ -538,10 +527,10 @@ class UpnpAction:
             """Coerce Python value to UPnP value."""
             return self.related_state_variable.coerce_upnp(value)
 
-    def __init__(self, name: str, args) -> None:
+    def __init__(self, name: str, arguments) -> None:
         """Initializer."""
-        self._name = name
-        self._args = args
+        self.name = name
+        self.arguments = arguments
 
         self._service = None
 
@@ -557,11 +546,6 @@ class UpnpAction:
             raise UpnpError('UpnpAction already bound to UpnpService')
 
         self._service = service
-
-    @property
-    def name(self) -> str:
-        """Get name of this UpnpAction."""
-        return self._name
 
     def __str__(self) -> str:
         """To string."""
@@ -579,15 +563,15 @@ class UpnpAction:
 
     def in_arguments(self) -> List['UpnpAction.Argument']:
         """Get all in-arguments."""
-        return [arg for arg in self._args if arg.direction == 'in']
+        return [arg for arg in self.arguments if arg.direction == 'in']
 
     def out_arguments(self) -> List['UpnpAction.Argument']:
         """Get all out-arguments."""
-        return [arg for arg in self._args if arg.direction == 'out']
+        return [arg for arg in self.arguments if arg.direction == 'out']
 
     def argument(self, name: str, direction: str = None):
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
-        for arg in self._args:
+        for arg in self.arguments:
             if arg.name != name:
                 continue
             if direction is not None and arg.direction != direction:
@@ -881,7 +865,7 @@ class UpnpFactory:
         root = await self._async_get_url_xml(description_url)
 
         # get name
-        device_desc = self._device_parse_xml(root)
+        device_desc = self._device_parse_xml(root, description_url)
 
         # get services
         services = []
@@ -889,9 +873,9 @@ class UpnpFactory:
             service = await self.async_create_service(service_desc_xml, description_url)
             services.append(service)
 
-        return UpnpDevice(self.requester, description_url, device_desc, services)
+        return UpnpDevice(self.requester, device_desc, services)
 
-    def _device_parse_xml(self, device_description_xml) -> Dict:
+    def _device_parse_xml(self, device_description_xml: ET.Element, description_url: str) -> Dict:
         """Parse device description XML."""
         # pylint: disable=no-self-use
         desc = {
@@ -900,6 +884,7 @@ class UpnpFactory:
             'manufacturer': device_description_xml.find('.//device:manufacturer', NS).text,
             'model_name': device_description_xml.find('.//device:modelName', NS).text,
             'udn': device_description_xml.find('.//device:UDN', NS).text,
+            'url': description_url,
         }
         model_desc_el = device_description_xml.find('.//device:modelDescription', NS)
         if model_desc_el is not None:
