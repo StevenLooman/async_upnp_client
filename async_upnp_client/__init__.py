@@ -111,7 +111,7 @@ class UpnpEventHandler:
     subscribe/resubscribe/unsubscribe handle subscriptions.
     """
 
-    def __init__(self, callback_url: str, requester: UpnpRequester) -> None:
+    def __init__(self, callback_url: str, requester: UpnpRequester):
         """Initializer."""
         self._callback_url = callback_url
         self._requester = requester
@@ -317,11 +317,12 @@ class UpnpDevice:
     """UPnP Device representation."""
 
     def __init__(self, requester: UpnpRequester, device_description: Mapping,
-                 services: List['UpnpService']) -> None:
+                 services: List['UpnpService'], xml: ET.Element) -> None:
         """Initializer."""
         self.requester = requester
         self._device_description = device_description
         self.services = {service.service_type: service for service in services}
+        self.xml = xml
 
         # bind services to ourselves
         for service in services:
@@ -361,13 +362,15 @@ class UpnpService:
     # pylint: disable=too-many-instance-attributes
 
     def __init__(self, requester: UpnpRequester, service_description: Mapping,
-                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction']) -> None:
+                 state_variables: List['UpnpStateVariable'], actions: List['UpnpAction'],
+                 xml: ET.Element) -> None:
         """Initializer."""
         # pylint: disable=too-many-arguments
         self.requester = requester
         self._service_description = service_description
         self.state_variables = {sv.name: sv for sv in state_variables}
         self.actions = {ac.name: ac for ac in actions}
+        self.xml = xml
 
         self.on_event = None
         self._device = None
@@ -487,11 +490,13 @@ class UpnpAction:
         """Representation of an Argument of an Action."""
 
         def __init__(self, name: str, direction: str,
-                     related_state_variable: 'UpnpStateVariable') -> None:
+                     related_state_variable: 'UpnpStateVariable',
+                     xml: ET.Element) -> None:
             """Initializer."""
             self.name = name
             self.direction = direction
             self.related_state_variable = related_state_variable
+            self.xml = xml
             self._value = None
 
         def validate_value(self, value):
@@ -527,10 +532,12 @@ class UpnpAction:
             """Coerce Python value to UPnP value."""
             return self.related_state_variable.coerce_upnp(value)
 
-    def __init__(self, name: str, arguments) -> None:
+    def __init__(self, name: str, arguments: List['UpnpAction.UpnpArgument'],
+                 xml: ET.Element) -> None:
         """Initializer."""
         self.name = name
         self.arguments = arguments
+        self.xml = xml
 
         self._service = None
 
@@ -673,10 +680,11 @@ class UpnpStateVariable:
 
     UPNP_VALUE_ERROR = object()
 
-    def __init__(self, state_variable_info: Mapping, schema) -> None:
+    def __init__(self, state_variable_info: Mapping, schema, xml) -> None:
         """Initializer."""
         self._state_variable_info = state_variable_info
         self._schema = schema
+        self.xml = xml
 
         self._service = None
         self._value = None
@@ -860,11 +868,11 @@ class UpnpFactory:
             'disable_state_variable_validation': disable_state_variable_validation,
         }
 
-    async def async_create_device(self, description_url) -> UpnpDevice:
+    async def async_create_device(self, description_url: str) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         root = await self._async_get_url_xml(description_url)
 
-        # get name
+        # get device info
         device_desc = self._device_parse_xml(root, description_url)
 
         # get services
@@ -873,7 +881,7 @@ class UpnpFactory:
             service = await self.async_create_service(service_desc_xml, description_url)
             services.append(service)
 
-        return UpnpDevice(self.requester, device_desc, services)
+        return UpnpDevice(self.requester, device_desc, services, root)
 
     def _device_parse_xml(self, device_description_xml: ET.Element, description_url: str) -> Dict:
         """Parse device description XML."""
@@ -908,7 +916,8 @@ class UpnpFactory:
         state_vars = self.create_state_variables(scpd_xml)
         actions = self.create_actions(scpd_xml, state_vars)
 
-        return UpnpService(self.requester, service_description, state_vars, actions)
+        return UpnpService(self.requester, service_description, state_vars, actions,
+                           service_description_xml)
 
     def _service_parse_xml(self, service_description_xml: ET.Element) -> Dict:
         """Parse service description XML."""
@@ -934,7 +943,7 @@ class UpnpFactory:
         state_variable_info = self._state_variable_parse_xml(state_variable_xml)
         type_info = state_variable_info['type_info']
         schema = self._state_variable_create_schema(type_info)
-        return UpnpStateVariable(state_variable_info, schema)
+        return UpnpStateVariable(state_variable_info, schema, state_variable_xml)
 
     def _state_variable_parse_xml(self, state_variable_xml: ET.Element) -> Dict:
         """Parse XML for state variable."""
@@ -1038,9 +1047,10 @@ class UpnpFactory:
         action_info = self._action_parse_xml(action_xml, state_variables)
         args = [UpnpAction.Argument(arg_info['name'],
                                     arg_info['direction'],
-                                    arg_info['state_variable'])
+                                    arg_info['state_variable'],
+                                    arg_info['xml'])
                 for arg_info in action_info['arguments']]
-        return UpnpAction(action_info['name'], args)
+        return UpnpAction(action_info['name'], args, action_xml)
 
     def _action_parse_xml(self, action_xml: ET.Element, state_variables: List[UpnpStateVariable]) \
             -> Dict:
@@ -1057,6 +1067,7 @@ class UpnpFactory:
                 'name': argument_xml.find('service:name', NS).text,
                 'direction': argument_xml.find('service:direction', NS).text,
                 'state_variable': svs[state_variable_name],
+                'xml': argument_xml,
             }
             info['arguments'].append(argument)
         return info

@@ -81,6 +81,31 @@ class TestUpnpStateVariable:
         state_var = service.state_variable('Volume')
         assert state_var
 
+        action = service.action('GetVolume')
+        assert action
+
+        argument = action.argument('InstanceID')
+        assert argument
+
+    @pytest.mark.asyncio
+    async def test_init_xml(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        assert device.xml is not None
+
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        assert service.xml is not None
+
+        state_var = service.state_variable('Volume')
+        assert state_var.xml is not None
+
+        action = service.action('GetVolume')
+        assert action.xml is not None
+
+        argument = action.argument('InstanceID')
+        assert argument.xml is not None
+
     @pytest.mark.asyncio
     async def test_set_value_volume(self):
         r = UpnpTestRequester(RESPONSE_MAP)
