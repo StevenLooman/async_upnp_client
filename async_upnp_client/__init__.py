@@ -7,6 +7,7 @@ import urllib.parse
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
+from http import HTTPStatus
 from typing import Dict
 from typing import List
 from typing import Mapping
@@ -139,7 +140,7 @@ class UpnpEventHandler:
 
         return self._subscriptions[sid]['service']
 
-    async def handle_notify(self, headers: Mapping, body: str) -> int:
+    async def handle_notify(self, headers: Mapping, body: str) -> HTTPStatus:
         """Handle a NOTIFY request."""
         # ensure valid request
         _LOGGER_TRAFFIC.debug('Incoming request:\nNOTIFY\n%s\n\n%s',
@@ -147,14 +148,14 @@ class UpnpEventHandler:
                               body)
         if 'NT' not in headers or \
            'NTS' not in headers:
-            _LOGGER_TRAFFIC.debug('Sending response: %s', 400)
-            return 400
+            _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.BAD_REQUEST)
+            return HTTPStatus.BAD_REQUEST
 
         if headers['NT'] != 'upnp:event' or \
            headers['NTS'] != 'upnp:propchange' or \
            'SID' not in headers:
-            _LOGGER_TRAFFIC.debug('Sending response: %s', 412)
-            return 412
+            _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.PRECONDITION_FAILED)
+            return HTTPStatus.PRECONDITION_FAILED
         sid = headers['SID']
 
         # SID not known yet? store it in the backlog
@@ -162,7 +163,7 @@ class UpnpEventHandler:
         if sid not in self._subscriptions:
             _LOGGER.debug('Storing NOTIFY in backlog for SID: %s', sid)
             self._backlog[sid] = {'headers': headers, 'body': body}
-            return 202  # accepted
+            return HTTPStatus.ACCEPTED
 
         # decode event and send updates to service
         changes = {}
@@ -177,8 +178,8 @@ class UpnpEventHandler:
         service = self._subscriptions[sid]['service']
         service.notify_changed_state_variables(changes)
 
-        _LOGGER_TRAFFIC.debug('Sending response: %s', 200)
-        return 200  # ok
+        _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.OK)
+        return HTTPStatus.OK
 
     async def async_subscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
             -> [bool, str]:
