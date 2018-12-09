@@ -6,6 +6,7 @@ Changes
 - Minor refactorings: less private variables which are actually public (through properties) anyway
 - Store XML-node at UpnpDevice/UpnpService/UpnpAction/UpnpAction.Argument/UpnpStateVariable
 - Use http.HTTPStatus
+- Try to be closer to the UPnP spec with regard to eventing
 
 
 0.13.4 (2018-12-07)

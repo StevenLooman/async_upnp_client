@@ -163,7 +163,9 @@ class UpnpEventHandler:
         if sid not in self._subscriptions:
             _LOGGER.debug('Storing NOTIFY in backlog for SID: %s', sid)
             self._backlog[sid] = {'headers': headers, 'body': body}
-            return HTTPStatus.ACCEPTED
+
+            _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.OK)
+            return HTTPStatus.OK
 
         # decode event and send updates to service
         changes = {}
@@ -197,7 +199,7 @@ class UpnpEventHandler:
         headers = {
             'NT': 'upnp:event',
             'TIMEOUT': 'Second-' + str(timeout.seconds),
-            'Host': urllib.parse.urlparse(service.event_sub_url).netloc,
+            'HOST': urllib.parse.urlparse(service.event_sub_url).netloc,
             'CALLBACK': '<{}>'.format(self.callback_url),
         }
         response_status, response_headers, _ = \
@@ -211,7 +213,7 @@ class UpnpEventHandler:
             return False, None
 
         if 'sid' not in response_headers:
-            _LOGGER.debug('No SID received, aborting subscription')
+            _LOGGER.debug('No SID received, aborting subscribe')
             return False, None
 
         sid = response_headers['sid']
@@ -240,7 +242,7 @@ class UpnpEventHandler:
         # do SUBSCRIBE request
         sid = self.sid_for_service(service)
         headers = {
-            'Host': urllib.parse.urlparse(service.event_sub_url).netloc,
+            'HOST': urllib.parse.urlparse(service.event_sub_url).netloc,
             'SID': sid,
             'TIMEOUT': 'Second-' + str(timeout),
         }
@@ -276,7 +278,7 @@ class UpnpEventHandler:
         # do UNSUBSCRIBE request
         sid = self.sid_for_service(service)
         headers = {
-            'Host': urllib.parse.urlparse(service.event_sub_url).netloc,
+            'HOST': urllib.parse.urlparse(service.event_sub_url).netloc,
             'SID': sid,
         }
         response_status, _, _ = \
