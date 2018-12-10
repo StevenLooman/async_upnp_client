@@ -1,9 +1,15 @@
 Changes
 =======
 
+0.13.8 (unreleased)
+
+- Add __repr__ for UpnpAction.Argument and UPnpService.Action (@rytilahti)
+
+
 0.13.7 (2018-12-15)
 
 - Make UpnpProfileDevice.device public and add utility methods for device information
+
 
 0.13.6 (2018-12-10)
 
