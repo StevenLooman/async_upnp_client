@@ -561,6 +561,7 @@ class UpnpAction:
             return self.related_state_variable.coerce_upnp(value)
 
         def __repr__(self) -> str:
+            """To repr."""
             return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
 
     def __init__(self, name: str, arguments: List['UpnpAction.UpnpArgument'],
@@ -590,7 +591,7 @@ class UpnpAction:
         return "<UpnpService.Action({0})>".format(self.name)
 
     def __repr__(self) -> str:
-        """Repr."""
+        """To repr."""
         return "<UpnpService.Action({0})({1}) -> {2}>".format(
             self.name, self.in_arguments(), self.out_arguments()
         )
