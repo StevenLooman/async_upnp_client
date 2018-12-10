@@ -560,6 +560,9 @@ class UpnpAction:
             """Coerce Python value to UPnP value."""
             return self.related_state_variable.coerce_upnp(value)
 
+        def __repr__(self) -> str:
+            return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
+
     def __init__(self, name: str, arguments: List['UpnpAction.UpnpArgument'],
                  xml: ET.Element) -> None:
         """Initializer."""
@@ -585,6 +588,12 @@ class UpnpAction:
     def __str__(self) -> str:
         """To string."""
         return "<UpnpService.Action({0})>".format(self.name)
+
+    def __repr__(self) -> str:
+        """Repr."""
+        return "<UpnpService.Action({0})({1}) -> {2}>".format(
+            self.name, self.in_arguments(), self.out_arguments()
+        )
 
     def validate_arguments(self, **kwargs):
         """
