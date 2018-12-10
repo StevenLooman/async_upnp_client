@@ -3,6 +3,8 @@ Changes
 
 0.13.6 (unreleased)
 
+- Add manufacturer, model_description, model_name, model_number properties to UpnpDevice.
+
 
 0.13.5 (2018-12-09)
 

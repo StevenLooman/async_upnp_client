@@ -337,6 +337,31 @@ class UpnpDevice:
         return self._device_description['friendly_name']
 
     @property
+    def friendly_name(self) -> str:
+        """Get the friendly name of this device, alias for name."""
+        return self._device_description['friendly_name']
+
+    @property
+    def manufacturer(self) -> str:
+        """Get the manufacturer of this device."""
+        return self._device_description['manufacturer']
+
+    @property
+    def model_description(self) -> str:
+        """Get the model description of this device."""
+        return self._device_description.get('model_description')
+
+    @property
+    def model_name(self) -> str:
+        """Get the model name of this device."""
+        return self._device_description['model_name']
+
+    @property
+    def model_number(self) -> str:
+        """Get the model number of this device."""
+        return self._device_description.get('model_number')
+
+    @property
     def udn(self) -> str:
         """Get UDN of this device."""
         return self._device_description['udn']
@@ -896,10 +921,14 @@ class UpnpFactory:
             'model_name': device_description_xml.find('.//device:modelName', NS).text,
             'udn': device_description_xml.find('.//device:UDN', NS).text,
             'url': description_url,
+
         }
         model_desc_el = device_description_xml.find('.//device:modelDescription', NS)
         if model_desc_el is not None:
             desc['model_description'] = model_desc_el.text
+        model_number_el = device_description_xml.find('.//device:modelNumber', NS)
+        if model_number_el is not None:
+            desc['model_number'] = model_number_el.text
         return desc
 
     async def async_create_service(self,
