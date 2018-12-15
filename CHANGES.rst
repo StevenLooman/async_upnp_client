@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.13.7 (unreleased)
+0.13.7 (2018-12-15)
 
 - Make UpnpProfileDevice.device public and add utility methods for device information
 
