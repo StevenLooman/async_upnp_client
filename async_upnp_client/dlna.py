@@ -197,7 +197,7 @@ class DmrDevice(UpnpProfileDevice):
                 # playing something, get position info
                 await self._async_poll_position_info()
         else:
-            await self._device.async_ping()
+            await self.device.async_ping()
 
     async def _async_poll_transport_info(self):
         """Update transport info from device."""
@@ -587,7 +587,7 @@ class DmrDevice(UpnpProfileDevice):
 
     async def _fetch_headers(self, url: str, headers: Mapping):
         """Do a HEAD/GET to get resources headers."""
-        requester = self._device.requester
+        requester = self.device.requester
 
         # try a HEAD first
         status, headers, _ = await requester.async_http_request('HEAD',
@@ -675,12 +675,12 @@ class DmrDevice(UpnpProfileDevice):
             # Some players use Item.albumArtURI,
             # though not found in the UPnP-av-ConnectionManager-v1-Service spec.
             if hasattr(item, 'album_art_uri'):
-                return _absolute_url(self._device, item.album_art_uri)
+                return _absolute_url(self.device, item.album_art_uri)
 
             for res in item.resources:
                 protocol_info = res.protocol_info
                 if protocol_info.startswith('http-get:*:image/'):
-                    return _absolute_url(self._device, res.url)
+                    return _absolute_url(self.device, res.url)
 
         return None
 

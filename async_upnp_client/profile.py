@@ -48,34 +48,52 @@ class UpnpProfileDevice:
             if device['st'] in cls.DEVICE_TYPES
         ]
 
-    def __init__(self,
-                 device: UpnpDevice,
-                 event_handler: UpnpEventHandler) -> None:
+    def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initializer."""
-        self._device = device
+        self.device = device
         self._event_handler = event_handler
         self.on_event = None
 
     @property
     def name(self) -> str:
         """Get the name of the device."""
-        return self._device.name
+        return self.device.name
+
+    @property
+    def manufacturer(self) -> str:
+        """Get the manufacturer of this device."""
+        return self.device.manufacturer
+
+    @property
+    def model_description(self) -> str:
+        """Get the model description of this device."""
+        return self.device.model_description
+
+    @property
+    def model_name(self) -> str:
+        """Get the model name of this device."""
+        return self.device.model_name
+
+    @property
+    def model_number(self) -> str:
+        """Get the model number of this device."""
+        return self.device.model_number
 
     @property
     def udn(self) -> str:
         """Get the UDN of the device."""
-        return self._device.udn
+        return self.device.udn
 
     def _service(self, service_type_abbreviation: str) -> Optional[UpnpService]:
         """Get UpnpService by service_type or alias."""
-        if not self._device:
+        if not self.device:
             return None
 
         if service_type_abbreviation not in self._SERVICE_TYPES:
             return None
 
         for service_type in self._SERVICE_TYPES[service_type_abbreviation]:
-            service = self._device.service(service_type)
+            service = self.device.service(service_type)
             if service:
                 return service
 
@@ -109,7 +127,7 @@ class UpnpProfileDevice:
 
     async def async_subscribe_services(self) -> timedelta:
         """(Re-)Subscribe to services."""
-        for service in self._device.services.values():
+        for service in self.device.services.values():
             # ensure we are interested in this service_type
             if not self._interesting_service(service):
                 continue
