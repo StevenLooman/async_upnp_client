@@ -3,10 +3,11 @@ Changes
 
 0.13.7 (unreleased)
 
+- Make UpnpProfileDevice.device public and add utility methods for device information
 
 0.13.6 (2018-12-10)
 
-- Add manufacturer, model_description, model_name, model_number properties to UpnpDevice.
+- Add manufacturer, model_description, model_name, model_number properties to UpnpDevice
 
 
 0.13.5 (2018-12-09)
