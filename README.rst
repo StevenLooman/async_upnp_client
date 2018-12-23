@@ -45,7 +45,8 @@ A command line interface is provided via the `upnp-client` script. This script c
 - subscribe to services and listen for events
 - show UPnP traffic (--debug-traffic) from and to the device
 - show pretty printed JSON (--pprint) for human readability
-- discover devices
+- search for devices
+- listen for advertisements
 
 The output of the script is a single line of JSON for each action-call or subscription-event. See the programs help for more information.
 
@@ -94,9 +95,9 @@ You can subscribe to list of services by providing these names or abbreviated na
     $ upnp-client --pprint subscribe http://192.168.178.10:49152/description.xml RC AVTransport
 
 
-An example of discovering devices::
+An example of searching for devices::
 
-    $ upnp-client --pprint discover
+    $ upnp-client --pprint search
     {
         "cache-control": "max-age=3600",
         "date": "Sat, 27 Oct 2018 10:43:42 GMT",
@@ -109,6 +110,24 @@ An example of discovering devices::
         "st": "upnp:rootdevice",
         "usn": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72::upnp:rootdevice",
         "_timestamp": "2018-10-27 12:43:09.125408"
+    }
+
+
+An example of listening for advertisements::
+
+    $ upnp-client --print advertisements
+    {
+        "Host": "239.255.255.250:1900",
+        "Cache-Control": "max-age=30",
+        "Location": "http://192.168.178.1:1900/WFADevice.xml",
+        "NTS": "ssdp:alive",
+        "Server": "POSIX, UPnP/1.0 UPnP Stack/2013.4.3.0",
+        "NT": "urn:schemas-wifialliance-org:device:WFADevice:1",
+        "USN": "uuid:99cb221c-1f15-c620-dc29-395f415623c6::urn:schemas-wifialliance-org:device:WFADevice:1",
+        "_timestamp": "2018-12-23 11:22:47.154293",
+        "_address": "('192.168.178.1', 1900)",
+        "_udn": "uuid:99cb221c-1f15-c620-dc29-395f415623c6",
+        "_source": "advertisement"
     }
 
 

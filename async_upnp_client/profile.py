@@ -13,7 +13,7 @@ from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpEventHandler
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
-from async_upnp_client.discovery import async_discover
+from async_upnp_client.search import async_search
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,17 +34,17 @@ class UpnpProfileDevice:
     _SERVICE_TYPES = {}
 
     @classmethod
-    async def async_discover(cls) -> Dict:
+    async def async_search(cls) -> List[Dict]:
         """
-        Discovery this device type.
+        Search for this device type.
 
-        This only return discovery info, not a profile itself.
+        This only returns search info, not a profile itself.
 
-        :return:
+        :return: List of devices (dicts) found
         """
         return [
             device
-            for device in await async_discover()
+            for device in await async_search()
             if device['st'] in cls.DEVICE_TYPES
         ]
 

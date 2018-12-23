@@ -1,9 +1,10 @@
 Changes
 =======
 
-0.13.8 (unreleased)
+0.14.0 (unreleased)
 
 - Add __repr__ for UpnpAction.Argument and UPnpService.Action (@rytilahti)
+- Support advertisements and rename discovery to search
 
 
 0.13.7 (2018-12-15)

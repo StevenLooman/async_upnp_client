@@ -15,12 +15,13 @@ from typing import Optional
 from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpFactory
 from async_upnp_client import UpnpService
+from async_upnp_client.advertisement import UpnpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpRequester
 from async_upnp_client.aiohttp import AiohttpNotifyServer
 from async_upnp_client.aiohttp import get_local_ip
 from async_upnp_client.dlna import dlna_handle_notify_last_change
-from async_upnp_client.discovery import async_discover as async_ssdp_discover
-from async_upnp_client.discovery import SSDP_ST_ALL
+from async_upnp_client.search import async_search as async_ssdp_search
+from async_upnp_client.ssdp import SSDP_ST_ALL
 
 
 logging.basicConfig()
@@ -50,9 +51,11 @@ subparser = subparsers.add_parser('subscribe', help='Subscribe to services')
 subparser.add_argument('device', help='URL to device description XML')
 subparser.add_argument('service', nargs='+', help='service type or part or abbreviation')
 subparser.add_argument('--bind', help='ip[:port], e.g., 192.168.0.10:8090')
-subparser = subparsers.add_parser('discover', help='Subscribe to services')
+subparser = subparsers.add_parser('search', help='Search for devices')
 subparser.add_argument('--bind', help='ip, e.g., 192.168.0.10')
-subparser.add_argument('--service_type', help='service type to discover', default=SSDP_ST_ALL)
+subparser.add_argument('--service_type', help='service type to search for', default=SSDP_ST_ALL)
+subparser = subparsers.add_parser('advertisements', help='Listen for advertisements')
+subparser.add_argument('--bind', help='ip, e.g., 192.168.0.10')
 
 args = parser.parse_args()
 pprint_indent = 4 if args.pprint else None
@@ -229,20 +232,40 @@ async def subscribe(description_url, service_names):
         await event_handler.async_resubscribe_all()
 
 
-async def discover(discover_args):
+async def search(search_args):
     """Discover devices."""
     timeout = args.timeout
-    service_type = discover_args.service_type
-    source_ip = discover_args.bind
+    service_type = search_args.service_type
+    source_ip = search_args.bind
 
-    async def response_received(response):
-        response['_timestamp'] = str(response['_timestamp'])
-        print(json.dumps(response, indent=pprint_indent))
+    async def on_response(data):
+        data = {key: str(value) for key, value in data.items()}
+        print(json.dumps(data, indent=pprint_indent))
 
-    await async_ssdp_discover(service_type=service_type,
-                              source_ip=source_ip,
-                              timeout=timeout,
-                              async_callback=response_received)
+    await async_ssdp_search(service_type=service_type,
+                            source_ip=source_ip,
+                            timeout=timeout,
+                            async_callback=on_response)
+
+
+async def advertisements(advertisement_args):
+    """Listen for advertisements."""
+    # pylint:disable=unused-argument
+    async def on_notify(data):
+        data = {key: str(value) for key, value in data.items()}
+        print(json.dumps(data, indent=pprint_indent))
+
+    listener = UpnpAdvertisementListener(on_alive=on_notify,
+                                         on_byebye=on_notify,
+                                         on_update=on_notify)
+    await listener.async_start()
+    try:
+        while True:
+            await asyncio.sleep(60)
+    except KeyboardInterrupt:
+        _LOGGER.debug('KeyboardInterrupt')
+        await listener.async_stop()
+        raise
 
 
 async def async_main():
@@ -257,8 +280,10 @@ async def async_main():
         await call_action(args.device, getattr(args, 'call-action'))
     elif args.command == 'subscribe':
         await subscribe(args.device, args.service)
-    elif args.command == 'discover':
-        await discover(args)
+    elif args.command == 'search':
+        await search(args)
+    elif args.command == 'advertisements':
+        await advertisements(args)
 
 
 def main():
