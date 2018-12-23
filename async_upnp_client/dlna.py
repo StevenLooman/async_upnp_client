@@ -13,7 +13,6 @@ from typing import List
 from typing import Mapping
 from typing import Optional
 
-from xml.sax import parseString
 from xml.sax.handler import ContentHandler
 from xml.sax.handler import ErrorHandler
 
@@ -22,6 +21,7 @@ from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
+from defusedxml.sax import parseString
 from didl_lite import didl_lite
 
 from async_upnp_client import UpnpDevice
@@ -134,7 +134,7 @@ def _parse_last_change_event(text: str) -> Dict[str, Dict[str, str]]:
     """
     content_handler = DlnaDmrEventContentHandler()
     error_handler = DlnaDmrEventErrorHandler()
-    parseString(text, content_handler, error_handler)
+    parseString(text.encode(), content_handler, error_handler)
     return content_handler.changes
 
 

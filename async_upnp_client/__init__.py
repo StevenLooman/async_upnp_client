@@ -16,6 +16,7 @@ from typing import Tuple
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
+import defusedxml.ElementTree
 import voluptuous as vol
 
 
@@ -169,7 +170,7 @@ class UpnpEventHandler:
 
         # decode event and send updates to service
         changes = {}
-        el_root = ET.fromstring(body)
+        el_root = defusedxml.ElementTree.fromstring(body)
         for el_property in el_root.findall('./event:property', NS):
             for el_state_var in el_property:
                 name = el_state_var.tag
@@ -679,7 +680,7 @@ class UpnpAction:
     def parse_response(self, service_type: str, response_headers: Mapping, response_body: str):
         """Parse response from called Action."""
         # pylint: disable=unused-argument
-        xml = ET.fromstring(response_body)
+        xml = defusedxml.ElementTree.fromstring(response_body)
 
         query = './/soap_envelope:Body/soap_envelope:Fault'
         if xml.find(query, NS):
@@ -1122,5 +1123,5 @@ class UpnpFactory:
         if status_code != 200:
             raise UpnpError("Received status code: {}".format(status_code))
 
-        root = ET.fromstring(response_body)
+        root = defusedxml.ElementTree.fromstring(response_body)
         return root
