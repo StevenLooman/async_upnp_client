@@ -1,11 +1,11 @@
 import asyncio
 import logging
 import uuid
-import xml.etree.ElementTree as ET
 
 import async_timeout
 from aiohttp import web
 from aiohttp import ClientSession
+import defusedxml.ElementTree as ET
 
 
 logging.basicConfig(level=logging.DEBUG)

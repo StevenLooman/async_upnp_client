@@ -5,7 +5,7 @@ import os.path
 from copy import copy
 
 import pytest
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 
 from async_upnp_client import (
     UpnpError,

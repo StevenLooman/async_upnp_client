@@ -32,6 +32,7 @@ INSTALL_REQUIRES=[
     'aiohttp>=3.3.2',
     'async-timeout>=3.0.0',
     'python-didl-lite==1.2.0',
+    'defusedxml>=0.5.0',
 ]
 
 
