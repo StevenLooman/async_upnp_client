@@ -8,16 +8,12 @@ from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
 from http import HTTPStatus
-from typing import Dict
-from typing import List
-from typing import Mapping
-from typing import Optional
-from typing import Tuple
+from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Tuple  # noqa: F401
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
 import defusedxml.ElementTree
-import voluptuous as vol
+import voluptuous as vol  # type: ignore
 
 
 NS = {
@@ -89,7 +85,8 @@ class UpnpRequester:
 
         return response_status, response_headers, response_body
 
-    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
+    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text') \
+            -> Tuple[int, Mapping, str]:
         """
         Actually do a HTTP request.
 
@@ -113,23 +110,29 @@ class UpnpEventHandler:
     subscribe/resubscribe/unsubscribe handle subscriptions.
     """
 
-    def __init__(self, callback_url: str, requester: UpnpRequester):
+    Subscription = NamedTuple(
+        'Subscription', [
+            ('service', 'UpnpService'),
+            ('timeout', timedelta),
+            ('renewal_time', datetime)])
+
+    def __init__(self, callback_url: str, requester: UpnpRequester) -> None:
         """Initializer."""
         self._callback_url = callback_url
         self._requester = requester
 
-        self._subscriptions = {}
-        self._backlog = {}
+        self._subscriptions = {}  # type: Dict[str, 'UpnpEventHandler.Subscription']
+        self._backlog = {}  # type: Dict[str, Tuple[Mapping, str]]
 
     @property
-    def callback_url(self):
+    def callback_url(self) -> str:
         """Return callback URL on which we are callable."""
         return self._callback_url
 
     def sid_for_service(self, service: 'UpnpService') -> Optional[str]:
         """Get the service connected to SID."""
         for sid, entry in self._subscriptions.items():
-            if entry['service'] == service:
+            if entry.service == service:
                 return sid
 
         return None
@@ -139,7 +142,7 @@ class UpnpEventHandler:
         if sid not in self._subscriptions:
             return None
 
-        return self._subscriptions[sid]['service']
+        return self._subscriptions[sid].service
 
     async def handle_notify(self, headers: Mapping, body: str) -> HTTPStatus:
         """Handle a NOTIFY request."""
@@ -163,7 +166,7 @@ class UpnpEventHandler:
         # Some devices don't behave nicely and send events before the SUBSCRIBE call is done.
         if sid not in self._subscriptions:
             _LOGGER.debug('Storing NOTIFY in backlog for SID: %s', sid)
-            self._backlog[sid] = {'headers': headers, 'body': body}
+            self._backlog[sid] = (headers, body, )
 
             _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.OK)
             return HTTPStatus.OK
@@ -174,18 +177,18 @@ class UpnpEventHandler:
         for el_property in el_root.findall('./event:property', NS):
             for el_state_var in el_property:
                 name = el_state_var.tag
-                value = el_state_var.text
+                value = el_state_var.text or ''
                 changes[name] = value
 
         # send changes to service
-        service = self._subscriptions[sid]['service']
+        service = self._subscriptions[sid].service
         service.notify_changed_state_variables(changes)
 
         _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.OK)
         return HTTPStatus.OK
 
     async def async_subscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
-            -> [bool, str]:
+            -> Tuple[bool, Optional[str]]:
         """
         Subscription to a UpnpService.
 
@@ -219,29 +222,32 @@ class UpnpEventHandler:
 
         sid = response_headers['sid']
         renewal_time = datetime.now() + timeout
-        self._subscriptions[sid] = {
-            'service': service,
-            'timeout': timeout,
-            'renewal_time': renewal_time,
-        }
+        self._subscriptions[sid] = UpnpEventHandler.Subscription(
+            service=service,
+            timeout=timeout,
+            renewal_time=renewal_time,
+        )
         _LOGGER.debug('Got SID: %s, renewal_time: %s', sid, renewal_time)
 
         # replay any backlog we have for this service
         if sid in self._backlog:
             _LOGGER.debug('Re-playing backlogged NOTIFY for SID: %s', sid)
             item = self._backlog[sid]
-            await self.handle_notify(item['headers'], item['body'])
+            await self.handle_notify(item[0], item[1])
             del self._backlog[sid]
 
         return True, sid
 
     async def async_resubscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
-            -> [bool, str]:
+            -> Tuple[bool, Optional[str]]:
         """Renew subscription to a UpnpService."""
         _LOGGER.debug('Resubscribing to: %s', service)
 
         # do SUBSCRIBE request
         sid = self.sid_for_service(service)
+        if not sid:
+            raise UpnpError('Could not find SID for service')
+
         headers = {
             'HOST': urllib.parse.urlparse(service.event_sub_url).netloc,
             'SID': sid,
@@ -255,24 +261,31 @@ class UpnpEventHandler:
             _LOGGER.debug('Did not receive 200, but %s', response_status)
             return False, None
 
-        # devices should return the SID when re-subscribe,
-        # but in case it doesn't, assume the same SID
-        if 'sid' in response_headers:
-            sid = response_headers['sid']
+        # Devices should return the SID when re-subscribe,
+        # but in case it doesn't, use the new SID.
+        if 'sid' in response_headers and response_headers['sid']:
+            new_sid = response_headers['sid']  # type: str
+            if new_sid != sid:
+                del self._subscriptions[sid]
+                sid = new_sid
 
         renewal_time = datetime.now() + timeout
-        self._subscriptions[sid] = {'service': service, 'renewal_time': renewal_time}
+        self._subscriptions[sid] = UpnpEventHandler.Subscription(
+            service=service,
+            timeout=timeout,
+            renewal_time=renewal_time,
+        )
         _LOGGER.debug('Got SID: %s, renewal_time: %s', sid, renewal_time)
 
         return True, sid
 
-    async def async_resubscribe_all(self):
+    async def async_resubscribe_all(self) -> None:
         """Renew all current subscription."""
         for entry in self._subscriptions.values():
-            service = entry['service']
+            service = entry.service
             await self.async_resubscribe(service)
 
-    async def async_unsubscribe(self, service: 'UpnpService'):
+    async def async_unsubscribe(self, service: 'UpnpService') -> Tuple[bool, Optional[str]]:
         """Unsubscribe from a UpnpService."""
         _LOGGER.debug('Unsubscribing from: %s, device: %s', service, service.device)
 
@@ -297,11 +310,11 @@ class UpnpEventHandler:
             del self._subscriptions[sid]
         return True, sid
 
-    async def async_unsubscribe_all(self):
+    async def async_unsubscribe_all(self) -> None:
         """Unsubscribe all subscriptions."""
         services = self._subscriptions.copy()
         for entry in services.values():
-            service = entry['service']
+            service = entry.service
             await self.async_unsubscribe(service)
 
 
@@ -320,7 +333,7 @@ class UpnpValueError(UpnpError):
 class UpnpDevice:
     """UPnP Device representation."""
 
-    def __init__(self, requester: UpnpRequester, device_description: Mapping,
+    def __init__(self, requester: UpnpRequester, device_description: Mapping[str, str],
                  services: List['UpnpService'], xml: ET.Element) -> None:
         """Initializer."""
         self.requester = requester
@@ -348,7 +361,7 @@ class UpnpDevice:
         return self._device_description['manufacturer']
 
     @property
-    def model_description(self) -> str:
+    def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
         return self._device_description.get('model_description')
 
@@ -358,7 +371,7 @@ class UpnpDevice:
         return self._device_description['model_name']
 
     @property
-    def model_number(self) -> str:
+    def model_number(self) -> Optional[str]:
         """Get the model number of this device."""
         return self._device_description.get('model_number')
 
@@ -372,9 +385,13 @@ class UpnpDevice:
         """Get the URL of this device."""
         return self._device_description['url']
 
-    def service(self, service_type: str) -> Optional['UpnpService']:
+    def has_service(self, service_type: str) -> bool:
+        """Check if service by service_type is available."""
+        return service_type in self.services
+
+    def service(self, service_type: str) -> 'UpnpService':
         """Get service by service_type."""
-        return self.services.get(service_type)
+        return self.services[service_type]
 
     async def async_ping(self) -> None:
         """Ping the device."""
@@ -390,7 +407,7 @@ class UpnpService:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self, requester: UpnpRequester, service_description: Mapping,
+    def __init__(self, requester: UpnpRequester, service_description: Mapping[str, str],
                  state_variables: List['UpnpStateVariable'], actions: List['UpnpAction'],
                  xml: ET.Element) -> None:
         """Initializer."""
@@ -401,8 +418,8 @@ class UpnpService:
         self.actions = {ac.name: ac for ac in actions}
         self.xml = xml
 
-        self.on_event = None
-        self._device = None
+        self.on_event = None  # type: Optional[Callable]
+        self._device = None  # type: Optional[UpnpDevice]
 
         # bind state variables to ourselves
         for state_var in state_variables:
@@ -415,6 +432,9 @@ class UpnpService:
     @property
     def device(self) -> UpnpDevice:
         """Get parent UpnpDevice."""
+        if not self._device:
+            raise UpnpError('UpnpService not bound to UpnpDevice')
+
         return self._device
 
     @device.setter
@@ -438,20 +458,23 @@ class UpnpService:
     @property
     def scpd_url(self) -> str:
         """Get full SCPD-url for this UpnpService."""
-        return urllib.parse.urljoin(self.device.device_url,
-                                    self._service_description['scpd_url'])
+        url = urllib.parse.urljoin(self.device.device_url,
+                                   self._service_description['scpd_url'])  # type: str
+        return url
 
     @property
     def control_url(self) -> str:
         """Get full control-url for this UpnpService."""
-        return urllib.parse.urljoin(self.device.device_url,
-                                    self._service_description['control_url'])
+        url = urllib.parse.urljoin(self.device.device_url,
+                                   self._service_description['control_url'])  # type: str
+        return url
 
     @property
     def event_sub_url(self) -> str:
         """Get full event sub-url for this UpnpService."""
-        return urllib.parse.urljoin(self.device.device_url,
-                                    self._service_description['event_sub_url'])
+        url = urllib.parse.urljoin(self.device.device_url,
+                                   self._service_description['event_sub_url'])  # type: str
+        return url
 
     def state_variable(self, name: str) -> 'UpnpStateVariable':
         """Get UPnpStateVariable by name."""
@@ -463,13 +486,20 @@ class UpnpService:
             name = name.split('}')[1]
             state_var = self.state_variables.get(name, None)
 
+        if state_var is None:
+            raise KeyError(name)
+
         return state_var
+
+    def has_action(self, name: str) -> bool:
+        """Check if self has action called named."""
+        return name in self.actions
 
     def action(self, name: str) -> 'UpnpAction':
         """Get UPnpAction by name."""
-        return self.actions.get(name, None)
+        return self.actions[name]
 
-    async def async_call_action(self, action: 'UpnpAction', **kwargs) -> None:
+    async def async_call_action(self, action: 'UpnpAction', **kwargs) -> Dict[str, Any]:
         """
         Call a UpnpAction.
 
@@ -503,12 +533,16 @@ class UpnpService:
 
     def __str__(self) -> str:
         """To string."""
-        udn = self._device.udn if self._device else 'unbound'
+        udn = 'unbound'
+        if self._device:
+            udn = self._device.udn
         return "<UpnpService({}, {})>".format(self.service_id, udn)
 
     def __repr__(self) -> str:
         """To repr."""
-        udn = self._device.udn if self._device else 'unbound'
+        udn = 'unbound'
+        if self._device:
+            udn = self._device.udn
         return "<UpnpService({}, {})>".format(self.service_id, udn)
 
 
@@ -528,17 +562,17 @@ class UpnpAction:
             self.xml = xml
             self._value = None
 
-        def validate_value(self, value):
+        def validate_value(self, value) -> None:
             """Validate value against related UpnpStateVariable."""
             self.related_state_variable.validate_value(value)
 
         @property
-        def value(self):
+        def value(self) -> Any:
             """Get Python value for this argument."""
             return self._value
 
         @value.setter
-        def value(self, value):
+        def value(self, value: Any):
             """Set Python value for this argument."""
             self.validate_value(value)
             self._value = value
@@ -553,7 +587,7 @@ class UpnpAction:
             """Set UPnP value for this argument."""
             self._value = self.coerce_python(upnp_value)
 
-        def coerce_python(self, upnp_value: str):
+        def coerce_python(self, upnp_value: str) -> Any:
             """Coerce UPnP value to Python."""
             return self.related_state_variable.coerce_python(upnp_value)
 
@@ -565,24 +599,27 @@ class UpnpAction:
             """To repr."""
             return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
 
-    def __init__(self, name: str, arguments: List['UpnpAction.UpnpArgument'],
-                 xml: ET.Element) -> None:
+    def __init__(self, name: str, arguments: List['UpnpAction.Argument'], xml: ET.Element) \
+            -> None:
         """Initializer."""
         self.name = name
         self.arguments = arguments
         self.xml = xml
 
-        self._service = None
+        self._service = None  # type: Optional[UpnpService]
 
     @property
     def service(self) -> UpnpService:
         """Get parent UpnpService."""
+        if not self._service:
+            raise UpnpError('UpnpAction not bound to UpnpService')
+
         return self._service
 
     @service.setter
     def service(self, service: UpnpService):
         """Set parent UpnpService."""
-        if self.service:
+        if self._service:
             raise UpnpError('UpnpAction already bound to UpnpService')
 
         self._service = service
@@ -597,7 +634,7 @@ class UpnpAction:
             self.name, self.in_arguments(), self.out_arguments()
         )
 
-    def validate_arguments(self, **kwargs):
+    def validate_arguments(self, **kwargs) -> None:
         """
         Validate arguments against in-arguments of self.
 
@@ -615,7 +652,7 @@ class UpnpAction:
         """Get all out-arguments."""
         return [arg for arg in self.arguments if arg.direction == 'out']
 
-    def argument(self, name: str, direction: str = None):
+    def argument(self, name: str, direction: Optional[str] = None):
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self.arguments:
             if arg.name != name:
@@ -625,7 +662,7 @@ class UpnpAction:
 
             return arg
 
-    async def async_call(self, **kwargs):
+    async def async_call(self, **kwargs) -> Dict[str, Any]:
         """Call an action with arguments."""
         # do request
         url, headers, body = self.create_request(**kwargs)
@@ -642,7 +679,7 @@ class UpnpAction:
                                             response_body)
         return response_args
 
-    def create_request(self, **kwargs) -> [str, Dict, str]:
+    def create_request(self, **kwargs) -> Tuple[str, Dict[str, str], str]:
         """Create headers and headers for this to-be-called UpnpAction."""
         # build URL
         control_url = self.service.control_url
@@ -671,21 +708,22 @@ class UpnpAction:
 
         return control_url, headers, body
 
-    def _format_request_args(self, **kwargs):
+    def _format_request_args(self, **kwargs) -> str:
         self.validate_arguments(**kwargs)
         arg_strs = ["<{0}>{1}</{0}>".format(arg.name, escape(arg.coerce_upnp(kwargs[arg.name])))
                     for arg in self.in_arguments()]
         return "\n".join(arg_strs)
 
-    def parse_response(self, service_type: str, response_headers: Mapping, response_body: str):
+    def parse_response(self, service_type: str, response_headers: Mapping, response_body: str) \
+            -> Dict[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
         xml = defusedxml.ElementTree.fromstring(response_body)
 
         query = './/soap_envelope:Body/soap_envelope:Fault'
         if xml.find(query, NS):
-            error_code = xml.find('.//control:errorCode', NS).text
-            error_description = xml.find('.//control:errorDescription', NS).text
+            error_code = xml.findtext('.//control:errorCode', None, NS)
+            error_description = xml.findtext('.//control:errorDescription', None, NS)
             raise UpnpError('Error during call_action, error_code: %s, error_description: %s' % (
                 error_code, error_description))
 
@@ -695,11 +733,14 @@ class UpnpAction:
             _LOGGER.debug("Error during unescape of: %s", response_body)
             raise
 
-    def _parse_response_args(self, service_type: str, xml: ET.Element):
+    def _parse_response_args(self, service_type: str, xml: ET.Element) -> Dict[str, Any]:
         """Parse response arguments."""
         args = {}
         query = ".//{{{0}}}{1}Response".format(service_type, self.name)
         response = xml.find(query, NS)
+        if not response:
+            raise UpnpError('Invalid response: %s' % (ET.tostring(xml, encoding='unicode'),))
+
         for arg_xml in response.findall('./'):
             name = arg_xml.tag
             arg = self.argument(name, 'out')
@@ -719,25 +760,28 @@ class UpnpStateVariable:
 
     UPNP_VALUE_ERROR = object()
 
-    def __init__(self, state_variable_info: Mapping, schema, xml) -> None:
+    def __init__(self, state_variable_info: Mapping[str, Any], schema, xml) -> None:
         """Initializer."""
         self._state_variable_info = state_variable_info
         self._schema = schema
         self.xml = xml
 
-        self._service = None
-        self._value = None
-        self._updated_at = None
+        self._service = None  # type: Optional[UpnpService]
+        self._value = None  # type: Any
+        self._updated_at = None  # type: Optional[datetime]
 
     @property
     def service(self) -> UpnpService:
         """Get parent UpnpService."""
+        if not self._service:
+            raise UpnpError('UpnpStateVariable not bound to UpnpService')
+
         return self._service
 
     @service.setter
     def service(self, service: UpnpService):
         """Set parent UpnpService."""
-        if self.service:
+        if self._service:
             raise UpnpError('UpnpStateVariable already bound to UpnpService')
 
         self._service = service
@@ -765,17 +809,21 @@ class UpnpStateVariable:
     @property
     def allowed_values(self) -> List:
         """List with allowed values for this UpnpStateVariable, if defined."""
-        return self._state_variable_info['type_info'].get('allowed_values', [])
+        type_info = self._state_variable_info['type_info']
+        allowed_values = type_info.get('allowed_values', [])  # type: List
+        return allowed_values
 
     @property
-    def send_events(self):
+    def send_events(self) -> bool:
         """Check if this UpnpStatevariable send events."""
-        return self._state_variable_info['send_events']
+        send_events = self._state_variable_info['send_events']  # type: bool
+        return send_events
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Name of the UpnpStatevariable."""
-        return self._state_variable_info['name']
+        name = self._state_variable_info['name']  # type: str
+        return name
 
     @property
     def data_type(self):
@@ -791,7 +839,7 @@ class UpnpStateVariable:
             return data_type(default_value)
         return None
 
-    def validate_value(self, value):
+    def validate_value(self, value) -> None:
         """Validate value."""
         try:
             self._schema({'value': value})
@@ -799,7 +847,7 @@ class UpnpStateVariable:
             raise UpnpValueError(self.name, value)
 
     @property
-    def value(self):
+    def value(self) -> Any:
         """
         Get the value, python typed.
 
@@ -811,7 +859,7 @@ class UpnpStateVariable:
         return self._value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Any):
         """Set value, python typed."""
         self.validate_value(value)
         self._value = value
@@ -834,7 +882,7 @@ class UpnpStateVariable:
         return self.coerce_upnp(self.value)
 
     @upnp_value.setter
-    def upnp_value(self, upnp_value):
+    def upnp_value(self, upnp_value: str):
         """Set the value, UPnP typed."""
         try:
             self.value = self.coerce_python(upnp_value)
@@ -842,7 +890,7 @@ class UpnpStateVariable:
             _LOGGER.debug('Error setting upnp_value "%s", error: %s', upnp_value, err)
             self._value = self.UPNP_VALUE_ERROR
 
-    def coerce_python(self, upnp_value):
+    def coerce_python(self, upnp_value) -> Any:
         """Coerce value from UPNP to python."""
         data_type = self._state_variable_info['type_info']['data_type_python']
         if data_type == bool:
@@ -857,7 +905,7 @@ class UpnpStateVariable:
         return str(value)
 
     @property
-    def updated_at(self) -> datetime:
+    def updated_at(self) -> Optional[datetime]:
         """
         Get timestamp at which this UpnpStateVariable was updated.
 
@@ -898,9 +946,9 @@ class UpnpFactory:
         'bin.hex': str,
         'uri': str,
         'uuid': str,
-    }
+    }  # type: Dict[str, Callable]
 
-    def __init__(self, requester, disable_state_variable_validation=False):
+    def __init__(self, requester, disable_state_variable_validation=False) -> None:
         """Initializer."""
         self.requester = requester
         self._properties = {
@@ -926,27 +974,27 @@ class UpnpFactory:
         """Parse device description XML."""
         # pylint: disable=no-self-use
         desc = {
-            'device_type': device_description_xml.find('.//device:deviceType', NS).text,
-            'friendly_name': device_description_xml.find('.//device:friendlyName', NS).text,
-            'manufacturer': device_description_xml.find('.//device:manufacturer', NS).text,
-            'model_name': device_description_xml.find('.//device:modelName', NS).text,
-            'udn': device_description_xml.find('.//device:UDN', NS).text,
+            'device_type': device_description_xml.findtext('.//device:deviceType', None, NS),
+            'friendly_name': device_description_xml.findtext('.//device:friendlyName', None, NS),
+            'manufacturer': device_description_xml.findtext('.//device:manufacturer', None, NS),
+            'model_name': device_description_xml.findtext('.//device:modelName', None, NS),
+            'udn': device_description_xml.findtext('.//device:UDN', None, NS),
             'url': description_url,
 
         }
-        model_desc_el = device_description_xml.find('.//device:modelDescription', NS)
-        if model_desc_el is not None:
-            desc['model_description'] = model_desc_el.text
-        model_number_el = device_description_xml.find('.//device:modelNumber', NS)
-        if model_number_el is not None:
-            desc['model_number'] = model_number_el.text
+        model_desc = device_description_xml.findtext('.//device:modelDescription', None, NS)
+        if model_desc:
+            desc['model_description'] = model_desc
+        model_number = device_description_xml.findtext('.//device:modelNumber', None, NS)
+        if model_number is not None:
+            desc['model_number'] = model_number
         return desc
 
     async def async_create_service(self,
                                    service_description_xml: ET.Element,
                                    base_url: str) -> UpnpService:
         """Retrieve the SCPD for a service and create a UpnpService from it."""
-        scpd_url = service_description_xml.find('device:SCPDURL', NS).text
+        scpd_url = service_description_xml.findtext('device:SCPDURL', None, NS)
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
         scpd_xml = await self._async_get_url_xml(scpd_url)
         return self.create_service(service_description_xml, scpd_xml)
@@ -966,11 +1014,11 @@ class UpnpFactory:
         """Parse service description XML."""
         # pylint: disable=no-self-use
         return {
-            'service_id': service_description_xml.find('device:serviceId', NS).text,
-            'service_type': service_description_xml.find('device:serviceType', NS).text,
-            'control_url': service_description_xml.find('device:controlURL', NS).text,
-            'event_sub_url': service_description_xml.find('device:eventSubURL', NS).text,
-            'scpd_url': service_description_xml.find('device:SCPDURL', NS).text,
+            'service_id': service_description_xml.findtext('device:serviceId', None, NS),
+            'service_type': service_description_xml.findtext('device:serviceType', None, NS),
+            'control_url': service_description_xml.findtext('device:controlURL', None, NS),
+            'event_sub_url': service_description_xml.findtext('device:eventSubURL', None, NS),
+            'scpd_url': service_description_xml.findtext('device:SCPDURL', None, NS),
         }
 
     def create_state_variables(self, scpd_xml: ET.Element) -> List[UpnpStateVariable]:
@@ -991,49 +1039,52 @@ class UpnpFactory:
     def _state_variable_parse_xml(self, state_variable_xml: ET.Element) -> Dict:
         """Parse XML for state variable."""
         # pylint: disable=no-self-use
+        type_info = dict()  # type: Dict[str, Any]
         info = {
             # Some buggy implementations have whitespace around var names
-            'name': state_variable_xml.find('service:name', NS).text.strip(),
-            'type_info': {}
-        }
-        type_info = info['type_info']
+            'name': state_variable_xml.findtext('service:name', '', NS).strip(),
+            'type_info': type_info,
+        }  # type: Dict[str, Any]
 
         # send events
         if 'sendEvents' in state_variable_xml.attrib:
             info['send_events'] = state_variable_xml.attrib['sendEvents'] == 'yes'
         elif state_variable_xml.find('service:sendEventsAttribute', NS) is not None:
             info['send_events'] = \
-                state_variable_xml.find('service:sendEventsAttribute', NS).text == 'yes'
+                state_variable_xml.findtext('service:sendEventsAttribute', None, NS) == 'yes'
         else:
             _LOGGER.debug('Invalid XML for state variable/send events:\n%s',
                           ET.tostring(state_variable_xml, encoding='unicode'))
             info['send_events'] = False
 
         # data type
-        data_type = state_variable_xml.find('service:dataType', NS).text
+        data_type = state_variable_xml.findtext('service:dataType', None, NS)
+        if data_type not in UpnpFactory.STATE_VARIABLE_TYPE_MAPPING:
+            raise UpnpError('Unsupported data type: %s' % (data_type,))
+        coercer = UpnpFactory.STATE_VARIABLE_TYPE_MAPPING[data_type]
         type_info['data_type'] = data_type
-        type_info['data_type_python'] = UpnpFactory.STATE_VARIABLE_TYPE_MAPPING[data_type]
+        type_info['data_type_python'] = coercer
 
         # default value
-        default_value = state_variable_xml.find('service:defaultValue', NS)
-        if default_value:
-            type_info['default_value'] = default_value.text
-            type_info['default_type_coerced'] = data_type(default_value.text)
+        default_value = state_variable_xml.findtext('service:defaultValue', None, NS)
+        if default_value is not None:
+            type_info['default_value'] = default_value
+            type_info['default_type_coerced'] = coercer(default_value)
 
         # allowed value ranges
         allowed_value_range = state_variable_xml.find('service:allowedValueRange', NS)
-        if allowed_value_range:
+        if allowed_value_range is not None:
             type_info['allowed_value_range'] = {
-                'min': allowed_value_range.find('service:minimum', NS).text,
-                'max': allowed_value_range.find('service:maximum', NS).text,
+                'min': allowed_value_range.findtext('service:minimum', None, NS),
+                'max': allowed_value_range.findtext('service:maximum', None, NS),
             }
-            if allowed_value_range.find('service:step', NS):
+            if allowed_value_range.find('service:step', NS) is not None:
                 type_info['allowed_value_range']['step'] = \
-                    allowed_value_range.find('service:step', NS).text
+                    allowed_value_range.findtext('service:step', None, NS)
 
         # allowed value list
         allowed_value_list = state_variable_xml.find('service:allowedValueList', NS)
-        if allowed_value_list:
+        if allowed_value_list is not None:
             type_info['allowed_values'] = \
                 [v.text for v in allowed_value_list.findall('service:allowedValue', NS)]
 
@@ -1100,19 +1151,20 @@ class UpnpFactory:
         """Parse XML for action."""
         # pylint: disable=no-self-use
         svs = {sv.name: sv for sv in state_variables}
+        args = []  # type: List[Dict[str, Any]]
         info = {
-            'name': action_xml.find('service:name', NS).text,
-            'arguments': [],
+            'name': action_xml.findtext('service:name', None, NS),
+            'arguments': args,
         }
         for argument_xml in action_xml.findall('.//service:argument', NS):
-            state_variable_name = argument_xml.find('service:relatedStateVariable', NS).text
+            state_variable_name = argument_xml.findtext('service:relatedStateVariable', '', NS)
             argument = {
-                'name': argument_xml.find('service:name', NS).text,
-                'direction': argument_xml.find('service:direction', NS).text,
+                'name': argument_xml.findtext('service:name', None, NS),
+                'direction': argument_xml.findtext('service:direction', None, NS),
                 'state_variable': svs[state_variable_name],
                 'xml': argument_xml,
             }
-            info['arguments'].append(argument)
+            args.append(argument)
         return info
 
     async def _async_get_url_xml(self, url: str) -> ET.Element:

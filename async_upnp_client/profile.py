@@ -4,9 +4,7 @@
 import logging
 
 from datetime import timedelta
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import Dict, List, Optional, Set
 
 from async_upnp_client import UpnpAction
 from async_upnp_client import UpnpDevice
@@ -29,24 +27,27 @@ class UpnpProfileDevice:
     Override _SERVICE_TYPES for aliases.
     """
 
-    DEVICE_TYPES = []
+    DEVICE_TYPES = []  # type: List[str]
 
-    _SERVICE_TYPES = {}
+    _SERVICE_TYPES = {}  # type: Dict[str, Set[str]]
 
     @classmethod
-    async def async_search(cls) -> List[Dict]:
+    async def async_search(cls) -> Set[Dict]:
         """
         Search for this device type.
 
         This only returns search info, not a profile itself.
 
-        :return: List of devices (dicts) found
+        :return: Set of devices (dicts) found
         """
-        return [
-            device
-            for device in await async_search()
-            if device['st'] in cls.DEVICE_TYPES
-        ]
+        responses = set()
+
+        async def on_response(data):
+            if 'st' in data and data['st'] in cls.DEVICE_TYPES:
+                responses.add(data)
+        async_search(async_callback=on_response)
+
+        return responses
 
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initializer."""
@@ -65,7 +66,7 @@ class UpnpProfileDevice:
         return self.device.manufacturer
 
     @property
-    def model_description(self) -> str:
+    def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
         return self.device.model_description
 
@@ -75,7 +76,7 @@ class UpnpProfileDevice:
         return self.device.model_name
 
     @property
-    def model_number(self) -> str:
+    def model_number(self) -> Optional[str]:
         """Get the model number of this device."""
         return self.device.model_number
 
@@ -167,3 +168,6 @@ class UpnpProfileDevice:
         :param service Service which sent the event.
         :param state_variables State variables which have been changed.
         """
+        if self.on_event:
+            # pylint: disable=not-callable
+            self.on_event(service, state_variables)

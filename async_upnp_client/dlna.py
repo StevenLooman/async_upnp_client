@@ -3,11 +3,10 @@
 
 import asyncio
 import logging
-import re
 
 from datetime import timedelta
 
-from typing import Any
+from typing import Any  # noqa: F401
 from typing import Dict
 from typing import List
 from typing import Mapping
@@ -17,18 +16,17 @@ from xml.sax.handler import ContentHandler
 from xml.sax.handler import ErrorHandler
 
 from urllib.parse import quote_plus
-from urllib.parse import urljoin
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 from defusedxml.sax import parseString
-from didl_lite import didl_lite
+from didl_lite import didl_lite  # type: ignore
 
-from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpError
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
 from async_upnp_client.profile import UpnpProfileDevice
+from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,60 +38,16 @@ STATE_PAUSED = 'PAUSED'
 STATE_IDLE = 'IDLE'
 
 
-def _time_to_str(time: timedelta) -> str:
-    """Convert timedelta to str/units."""
-    total_seconds = abs(time.total_seconds())
-    target = {
-        'sign': '-' if time.total_seconds() < 0 else '',
-        'hours': int(total_seconds // 3600),
-        'minutes': int(total_seconds // 60),
-        'seconds': int(total_seconds % 60),
-    }
-    return '{sign}{hours}:{minutes}:{seconds}'.format(**target)
-
-
-def _str_to_time(string: str) -> timedelta:
-    """Convert a string to timedelta."""
-    regexp = r"(?P<sign>[-+])?(?P<h>\d+):(?P<m>\d+):(?P<s>\d+)\.?(?P<ms>\d+)?"
-    match = re.match(regexp, string)
-    if not match:
-        return None
-
-    sign = -1 if match.group('sign') == '-' else 1
-    hours = int(match.group('h'))
-    minutes = int(match.group('m'))
-    seconds = int(match.group('s'))
-    if match.group('ms'):
-        msec = int(match.group('ms'))
-    else:
-        msec = 0
-    return sign * timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec)
-
-
-def _absolute_url(device: UpnpDevice, url: str) -> str:
-    """
-    Convert a relative URL to an absolute URL pointing at device.
-
-    If url is already an absolute url (i.e., starts with http:/https:),
-    then the url itself is returned.
-    """
-    if url.startswith('http:') or \
-       url.startswith('https:'):
-        return url
-
-    return urljoin(device.device_url, url)
-
-
 class DlnaDmrEventContentHandler(ContentHandler):
     """Content Handler to parse DLNA DMR Event data."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializer."""
         super().__init__()
-        self.changes = {}
+        self.changes = {}  # type: Dict[str, Dict[str, Any]]
         self._current_instance = None
 
-    def startElement(self, name, attrs):
+    def startElement(self, name: str, attrs: Mapping) -> None:
         """Handle startElement."""
         if 'val' not in attrs:
             return
@@ -107,7 +61,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
 
             self.changes[current_instance][name] = attrs.get('val')
 
-    def endElement(self, name):
+    def endElement(self, name: str) -> None:
         """Handle endElement."""
         self._current_instance = None
 
@@ -115,11 +69,11 @@ class DlnaDmrEventContentHandler(ContentHandler):
 class DlnaDmrEventErrorHandler(ErrorHandler):
     """Error handler which ignores errors."""
 
-    def error(self, exception):
+    def error(self, exception) -> None:
         """Handle error."""
         _LOGGER.debug("Error during parsing: %s", exception)
 
-    def fatalError(self, exception):
+    def fatalError(self, exception) -> None:
         """Handle error."""
         _LOGGER.debug("Fatal error during parsing: %s", exception)
 
@@ -271,76 +225,84 @@ class DmrDevice(UpnpProfileDevice):
 
     def _level(self, var_name: str) -> Optional[float]:
         state_var = self._state_variable('RC', var_name)
-        value = state_var.value
+        if state_var is None:
+            return None
+
+        value = state_var.value  # type: float
         if value is None:
             _LOGGER.debug('Got no value for %s', var_name)
             return None
 
-        max_value = state_var.max_value or 100
+        max_value = state_var.max_value or 100.0
         return min(value / max_value, 1.0)
 
-    async def _async_set_level(self, var_name: str, level: float, **kwargs: Dict[str, Any]) -> None:
+    async def _async_set_level(self, var_name: str, level: float, **kwargs) -> None:
         action = self._action('RC', 'Set%s' % var_name)
-        argument = action.argument('Desired%s' % var_name)
+        if not action:
+            return
+
+        name = 'Desired%s' % var_name
+        argument = action.argument(name)
         state_variable = argument.related_state_variable
+
         min_ = state_variable.min_value or 0
         max_ = state_variable.max_value or 100
         desired_level = int(min_ + level * (max_ - min_))
-        args = kwargs.copy()
-        args.update({'Desired%s' % var_name: desired_level})
 
+        args = kwargs.copy()
+        args[name] = desired_level
         await action.async_call(InstanceID=0, **args)
 
 # region RC/Picture
     @property
-    def has_brightness_level(self) -> bool:
+    def has_brightness_level(self):
         """Check if device has brightness level controls."""
         return self._supports('Brightness')
 
     @property
-    def brightness_level(self) -> Optional[float]:
+    def brightness_level(self):
         """Brightness level of the media player (0..1)."""
         return self._level('Brightness')
 
-    async def async_set_brightness_level(self, brightness: float) -> None:
+    async def async_set_brightness_level(self, brightness: float):
         """Set brightness level, range 0..1."""
         await self._async_set_level('Brightness', brightness)
 
     @property
-    def has_contrast_level(self) -> bool:
+    def has_contrast_level(self):
         """Check if device has contrast level controls."""
         return self._supports('Contrast')
 
     @property
-    def contrast_level(self) -> Optional[float]:
+    def contrast_level(self):
         """Contrast level of the media player (0..1)."""
         return self._level('Contrast')
 
-    async def async_set_contrast_level(self, contrast: float) -> None:
+    async def async_set_contrast_level(self, contrast: float):
         """Set contrast level, range 0..1."""
         await self._async_set_level('Contrast', contrast)
 
     @property
-    def has_sharpness_level(self) -> bool:
+    def has_sharpness_level(self):
         """Check if device has sharpness level controls."""
         return self._supports('Sharpness')
 
     @property
-    def sharpness_level(self) -> Optional[float]:
+    def sharpness_level(self):
         """Sharpness level of the media player (0..1)."""
         return self._level('Sharpness')
 
-    async def async_set_sharpness_level(self, sharpness: float) -> None:
+    async def async_set_sharpness_level(self, sharpness: float):
         """Set sharpness level, range 0..1."""
         await self._async_set_level('Sharpness', sharpness)
 
     @property
-    def has_color_temperature_level(self) -> bool:
+    def has_color_temperature_level(self):
         """Check if device has color temperature level controls."""
         return self._supports('ColorTemperature')
 
     @property
-    def color_temperature_level(self) -> Optional[float]:
+    def color_temperature_level(self):
         """Color temperature level of the media player (0..1)."""
         return self._level('ColorTemperature')
 
@@ -500,7 +462,7 @@ class DmrDevice(UpnpProfileDevice):
             return False
 
         seek_modes = [mode.lower().strip()
-                      for mode in self._state_variable('AVT', 'A_ARG_TYPE_SeekMode').allowed_values]
+                      for mode in state_var.allowed_values]
         return mode.lower() in seek_modes
 
     @property
@@ -520,8 +482,11 @@ class DmrDevice(UpnpProfileDevice):
             _LOGGER.debug('Cannot do Seek by ABS_TIME')
             return
 
-        target = _time_to_str(time)
+        target = time_to_str(time)
         action = self._action('AVT', 'Seek')
+        if not action:
+            return
+
         await action.async_call(InstanceID=0, Unit='ABS_TIME', Target=target)
 
     @property
@@ -541,8 +506,11 @@ class DmrDevice(UpnpProfileDevice):
             _LOGGER.debug('Cannot do Seek by REL_TIME')
             return
 
-        target = _time_to_str(time)
+        target = time_to_str(time)
         action = self._action('AVT', 'Seek')
+        if not action:
+            return
+
         await action.async_call(InstanceID=0, Unit='REL_TIME', Target=target)
 
     @property
@@ -569,6 +537,9 @@ class DmrDevice(UpnpProfileDevice):
                                                               mime_type,
                                                               upnp_class)
         action = self._action('AVT', 'SetAVTransportURI')
+        if not action:
+            return
+
         await action.async_call(InstanceID=0,
                                 CurrentURI=media_url,
                                 CurrentURIMetaData=meta_data)
@@ -585,7 +556,7 @@ class DmrDevice(UpnpProfileDevice):
         else:
             _LOGGER.debug('break out of waiting game')
 
-    async def _fetch_headers(self, url: str, headers: Mapping):
+    async def _fetch_headers(self, url: str, headers: Mapping) -> Optional[Mapping[str, str]]:
         """Do a HEAD/GET to get resources headers."""
         requester = self.device.requester
 
@@ -634,7 +605,8 @@ class DmrDevice(UpnpProfileDevice):
         item = didl_item_type(id="0", parent_id="0", title=media_title,
                               restricted="1", resources=[resource])
 
-        return didl_lite.to_xml_string(item).decode('utf-8')
+        xml_string = didl_lite.to_xml_string(item)  # type: bytes
+        return xml_string.decode('utf-8')
 # endregion
 
 # region AVT/Media info
@@ -654,7 +626,8 @@ class DmrDevice(UpnpProfileDevice):
             return None
 
         item = items[0]
-        return item.title
+        title = item.title  # type: str
+        return title
 
     @property
     def media_image_url(self):
@@ -671,16 +644,17 @@ class DmrDevice(UpnpProfileDevice):
         if not items:
             return None
 
+        device_url = self.device.device_url
         for item in items:
             # Some players use Item.albumArtURI,
             # though not found in the UPnP-av-ConnectionManager-v1-Service spec.
             if hasattr(item, 'album_art_uri'):
-                return _absolute_url(self.device, item.album_art_uri)
+                return absolute_url(device_url, item.album_art_uri)
 
             for res in item.resources:
                 protocol_info = res.protocol_info
                 if protocol_info.startswith('http-get:*:image/'):
-                    return _absolute_url(self.device, res.url)
+                    return absolute_url(device_url, res.url)
 
         return None
 
@@ -693,7 +667,7 @@ class DmrDevice(UpnpProfileDevice):
            state_var.value == 'NOT_IMPLEMENTED':
             return None
 
-        time = _str_to_time(state_var.value)
+        time = str_to_time(state_var.value)
         if time is None:
             return None
 
@@ -708,7 +682,7 @@ class DmrDevice(UpnpProfileDevice):
            state_var.value == 'NOT_IMPLEMENTED':
             return None
 
-        time = _str_to_time(state_var.value)
+        time = str_to_time(state_var.value)
         if time is None:
             return None
 

@@ -4,8 +4,10 @@ import asyncio
 import os.path
 from copy import copy
 
-import pytest
 import defusedxml.ElementTree as ET
+import pytest  # type: ignore
+
+from typing import Dict, List
 
 from async_upnp_client import (
     UpnpError,
@@ -24,7 +26,7 @@ NS = {
 }
 
 
-def read_file(filename):
+def read_file(filename) -> str:
     path = os.path.join('tests', 'fixtures', filename)
     with open(path, 'r') as f:
         return f.read()
@@ -32,9 +34,8 @@ def read_file(filename):
 
 class UpnpTestRequester(UpnpRequester):
 
-    def __init__(self, response_map):
+    def __init__(self, response_map) -> None:
         self._response_map = copy(response_map)
-        self._received_requests = {}
 
     async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
         await asyncio.sleep(0.01)
@@ -43,13 +44,7 @@ class UpnpTestRequester(UpnpRequester):
         if key not in self._response_map:
             raise Exception('Request not in response map')
 
-        self._received_requests[key] = (headers, body)
-
         return self._response_map[key]
-
-    def headers(self, method, url):
-        key = (method, url)
-        return self._received_requests[key]
 
 
 RESPONSE_MAP = {
@@ -318,9 +313,12 @@ class TestUpnpServiceAction:
         ns = {'avt_service': service_type}
         assert root.find('.//avt_service:SetAVTransportURI', ns) is not None
         assert root.find('.//CurrentURIMetaData', ns) is not None
-        #assert root.find('.//CurrentURIMetaData', ns).text == '&lt;item&gt;test thing&lt;/item&gt;'
-        assert root.find('.//CurrentURIMetaData', ns).text == '<item>test thing</item>'  # ET escapes for us...
-        assert root.find('.//CurrentURIMetaData', ns).findall('./') == []  # this shouldn't have any children, due to its contents being escaped
+        #assert root.findtext('.//CurrentURIMetaData', ns) == '&lt;item&gt;test thing&lt;/item&gt;'
+        assert root.findtext('.//CurrentURIMetaData', None, ns) == '<item>test thing</item>'  # ET escapes for us...
+
+        current_uri_metadata_el = root.find('.//CurrentURIMetaData', ns)
+        assert current_uri_metadata_el is not None
+        assert current_uri_metadata_el.findall('./') == []  # this shouldn't have any children, due to its contents being escaped
 
     @pytest.mark.asyncio
     async def test_parse_response(self):
@@ -386,7 +384,7 @@ class TestUpnpService:
         responses = {
             ('POST', 'http://localhost:1234/upnp/control/RenderingControl1'):
                 (200, {}, read_file('action_GetVolume.xml'))
-        }
+        }  # type: Dict
         responses.update(RESPONSE_MAP)
         r = UpnpTestRequester(responses)
         factory = UpnpFactory(r)
@@ -451,7 +449,7 @@ class TestUpnpEventHandler:
 
     @pytest.mark.asyncio
     async def test_on_notify_upnp_event(self):
-        changed_vars = []
+        changed_vars = []  # type: List[UpnpStateVariable]
 
         def on_event(self, changed_state_variables):
             nonlocal changed_vars
@@ -488,7 +486,7 @@ class TestUpnpEventHandler:
 
     @pytest.mark.asyncio
     async def test_on_notify_dlna_event(self):
-        changed_vars = []
+        changed_vars = []  # type: List[UpnpStateVariable]
 
         def on_event(self, changed_state_variables):
             nonlocal changed_vars

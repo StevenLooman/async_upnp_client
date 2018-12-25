@@ -16,7 +16,7 @@ def test_ssdp_search_packet():
 
 
 def test_is_valid_ssdp_packet():
-    assert not is_valid_ssdp_packet('')
+    assert not is_valid_ssdp_packet(b'')
 
     msg = b'HTTP/1.1 200 OK\r\n' \
           b'Cache-Control: max-age=1900\r\n' \
@@ -38,12 +38,13 @@ def test_decode_ssdp_packet():
           b'EXT:\r\n\r\n'
     request_line, headers = decode_ssdp_packet(msg, 'addr')
 
-    assert request_line == b'HTTP/1.1 200 OK'
+    assert request_line == 'HTTP/1.1 200 OK'
 
+    # Remove variable things
     assert '_timestamp' in headers
-    del headers['_timestamp']  # Remove variable things
+    del headers['_timestamp']
 
-    headers = {key.lower(): value for key, value in headers.items()}
+    print(headers)
     assert headers == {
         'cache-control': 'max-age=1900',
         'location': 'http://192.168.1.1:80/RootDevice.xml',

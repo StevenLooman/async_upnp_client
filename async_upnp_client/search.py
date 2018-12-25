@@ -5,6 +5,7 @@ import logging
 import socket
 
 from ipaddress import IPv4Address
+from typing import Optional
 
 from async_upnp_client.ssdp import build_ssdp_search_packet
 from async_upnp_client.ssdp import SsdpProtocol
@@ -18,9 +19,9 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_search(timeout: int = SSDP_MX,
                        service_type: str = SSDP_ST_ALL,
-                       source_ip: IPv4Address = None,
+                       source_ip: Optional[IPv4Address] = None,
                        async_callback=None,
-                       loop=None):
+                       loop=None) -> None:
     """Discover devices via SSDP."""
     loop = loop or asyncio.get_event_loop()
 

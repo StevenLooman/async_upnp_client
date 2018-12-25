@@ -5,6 +5,8 @@ import asyncio
 import logging
 import socket
 
+from typing import Mapping, Optional, Tuple  # noqa: F401
+
 import aiohttp
 import aiohttp.web
 import async_timeout
@@ -24,7 +26,8 @@ def get_local_ip(target_host=None) -> str:
     try:
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         temp_sock.connect((target_host, target_port))
-        return temp_sock.getsockname()[0]
+        local_ip = temp_sock.getsockname()[0]  # type: str
+        return local_ip
     finally:
         temp_sock.close()
 
@@ -36,7 +39,8 @@ class AiohttpRequester(UpnpRequester):
         """Initializer."""
         self._timeout = timeout
 
-    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
+    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text') \
+            -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
 
@@ -69,7 +73,8 @@ class AiohttpSessionRequester(UpnpRequester):
         self._with_sleep = with_sleep
         self._timeout = timeout
 
-    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
+    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text') \
+            -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
 
@@ -100,13 +105,13 @@ class AiohttpNotifyServer:
         self._listen_host = listen_host or get_local_ip()
         self._loop = loop or asyncio.get_event_loop()
 
-        self._aiohttp_server = None
+        self._aiohttp_server = None  # type: Optional[aiohttp.web.Server]
         self._server = None
 
         callback_url = "http://{}:{}/notify".format(self._listen_host, self._listen_port)
         self.event_handler = UpnpEventHandler(callback_url, requester)
 
-    async def start_server(self):
+    async def start_server(self) -> None:
         """Start the HTTP server."""
         self._aiohttp_server = aiohttp.web.Server(self._handle_request)
         try:
@@ -117,7 +122,7 @@ class AiohttpNotifyServer:
             _LOGGER.error("Failed to create HTTP server at %s:%d: %s",
                           self._listen_host, self._listen_port, error)
 
-    async def stop_server(self):
+    async def stop_server(self) -> None:
         """Stop the HTTP server."""
         if self._aiohttp_server:
             await self._aiohttp_server.shutdown(10)

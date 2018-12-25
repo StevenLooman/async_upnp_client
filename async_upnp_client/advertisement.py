@@ -6,6 +6,8 @@ import logging
 import socket
 import struct
 
+from typing import Any, Awaitable, Optional  # noqa: F401
+
 from async_upnp_client.ssdp import SsdpProtocol
 from async_upnp_client.ssdp import SSDP_ALIVE
 from async_upnp_client.ssdp import SSDP_BYEBYE
@@ -19,17 +21,17 @@ _LOGGER = logging.getLogger(__name__)
 class UpnpAdvertisementListener:
     """UPnP Advertisement listener."""
 
-    def __init__(self, on_alive=None, on_byebye=None, on_update=None, loop=None):
+    def __init__(self, on_alive=None, on_byebye=None, on_update=None, loop=None) -> None:
         """Initializer."""
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
         self._loop = loop or asyncio.get_event_loop()
-        self._transport = None
+        self._transport = None  # type: Optional[asyncio.DatagramTransport]
 
         self._connect = self._create_protocol()
 
-    def _create_protocol(self):
+    def _create_protocol(self) -> Awaitable[Any]:
         """Create a socket to listen on."""
         # create socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -47,7 +49,7 @@ class UpnpAdvertisementListener:
         )
         return connect
 
-    async def _on_data(self, request_line, headers):
+    async def _on_data(self, request_line, headers) -> None:
         """Handle data."""
         _LOGGER.debug('UpnpAdvertisementListener._on_data: %s, %s', request_line, headers)
         if 'NTS' not in headers:
@@ -63,10 +65,11 @@ class UpnpAdvertisementListener:
         elif data_type == SSDP_UPDATE and self.on_update:
             await self.on_update(headers)
 
-    async def async_start(self):
+    async def async_start(self) -> None:
         """Start listening for notifications."""
         self._transport, _ = await self._connect
 
-    async def async_stop(self):
+    async def async_stop(self) -> None:
         """Stop listening for notifications."""
-        self._transport.close()
+        if self._transport:
+            self._transport.close()
