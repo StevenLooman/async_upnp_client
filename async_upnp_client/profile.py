@@ -4,7 +4,10 @@
 import logging
 
 from datetime import timedelta
-from typing import Dict, List, Optional, Set
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
 
 from async_upnp_client import UpnpAction
 from async_upnp_client import UpnpDevice
@@ -45,9 +48,14 @@ class UpnpProfileDevice:
         async def on_response(data):
             if 'st' in data and data['st'] in cls.DEVICE_TYPES:
                 responses.add(data)
-        async_search(async_callback=on_response)
+        await async_search(async_callback=on_response)
 
         return responses
+
+    @classmethod
+    async def async_discover(cls) -> Set[Dict]:
+        """Alias for async_search."""
+        return await cls.async_search()
 
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initializer."""
