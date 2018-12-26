@@ -6,6 +6,7 @@ Changes
 - Add __repr__ for UpnpAction.Argument and UPnpService.Action (@rytilahti)
 - Support advertisements and rename discovery to search
 - Use defusedxml to parse XML (@scop)
+- Fix UpnpProfileDevice.async_search() + add UpnpProfileDevice.upnp_discover() for backwards compatiblity
 
 
 0.13.7 (2018-12-15)

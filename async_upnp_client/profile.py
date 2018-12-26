@@ -7,6 +7,7 @@ from datetime import timedelta
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
 
 from async_upnp_client import UpnpAction
 from async_upnp_client import UpnpDevice
@@ -34,7 +35,7 @@ class UpnpProfileDevice:
     _SERVICE_TYPES = {}
 
     @classmethod
-    async def async_search(cls) -> List[Dict]:
+    async def async_search(cls) -> Set[Dict]:
         """
         Search for this device type.
 
@@ -42,11 +43,19 @@ class UpnpProfileDevice:
 
         :return: List of devices (dicts) found
         """
-        return [
-            device
-            for device in await async_search()
-            if device['st'] in cls.DEVICE_TYPES
-        ]
+        responses = set()
+
+        async def on_response(data):
+            if 'st' in data and data['st'] in cls.DEVICE_TYPES:
+                responses.add(data)
+        await async_search(async_callback=on_response)
+
+        return responses
+
+    @classmethod
+    async def async_discover(cls) -> Set[Dict]:
+        """Alias for async_search."""
+        return await cls.async_search()
 
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initializer."""
