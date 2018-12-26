@@ -18,20 +18,25 @@ class CaseInsensitiveDict(MutableMapping):
         for key, value in kwargs.items():
             self[key] = value
 
-    def __setitem__(self, key, value) -> None:
+    def _ci_key(self, key: str) -> str:
+        """Get storable key from key."""
+        # pylint: disable=no-self-use
+        return key.lower()
+
+    def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
-        key_lower = key.lower()
-        self._data[key_lower] = (key, value)
+        key_ci = self._ci_key(key)
+        self._data[key_ci] = (key, value)
 
-    def __getitem__(self, key) -> Any:
+    def __getitem__(self, key: str) -> Any:
         """Get item."""
-        key_lower = key.lower()
-        return self._data[key_lower][1]
+        ci_key = self._ci_key(key)
+        return self._data[ci_key][1]
 
-    def __delitem__(self, key) -> None:
+    def __delitem__(self, key: str) -> None:
         """Del item."""
-        key_lower = key.lower()
-        del self._data[key_lower]
+        ci_key = self._ci_key(key)
+        del self._data[ci_key]
 
     def __len__(self):
         """Get length."""
@@ -50,9 +55,14 @@ class CaseInsensitiveDict(MutableMapping):
         if not isinstance(other, Mapping):
             return NotImplemented
 
-        dict_a = {key.lower(): value for key, value in self.items()}
-        dict_b = {key.lower(): value for key, value in other.items()}
+        dict_a = {self._ci_key(key): value for key, value in self.items()}
+        dict_b = {self._ci_key(key): value for key, value in other.items()}
         return dict_a == dict_b
+
+    def __hash__(self):
+        """Get hash."""
+        ci_dict = {self._ci_key(key): value for key, value in self.items()}
+        return hash(tuple(sorted(ci_dict.items())))
 
 
 def time_to_str(time: timedelta) -> str:

@@ -12,7 +12,8 @@ from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Tup
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
-import defusedxml.ElementTree
+import defusedxml.ElementTree  # type: ignore
+
 import voluptuous as vol  # type: ignore
 
 
@@ -1175,5 +1176,5 @@ class UpnpFactory:
         if status_code != 200:
             raise UpnpError("Received status code: {}".format(status_code))
 
-        root = defusedxml.ElementTree.fromstring(response_body)
+        root = defusedxml.ElementTree.fromstring(response_body)  # type: ET.Element
         return root

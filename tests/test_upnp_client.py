@@ -3,11 +3,11 @@
 import asyncio
 import os.path
 from copy import copy
+from typing import Dict, List
 
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as ET  # type: ignore
 import pytest  # type: ignore
 
-from typing import Dict, List
 
 from async_upnp_client import (
     UpnpError,

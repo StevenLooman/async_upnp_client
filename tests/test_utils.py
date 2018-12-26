@@ -21,6 +21,11 @@ def test_case_insensitive_dict():
     ci = CaseInsensitiveDict(**source_dict)
     assert ci == {'key': 'value'}
 
+    cis = set()
+    cis.add(CaseInsensitiveDict(key='value'))
+    cis.add(CaseInsensitiveDict(KEY='value'))
+    assert len(cis) == 1
+
 
 def test_str_to_time():
     assert str_to_time('0:0:10') == timedelta(hours=0, minutes=0, seconds=10)

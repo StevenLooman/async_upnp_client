@@ -19,7 +19,8 @@ from urllib.parse import quote_plus
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
-from defusedxml.sax import parseString
+from defusedxml.sax import parseString  # type: ignore
+
 from didl_lite import didl_lite  # type: ignore
 
 from async_upnp_client import UpnpError

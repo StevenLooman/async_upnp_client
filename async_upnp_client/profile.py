@@ -94,9 +94,8 @@ class UpnpProfileDevice:
             return None
 
         for service_type in self._SERVICE_TYPES[service_type_abbreviation]:
-            service = self.device.service(service_type)
-            if service:
-                return service
+            if self.device.has_service(service_type):
+                return self.device.service(service_type)
 
         return None
 
