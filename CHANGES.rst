@@ -7,6 +7,7 @@ Changes
 - Support advertisements and rename discovery to search
 - Use defusedxml to parse XML (@scop)
 - Fix UpnpProfileDevice.async_search() + add UpnpProfileDevice.upnp_discover() for backwards compatiblity
+- Add work-around for win32-platform when using `upnp-client search`
 
 
 0.13.7 (2018-12-15)
