@@ -66,7 +66,7 @@ class UpnpRequester:
         :return status code, headers, body
         """
         # pylint: disable=too-many-arguments
-        _LOGGER_TRAFFIC.debug('Sending request:\n%s %s\n%s\n%s\n',
+        _LOGGER_TRAFFIC.debug('Sending request:\n%s %s\n%s\n\n%s\n',
                               method,
                               url,
                               '\n'.join([key + ": " + value
