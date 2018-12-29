@@ -1,6 +1,11 @@
 Changes
 =======
 
+0.13.8 (2018-12-29)
+
+- Send content-type/charset on call-action, increasing compatiblity (@tsvi)
+
+
 0.13.7 (2018-12-15)
 
 - Make UpnpProfileDevice.device public and add utility methods for device information
