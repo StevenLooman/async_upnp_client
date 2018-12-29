@@ -16,9 +16,12 @@ from async_upnp_client import UpnpEventHandler
 _LOGGER = logging.getLogger(__name__)
 
 
+EXTERNAL_IP = '1.1.1.1'
+
+
 def get_local_ip(target_host=None) -> str:
     """Try to get the local IP of this machine, used to talk to target_url."""
-    target_host = target_host or '8.8.8.8'
+    target_host = target_host or EXTERNAL_IP
     target_port = 80
 
     try:
