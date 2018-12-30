@@ -4,16 +4,14 @@
 import logging
 
 from datetime import timedelta
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
+from typing import Dict, List, Optional, Sequence, Set  # noqa: F401
 
-from async_upnp_client import UpnpAction
-from async_upnp_client import UpnpDevice
-from async_upnp_client import UpnpEventHandler
-from async_upnp_client import UpnpService
-from async_upnp_client import UpnpStateVariable
+from async_upnp_client.client import EventCallbackType  # noqa: F401
+from async_upnp_client.client import UpnpAction
+from async_upnp_client.client import UpnpDevice
+from async_upnp_client.client import UpnpService
+from async_upnp_client.client import UpnpStateVariable
+from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.search import async_search
 
 
@@ -140,7 +138,8 @@ class UpnpProfileDevice:
             if not self._interesting_service(service):
                 continue
 
-            service.on_event = self._on_event
+            on_event = self._on_event  # type: EventCallbackType
+            service.on_event = on_event
             if self._event_handler.sid_for_service(service) is None:
                 _LOGGER.debug('Subscribing to service: %s', service)
                 success, _ = \
@@ -168,7 +167,7 @@ class UpnpProfileDevice:
         """Unsubscribe from all subscribed services."""
         await self._event_handler.async_unsubscribe_all()
 
-    def _on_event(self, service: UpnpService, state_variables: List[UpnpStateVariable]):
+    def _on_event(self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]) -> None:
         """
         State variable(s) changed. Override to handle events.
 

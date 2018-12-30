@@ -4,23 +4,17 @@
 import asyncio
 import logging
 
+from datetime import datetime
 from datetime import timedelta
-
-from typing import Any  # noqa: F401
-from typing import Dict
-from typing import List
-from typing import Mapping
-from typing import Optional
-
+from enum import Enum
+from typing import Any, Dict, List, Mapping, Optional, Sequence  # noqa: F401
 from xml.sax.handler import ContentHandler
 from xml.sax.handler import ErrorHandler
-
 from urllib.parse import quote_plus
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 from defusedxml.sax import parseString  # type: ignore
-
 from didl_lite import didl_lite  # type: ignore
 
 from async_upnp_client import UpnpError
@@ -32,6 +26,8 @@ from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
 
 _LOGGER = logging.getLogger(__name__)
 
+
+DeviceState = Enum('DeviceState', 'ON PLAYING PAUSED IDLE')  # pylint: disable=invalid-name
 
 STATE_ON = 'ON'
 STATE_PLAYING = 'PLAYING'
@@ -140,28 +136,32 @@ class DmrDevice(UpnpProfileDevice):
         },
     }
 
-    async def async_update(self):
+    async def async_update(self) -> None:
         """Retrieve the latest data."""
         # call GetTransportInfo/GetPositionInfo regularly
         avt_service = self._service('AVT')
         if avt_service:
             await self._async_poll_transport_info()
 
-            if self.state == STATE_PLAYING or \
-               self.state == STATE_PAUSED:
+            if self.state == DeviceState.PLAYING or \
+               self.state == DeviceState.PAUSED:
                 # playing something, get position info
                 await self._async_poll_position_info()
         else:
             await self.device.async_ping()
 
-    async def _async_poll_transport_info(self):
+    async def _async_poll_transport_info(self) -> None:
         """Update transport info from device."""
         action = self._action('AVT', 'GetTransportInfo')
+        if not action:
+            return
         result = await action.async_call(InstanceID=0)
 
         # set/update state_variable 'TransportState'
         changed = []
         state_var = self._state_variable('AVT', 'TransportState')
+        if not state_var:
+            return
         if state_var.value != result['CurrentTransportState']:
             state_var.value = result['CurrentTransportState']
             changed.append(state_var)
@@ -169,26 +169,28 @@ class DmrDevice(UpnpProfileDevice):
         service = action.service
         self._on_event(service, changed)
 
-    async def _async_poll_position_info(self):
+    async def _async_poll_position_info(self) -> None:
         """Update position info."""
         action = self._action('AVT', 'GetPositionInfo')
+        if not action:
+            return
         result = await action.async_call(InstanceID=0)
 
         changed = []
         track_duration = self._state_variable('AVT', 'CurrentTrackDuration')
-        if track_duration.value != result['TrackDuration']:
+        if track_duration and track_duration.value != result['TrackDuration']:
             track_duration.value = result['TrackDuration']
             changed.append(track_duration)
 
         time_position = self._state_variable('AVT', 'RelativeTimePosition')
-        if time_position.value != result['RelTime']:
+        if time_position and time_position.value != result['RelTime']:
             time_position.value = result['RelTime']
             changed.append(time_position)
 
         service = action.service
         self._on_event(service, changed)
 
-    def _on_event(self, service: UpnpService, state_variables: List[UpnpStateVariable]):
+    def _on_event(self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]) -> None:
         """State variable(s) changed, let home-assistant know."""
         # handle DLNA specific event
         for state_variable in state_variables:
@@ -200,34 +202,36 @@ class DmrDevice(UpnpProfileDevice):
             self.on_event(service, state_variables)
 
     @property
-    def state(self):
+    def state(self) -> DeviceState:
         """Get current state."""
         state_var = self._state_variable('AVT', 'TransportState')
         if not state_var:
-            return STATE_ON
+            return DeviceState.ON
 
         state_value = (state_var.value or '').strip().lower()
         if state_value == 'playing':
-            return STATE_PLAYING
+            return DeviceState.PLAYING
         if state_value == 'paused':
-            return STATE_PAUSED
+            return DeviceState.PAUSED
 
-        return STATE_IDLE
+        return DeviceState.IDLE
 
     @property
-    def _current_transport_actions(self):
+    def _current_transport_actions(self) -> List[str]:
         state_var = self._state_variable('AVT', 'CurrentTransportActions')
+        if not state_var:
+            return []
         transport_actions = (state_var.value or '').split(',')
         return [a.lower().strip() for a in transport_actions]
 
     def _supports(self, var_name: str) -> bool:
         return self._state_variable('RC', var_name) is not None and \
-            self._action('RC', 'Set%s' % var_name) is not None
+            self._action('RC', 'Set%s' % (var_name, )) is not None
 
     def _level(self, var_name: str) -> Optional[float]:
         state_var = self._state_variable('RC', var_name)
         if state_var is None:
-            return None
+            raise UpnpError('Missing StateVariable RC/%s' % (var_name, ))
 
         value = state_var.value  # type: float
         if value is None:
@@ -240,7 +244,7 @@ class DmrDevice(UpnpProfileDevice):
     async def _async_set_level(self, var_name: str, level: float, **kwargs) -> None:
         action = self._action('RC', 'Set%s' % var_name)
         if not action:
-            return
+            raise UpnpError('Missing Action RC/Set%s' % (var_name, ))
 
         name = 'Desired%s' % var_name
         argument = action.argument(name)
@@ -256,26 +260,26 @@ class DmrDevice(UpnpProfileDevice):
 
 # region RC/Picture
     @property
-    def has_brightness_level(self):
+    def has_brightness_level(self) -> bool:
         """Check if device has brightness level controls."""
         return self._supports('Brightness')
 
     @property
-    def brightness_level(self):
+    def brightness_level(self) -> Optional[float]:
         """Brightness level of the media player (0..1)."""
         return self._level('Brightness')
 
-    async def async_set_brightness_level(self, brightness: float):
+    async def async_set_brightness_level(self, brightness: float) -> None:
         """Set brightness level, range 0..1."""
         await self._async_set_level('Brightness', brightness)
 
     @property
-    def has_contrast_level(self):
+    def has_contrast_level(self) -> bool:
         """Check if device has contrast level controls."""
         return self._supports('Contrast')
 
     @property
-    def contrast_level(self):
+    def contrast_level(self) -> Optional[float]:
         """Contrast level of the media player (0..1)."""
         return self._level('Contrast')
 
@@ -284,30 +288,30 @@ class DmrDevice(UpnpProfileDevice):
         await self._async_set_level('Contrast', contrast)
 
     @property
-    def has_sharpness_level(self):
+    def has_sharpness_level(self) -> bool:
         """Check if device has sharpness level controls."""
         return self._supports('Sharpness')
 
     @property
-    def sharpness_level(self):
+    def sharpness_level(self) -> Optional[float]:
         """Sharpness level of the media player (0..1)."""
         return self._level('Sharpness')
 
-    async def async_set_sharpness_level(self, sharpness: float):
+    async def async_set_sharpness_level(self, sharpness: float) -> None:
         """Set sharpness level, range 0..1."""
         await self._async_set_level('Sharpness', sharpness)
 
     @property
-    def has_color_temperature_level(self):
+    def has_color_temperature_level(self) -> bool:
         """Check if device has color temperature level controls."""
         return self._supports('ColorTemperature')
 
     @property
-    def color_temperature_level(self):
+    def color_temperature_level(self) -> Optional[float]:
         """Color temperature level of the media player (0..1)."""
         return self._level('ColorTemperature')
 
-    async def async_set_color_temperature_level(self, color_temperature: float):
+    async def async_set_color_temperature_level(self, color_temperature: float) -> None:
         """Set color temperature level, range 0..1."""
         # pylint: disable=invalid-name
         await self._async_set_level('ColorTemperature', color_temperature)
@@ -315,40 +319,43 @@ class DmrDevice(UpnpProfileDevice):
 
 # region RC/Volume
     @property
-    def has_volume_level(self):
+    def has_volume_level(self) -> bool:
         """Check if device has Volume level controls."""
         return self._supports('Volume')
 
     @property
-    def volume_level(self):
+    def volume_level(self) -> Optional[float]:
         """Volume level of the media player (0..1)."""
         return self._level('Volume')
 
-    async def async_set_volume_level(self, volume: float):
+    async def async_set_volume_level(self, volume: float) -> None:
         """Set volume level, range 0..1."""
         await self._async_set_level('Volume', volume, Channel='Master')
 
     @property
-    def has_volume_mute(self):
+    def has_volume_mute(self) -> bool:
         """Check if device has Volume mute controls."""
         return self._supports('Mute')
 
     @property
-    def is_volume_muted(self):
+    def is_volume_muted(self) -> Optional[bool]:
         """Boolean if volume is currently muted."""
         state_var = self._state_variable('RC', 'Mute')
-        value = state_var.value
+        if not state_var:
+            return None
+        value = state_var.value  # type: Optional[bool]
         if value is None:
             _LOGGER.debug('Got no value for Volume_mute')
             return None
 
         return value
 
-    async def async_mute_volume(self, mute):
+    async def async_mute_volume(self, mute) -> None:
         """Mute the volume."""
         action = self._action('RC', 'SetMute')
+        if not action:
+            raise UpnpError('Missing action RC/SetMute')
         desired_mute = bool(mute)
-
         await action.async_call(InstanceID=0,
                                 Channel='Master',
                                 DesiredMute=desired_mute)
@@ -356,106 +363,116 @@ class DmrDevice(UpnpProfileDevice):
 
 # region AVT/Transport actions
     @property
-    def has_pause(self):
+    def has_pause(self) -> bool:
         """Check if device has Pause controls."""
         return self._action('AVT', 'Pause') is not None
 
     @property
-    def can_pause(self):
+    def can_pause(self) -> bool:
         """Check if the device can currently Pause."""
         return self.has_pause and \
             'pause' in self._current_transport_actions
 
-    async def async_pause(self):
+    async def async_pause(self) -> None:
         """Send pause command."""
         if 'pause' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Pause')
             return
 
         action = self._action('AVT', 'Pause')
+        if not action:
+            raise UpnpError('Missing action AVT/Pause')
         await action.async_call(InstanceID=0)
 
     @property
-    def has_play(self):
+    def has_play(self) -> bool:
         """Check if device has Play controls."""
         return self._action('AVT', 'Play') is not None
 
     @property
-    def can_play(self):
+    def can_play(self) -> bool:
         """Check if the device can currently play."""
         return self.has_play and \
             'play' in self._current_transport_actions
 
-    async def async_play(self):
+    async def async_play(self) -> None:
         """Send play command."""
         if 'play' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Play')
             return
 
         action = self._action('AVT', 'Play')
+        if not action:
+            raise UpnpError('Missing action AVT/Play')
         await action.async_call(InstanceID=0, Speed='1')
 
     @property
-    def can_stop(self):
+    def can_stop(self) -> bool:
         """Check if the device can currently stop."""
         return self.has_stop and \
             'stop' in self._current_transport_actions
 
     @property
-    def has_stop(self):
+    def has_stop(self) -> bool:
         """Check if device has Play controls."""
         return self._action('AVT', 'Stop') is not None
 
-    async def async_stop(self):
+    async def async_stop(self) -> None:
         """Send stop command."""
         if 'stop' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Stop')
             return
 
         action = self._action('AVT', 'Stop')
+        if not action:
+            raise UpnpError('Missing action AVT/Stop')
         await action.async_call(InstanceID=0)
 
     @property
-    def has_previous(self):
+    def has_previous(self) -> bool:
         """Check if device has Previous controls."""
-        return self._action('AVT', 'Previous')
+        return self._action('AVT', 'Previous') is not None
 
     @property
-    def can_previous(self):
+    def can_previous(self) -> bool:
         """Check if the device can currently Previous."""
         return self.has_previous and \
             'previous' in self._current_transport_actions
 
-    async def async_previous(self):
+    async def async_previous(self) -> None:
         """Send previous track command."""
         if 'previous' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Previous')
             return
 
         action = self._action('AVT', 'Previous')
+        if not action:
+            raise UpnpError('Missing action AVT/Previous')
         await action.async_call(InstanceID=0)
 
     @property
-    def has_next(self):
+    def has_next(self) -> bool:
         """Check if device has Next controls."""
         return self._action('AVT', 'Next') is not None
 
     @property
-    def can_next(self):
+    def can_next(self) -> bool:
         """Check if the device can currently Next."""
         return self.has_next and \
             'next' in self._current_transport_actions
 
-    async def async_next(self):
+    async def async_next(self) -> None:
         """Send next track command."""
         if 'next' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Next')
             return
 
         action = self._action('AVT', 'Next')
+        if not action:
+            raise UpnpError('Missing action AVT/Next')
         await action.async_call(InstanceID=0)
 
-    def _has_seek_with_mode(self, mode: str):
+    def _has_seek_with_mode(self, mode: str) -> bool:
         """Check if device has Seek mode."""
         action = self._action('AVT', 'Seek')
         state_var = self._state_variable('AVT', 'A_ARG_TYPE_SeekMode')
@@ -467,59 +484,61 @@ class DmrDevice(UpnpProfileDevice):
         return mode.lower() in seek_modes
 
     @property
-    def has_seek_abs_time(self):
+    def has_seek_abs_time(self) -> bool:
         """Check if device has Seek controls, by ABS_TIME."""
         return self._has_seek_with_mode('ABS_TIME')
 
     @property
-    def can_seek_abs_time(self):
+    def can_seek_abs_time(self) -> bool:
         """Check if the device can currently Seek with ABS_TIME."""
         return self.has_seek_abs_time and \
             'seek' in self._current_transport_actions
 
-    async def async_seek_abs_time(self, time: timedelta):
+    async def async_seek_abs_time(self, time: timedelta) -> None:
         """Send seek command with ABS_TIME."""
         if 'seek' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Seek by ABS_TIME')
             return
 
-        target = time_to_str(time)
         action = self._action('AVT', 'Seek')
         if not action:
-            return
-
+            raise UpnpError('Missing action AVT/Seek')
+        target = time_to_str(time)
         await action.async_call(InstanceID=0, Unit='ABS_TIME', Target=target)
 
     @property
-    def has_seek_rel_time(self):
+    def has_seek_rel_time(self) -> bool:
         """Check if device has Seek controls, by REL_TIME."""
         return self._has_seek_with_mode('REL_TIME')
 
     @property
-    def can_seek_rel_time(self):
+    def can_seek_rel_time(self) -> bool:
         """Check if the device can currently Seek with REL_TIME."""
         return self.has_seek_rel_time and \
             'seek' in self._current_transport_actions
 
-    async def async_seek_rel_time(self, time: timedelta):
+    async def async_seek_rel_time(self, time: timedelta) -> None:
         """Send seek command with REL_TIME."""
         if 'seek' not in self._current_transport_actions:
             _LOGGER.debug('Cannot do Seek by REL_TIME')
             return
 
-        target = time_to_str(time)
         action = self._action('AVT', 'Seek')
         if not action:
-            return
-
+            raise UpnpError('Missing action AVT/Seek')
+        target = time_to_str(time)
         await action.async_call(InstanceID=0, Unit='REL_TIME', Target=target)
 
     @property
-    def has_play_media(self):
+    def has_play_media(self) -> bool:
         """Check if device has Play controls."""
         return self._action('AVT', 'SetAVTransportURI') is not None
 
-    async def async_set_transport_uri(self, media_url, media_title, mime_type, upnp_class):
+    async def async_set_transport_uri(self,
+                                      media_url: str,
+                                      media_title: str,
+                                      mime_type: str,
+                                      upnp_class: str) -> None:
         """Play a piece of media."""
         # escape media_url
         _LOGGER.debug('Set transport uri: %s', media_url)
@@ -528,9 +547,9 @@ class DmrDevice(UpnpProfileDevice):
             media_url_parts.scheme,
             media_url_parts.netloc,
             media_url_parts.path,
-            None,
+            '',
             quote_plus(media_url_parts.query),
-            None])
+            ''])
 
         # queue media
         meta_data = await self._construct_play_media_metadata(media_url,
@@ -539,13 +558,12 @@ class DmrDevice(UpnpProfileDevice):
                                                               upnp_class)
         action = self._action('AVT', 'SetAVTransportURI')
         if not action:
-            return
-
+            raise UpnpError('Missing action AVT/SetAVTransportURI')
         await action.async_call(InstanceID=0,
                                 CurrentURI=media_url,
                                 CurrentURIMetaData=meta_data)
 
-    async def async_wait_for_can_play(self, max_wait_time=5):
+    async def async_wait_for_can_play(self, max_wait_time: int = 5):
         """Wait for play command to be ready."""
         loop_time = 0.25
         count = int(max_wait_time / loop_time)
@@ -557,7 +575,8 @@ class DmrDevice(UpnpProfileDevice):
         else:
             _LOGGER.debug('break out of waiting game')
 
-    async def _fetch_headers(self, url: str, headers: Mapping) -> Optional[Mapping[str, str]]:
+    async def _fetch_headers(self, url: str, headers: Mapping[str, str]) \
+            -> Optional[Mapping[str, str]]:
         """Do a HEAD/GET to get resources headers."""
         requester = self.device.requester
 
@@ -579,7 +598,11 @@ class DmrDevice(UpnpProfileDevice):
 
         return None
 
-    async def _construct_play_media_metadata(self, media_url, media_title, mime_type, upnp_class):
+    async def _construct_play_media_metadata(self,
+                                             media_url: str,
+                                             media_title: str,
+                                             mime_type: str,
+                                             upnp_class: str) -> str:
         """Construct the metadata for play_media command."""
         media_info = {
             'mime_type': mime_type,
@@ -612,7 +635,7 @@ class DmrDevice(UpnpProfileDevice):
 
 # region AVT/Media info
     @property
-    def media_title(self):
+    def media_title(self) -> Optional[str]:
         """Title of current playing media."""
         state_var = self._state_variable('AVT', 'CurrentTrackMetaData')
         if state_var is None:
@@ -631,7 +654,7 @@ class DmrDevice(UpnpProfileDevice):
         return title
 
     @property
-    def media_image_url(self):
+    def media_image_url(self) -> Optional[str]:
         """Image url of current playing media."""
         state_var = self._state_variable('AVT', 'CurrentTrackMetaData')
         if state_var is None:
@@ -660,7 +683,7 @@ class DmrDevice(UpnpProfileDevice):
         return None
 
     @property
-    def media_duration(self):
+    def media_duration(self) -> Optional[int]:
         """Duration of current playing media in seconds."""
         state_var = self._state_variable('AVT', 'CurrentTrackDuration')
         if state_var is None or \
@@ -675,7 +698,7 @@ class DmrDevice(UpnpProfileDevice):
         return time.seconds
 
     @property
-    def media_position(self):
+    def media_position(self) -> Optional[int]:
         """Position of current playing media in seconds."""
         state_var = self._state_variable('AVT', 'RelativeTimePosition')
         if state_var is None or \
@@ -690,12 +713,8 @@ class DmrDevice(UpnpProfileDevice):
         return time.seconds
 
     @property
-    def media_position_updated_at(self):
-        """
-        When was the position of the current playing media valid.
-
-        Returns value from homeassistant.util.dt.utcnow().
-        """
+    def media_position_updated_at(self) -> Optional[datetime]:
+        """When was the position of the current playing media valid."""
         state_var = self._state_variable('AVT', 'RelativeTimePosition')
         if state_var is None:
             return None
