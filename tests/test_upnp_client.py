@@ -1,64 +1,22 @@
+# -*- coding: utf-8 -*-
 """Unit tests for upnp_client."""
 
-import asyncio
-import os.path
-from copy import copy
 from typing import Dict, List
 
 import defusedxml.ElementTree as ET  # type: ignore
 import pytest  # type: ignore
 
-
 from async_upnp_client import (
     UpnpError,
     UpnpEventHandler,
     UpnpFactory,
-    UpnpRequester,
     UpnpStateVariable,
     UpnpValueError,
 )
-from async_upnp_client.dlna import dlna_handle_notify_last_change
 
-
-NS = {
-    'device': 'urn:schemas-upnp-org:device-1-0',
-    'service': 'urn:schemas-upnp-org:service-1-0',
-}
-
-
-def read_file(filename) -> str:
-    path = os.path.join('tests', 'fixtures', filename)
-    with open(path, 'r') as f:
-        return f.read()
-
-
-class UpnpTestRequester(UpnpRequester):
-
-    def __init__(self, response_map) -> None:
-        self._response_map = copy(response_map)
-
-    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text'):
-        await asyncio.sleep(0.01)
-
-        key = (method, url)
-        if key not in self._response_map:
-            raise Exception('Request not in response map')
-
-        return self._response_map[key]
-
-
-RESPONSE_MAP = {
-    ('GET', 'http://localhost:1234/dmr'):
-        (200, {}, read_file('dmr')),
-    ('GET', 'http://localhost:1234/RenderingControl_1.xml'):
-        (200, {}, read_file('RenderingControl_1.xml')),
-    ('GET', 'http://localhost:1234/AVTransport_1.xml'):
-        (200, {}, read_file('AVTransport_1.xml')),
-    ('SUBSCRIBE', 'http://localhost:1234/upnp/event/RenderingControl1'):
-        (200, {'sid': 'uuid:dummy'}, ''),
-    ('UNSUBSCRIBE', 'http://localhost:1234/upnp/event/RenderingControl1'):
-        (200, {'sid': 'uuid:dummy'}, ''),
-}
+from .upnp_test_requester import read_file
+from .upnp_test_requester import UpnpTestRequester
+from .upnp_test_requester import RESPONSE_MAP
 
 
 class TestUpnpStateVariable:
@@ -483,54 +441,3 @@ class TestUpnpEventHandler:
 
         state_var = service.state_variable('Volume')
         assert state_var.value == 60
-
-    @pytest.mark.asyncio
-    async def test_on_notify_dlna_event(self):
-        changed_vars = []  # type: List[UpnpStateVariable]
-
-        def on_event(self, changed_state_variables):
-            nonlocal changed_vars
-            changed_vars += changed_state_variables
-
-            assert changed_state_variables
-            if changed_state_variables[0].name == 'LastChange':
-                last_change = changed_state_variables[0]
-                assert last_change.name == 'LastChange'
-
-                dlna_handle_notify_last_change(last_change)
-
-        r = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(r)
-        device = await factory.async_create_device('http://localhost:1234/dmr')
-        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
-        service.on_event = on_event
-        event_handler = UpnpEventHandler('http://localhost:11302', r)
-        await event_handler.async_subscribe(service)
-
-        headers = {
-            'NT': 'upnp:event',
-            'NTS': 'upnp:propchange',
-            'SID': 'uuid:dummy',
-        }
-        body = """
-<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
-    <e:property>
-        <LastChange>
-            &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/RCS/&quot;&gt;
-                &lt;InstanceID val=&quot;0&quot;&gt;
-                    &lt;Mute channel=&quot;Master&quot; val=&quot;0&quot;/&gt;
-                    &lt;Volume channel=&quot;Master&quot; val=&quot;50&quot;/&gt;
-                    &lt;/InstanceID&gt;
-            &lt;/Event&gt;
-        </LastChange>
-    </e:property>
-</e:propertyset>
-"""
-
-        result = await event_handler.handle_notify(headers, body)
-        assert result == 200
-
-        assert len(changed_vars) == 3
-
-        state_var = service.state_variable('Volume')
-        assert state_var.value == 50

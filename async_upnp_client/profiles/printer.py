@@ -4,7 +4,7 @@
 import logging
 from typing import List, NamedTuple, Optional
 
-from async_upnp_client.profile import UpnpProfileDevice
+from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 
 _LOGGER = logging.getLogger(__name__)

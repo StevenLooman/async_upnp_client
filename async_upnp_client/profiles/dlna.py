@@ -20,7 +20,7 @@ from didl_lite import didl_lite  # type: ignore
 from async_upnp_client import UpnpError
 from async_upnp_client import UpnpService
 from async_upnp_client import UpnpStateVariable
-from async_upnp_client.profile import UpnpProfileDevice
+from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
 
 

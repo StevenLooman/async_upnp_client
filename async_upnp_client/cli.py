@@ -19,7 +19,7 @@ from async_upnp_client.advertisement import UpnpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpRequester
 from async_upnp_client.aiohttp import AiohttpNotifyServer
 from async_upnp_client.aiohttp import get_local_ip
-from async_upnp_client.dlna import dlna_handle_notify_last_change
+from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_ST_ALL
 
