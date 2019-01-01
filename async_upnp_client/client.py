@@ -499,22 +499,22 @@ class UpnpAction:
         # construct SOAP body
         service_type = self.service.service_type
         soap_args = self._format_request_args(**kwargs)
-        body = """<?xml version="1.0"?>
-        <s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
-                    xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
-          <s:Body>
-            <u:{1} xmlns:u="{0}">
-                {2}
-            </u:{1}>
-           </s:Body>
-        </s:Envelope>""".format(service_type, self.name, soap_args)
+        body = '<?xml version="1.0"?>' \
+               '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"' \
+               ' xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">' \
+               '<s:Body>' \
+               '<u:{1} xmlns:u="{0}">' \
+               '{2}' \
+               '</u:{1}>' \
+               '</s:Body>' \
+               '</s:Envelope>'.format(service_type, self.name, soap_args)
 
         # construct SOAP header
         soap_action = "{0}#{1}".format(service_type, self.name)
         headers = {
             'SOAPAction': u'"{0}"'.format(soap_action),
             'Host': urllib.parse.urlparse(control_url).netloc,
-            'Content-Type': 'text/xml',
+            'Content-Type': 'text/xml; charset="utf-8"',
             'Content-Length': str(len(body)),
         }
 
