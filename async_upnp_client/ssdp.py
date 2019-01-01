@@ -62,10 +62,7 @@ def decode_ssdp_packet(data: bytes, addr: str) -> Tuple[str, CaseInsensitiveDict
     headers['_address'] = addr
     if 'usn' in headers and 'uuid:' in headers['usn']:
         parts = str(headers['usn']).split('::')
-        if len(parts) > 1:
-            headers['_udn'] = parts[0] if 'uuid:' in parts[0] else parts[1]
-        else:
-            headers['_udn'] = parts[0]
+        headers['_udn'] = parts[0]
 
     return request_line, headers
 

@@ -240,6 +240,9 @@ async def search(search_args) -> None:
     timeout = args.timeout
     service_type = search_args.service_type
     source_ip = search_args.bind
+    if sys.platform == 'win32' and not source_ip:
+        _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
+        source_ip = '0.0.0.0'  # force to IPv4 to prevent asyncio crash/WinError 10022
 
     async def on_response(data):
         data = {key: str(value) for key, value in data.items()}
