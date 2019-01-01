@@ -4,7 +4,7 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
-from typing import List, NamedTuple, Optional
+from typing import List, NamedTuple, Optional, Sequence
 
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
@@ -72,7 +72,7 @@ class IgdDevice(UpnpProfileDevice):
         },
     }
 
-    def _any_action(self, service_names: List[str], action_name: str):
+    def _any_action(self, service_names: Sequence[str], action_name: str):
         for service_name in service_names:
             action = self._action(service_name, action_name)
             if action is not None:
@@ -156,7 +156,7 @@ class IgdDevice(UpnpProfileDevice):
             int(result['NewLayer1DownstreamMaxBitRate']),
             result['NewPhysicalLinkStatus'])
 
-    async def async_get_external_ip_address(self, services: Optional[List[str]] = None) \
+    async def async_get_external_ip_address(self, services: Optional[Sequence[str]] = None) \
             -> Optional[str]:
         """
         Get the external IP address.
@@ -290,7 +290,7 @@ class IgdDevice(UpnpProfileDevice):
             NewExternalPort=external_port,
             NewProtocol=protocol)
 
-    async def async_get_connection_type_info(self, services: Optional[List[str]] = None) \
+    async def async_get_connection_type_info(self, services: Optional[Sequence[str]] = None) \
             -> Optional[ConnectionTypeInfo]:
         """
         Get connection type info.
@@ -323,7 +323,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call(NewConnectionType=connection_type)
 
-    async def async_request_connection(self, services: Optional[List[str]] = None) -> None:
+    async def async_request_connection(self, services: Optional[Sequence[str]] = None) -> None:
         """
         Request connection.
 
@@ -336,7 +336,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call()
 
-    async def async_request_termination(self, services: Optional[List[str]] = None) -> None:
+    async def async_request_termination(self, services: Optional[Sequence[str]] = None) -> None:
         """
         Request connection termination.
 
@@ -349,7 +349,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call()
 
-    async def async_force_termination(self, services: Optional[List[str]] = None) -> None:
+    async def async_force_termination(self, services: Optional[Sequence[str]] = None) -> None:
         """
         Force connection termination.
 
@@ -362,7 +362,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call()
 
-    async def async_get_status_info(self, services: Optional[List[str]] = None) \
+    async def async_get_status_info(self, services: Optional[Sequence[str]] = None) \
             -> Optional[StatusInfo]:
         """
         Get status info.
@@ -380,7 +380,8 @@ class IgdDevice(UpnpProfileDevice):
             result['NewLastConnectionError'],
             result['NewUptime'])
 
-    async def async_get_port_mapping_number_of_entries(self, services: Optional[List[str]] = None) \
+    async def async_get_port_mapping_number_of_entries(self,
+                                                       services: Optional[Sequence[str]] = None) \
             -> Optional[int]:
         """
         Get number of port mapping entries.
@@ -396,7 +397,7 @@ class IgdDevice(UpnpProfileDevice):
         result = await action.async_call()
         return int(result['NewPortMappingNumberOfEntries'])
 
-    async def async_get_nat_rsip_status(self, services: Optional[List[str]] = None) \
+    async def async_get_nat_rsip_status(self, services: Optional[Sequence[str]] = None) \
             -> Optional[NatRsipStatusInfo]:
         """
         Get NAT enabled and RSIP availability statuses.

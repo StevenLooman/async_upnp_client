@@ -625,7 +625,7 @@ class UpnpStateVariable:
         return None
 
     @property
-    def allowed_values(self) -> List:
+    def allowed_values(self) -> List[Any]:
         """List with allowed values for this UpnpStateVariable, if defined."""
         data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
