@@ -29,11 +29,6 @@ _LOGGER = logging.getLogger(__name__)
 
 DeviceState = Enum('DeviceState', 'ON PLAYING PAUSED IDLE')  # pylint: disable=invalid-name
 
-STATE_ON = 'ON'
-STATE_PLAYING = 'PLAYING'
-STATE_PAUSED = 'PAUSED'
-STATE_IDLE = 'IDLE'
-
 
 class DlnaDmrEventContentHandler(ContentHandler):
     """Content Handler to parse DLNA DMR Event data."""
