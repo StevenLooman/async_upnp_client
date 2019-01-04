@@ -10,11 +10,12 @@ import operator
 import sys
 import time
 import urllib.parse
-from typing import Optional, Tuple
+from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpFactory
 from async_upnp_client import UpnpService
+from async_upnp_client import UpnpStateVariable
 from async_upnp_client.advertisement import UpnpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpRequester
 from async_upnp_client.aiohttp import AiohttpNotifyServer
@@ -63,7 +64,7 @@ pprint_indent = 4 if args.pprint else None
 event_handler = None
 
 
-async def create_device(description_url) -> UpnpDevice:
+async def create_device(description_url: str) -> UpnpDevice:
     """Create UpnpDevice."""
     timeout = args.timeout
     requester = AiohttpRequester(timeout)
@@ -72,7 +73,7 @@ async def create_device(description_url) -> UpnpDevice:
     return await factory.async_create_device(description_url)
 
 
-def bind_host_port() -> Tuple[str, str]:
+def bind_host_port() -> Tuple[str, int]:
     """Determine listening host/port."""
     bind = args.bind
 
@@ -87,7 +88,7 @@ def bind_host_port() -> Tuple[str, str]:
         bind = bind + ':' + str(DEFAULT_PORT)
 
     host, port = bind.split(':')
-    return host, port
+    return host, int(port)
 
 
 def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpService]:
@@ -101,7 +102,7 @@ def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpS
     return None
 
 
-def on_event(service, service_variables) -> None:
+def on_event(service: UpnpService, service_variables: Sequence[UpnpStateVariable]) -> None:
     """Handle a UPnP event."""
     _LOGGER.debug('State variable change for %s, variables: %s',
                   service,
@@ -121,7 +122,7 @@ def on_event(service, service_variables) -> None:
         dlna_handle_notify_last_change(last_change)
 
 
-async def call_action(description_url, call_action_args) -> None:
+async def call_action(description_url: str, call_action_args: Sequence) -> None:
     """Call an action and show results."""
     device = await create_device(description_url)
 
@@ -199,7 +200,7 @@ async def call_action(description_url, call_action_args) -> None:
     print(json.dumps(obj, indent=pprint_indent))
 
 
-async def subscribe(description_url, service_names) -> None:
+async def subscribe(description_url: str, service_names: Any) -> None:
     """Subscribe to service(s) and output updates."""
     global event_handler  # pylint: disable=global-statement
 
@@ -235,7 +236,7 @@ async def subscribe(description_url, service_names) -> None:
         await event_handler.async_resubscribe_all()
 
 
-async def search(search_args) -> None:
+async def search(search_args: Any) -> None:
     """Discover devices."""
     timeout = args.timeout
     service_type = search_args.service_type
@@ -244,7 +245,7 @@ async def search(search_args) -> None:
         _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
         source_ip = '0.0.0.0'  # force to IPv4 to prevent asyncio crash/WinError 10022
 
-    async def on_response(data):
+    async def on_response(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
         print(json.dumps(data, indent=pprint_indent))
 
@@ -254,10 +255,10 @@ async def search(search_args) -> None:
                             async_callback=on_response)
 
 
-async def advertisements(advertisement_args) -> None:
+async def advertisements(advertisement_args: Any) -> None:
     """Listen for advertisements."""
     # pylint:disable=unused-argument
-    async def on_notify(data):
+    async def on_notify(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
         print(json.dumps(data, indent=pprint_indent))
 

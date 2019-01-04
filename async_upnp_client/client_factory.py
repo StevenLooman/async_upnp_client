@@ -12,6 +12,7 @@ import voluptuous as vol  # type: ignore
 from async_upnp_client.client import UpnpAction
 from async_upnp_client.client import UpnpDevice
 from async_upnp_client.client import UpnpError
+from async_upnp_client.client import UpnpRequester
 from async_upnp_client.client import UpnpService
 from async_upnp_client.client import UpnpStateVariable
 from async_upnp_client.const import NS
@@ -35,7 +36,9 @@ class UpnpFactory:
     You have probably received this URL from netdisco, for example.
     """
 
-    def __init__(self, requester, disable_state_variable_validation=False) -> None:
+    def __init__(self,
+                 requester: UpnpRequester,
+                 disable_state_variable_validation: bool = False) -> None:
         """Initializer."""
         self.requester = requester
         self._properties = {
@@ -116,7 +119,7 @@ class UpnpFactory:
         state_variable_info = self._state_variable_parse_xml(state_variable_xml)
         type_info = state_variable_info.type_info
         schema = self._state_variable_create_schema(type_info)
-        return UpnpStateVariable(state_variable_info, schema, state_variable_xml)
+        return UpnpStateVariable(state_variable_info, schema)
 
     def _state_variable_parse_xml(self, state_variable_xml: ET.Element) -> StateVariableInfo:
         """Parse XML for state variable."""

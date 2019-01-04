@@ -61,11 +61,11 @@ class DlnaDmrEventContentHandler(ContentHandler):
 class DlnaDmrEventErrorHandler(ErrorHandler):
     """Error handler which ignores errors."""
 
-    def error(self, exception) -> None:
+    def error(self, exception: Exception) -> None:
         """Handle error."""
         _LOGGER.debug("Error during parsing: %s", exception)
 
-    def fatalError(self, exception) -> None:
+    def fatalError(self, exception: Exception) -> None:
         """Handle error."""
         _LOGGER.debug("Fatal error during parsing: %s", exception)
 
@@ -84,7 +84,7 @@ def _parse_last_change_event(text: str) -> Dict[str, Dict[str, str]]:
     return content_handler.changes
 
 
-def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
+def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     """
     Handle changes to LastChange state variable.
 
@@ -96,13 +96,17 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable):
     if state_var.name != 'LastChange':
         raise UpnpError('Call this only on state variable LastChange')
 
-    service = state_var.service
-    event_data = state_var.value
+    event_data = state_var.value  # type: Optional[str]
+    if not event_data:
+        _LOGGER.debug('No event data on state_variable')
+        return
+
     changes = _parse_last_change_event(event_data)
     if '0' not in changes:
         _LOGGER.warning('Only InstanceID 0 is supported')
         return
 
+    service = state_var.service
     changes_0 = changes['0']
     service.notify_changed_state_variables(changes_0)
 
@@ -228,7 +232,7 @@ class DmrDevice(UpnpProfileDevice):
         if state_var is None:
             raise UpnpError('Missing StateVariable RC/%s' % (var_name, ))
 
-        value = state_var.value  # type: float
+        value = state_var.value  # type: Optional[float]
         if value is None:
             _LOGGER.debug('Got no value for %s', var_name)
             return None
@@ -236,13 +240,15 @@ class DmrDevice(UpnpProfileDevice):
         max_value = state_var.max_value or 100.0
         return min(value / max_value, 1.0)
 
-    async def _async_set_level(self, var_name: str, level: float, **kwargs) -> None:
+    async def _async_set_level(self, var_name: str, level: float, **kwargs: Any) -> None:
         action = self._action('RC', 'Set%s' % var_name)
         if not action:
             raise UpnpError('Missing Action RC/Set%s' % (var_name, ))
 
-        name = 'Desired%s' % var_name
-        argument = action.argument(name)
+        arg_name = 'Desired%s' % var_name
+        argument = action.argument(arg_name)
+        if not argument:
+            raise UpnpError('Missing Argument %s for Action RC/Set%s' % (arg_name, var_name, ))
         state_variable = argument.related_state_variable
 
         min_ = state_variable.min_value or 0
@@ -250,7 +256,7 @@ class DmrDevice(UpnpProfileDevice):
         desired_level = int(min_ + level * (max_ - min_))
 
         args = kwargs.copy()
-        args[name] = desired_level
+        args[arg_name] = desired_level
         await action.async_call(InstanceID=0, **args)
 
 # region RC/Picture
@@ -278,7 +284,7 @@ class DmrDevice(UpnpProfileDevice):
         """Contrast level of the media player (0..1)."""
         return self._level('Contrast')
 
-    async def async_set_contrast_level(self, contrast: float):
+    async def async_set_contrast_level(self, contrast: float) -> None:
         """Set contrast level, range 0..1."""
         await self._async_set_level('Contrast', contrast)
 
@@ -345,7 +351,7 @@ class DmrDevice(UpnpProfileDevice):
 
         return value
 
-    async def async_mute_volume(self, mute) -> None:
+    async def async_mute_volume(self, mute: bool) -> None:
         """Mute the volume."""
         action = self._action('RC', 'SetMute')
         if not action:
@@ -558,7 +564,7 @@ class DmrDevice(UpnpProfileDevice):
                                 CurrentURI=media_url,
                                 CurrentURIMetaData=meta_data)
 
-    async def async_wait_for_can_play(self, max_wait_time: int = 5):
+    async def async_wait_for_can_play(self, max_wait_time: int = 5) -> None:
         """Wait for play command to be ready."""
         loop_time = 0.25
         count = int(max_wait_time / loop_time)

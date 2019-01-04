@@ -4,7 +4,7 @@
 import logging
 
 from datetime import timedelta
-from typing import Dict, List, Optional, Sequence, Set  # noqa: F401
+from typing import Dict, List, Mapping, Optional, Sequence, Set  # noqa: F401
 
 from async_upnp_client.client import EventCallbackType  # noqa: F401
 from async_upnp_client.client import UpnpAction
@@ -33,7 +33,7 @@ class UpnpProfileDevice:
     _SERVICE_TYPES = {}  # type: Dict[str, Set[str]]
 
     @classmethod
-    async def async_search(cls) -> Set[Dict]:
+    async def async_search(cls) -> Set[Mapping[str, str]]:
         """
         Search for this device type.
 
@@ -43,7 +43,7 @@ class UpnpProfileDevice:
         """
         responses = set()
 
-        async def on_response(data):
+        async def on_response(data: Mapping[str, str]) -> None:
             if 'st' in data and data['st'] in cls.DEVICE_TYPES:
                 responses.add(data)
         await async_search(async_callback=on_response)
@@ -51,7 +51,7 @@ class UpnpProfileDevice:
         return responses
 
     @classmethod
-    async def async_discover(cls) -> Set[Dict]:
+    async def async_discover(cls) -> Set[Mapping[str, str]]:
         """Alias for async_search."""
         return await cls.async_search()
 
@@ -163,7 +163,7 @@ class UpnpProfileDevice:
 
         return SUBSCRIBE_TIMEOUT
 
-    async def async_unsubscribe_services(self):
+    async def async_unsubscribe_services(self) -> None:
         """Unsubscribe from all subscribed services."""
         await self._event_handler.async_unsubscribe_all()
 

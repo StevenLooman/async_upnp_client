@@ -5,7 +5,8 @@ import logging
 import urllib.parse
 from datetime import datetime
 from datetime import timezone
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple  # noqa: F401
+from typing import Any, Callable, Dict, Generic, List
+from typing import Mapping, Optional, Sequence, Tuple, TypeVar, Union  # noqa: F401
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
@@ -13,7 +14,6 @@ import defusedxml.ElementTree as DET  # type: ignore
 import voluptuous as vol  # type: ignore
 
 from async_upnp_client.const import NS
-from async_upnp_client.const import STATE_VARIABLE_TYPE_MAPPING
 from async_upnp_client.const import ActionInfo
 from async_upnp_client.const import ActionArgumentInfo
 from async_upnp_client.const import DeviceInfo
@@ -37,8 +37,13 @@ class UpnpRequester:
 
     # pylint: disable=too-few-public-methods
 
-    async def async_http_request(self, method, url, headers=None, body=None, body_type='text') \
-            -> Tuple[int, Mapping, str]:
+    async def async_http_request(self,
+                                 method: str,
+                                 url: str,
+                                 headers: Optional[Mapping[str, str]] = None,
+                                 body: Optional[str] = None,
+                                 body_type: str = 'text') \
+            -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """
         Do a HTTP request.
 
@@ -74,8 +79,13 @@ class UpnpRequester:
 
         return response_status, response_headers, response_body
 
-    async def async_do_http_request(self, method, url, headers=None, body=None, body_type='text') \
-            -> Tuple[int, Mapping, str]:
+    async def async_do_http_request(self,
+                                    method: str,
+                                    url: str,
+                                    headers: Optional[Mapping[str, str]] = None,
+                                    body: Optional[str] = None,
+                                    body_type: str = 'text') \
+            -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """
         Actually do a HTTP request.
 
@@ -98,7 +108,7 @@ class UpnpError(Exception):
 class UpnpValueError(UpnpError):
     """Invalid value error."""
 
-    def __init__(self, name, value) -> None:
+    def __init__(self, name: str, value: Any) -> None:
         """Initializer."""
         super().__init__("Invalid value for %s: '%s'" % (name, value))
 
@@ -282,7 +292,7 @@ class UpnpService:
         """Get UPnpAction by name."""
         return self.actions[name]
 
-    async def async_call_action(self, action: 'UpnpAction', **kwargs) -> Dict[str, Any]:
+    async def async_call_action(self, action: 'UpnpAction', **kwargs: Any) -> Dict[str, Any]:
         """
         Call a UpnpAction.
 
@@ -335,14 +345,16 @@ class UpnpAction:
     class Argument:
         """Representation of an Argument of an Action."""
 
-        def __init__(self, argument_info: ActionArgumentInfo, state_variable: 'UpnpStateVariable') \
+        def __init__(self,
+                     argument_info: ActionArgumentInfo,
+                     state_variable: 'UpnpStateVariable') \
                 -> None:
             """Initializer."""
             self._argument_info = argument_info
             self._related_state_variable = state_variable
             self._value = None
 
-        def validate_value(self, value) -> None:
+        def validate_value(self, value: Any) -> None:
             """Validate value against related UpnpStateVariable."""
             self.related_state_variable.validate_value(value)
 
@@ -372,7 +384,7 @@ class UpnpAction:
             return self._value
 
         @value.setter
-        def value(self, value: Any):
+        def value(self, value: Any) -> None:
             """Set Python value for this argument."""
             self.validate_value(value)
             self._value = value
@@ -383,7 +395,7 @@ class UpnpAction:
             return self.coerce_upnp(self.value)
 
         @upnp_value.setter
-        def upnp_value(self, upnp_value: str):
+        def upnp_value(self, upnp_value: str) -> None:
             """Set UPnP value for this argument."""
             self._value = self.coerce_python(upnp_value)
 
@@ -391,7 +403,7 @@ class UpnpAction:
             """Coerce UPnP value to Python."""
             return self.related_state_variable.coerce_python(upnp_value)
 
-        def coerce_upnp(self, value) -> str:
+        def coerce_upnp(self, value: Any) -> str:
             """Coerce Python value to UPnP value."""
             return self.related_state_variable.coerce_upnp(value)
 
@@ -429,7 +441,7 @@ class UpnpAction:
         return self._service
 
     @service.setter
-    def service(self, service: UpnpService):
+    def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
         if self._service:
             raise UpnpError('UpnpAction already bound to UpnpService')
@@ -446,7 +458,7 @@ class UpnpAction:
             self.name, self.in_arguments(), self.out_arguments()
         )
 
-    def validate_arguments(self, **kwargs) -> None:
+    def validate_arguments(self, **kwargs: Any) -> None:
         """
         Validate arguments against in-arguments of self.
 
@@ -464,7 +476,8 @@ class UpnpAction:
         """Get all out-arguments."""
         return [arg for arg in self.arguments if arg.direction == 'out']
 
-    def argument(self, name: str, direction: Optional[str] = None):
+    def argument(self, name: str, direction: Optional[str] = None) \
+            -> Optional['UpnpAction.Argument']:
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self.arguments:
             if arg.name != name:
@@ -473,13 +486,16 @@ class UpnpAction:
                 continue
 
             return arg
+        return None
 
-    async def async_call(self, **kwargs) -> Dict[str, Any]:
+    async def async_call(self, **kwargs: Any) -> Dict[str, Any]:
         """Call an action with arguments."""
         # do request
         url, headers, body = self.create_request(**kwargs)
         status_code, response_headers, response_body = \
             await self.service.requester.async_http_request('POST', url, headers, body)
+        if not isinstance(response_body, str):
+            raise UpnpError('Did not receive a body')
 
         if status_code != 200:
             raise UpnpError('Error during async_call(), status: %s, body: %s' %
@@ -491,7 +507,7 @@ class UpnpAction:
                                             response_body)
         return response_args
 
-    def create_request(self, **kwargs) -> Tuple[str, Dict[str, str], str]:
+    def create_request(self, **kwargs: Any) -> Tuple[str, Dict[str, str], str]:
         """Create headers and headers for this to-be-called UpnpAction."""
         # build URL
         control_url = self.service.control_url
@@ -520,7 +536,7 @@ class UpnpAction:
 
         return control_url, headers, body
 
-    def _format_request_args(self, **kwargs) -> str:
+    def _format_request_args(self, **kwargs: Any) -> str:
         self.validate_arguments(**kwargs)
         arg_strs = ["<{0}>{1}</{0}>".format(arg.name, escape(arg.coerce_upnp(kwargs[arg.name])))
                     for arg in self.in_arguments()]
@@ -556,6 +572,9 @@ class UpnpAction:
         for arg_xml in response.findall('./'):
             name = arg_xml.tag
             arg = self.argument(name, 'out')
+            if not arg:
+                raise UpnpError('Invalid response, unknown argument: %s, %s' %
+                                (name, ET.tostring(xml, encoding='unicode')))
 
             try:
                 arg.upnp_value = unescape(arg_xml.text or '')
@@ -567,19 +586,21 @@ class UpnpAction:
         return args
 
 
-class UpnpStateVariable:
+T = TypeVar('T')  # pylint: disable=invalid-name
+
+
+class UpnpStateVariable(Generic[T]):
     """Representation of a State Variable."""
 
     UPNP_VALUE_ERROR = object()
 
-    def __init__(self, state_variable_info: StateVariableInfo, schema, xml) -> None:
+    def __init__(self, state_variable_info: StateVariableInfo, schema: vol.Schema) -> None:
         """Initializer."""
         self._state_variable_info = state_variable_info
         self._schema = schema
-        self.xml = xml
 
         self._service = None  # type: Optional[UpnpService]
-        self._value = None  # type: Any
+        self._value = None  # type: Optional[Any]  # None, T or UPNP_VALUE_ERROR
         self._updated_at = None  # type: Optional[datetime]
 
     @property
@@ -591,7 +612,7 @@ class UpnpStateVariable:
         return self._service
 
     @service.setter
-    def service(self, service: UpnpService):
+    def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
         if self._service:
             raise UpnpError('UpnpStateVariable already bound to UpnpService')
@@ -599,33 +620,42 @@ class UpnpStateVariable:
         self._service = service
 
     @property
-    def data_type_python(self):
+    def xml(self) -> ET.Element:
+        """Get the XML for this State Variable."""
+        return self._state_variable_info.xml
+
+    @property
+    def data_type_python(self) -> Callable[[str], Any]:
         """Get the data type (coercer) for this State Variable."""
         type_info = self._state_variable_info.type_info
         return type_info.data_type_python
 
     @property
-    def min_value(self):
+    def min_value(self) -> Optional[T]:
         """Min value for this UpnpStateVariable, if defined."""
         data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
         min_ = type_info.allowed_value_range.get('min')
         if data_type == int and min_ is not None:
-            return data_type(min_)
+            value = data_type(min_)  # type: T
+            return value
+
         return None
 
     @property
-    def max_value(self):
+    def max_value(self) -> Optional[T]:
         """Max value for this UpnpStateVariable, if defined."""
         data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
         max_ = type_info.allowed_value_range.get('max')
         if data_type == int and max_ is not None:
-            return data_type(max_)
+            value = data_type(max_)  # type: T
+            return value
+
         return None
 
     @property
-    def allowed_values(self) -> List[Any]:
+    def allowed_values(self) -> List[T]:
         """List with allowed values for this UpnpStateVariable, if defined."""
         data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
@@ -635,7 +665,7 @@ class UpnpStateVariable:
     @property
     def send_events(self) -> bool:
         """Check if this UpnpStatevariable send events."""
-        send_events = self._state_variable_info.send_events  # type: bool
+        send_events = self._state_variable_info.send_events
         return send_events
 
     @property
@@ -645,21 +675,23 @@ class UpnpStateVariable:
         return name
 
     @property
-    def data_type(self):
-        """Python datatype of UpnpStateVariable."""
+    def data_type(self) -> str:
+        """UPNP data type of UpnpStateVariable."""
         return self._state_variable_info.type_info.data_type
 
     @property
-    def default_value(self):
+    def default_value(self) -> Optional[T]:
         """Get default value for UpnpStateVariable, if defined."""
-        data_type_upnp = self._state_variable_info.type_info.data_type
-        data_type = STATE_VARIABLE_TYPE_MAPPING[data_type_upnp]
-        default_value = self._state_variable_info.type_info.default_value
+        type_info = self._state_variable_info.type_info
+        default_value = type_info.default_value
         if default_value is not None:
-            return data_type(default_value)
+            data_type = self.data_type_python
+            value = data_type(default_value)  # type: T
+            return value
+
         return None
 
-    def validate_value(self, value) -> None:
+    def validate_value(self, value: T) -> None:
         """Validate value."""
         try:
             self._schema({'value': value})
@@ -667,7 +699,7 @@ class UpnpStateVariable:
             raise UpnpValueError(self.name, value)
 
     @property
-    def value(self) -> Any:
+    def value(self) -> Optional[T]:
         """
         Get the value, python typed.
 
@@ -679,14 +711,14 @@ class UpnpStateVariable:
         return self._value
 
     @value.setter
-    def value(self, value: Any):
+    def value(self, value: Any) -> None:
         """Set value, python typed."""
         self.validate_value(value)
         self._value = value
         self._updated_at = datetime.now(timezone.utc)
 
     @property
-    def value_unchecked(self):
+    def value_unchecked(self) -> Optional[T]:
         """
         Get the value, python typed.
 
@@ -702,22 +734,22 @@ class UpnpStateVariable:
         return self.coerce_upnp(self.value)
 
     @upnp_value.setter
-    def upnp_value(self, upnp_value: str):
+    def upnp_value(self, upnp_value: str) -> None:
         """Set the value, UPnP typed."""
         try:
             self.value = self.coerce_python(upnp_value)
         except ValueError as err:
             _LOGGER.debug('Error setting upnp_value "%s", error: %s', upnp_value, err)
-            self._value = self.UPNP_VALUE_ERROR
+            self._value = UpnpStateVariable.UPNP_VALUE_ERROR
 
-    def coerce_python(self, upnp_value) -> Any:
+    def coerce_python(self, upnp_value: str) -> Any:
         """Coerce value from UPNP to python."""
         data_type = self.data_type_python
         if data_type == bool:
             return upnp_value == '1'
         return data_type(upnp_value)
 
-    def coerce_upnp(self, value) -> str:
+    def coerce_upnp(self, value: Any) -> str:
         """Coerce value from python to UPNP."""
         data_type = self.data_type_python
         if data_type == bool:
@@ -733,6 +765,6 @@ class UpnpStateVariable:
         """
         return self._updated_at
 
-    def __str__(self):
+    def __str__(self) -> str:
         """To string."""
-        return "<StateVariable({0}, {1})>".format(self.name, self.data_type)
+        return "<UpnpStateVariable({0}, {1})>".format(self.name, self.data_type)

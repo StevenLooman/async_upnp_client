@@ -2,17 +2,17 @@
 """UPnP discovery via Simple Service Discovery Protocol (SSDP)."""
 
 import asyncio
+from asyncio.events import AbstractEventLoop
 import logging
 import socket
 import struct
+from typing import Awaitable, Callable, Mapping, MutableMapping, Optional  # noqa: F401
 
-from typing import Any, Awaitable, Optional  # noqa: F401
-
-from async_upnp_client.ssdp import SsdpProtocol
 from async_upnp_client.ssdp import SSDP_ALIVE
 from async_upnp_client.ssdp import SSDP_BYEBYE
 from async_upnp_client.ssdp import SSDP_TARGET
 from async_upnp_client.ssdp import SSDP_UPDATE
+from async_upnp_client.ssdp import SsdpProtocol
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -21,17 +21,21 @@ _LOGGER = logging.getLogger(__name__)
 class UpnpAdvertisementListener:
     """UPnP Advertisement listener."""
 
-    def __init__(self, on_alive=None, on_byebye=None, on_update=None, loop=None) -> None:
+    def __init__(self,
+                 on_alive: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+                 on_byebye: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+                 on_update: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+                 loop: Optional[AbstractEventLoop] = None) -> None:
         """Initializer."""
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
-        self._loop = loop or asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_event_loop()  # type: AbstractEventLoop
         self._transport = None  # type: Optional[asyncio.DatagramTransport]
 
         self._connect = self._create_protocol()
 
-    def _create_protocol(self) -> Awaitable[Any]:
+    def _create_protocol(self) -> Awaitable:
         """Create a socket to listen on."""
         # create socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -49,7 +53,7 @@ class UpnpAdvertisementListener:
         )
         return connect
 
-    async def _on_data(self, request_line, headers) -> None:
+    async def _on_data(self, request_line: str, headers: MutableMapping[str, str]) -> None:
         """Handle data."""
         _LOGGER.debug('UpnpAdvertisementListener._on_data: %s, %s', request_line, headers)
         if 'NTS' not in headers:

@@ -12,7 +12,7 @@ from urllib.parse import urljoin
 class CaseInsensitiveDict(MutableMapping):
     """Case insensitive dict."""
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         """Initializer."""
         self._data = dict()  # type: Dict[str, Any]
         for key, value in kwargs.items():
@@ -38,7 +38,7 @@ class CaseInsensitiveDict(MutableMapping):
         ci_key = self._ci_key(key)
         del self._data[ci_key]
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get length."""
         return len(self._data)
 
@@ -46,11 +46,11 @@ class CaseInsensitiveDict(MutableMapping):
         """Get iterator."""
         return (key for key, value in self._data.values())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Repr."""
         return str(dict(self.items()))
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         """Compare for equality."""
         if not isinstance(other, Mapping):
             return NotImplemented
@@ -59,7 +59,7 @@ class CaseInsensitiveDict(MutableMapping):
         dict_b = {self._ci_key(key): value for key, value in other.items()}
         return dict_a == dict_b
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """Get hash."""
         ci_dict = {self._ci_key(key): value for key, value in self.items()}
         return hash(tuple(sorted(ci_dict.items())))

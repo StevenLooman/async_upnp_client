@@ -106,8 +106,10 @@ class UpnpEventHandler:
         _LOGGER_TRAFFIC.debug('Sending response: %s', HTTPStatus.OK)
         return HTTPStatus.OK
 
-    async def async_subscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
-            -> Tuple[bool, Optional[str]]:
+    async def async_subscribe(self,
+                              service: 'UpnpService',
+                              timeout: timedelta = timedelta(seconds=1800)  # noqa: E252
+                              ) -> Tuple[bool, Optional[str]]:
         """
         Subscription to a UpnpService.
 
@@ -157,8 +159,10 @@ class UpnpEventHandler:
 
         return True, sid
 
-    async def async_resubscribe(self, service: 'UpnpService', timeout=timedelta(seconds=1800)) \
-            -> Tuple[bool, Optional[str]]:
+    async def async_resubscribe(self,
+                                service: 'UpnpService',
+                                timeout: timedelta = timedelta(seconds=1800)  # noqa: E252
+                                ) -> Tuple[bool, Optional[str]]:
         """Renew subscription to a UpnpService."""
         _LOGGER.debug('Resubscribing to: %s', service)
 
@@ -210,6 +214,10 @@ class UpnpEventHandler:
 
         # do UNSUBSCRIBE request
         sid = self.sid_for_service(service)
+        if not sid:
+            _LOGGER.debug('Could not determine SID to unsubscribe')
+            return False, None
+
         headers = {
             'HOST': urllib.parse.urlparse(service.event_sub_url).netloc,
             'SID': sid,

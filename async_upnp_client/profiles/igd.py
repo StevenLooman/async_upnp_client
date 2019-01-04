@@ -6,6 +6,7 @@ from ipaddress import IPv4Address
 import logging
 from typing import List, NamedTuple, Optional, Sequence
 
+from async_upnp_client import UpnpAction
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 
@@ -72,7 +73,7 @@ class IgdDevice(UpnpProfileDevice):
         },
     }
 
-    def _any_action(self, service_names: Sequence[str], action_name: str):
+    def _any_action(self, service_names: Sequence[str], action_name: str) -> Optional[UpnpAction]:
         for service_name in service_names:
             action = self._action(service_name, action_name)
             if action is not None:
@@ -260,6 +261,9 @@ class IgdDevice(UpnpProfileDevice):
         # pylint: disable=too-many-arguments
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'AddPortMapping')
+        if not action:
+            return
+
         await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
@@ -285,6 +289,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'DeletePortMapping')
+        if not action:
+            return
+
         await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
