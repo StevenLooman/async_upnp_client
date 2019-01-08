@@ -9,6 +9,7 @@ Changes
 - Fix UpnpProfileDevice.async_search() + add UpnpProfileDevice.upnp_discover() for backwards compatiblity
 - Add work-around for win32-platform when using `upnp-client search`
 - Minor changes
+- Typing fixes + automated type checking
 
 
 0.13.8 (2018-12-29)

@@ -2,9 +2,9 @@
 """UPnP printer module."""
 
 import logging
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Optional
 
-from async_upnp_client.profile import UpnpProfileDevice
+from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -31,9 +31,12 @@ class PrinterDevice(UpnpProfileDevice):
         },
     }
 
-    async def async_get_printer_attributes(self) -> PrinterAttributes:
+    async def async_get_printer_attributes(self) -> Optional[PrinterAttributes]:
         """Get printer attributes."""
         action = self._action('BASIC', 'GetPrinterAttributes')
+        if not action:
+            return None
+
         result = await action.async_call()
         return PrinterAttributes(
             result['PrinterState'],

@@ -4,9 +4,10 @@
 from datetime import timedelta
 from ipaddress import IPv4Address
 import logging
-from typing import List, NamedTuple, Optional
+from typing import List, NamedTuple, Optional, Sequence
 
-from async_upnp_client.profile import UpnpProfileDevice
+from async_upnp_client import UpnpAction
+from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -72,43 +73,63 @@ class IgdDevice(UpnpProfileDevice):
         },
     }
 
-    def _any_action(self, service_names: List[str], action_name: str):
+    def _any_action(self, service_names: Sequence[str], action_name: str) -> Optional[UpnpAction]:
         for service_name in service_names:
             action = self._action(service_name, action_name)
             if action is not None:
                 return action
         return None
 
-    async def async_get_total_bytes_received(self) -> int:
+    async def async_get_total_bytes_received(self) -> Optional[int]:
         """Get total bytes received."""
         action = self._action('WANCIC', 'GetTotalBytesReceived')
-        result = await action.async_call()
-        return result['NewTotalBytesReceived']
+        if not action:
+            return None
 
-    async def async_get_total_bytes_sent(self) -> int:
+        result = await action.async_call()
+        total_bytes_received = result['NewTotalBytesReceived']  # type: int
+        return total_bytes_received
+
+    async def async_get_total_bytes_sent(self) -> Optional[int]:
         """Get total bytes sent."""
         action = self._action('WANCIC', 'GetTotalBytesSent')
-        result = await action.async_call()
-        return result['NewTotalBytesSent']
+        if not action:
+            return None
 
-    async def async_get_total_packets_received(self) -> int:
+        result = await action.async_call()
+        total_bytes_sent = result['NewTotalBytesSent']  # type: int
+        return total_bytes_sent
+
+    async def async_get_total_packets_received(self) -> Optional[int]:
         """Get total packets received."""
         # pylint: disable=invalid-name
         action = self._action('WANCIC', 'GetTotalPacketsReceived')
-        result = await action.async_call()
-        return result['NewTotalPacketsReceived']
+        if not action:
+            return None
 
-    async def async_get_total_packets_sent(self) -> int:
+        result = await action.async_call()
+        total_packets_received = result['NewTotalPacketsReceived']  # type: int
+        return total_packets_received
+
+    async def async_get_total_packets_sent(self) -> Optional[int]:
         """Get total packets sent."""
         action = self._action('WANCIC', 'GetTotalPacketsSent')
-        result = await action.async_call()
-        return result['NewTotalPacketsSent']
+        if not action:
+            return None
 
-    async def async_get_enabled_for_internet(self) -> bool:
+        result = await action.async_call()
+        total_packets_sent = result['NewTotalPacketsSent']  # type: int
+        return total_packets_sent
+
+    async def async_get_enabled_for_internet(self) -> Optional[bool]:
         """Get internet access enabled state."""
         action = self._action('WANCIC', 'GetEnabledForInternet')
+        if not action:
+            return None
+
         result = await action.async_call()
-        return result['NewEnabledForInternet']
+        enabled_for_internet = result['NewEnabledForInternet']  # type: bool
+        return enabled_for_internet
 
     async def async_set_enabled_for_internet(self, enabled: bool) -> None:
         """
@@ -117,20 +138,27 @@ class IgdDevice(UpnpProfileDevice):
         :param enabled whether access should be enabled
         """
         action = self._action('WANCIC', 'SetEnabledForInternet')
+        if not action:
+            return
+
         await action.async_call(NewEnabledForInternet=enabled)
 
-    async def async_get_common_link_properties(self) -> CommonLinkProperties:
+    async def async_get_common_link_properties(self) -> Optional[CommonLinkProperties]:
         """Get common link properties."""
         # pylint: disable=invalid-name
         action = self._action('WANCIC', 'GetCommonLinkProperties')
+        if not action:
+            return None
+
         result = await action.async_call()
         return CommonLinkProperties(
             result['NewWANAccessType'],
-            result['NewLayer1UpstreamMaxBitRate'],
-            result['NewLayer1DownstreamMaxBitRate'],
+            int(result['NewLayer1UpstreamMaxBitRate']),
+            int(result['NewLayer1DownstreamMaxBitRate']),
             result['NewPhysicalLinkStatus'])
 
-    async def async_get_external_ip_address(self, services: List = None) -> str:
+    async def async_get_external_ip_address(self, services: Optional[Sequence[str]] = None) \
+            -> Optional[str]:
         """
         Get the external IP address.
 
@@ -138,12 +166,17 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetExternalIPAddress')
+        if not action:
+            return None
+
         result = await action.async_call()
-        return result['NewExternalIPAddress']
+        external_ip_address = result['NewExternalIPAddress']  # type: str
+        return external_ip_address
 
     async def async_get_generic_port_mapping_entry(self,
                                                    port_mapping_index: int,
-                                                   services: List = None) -> PortMappingEntry:
+                                                   services: Optional[List[str]] = None) \
+            -> Optional[PortMappingEntry]:
         """
         Get generic port mapping entry.
 
@@ -153,6 +186,9 @@ class IgdDevice(UpnpProfileDevice):
         # pylint: disable=invalid-name
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetGenericPortMappingEntry')
+        if not action:
+            return None
+
         result = await action.async_call(
             NewPortMappingIndex=port_mapping_index)
         return PortMappingEntry(
@@ -169,7 +205,8 @@ class IgdDevice(UpnpProfileDevice):
                                                     remote_host: Optional[IPv4Address],
                                                     external_port: int,
                                                     protocol: str,
-                                                    services: List = None) -> PortMappingEntry:
+                                                    services: Optional[List[str]] = None) \
+            -> Optional[PortMappingEntry]:
         """
         Get specific port mapping entry.
 
@@ -181,6 +218,9 @@ class IgdDevice(UpnpProfileDevice):
         # pylint: disable=invalid-name
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetSpecificPortMappingEntry')
+        if not action:
+            return None
+
         result = await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
@@ -204,7 +244,7 @@ class IgdDevice(UpnpProfileDevice):
                                      enabled: bool,
                                      description: str,
                                      lease_duration: timedelta,
-                                     services: List = None):
+                                     services: Optional[List[str]] = None) -> None:
         """
         Add a port mapping.
 
@@ -221,6 +261,9 @@ class IgdDevice(UpnpProfileDevice):
         # pylint: disable=too-many-arguments
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'AddPortMapping')
+        if not action:
+            return
+
         await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
@@ -235,7 +278,7 @@ class IgdDevice(UpnpProfileDevice):
                                         remote_host: IPv4Address,
                                         external_port: int,
                                         protocol: str,
-                                        services: List = None):
+                                        services: Optional[List[str]] = None) -> None:
         """
         Delete an existing port mapping.
 
@@ -246,12 +289,16 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'DeletePortMapping')
+        if not action:
+            return
+
         await action.async_call(
             NewRemoteHost=remote_host.exploded if remote_host else '',
             NewExternalPort=external_port,
             NewProtocol=protocol)
 
-    async def async_get_connection_type_info(self, services: List = None) -> ConnectionTypeInfo:
+    async def async_get_connection_type_info(self, services: Optional[Sequence[str]] = None) \
+            -> Optional[ConnectionTypeInfo]:
         """
         Get connection type info.
 
@@ -259,12 +306,17 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetConnectionTypeInfo')
+        if not action:
+            return None
+
         result = await action.async_call()
         return ConnectionTypeInfo(
             result['NewConnectionType'],
             result['NewPossibleConnectionTypes'])
 
-    async def async_set_connection_type(self, connection_type: str, services: List = None) -> None:
+    async def async_set_connection_type(self,
+                                        connection_type: str,
+                                        services: Optional[List[str]] = None) -> None:
         """
         Set connection type.
 
@@ -273,9 +325,12 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'SetConnectionType')
+        if not action:
+            return
+
         await action.async_call(NewConnectionType=connection_type)
 
-    async def async_request_connection(self, services: List = None) -> None:
+    async def async_request_connection(self, services: Optional[Sequence[str]] = None) -> None:
         """
         Request connection.
 
@@ -283,9 +338,12 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'RequestConnection')
+        if not action:
+            return
+
         await action.async_call()
 
-    async def async_request_termination(self, services: List = None) -> None:
+    async def async_request_termination(self, services: Optional[Sequence[str]] = None) -> None:
         """
         Request connection termination.
 
@@ -293,19 +351,26 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'RequestTermination')
+        if not action:
+            return
+
         await action.async_call()
 
-    async def async_force_termination(self, services: List = None) -> None:
+    async def async_force_termination(self, services: Optional[Sequence[str]] = None) -> None:
         """
         Force connection termination.
 
         :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
         services = services or ['WANIPC', 'WANPPP']
-        action = self._action(services, 'ForceTermination')
+        action = self._any_action(services, 'ForceTermination')
+        if not action:
+            return
+
         await action.async_call()
 
-    async def async_get_status_info(self, services: List = None) -> StatusInfo:
+    async def async_get_status_info(self, services: Optional[Sequence[str]] = None) \
+            -> Optional[StatusInfo]:
         """
         Get status info.
 
@@ -313,13 +378,18 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetStatusInfo')
+        if not action:
+            return None
+
         result = await action.async_call()
         return StatusInfo(
             result['NewConnectionStatus'],
             result['NewLastConnectionError'],
             result['NewUptime'])
 
-    async def async_get_port_mapping_number_of_entries(self, services: List = None) -> int:
+    async def async_get_port_mapping_number_of_entries(self,
+                                                       services: Optional[Sequence[str]] = None) \
+            -> Optional[int]:
         """
         Get number of port mapping entries.
 
@@ -328,10 +398,14 @@ class IgdDevice(UpnpProfileDevice):
         # pylint: disable=invalid-name
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetPortMappingNumberOfEntries')
-        result = await action.async_call()
-        return result['NewPortMappingNumberOfEntries']
+        if not action:
+            return None
 
-    async def async_get_nat_rsip_status(self, services: List = None) -> NatRsipStatusInfo:
+        result = await action.async_call()
+        return int(result['NewPortMappingNumberOfEntries'])
+
+    async def async_get_nat_rsip_status(self, services: Optional[Sequence[str]] = None) \
+            -> Optional[NatRsipStatusInfo]:
         """
         Get NAT enabled and RSIP availability statuses.
 
@@ -339,17 +413,24 @@ class IgdDevice(UpnpProfileDevice):
         """
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetNATRSIPStatus')
+        if not action:
+            return None
+
         result = await action.async_call()
         return NatRsipStatusInfo(
             result['NewNATEnabled'],
             result['NewRSIPAvailable'])
 
-    async def async_get_default_connection_service(self) -> str:
+    async def async_get_default_connection_service(self) -> Optional[str]:
         """Get default connection service."""
         # pylint: disable=invalid-name
         action = self._action('L3FWD', 'GetDefaultConnectionService')
+        if not action:
+            return None
+
         result = await action.async_call()
-        return result['NewDefaultConnectionService']
+        default_connection_service = result['NewDefaultConnectionService']  # type: str
+        return default_connection_service
 
     async def async_set_default_connection_service(self, service: str) -> None:
         """
@@ -359,4 +440,7 @@ class IgdDevice(UpnpProfileDevice):
         """
         # pylint: disable=invalid-name
         action = self._action('L3FWD', 'SetDefaultConnectionService')
+        if not action:
+            return
+
         await action.async_call(NewDefaultConnectionService=service)

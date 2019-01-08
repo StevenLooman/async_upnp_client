@@ -4,16 +4,14 @@
 import logging
 
 from datetime import timedelta
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
+from typing import Dict, List, Mapping, Optional, Sequence, Set  # noqa: F401
 
-from async_upnp_client import UpnpAction
-from async_upnp_client import UpnpDevice
-from async_upnp_client import UpnpEventHandler
-from async_upnp_client import UpnpService
-from async_upnp_client import UpnpStateVariable
+from async_upnp_client.client import EventCallbackType  # noqa: F401
+from async_upnp_client.client import UpnpAction
+from async_upnp_client.client import UpnpDevice
+from async_upnp_client.client import UpnpService
+from async_upnp_client.client import UpnpStateVariable
+from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.search import async_search
 
 
@@ -30,22 +28,22 @@ class UpnpProfileDevice:
     Override _SERVICE_TYPES for aliases.
     """
 
-    DEVICE_TYPES = []
+    DEVICE_TYPES = []  # type: List[str]
 
-    _SERVICE_TYPES = {}
+    _SERVICE_TYPES = {}  # type: Dict[str, Set[str]]
 
     @classmethod
-    async def async_search(cls) -> Set[Dict]:
+    async def async_search(cls) -> Set[Mapping[str, str]]:
         """
         Search for this device type.
 
         This only returns search info, not a profile itself.
 
-        :return: List of devices (dicts) found
+        :return: Set of devices (dicts) found
         """
         responses = set()
 
-        async def on_response(data):
+        async def on_response(data: Mapping[str, str]) -> None:
             if 'st' in data and data['st'] in cls.DEVICE_TYPES:
                 responses.add(data)
         await async_search(async_callback=on_response)
@@ -53,7 +51,7 @@ class UpnpProfileDevice:
         return responses
 
     @classmethod
-    async def async_discover(cls) -> Set[Dict]:
+    async def async_discover(cls) -> Set[Mapping[str, str]]:
         """Alias for async_search."""
         return await cls.async_search()
 
@@ -74,7 +72,7 @@ class UpnpProfileDevice:
         return self.device.manufacturer
 
     @property
-    def model_description(self) -> str:
+    def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
         return self.device.model_description
 
@@ -84,7 +82,7 @@ class UpnpProfileDevice:
         return self.device.model_name
 
     @property
-    def model_number(self) -> str:
+    def model_number(self) -> Optional[str]:
         """Get the model number of this device."""
         return self.device.model_number
 
@@ -102,9 +100,8 @@ class UpnpProfileDevice:
             return None
 
         for service_type in self._SERVICE_TYPES[service_type_abbreviation]:
-            service = self.device.service(service_type)
-            if service:
-                return service
+            if self.device.has_service(service_type):
+                return self.device.service(service_type)
 
         return None
 
@@ -141,7 +138,8 @@ class UpnpProfileDevice:
             if not self._interesting_service(service):
                 continue
 
-            service.on_event = self._on_event
+            on_event = self._on_event  # type: EventCallbackType
+            service.on_event = on_event
             if self._event_handler.sid_for_service(service) is None:
                 _LOGGER.debug('Subscribing to service: %s', service)
                 success, _ = \
@@ -165,14 +163,17 @@ class UpnpProfileDevice:
 
         return SUBSCRIBE_TIMEOUT
 
-    async def async_unsubscribe_services(self):
+    async def async_unsubscribe_services(self) -> None:
         """Unsubscribe from all subscribed services."""
         await self._event_handler.async_unsubscribe_all()
 
-    def _on_event(self, service: UpnpService, state_variables: List[UpnpStateVariable]):
+    def _on_event(self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]) -> None:
         """
         State variable(s) changed. Override to handle events.
 
         :param service Service which sent the event.
         :param state_variables State variables which have been changed.
         """
+        if self.on_event:
+            # pylint: disable=not-callable
+            self.on_event(service, state_variables)
