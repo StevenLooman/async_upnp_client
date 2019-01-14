@@ -4,6 +4,7 @@
 import logging
 
 from datetime import timedelta
+from ipaddress import IPv4Address
 from typing import Dict, List, Mapping, Optional, Sequence, Set  # noqa: F401
 
 from async_upnp_client.client import EventCallbackType  # noqa: F401
@@ -33,7 +34,7 @@ class UpnpProfileDevice:
     _SERVICE_TYPES = {}  # type: Dict[str, Set[str]]
 
     @classmethod
-    async def async_search(cls) -> Set[Mapping[str, str]]:
+    async def async_search(cls, source_ip: Optional[IPv4Address] = None) -> Set[Mapping[str, str]]:
         """
         Search for this device type.
 
@@ -46,7 +47,7 @@ class UpnpProfileDevice:
         async def on_response(data: Mapping[str, str]) -> None:
             if 'st' in data and data['st'] in cls.DEVICE_TYPES:
                 responses.add(data)
-        await async_search(async_callback=on_response)
+        await async_search(async_callback=on_response, source_ip=source_ip)
 
         return responses
 

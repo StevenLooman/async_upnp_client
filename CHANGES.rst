@@ -10,6 +10,7 @@ Changes
 - Add work-around for win32-platform when using `upnp-client search`
 - Minor changes
 - Typing fixes + automated type checking
+- Support binding to IP(v4) for search and advertisements
 
 
 0.13.8 (2018-12-29)

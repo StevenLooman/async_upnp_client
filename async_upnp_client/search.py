@@ -23,13 +23,13 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
                        source_ip: Optional[IPv4Address] = None,
                        loop: Optional[AbstractEventLoop] = None) -> None:
     """Discover devices via SSDP."""
+    source_ip = source_ip or IPv4Address('0.0.0.0')
     loop_ = loop or asyncio.get_event_loop()  # type: AbstractEventLoop
 
     # create socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    if source_ip:
-        sock.bind((source_ip, 0))
+    sock.bind((source_ip.compressed, 0))
 
     async def on_connect(transport: DatagramTransport) -> None:
         """Handle connection made."""

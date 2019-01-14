@@ -3,9 +3,9 @@
 
 import asyncio
 from asyncio.events import AbstractEventLoop
+from ipaddress import IPv4Address
 import logging
 import socket
-import struct
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional  # noqa: F401
 
 from async_upnp_client.ssdp import SSDP_ALIVE
@@ -25,25 +25,31 @@ class UpnpAdvertisementListener:
                  on_alive: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
                  on_byebye: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
                  on_update: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+                 source_ip: Optional[IPv4Address] = None,
                  loop: Optional[AbstractEventLoop] = None) -> None:
         """Initializer."""
+        # pylint: disable=too-many-arguments
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
         self._loop = loop or asyncio.get_event_loop()  # type: AbstractEventLoop
         self._transport = None  # type: Optional[asyncio.DatagramTransport]
 
-        self._connect = self._create_protocol()
+        self._connect = self._create_protocol(source_ip)
 
-    def _create_protocol(self) -> Awaitable:
+    def _create_protocol(self, source_ip: Optional[IPv4Address]) -> Awaitable:
         """Create a socket to listen on."""
+        source_ip = source_ip or IPv4Address('0.0.0.0')
+
         # create socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, source_ip.packed)
 
         # multicast
-        mreq = struct.pack("4sl", socket.inet_aton(SSDP_TARGET[0]), socket.INADDR_ANY)
-        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        sock.setsockopt(socket.IPPROTO_IP,
+                        socket.IP_ADD_MEMBERSHIP,
+                        IPv4Address(SSDP_TARGET[0]).packed + source_ip.packed)
         sock.bind(SSDP_TARGET)
 
         # create protocol and send discovery packet

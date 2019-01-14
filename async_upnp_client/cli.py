@@ -10,6 +10,7 @@ import operator
 import sys
 import time
 import urllib.parse
+from ipaddress import IPv4Address
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from async_upnp_client import UpnpDevice
@@ -244,6 +245,8 @@ async def search(search_args: Any) -> None:
     if sys.platform == 'win32' and not source_ip:
         _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
         source_ip = '0.0.0.0'  # force to IPv4 to prevent asyncio crash/WinError 10022
+    if source_ip:
+        source_ip = IPv4Address(source_ip)
 
     async def on_response(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
@@ -257,14 +260,21 @@ async def search(search_args: Any) -> None:
 
 async def advertisements(advertisement_args: Any) -> None:
     """Listen for advertisements."""
-    # pylint:disable=unused-argument
+    source_ip = advertisement_args.bind
+    if sys.platform == 'win32' and not source_ip:
+        _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
+        source_ip = '0.0.0.0'  # force to IPv4 to prevent asyncio crash/WinError 10022
+    if source_ip:
+        source_ip = IPv4Address(source_ip)
+
     async def on_notify(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
         print(json.dumps(data, indent=pprint_indent))
 
     listener = UpnpAdvertisementListener(on_alive=on_notify,
                                          on_byebye=on_notify,
-                                         on_update=on_notify)
+                                         on_update=on_notify,
+                                         source_ip=source_ip)
     await listener.async_start()
     try:
         while True:
