@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.1 (unreleased)
+0.14.1 (2019-01-16)
 
 - Fix missing async_upnp_client.profiles in package
 
