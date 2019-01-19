@@ -566,7 +566,7 @@ class UpnpAction:
         args = {}
         query = ".//{{{0}}}{1}Response".format(service_type, self.name)
         response = xml.find(query, NS)
-        if not response:
+        if response is None:
             raise UpnpError('Invalid response: %s' % (ET.tostring(xml, encoding='unicode'),))
 
         for arg_xml in response.findall('./'):

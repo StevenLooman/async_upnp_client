@@ -292,6 +292,19 @@ class TestUpnpServiceAction:
         assert result == {'CurrentVolume': 3}
 
     @pytest.mark.asyncio
+    async def test_parse_response_empty(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        action = service.action('SetVolume')
+
+        service_type = 'urn:schemas-upnp-org:service:RenderingControl:1'
+        response = read_file('action_SetVolume.xml')
+        result = action.parse_response(service_type, {}, response)
+        assert result == {}
+
+    @pytest.mark.asyncio
     async def test_parse_response_error(self):
         r = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(r)
