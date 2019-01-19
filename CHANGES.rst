@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.2 (unreleased)
+0.14.2 (2019-01-19)
 
 - Fix parsing response of Action call without any return values
 
