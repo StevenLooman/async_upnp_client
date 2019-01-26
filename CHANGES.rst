@@ -3,6 +3,8 @@ Changes
 
 0.14.3 (unreleased)
 
+- Upgrade to python-didl-lite==1.2.2 for typing info, add `py.typed` marker
+
 
 0.14.2 (2019-01-19)
 

@@ -37,7 +37,7 @@ INSTALL_REQUIRES=[
     'voluptuous>=0.11.1',
     'aiohttp>=3.3.2',
     'async-timeout>=3.0.0',
-    'python-didl-lite==1.2.0',
+    'python-didl-lite==1.2.2',
     'defusedxml>=0.5.0',
 ]
 
@@ -66,6 +66,9 @@ setup(
         'Programming Language :: Python :: 3.7',
     ],
     packages=PACKAGES,
+    package_data={
+        'async_upnp_client': ['py.typed'],
+    },
     install_requires=INSTALL_REQUIRES,
     tests_require=TEST_REQUIRES,
     cmdclass={'test': PyTest},

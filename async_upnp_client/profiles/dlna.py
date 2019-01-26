@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
 from defusedxml.sax import parseString  # type: ignore
-from didl_lite import didl_lite  # type: ignore
+from didl_lite import didl_lite
 
 from async_upnp_client import UpnpError
 from async_upnp_client import UpnpService
@@ -627,6 +627,9 @@ class DmrDevice(UpnpProfileDevice):
         protocol_info = "http-get:*:{mime_type}:{dlna_features}".format(**media_info)
         resource = didl_lite.Resource(uri=media_url, protocol_info=protocol_info)
         didl_item_type = didl_lite.type_by_upnp_class(upnp_class)
+        if not didl_item_type:
+            raise UpnpError('Unknown DIDL-lite type')
+
         item = didl_item_type(id="0", parent_id="0", title=media_title,
                               restricted="1", resources=[resource])
 
