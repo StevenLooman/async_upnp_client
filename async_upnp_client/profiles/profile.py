@@ -19,7 +19,7 @@ from async_upnp_client.search import async_search
 _LOGGER = logging.getLogger(__name__)
 
 
-SUBSCRIBE_TIMEOUT = timedelta(minutes=30)
+SUBSCRIBE_TIMEOUT = timedelta(minutes=9)
 
 
 class UpnpProfileDevice:

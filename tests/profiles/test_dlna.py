@@ -21,7 +21,7 @@ def test_parse_last_change_event():
     assert _parse_last_change_event(data) == {'0': {'TransportState': 'PAUSED_PLAYBACK'}}
 
 
-def test_parse_last_change_event_2():
+def test_parse_last_change_event_multiple_instances():
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0"><TransportState val="PAUSED_PLAYBACK"/></InstanceID>
 <InstanceID val="1"><TransportState val="PLAYING"/></InstanceID>
@@ -29,6 +29,19 @@ def test_parse_last_change_event_2():
     assert _parse_last_change_event(data) == {
         '0': {'TransportState': 'PAUSED_PLAYBACK'},
         '1': {'TransportState': 'PLAYING'},
+    }
+
+
+def test_parse_last_change_event_multiple_channels():
+    data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
+<InstanceID val="0">
+  <Volume channel="Master" val="10"/>
+  <Volume channel="Left" val="20"/>
+  <Volume channel="Right" val="30"/>
+</InstanceID>
+</Event>"""
+    assert _parse_last_change_event(data) == {
+        '0': {'Volume': '10'},
     }
 
 

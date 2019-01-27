@@ -51,6 +51,10 @@ class DlnaDmrEventContentHandler(ContentHandler):
             if current_instance not in self.changes:
                 self.changes[current_instance] = {}
 
+            # if channel is given, we're only interested in the Master channel
+            if attrs.get('channel') not in (None, 'Master'):
+                return
+
             self.changes[current_instance][name] = attrs.get('val')
 
     def endElement(self, name: str) -> None:

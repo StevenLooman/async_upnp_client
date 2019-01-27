@@ -4,6 +4,7 @@ Changes
 0.14.3 (unreleased)
 
 - Upgrade to python-didl-lite==1.2.2 for typing info, add `py.typed` marker
+- Add fix for HEOS-1 speakers: default subscription time-out to 9 minutes, only use channel Master (@stp6778)
 
 
 0.14.2 (2019-01-19)
