@@ -3,6 +3,8 @@ Changes
 
 0.14.4 (unreleased)
 
+- Ignore unknown state variable changes via LastChange events
+
 
 0.14.3 (2019-01-27)
 

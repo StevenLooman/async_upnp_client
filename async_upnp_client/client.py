@@ -269,6 +269,15 @@ class UpnpService:
         """Get the XML description for this service."""
         return self._service_info.xml
 
+    def has_state_variable(self, name: str) -> bool:
+        """Check if self has state variable called name."""
+        if name not in self.state_variables and \
+           '}' in name:
+            # possibly messed up namespaces, try again without namespace
+            name = name.split('}')[1]
+
+        return name in self.state_variables
+
     def state_variable(self, name: str) -> 'UpnpStateVariable':
         """Get UPnpStateVariable by name."""
         state_var = self.state_variables.get(name, None)
@@ -285,7 +294,7 @@ class UpnpService:
         return state_var
 
     def has_action(self, name: str) -> bool:
-        """Check if self has action called named."""
+        """Check if self has action called name."""
         return name in self.actions
 
     def action(self, name: str) -> 'UpnpAction':
@@ -309,11 +318,11 @@ class UpnpService:
         changed_state_variables = []
 
         for name, value in changes.items():
-            state_var = self.state_variable(name)
-            if not state_var:
+            if not self.has_state_variable(name):
                 _LOGGER.debug('State variable %s does not exist, ignoring', name)
                 continue
 
+            state_var = self.state_variable(name)
             try:
                 state_var.upnp_value = value
                 changed_state_variables.append(state_var)
