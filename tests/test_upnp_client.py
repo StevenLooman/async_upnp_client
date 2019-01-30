@@ -189,16 +189,16 @@ class TestUpnpStateVariable:
         service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
 
         sv = service.state_variable('A_ARG_TYPE_InstanceID')  # old style
-        assert sv.send_events == False
+        assert sv.send_events is False
 
         sv = service.state_variable('A_ARG_TYPE_Channel')  # new style
-        assert sv.send_events == False
+        assert sv.send_events is False
 
         sv = service.state_variable('Volume')  # broken/none given
-        assert sv.send_events == False
+        assert sv.send_events is False
 
         sv = service.state_variable('LastChange')
-        assert sv.send_events == True
+        assert sv.send_events is True
 
 
 class TestUpnpServiceAction:
