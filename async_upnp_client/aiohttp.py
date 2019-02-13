@@ -122,17 +122,21 @@ class AiohttpNotifyServer:
                  requester: UpnpRequester,
                  listen_port: int,
                  listen_host: Optional[str] = None,
+                 callback_url: Optional[str] = None,
                  loop: Optional[AbstractEventLoop] = None) -> None:
         """Initializer."""
+        # pylint: disable=too-many-arguments
         self._listen_port = listen_port
         self._listen_host = listen_host or get_local_ip()
+        self._callback_url = callback_url or \
+            "http://{}:{}/notify".format(
+                self._listen_host, self._listen_port)
         self._loop = loop or asyncio.get_event_loop()
 
         self._aiohttp_server = None  # type: Optional[aiohttp.web.Server]
         self._server = None  # type: Optional[AbstractServer]
 
-        callback_url = "http://{}:{}/notify".format(self._listen_host, self._listen_port)
-        self.event_handler = UpnpEventHandler(callback_url, requester)
+        self.event_handler = UpnpEventHandler(self._callback_url, requester)
 
     async def start_server(self) -> None:
         """Start the HTTP server."""

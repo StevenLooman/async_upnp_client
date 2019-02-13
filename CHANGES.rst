@@ -3,6 +3,8 @@ Changes
 
 0.14.5 (unreleased)
 
+- Allow overriding of callback_url in AiohttpNotifyServer (@KarlVogel)
+
 
 0.14.4 (2019-02-04)
 
