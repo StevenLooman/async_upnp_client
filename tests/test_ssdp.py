@@ -44,7 +44,6 @@ def test_decode_ssdp_packet():
     assert '_timestamp' in headers
     del headers['_timestamp']
 
-    print(headers)
     assert headers == {
         'cache-control': 'max-age=1900',
         'location': 'http://192.168.1.1:80/RootDevice.xml',

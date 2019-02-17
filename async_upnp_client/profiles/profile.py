@@ -113,12 +113,18 @@ class UpnpProfileDevice:
         if not service:
             return None
 
+        if not service.has_state_variable(state_variable_name):
+            return None
+
         return service.state_variable(state_variable_name)
 
     def _action(self, service_name: str, action_name: str) -> Optional[UpnpAction]:
         """Check if service has action."""
         service = self._service(service_name)
         if not service:
+            return None
+
+        if not service.has_action(action_name):
             return None
 
         return service.action(action_name)
