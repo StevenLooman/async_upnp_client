@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.5 (unreleased)
+0.14.5 (2019-03-02)
 
 - Allow overriding of callback_url in AiohttpNotifyServer (@KarlVogel)
 - Check action/state_variable exists when retrieving it, preventing an error
