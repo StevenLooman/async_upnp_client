@@ -22,7 +22,7 @@ from async_upnp_client.const import StateVariableInfo
 
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC = logging.getLogger(__name__ + ".traffic")
+_LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 
 
 EventCallbackType = Callable[['UpnpService', Sequence['UpnpStateVariable']], None]

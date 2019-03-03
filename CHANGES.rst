@@ -3,6 +3,8 @@ Changes
 
 0.14.6 (unreleased)
 
+- Fixes to CLI
+
 
 0.14.5 (2019-03-02)
 

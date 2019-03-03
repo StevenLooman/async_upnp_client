@@ -152,13 +152,13 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
         sys.exit(1)
 
     # get action
-    action = service.action(action_name)
-    if not action:
+    if not service.has_action(action_name):
         print('Unknown action: %s' % (action_name, ))
         print('Available actions:\n%s' % (
             '\n'.join(['  ' + name for name in sorted(service.actions)])
         ))
         sys.exit(1)
+    action = service.action(action_name)
 
     # get in variables
     coerced_args = {}
@@ -289,6 +289,7 @@ async def async_main() -> None:
     """Asunc main."""
     if args.debug:
         _LOGGER.setLevel(logging.DEBUG)
+        _LOGGER_TRAFFIC.setLevel(logging.INFO)
         _LOGGER_LIB.setLevel(logging.DEBUG)
     if args.debug_traffic:
         _LOGGER_TRAFFIC.setLevel(logging.DEBUG)
