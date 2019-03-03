@@ -92,6 +92,7 @@ class UpnpEventHandler:
 
         # decode event and send updates to service
         changes = {}
+        body = body.strip().strip('\u0000')
         el_root = DET.fromstring(body)
         for el_property in el_root.findall('./event:property', NS):
             for el_state_var in el_property:
