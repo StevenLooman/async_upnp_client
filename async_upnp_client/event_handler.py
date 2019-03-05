@@ -119,7 +119,7 @@ class UpnpEventHandler:
         :param service UpnpService to subscribe to self
         :param timeout Timeout of subscription
         """
-        _LOGGER.debug('Subscribing to: %s, callback URL: %s', service, self._callback_url)
+        _LOGGER.debug('Subscribing to: %s, callback URL: %s', service, self.callback_url)
 
         # do SUBSCRIBE request
         headers = {
