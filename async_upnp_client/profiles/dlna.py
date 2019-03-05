@@ -30,6 +30,61 @@ _LOGGER = logging.getLogger(__name__)
 DeviceState = Enum('DeviceState', 'ON PLAYING PAUSED IDLE')  # pylint: disable=invalid-name
 
 
+class DlnaOrgOp(Enum):
+    """DLNA.ORG_OP (Operations Parameter) flags."""
+
+    NONE = 0
+    RANGE = 0x01
+    TIMESEEK = 0x10
+
+
+class DlnaOrgCi(Enum):
+    """DLNA.ORG_CI (Conversion Indicator) flags."""
+
+    NONE = 0
+    TRANSCODED = 1
+
+
+class DlnaOrgPs(Enum):
+    """DLNA.ORG_PS (PlaySpeed ) flags."""
+
+    INVALID = 0
+    NORMAL = 1
+
+
+class DlanOrgFlags(Enum):
+    """
+    DLNA.ORG_FLAGS flags.
+
+    padded with 24 trailing 0s
+    80000000  31  sender paced
+    40000000  30  lsop time based seek supported
+    20000000  29  lsop byte based seek supported
+    10000000  28  playcontainer supported
+     8000000  27  s0 increasing supported
+     4000000  26  sN increasing supported
+     2000000  25  rtsp pause supported
+     1000000  24  streaming transfer mode supported
+      800000  23  interactive transfer mode supported
+      400000  22  background transfer mode supported
+      200000  21  connection stalling supported
+      100000  20  dlna version15 supported
+    """
+
+    SENDER_PACED = 1 << 31
+    TIME_BASED_SEEK = 1 << 30
+    BYTE_BASED_SEEK = 1 << 29
+    PLAY_CONTAINER = 1 << 28
+    S0_INCREASE = 1 << 27
+    SN_INCREASE = 1 << 26
+    RTSP_PAUSE = 1 << 25
+    STREAMING_TRANSFER_MODE = 1 << 24
+    INTERACTIVE_TRANSFERT_MODE = 1 << 23
+    BACKGROUND_TRANSFERT_MODE = 1 << 22
+    CONNECTION_STALL = 1 << 21
+    DLNA_V15 = 1 << 20
+
+
 class DlnaDmrEventContentHandler(ContentHandler):
     """Content Handler to parse DLNA DMR Event data."""
 
@@ -543,8 +598,11 @@ class DmrDevice(UpnpProfileDevice):
                                       media_url: str,
                                       media_title: str,
                                       mime_type: str,
-                                      upnp_class: str) -> None:
+                                      upnp_class: str,
+                                      override_mime_type: Optional[str] = None,
+                                      override_dlna_features: Optional[str] = None) -> None:
         """Play a piece of media."""
+        # pylint: disable=too-many-arguments
         # escape media_url
         _LOGGER.debug('Set transport uri: %s', media_url)
         media_url_parts = urlparse(media_url)
@@ -557,10 +615,10 @@ class DmrDevice(UpnpProfileDevice):
             ''])
 
         # queue media
-        meta_data = await self._construct_play_media_metadata(media_url,
-                                                              media_title,
-                                                              mime_type,
-                                                              upnp_class)
+        meta_data = await self._construct_play_media_metadata(
+            media_url, media_title, mime_type, upnp_class,
+            override_mime_type=override_mime_type,
+            override_dlna_features=override_dlna_features)
         action = self._action('AVT', 'SetAVTransportURI')
         if not action:
             raise UpnpError('Missing action AVT/SetAVTransportURI')
@@ -607,12 +665,26 @@ class DmrDevice(UpnpProfileDevice):
                                              media_url: str,
                                              media_title: str,
                                              mime_type: str,
-                                             upnp_class: str) -> str:
-        """Construct the metadata for play_media command."""
+                                             upnp_class: str,
+                                             override_mime_type: Optional[str] = None,
+                                             override_dlna_features: Optional[str] = None) -> str:
+        """
+        Construct the metadata for play_media command.
+
+        This queries the source and takes mime_type/dlna_features from it.
+
+        :arg media_url URL to media
+        :arg media_title
+        :arg mime_type Suggested mime type, will be overridden by source if possible
+        :arg upnp_class UPnP class
+        :arg override_mime_type Enfore mime_type, even if source reports a different mime_type
+        :arg override_dlna_features Enforce DLNA features, even if source reports different features
+        :return String containing metadata
+        """
+        # pylint: disable=too-many-arguments, too-many-locals
         media_info = {
             'mime_type': mime_type,
-            'dlna_features': 'DLNA.ORG_OP=01;DLNA.ORG_CI=0;'
-                             'DLNA.ORG_FLAGS=00000000000000000000000000000000',
+            'dlna_features': '*',
         }
 
         # do a HEAD/GET, to retrieve content-type/mime-type
@@ -627,18 +699,59 @@ class DmrDevice(UpnpProfileDevice):
         except Exception:  # pylint: disable=broad-except
             pass
 
+        # use CM/GetProtocolInfo to improve on dlna_features
+        if self.has_get_protocol_info:
+            protocol_info_entries = await self._async_get_sink_protocol_info_for_mime_type(
+                media_info['mime_type'])
+            for entry in protocol_info_entries:
+                if entry[3] == '*':
+                    # device accepts anything, send this
+                    media_info['dlna_features'] = '*'
+
+        # allow overriding of mime_type/dlna_features
+        if override_mime_type:
+            media_info['mime_type'] = override_mime_type
+        if override_dlna_features:
+            media_info['dlna_features'] = override_dlna_features
+
         # build DIDL-Lite item + resource
-        protocol_info = "http-get:*:{mime_type}:{dlna_features}".format(**media_info)
-        resource = didl_lite.Resource(uri=media_url, protocol_info=protocol_info)
         didl_item_type = didl_lite.type_by_upnp_class(upnp_class)
         if not didl_item_type:
             raise UpnpError('Unknown DIDL-lite type')
 
-        item = didl_item_type(id="0", parent_id="0", title=media_title,
-                              restricted="1", resources=[resource])
+        protocol_info = "http-get:*:{mime_type}:{dlna_features}".format(**media_info)
+        resource = didl_lite.Resource(uri=media_url, protocol_info=protocol_info)
+        item = didl_item_type(id="0", parent_id="-1", title=media_title,
+                              restricted="false", resources=[resource])
 
         xml_string = didl_lite.to_xml_string(item)  # type: bytes
         return xml_string.decode('utf-8')
+
+    @property
+    def has_get_protocol_info(self) -> bool:
+        """Check if device has Play controls."""
+        return self._action('CM', 'GetProtocolInfo') is not None
+
+    async def async_get_protocol_info(self) -> Dict[str, List[str]]:
+        """Get protocol info."""
+        action = self._action('CM', 'GetProtocolInfo')
+        if not action:
+            return {'source': [], 'sink': []}
+
+        protocol_info = await action.async_call()
+        return {
+            'source': protocol_info['Source'].split(','),
+            'sink': protocol_info['Sink'].split(','),
+        }
+
+    async def _async_get_sink_protocol_info_for_mime_type(self, mime_type: str) -> List[List[str]]:
+        """Get protocol_info for a specific mime type."""
+        protocol_info = await self.async_get_protocol_info()
+        source = protocol_info['source']
+        # example entry:
+        # http-get:*:video/mpeg:DLNA.ORG_PN=MPEG_TS_HD_KO_ISO;DLNA.ORG_FLAGS=ED100000000000000000...
+        return [entry.split(':') for entry in source
+                if ':' in entry and entry.split(':')[2] == mime_type]
 # endregion
 
 # region AVT/Media info
