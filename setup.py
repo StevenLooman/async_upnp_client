@@ -43,7 +43,7 @@ INSTALL_REQUIRES=[
 
 
 TEST_REQUIRES=[
-    'pytest',
+    'pytest>=3',
     'pytest-asyncio',
 ]
 
