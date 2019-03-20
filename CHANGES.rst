@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.6 (unreleased)
+0.14.6 (2019-03-20)
 
 - Fixes to CLI
 - Handle invalid event-XML containing invalid trailing characters
