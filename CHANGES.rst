@@ -6,6 +6,7 @@ Changes
 - Fixes to CLI
 - Handle invalid event-XML containing invalid trailing characters
 - Improve constructing metadata when playing media on DLNA/DMR devices
+- Upgrade to python-didl-lite==1.2.4 for namespacing changes
 
 
 0.14.5 (2019-03-02)
