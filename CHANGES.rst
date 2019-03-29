@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.7 (unreleased)
+0.14.7 (2019-03-29)
 
 - Better handle empty default values for state variables (@LooSik)
 
