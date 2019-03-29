@@ -3,6 +3,8 @@ Changes
 
 0.14.7 (unreleased)
 
+- Better handle empty default values for state variables (@LooSik)
+
 
 0.14.6 (2019-03-20)
 

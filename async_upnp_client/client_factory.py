@@ -205,7 +205,8 @@ class UpnpFactory:
         # construct key
         key = vol.Required('value')
 
-        if type_info.default_value is not None:
+        if type_info.default_value is not None and \
+           type_info.default_value != '':
             default_value = type_info.default_value  # type: Any
             if data_type == bool:
                 default_value = default_value == '1'

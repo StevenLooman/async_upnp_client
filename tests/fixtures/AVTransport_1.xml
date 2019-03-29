@@ -452,7 +452,7 @@
         <minimum>0</minimum>
         <maximum>4294967295</maximum>
       </allowedValueRange>
-      <defaultValue>0</defaultValue>
+      <defaultValue></defaultValue>
     </stateVariable>
     <stateVariable sendEvents="no">
       <name>CurrentMediaDuration</name>
