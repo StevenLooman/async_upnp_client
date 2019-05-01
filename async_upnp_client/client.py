@@ -420,11 +420,14 @@ class UpnpAction:
             """To repr."""
             return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
 
-    def __init__(self, action_info: ActionInfo, arguments: List['UpnpAction.Argument']) -> None:
+    def __init__(self, action_info: ActionInfo, arguments: List['UpnpAction.Argument'],disable_unknown_out_argument_error: bool = False) -> None:
         """Initializer."""
         self._action_info = action_info
         self._arguments = arguments
         self._service = None  # type: Optional[UpnpService]
+        self._properties = {
+            'disable_unknown_out_argument_error': disable_unknown_out_argument_error,
+        }
 
     @property
     def name(self) -> str:
@@ -582,8 +585,11 @@ class UpnpAction:
             name = arg_xml.tag
             arg = self.argument(name, 'out')
             if not arg:
-                raise UpnpError('Invalid response, unknown argument: %s, %s' %
-                                (name, ET.tostring(xml, encoding='unicode')))
+                if self._properties['disable_unknown_out_argument_error']:
+                    continue
+                else:
+                    raise UpnpError('Invalid response, unknown argument: %s, %s' %
+                                    (name, ET.tostring(xml, encoding='unicode')))
 
             try:
                 arg.upnp_value = unescape(arg_xml.text or '')
