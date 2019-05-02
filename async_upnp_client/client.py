@@ -420,8 +420,8 @@ class UpnpAction:
             """To repr."""
             return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
 
-    def __init__(self, action_info: ActionInfo, arguments: List['UpnpAction.Argument'],\
-        disable_unknown_out_argument_error: bool = False) -> None:
+    def __init__(self, action_info: ActionInfo, arguments: List['UpnpAction.Argument'],
+                 disable_unknown_out_argument_error: bool = False) -> None:
         """Initializer."""
         self._action_info = action_info
         self._arguments = arguments
