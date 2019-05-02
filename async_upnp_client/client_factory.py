@@ -234,11 +234,11 @@ class UpnpFactory:
         svs = {sv.name: sv for sv in state_variables}
         arguments = [UpnpAction.Argument(arg_info, svs[arg_info.state_variable_name])
                      for arg_info in action_info.arguments]
+        disable_unknown_out_argument_error = self._properties['disable_unknown_out_argument_error']
         return UpnpAction(
-            action_info, 
+            action_info,
             arguments,
-            disable_unknown_out_argument_error=\
-                self._properties['disable_unknown_out_argument_error']
+            disable_unknown_out_argument_error=disable_unknown_out_argument_error
         )
 
     def _action_parse_xml(self, action_xml: ET.Element) -> ActionInfo:
