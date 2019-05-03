@@ -320,6 +320,36 @@ class TestUpnpServiceAction:
         except UpnpError:
             pass
 
+    @pytest.mark.asyncio
+    async def test_unknown_out_argument(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        link_service = 'http://localhost:1234/MainTVAgent2.xml'
+        service_type = 'urn:samsung.com:service:MainTVAgent2:1'
+        test_action = 'GetChannelListURL'
+
+        factory = UpnpFactory(r)
+        device = await factory.async_create_device(link_service)
+        service = device.service(service_type)
+        action = service.action(test_action)
+
+        response = read_file('action_GetChannelListURL.xml')
+        try:
+            action.parse_response(service_type, {}, response)
+            assert False
+        except UpnpError:
+            pass
+
+        factory = UpnpFactory(r,disable_unknown_out_argument_error=True)
+        device = await factory.async_create_device(link_service)
+        service = device.service(service_type)
+        action = service.action(test_action)
+
+        try:
+            action.parse_response(service_type, {}, response)
+        except UpnpError:
+            assert False
+            pass
+
 
 class TestUpnpService:
 
