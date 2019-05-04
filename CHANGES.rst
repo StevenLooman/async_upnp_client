@@ -3,6 +3,8 @@ Changes
 
 0.14.8 (unreleased)
 
+- Added the disable_unknown_out_argument_error to disable exception raising for not found arguments (@p3g4asus)
+
 
 0.14.7 (2019-03-29)
 
