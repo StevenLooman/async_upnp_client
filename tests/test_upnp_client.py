@@ -323,16 +323,16 @@ class TestUpnpServiceAction:
     @pytest.mark.asyncio
     async def test_unknown_out_argument(self):
         r = UpnpTestRequester(RESPONSE_MAP)
-        link_service = 'http://localhost:1234/MainTVAgent2.xml'
-        service_type = 'urn:samsung.com:service:MainTVAgent2:1'
-        test_action = 'GetChannelListURL'
+        link_service = 'http://localhost:1234/dmr'
+        service_type = 'urn:schemas-upnp-org:service:RenderingControl:1'
+        test_action = 'GetVolume'
 
         factory = UpnpFactory(r)
         device = await factory.async_create_device(link_service)
         service = device.service(service_type)
         action = service.action(test_action)
 
-        response = read_file('action_GetChannelListURL.xml')
+        response = read_file('action_GetVolumeExtraOutParameter.xml')
         try:
             action.parse_response(service_type, {}, response)
             assert False

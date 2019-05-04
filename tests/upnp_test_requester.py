@@ -40,10 +40,6 @@ RESPONSE_MAP = {
         (200, {'sid': 'uuid:dummy'}, ''),
     ('UNSUBSCRIBE', 'http://localhost:1234/upnp/event/RenderingControl1'):
         (200, {'sid': 'uuid:dummy'}, ''),
-    ('GET', 'http://localhost:1234/MainTVAgent2.xml'):
-        (200, {}, read_file('MainTVAgent2.xml')),
-    ('GET', 'http://localhost:1234/smp_3_'):
-        (200, {}, read_file('smp_3_')),
 }
 
 
