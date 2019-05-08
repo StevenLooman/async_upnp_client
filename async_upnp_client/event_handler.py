@@ -175,7 +175,7 @@ class UpnpEventHandler:
         headers = {
             'HOST': urllib.parse.urlparse(service.event_sub_url).netloc,
             'SID': sid,
-            'TIMEOUT': 'Second-' + str(timeout),
+            'TIMEOUT': 'Second-' + str(timeout.seconds),
         }
         response_status, response_headers, _ = \
             await self._requester.async_http_request('SUBSCRIBE', service.event_sub_url, headers)
