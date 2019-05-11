@@ -1,11 +1,15 @@
 Changes
 =======
 
-0.14.8 (unreleased)
+0.14.9 (unreleased)
 
-- Added the disable_unknown_out_argument_error to disable exception raising for not found arguments (@p3g4asus)
 - Fix service resubscription failure: wrong timeout format (@romaincolombo)
 - Disable transport action checks for non capable devices (@romaincolombo)
+
+
+0.14.8 (2019-05-04)
+
+- Added the disable_unknown_out_argument_error to disable exception raising for not found arguments (@p3g4asus)
 
 
 0.14.7 (2019-03-29)
