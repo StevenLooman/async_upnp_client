@@ -279,7 +279,7 @@ class DmrDevice(UpnpProfileDevice):
         state_var = self._state_variable('AVT', 'CurrentTransportActions')
         if not state_var:
             return False
-        return state_var.value != None or state_var.updated_at != None
+        return state_var.value is not None or state_var.updated_at is not None
 
     @property
     def _current_transport_actions(self) -> List[str]:
