@@ -275,12 +275,23 @@ class DmrDevice(UpnpProfileDevice):
         return DeviceState.IDLE
 
     @property
+    def _has_current_transport_actions(self) -> bool:
+        state_var = self._state_variable('AVT', 'CurrentTransportActions')
+        if not state_var:
+            return False
+        return state_var.value is not None or state_var.updated_at is not None
+
+    @property
     def _current_transport_actions(self) -> List[str]:
         state_var = self._state_variable('AVT', 'CurrentTransportActions')
         if not state_var:
             return []
         transport_actions = (state_var.value or '').split(',')
         return [a.lower().strip() for a in transport_actions]
+
+    def _can_transport_action(self, action: str) -> bool:
+        return action in self._current_transport_actions or \
+            not self._has_current_transport_actions
 
     def _supports(self, var_name: str) -> bool:
         return self._state_variable('RC', var_name) is not None and \
@@ -431,11 +442,11 @@ class DmrDevice(UpnpProfileDevice):
     def can_pause(self) -> bool:
         """Check if the device can currently Pause."""
         return self.has_pause and \
-            'pause' in self._current_transport_actions
+            self._can_transport_action('pause')
 
     async def async_pause(self) -> None:
         """Send pause command."""
-        if 'pause' not in self._current_transport_actions:
+        if not self._can_transport_action('pause'):
             _LOGGER.debug('Cannot do Pause')
             return
 
@@ -453,11 +464,11 @@ class DmrDevice(UpnpProfileDevice):
     def can_play(self) -> bool:
         """Check if the device can currently play."""
         return self.has_play and \
-            'play' in self._current_transport_actions
+            self._can_transport_action('play')
 
     async def async_play(self) -> None:
         """Send play command."""
-        if 'play' not in self._current_transport_actions:
+        if not self._can_transport_action('play'):
             _LOGGER.debug('Cannot do Play')
             return
 
@@ -470,7 +481,7 @@ class DmrDevice(UpnpProfileDevice):
     def can_stop(self) -> bool:
         """Check if the device can currently stop."""
         return self.has_stop and \
-            'stop' in self._current_transport_actions
+            self._can_transport_action('stop')
 
     @property
     def has_stop(self) -> bool:
@@ -479,7 +490,7 @@ class DmrDevice(UpnpProfileDevice):
 
     async def async_stop(self) -> None:
         """Send stop command."""
-        if 'stop' not in self._current_transport_actions:
+        if not self._can_transport_action('stop'):
             _LOGGER.debug('Cannot do Stop')
             return
 
@@ -497,11 +508,11 @@ class DmrDevice(UpnpProfileDevice):
     def can_previous(self) -> bool:
         """Check if the device can currently Previous."""
         return self.has_previous and \
-            'previous' in self._current_transport_actions
+            self._can_transport_action('previous')
 
     async def async_previous(self) -> None:
         """Send previous track command."""
-        if 'previous' not in self._current_transport_actions:
+        if not self._can_transport_action('previous'):
             _LOGGER.debug('Cannot do Previous')
             return
 
@@ -519,11 +530,11 @@ class DmrDevice(UpnpProfileDevice):
     def can_next(self) -> bool:
         """Check if the device can currently Next."""
         return self.has_next and \
-            'next' in self._current_transport_actions
+            self._can_transport_action('next')
 
     async def async_next(self) -> None:
         """Send next track command."""
-        if 'next' not in self._current_transport_actions:
+        if not self._can_transport_action('next'):
             _LOGGER.debug('Cannot do Next')
             return
 
@@ -552,11 +563,11 @@ class DmrDevice(UpnpProfileDevice):
     def can_seek_abs_time(self) -> bool:
         """Check if the device can currently Seek with ABS_TIME."""
         return self.has_seek_abs_time and \
-            'seek' in self._current_transport_actions
+            self._can_transport_action('seek')
 
     async def async_seek_abs_time(self, time: timedelta) -> None:
         """Send seek command with ABS_TIME."""
-        if 'seek' not in self._current_transport_actions:
+        if not self._can_transport_action('seek'):
             _LOGGER.debug('Cannot do Seek by ABS_TIME')
             return
 
@@ -575,11 +586,11 @@ class DmrDevice(UpnpProfileDevice):
     def can_seek_rel_time(self) -> bool:
         """Check if the device can currently Seek with REL_TIME."""
         return self.has_seek_rel_time and \
-            'seek' in self._current_transport_actions
+            self._can_transport_action('seek')
 
     async def async_seek_rel_time(self, time: timedelta) -> None:
         """Send seek command with REL_TIME."""
-        if 'seek' not in self._current_transport_actions:
+        if not self._can_transport_action('seek'):
             _LOGGER.debug('Cannot do Seek by REL_TIME')
             return
 
@@ -632,7 +643,7 @@ class DmrDevice(UpnpProfileDevice):
         count = int(max_wait_time / loop_time)
         # wait for state variable AVT.AVTransportURI to change and
         for _ in range(count):
-            if 'play' in self._current_transport_actions:
+            if self._can_transport_action('play'):
                 break
             await asyncio.sleep(loop_time)
         else:
