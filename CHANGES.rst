@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.9 (unreleased)
+0.14.9 (2019-05-11)
 
 - Fix service resubscription failure: wrong timeout format (@romaincolombo)
 - Disable transport action checks for non capable devices (@romaincolombo)
