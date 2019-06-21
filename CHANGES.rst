@@ -3,6 +3,8 @@ Changes
 
 0.14.10 (unreleased)
 
+- Ability to pass timeout argument to async_search
+
 
 0.14.9 (2019-05-11)
 

@@ -14,6 +14,7 @@ from async_upnp_client.client import UpnpService
 from async_upnp_client.client import UpnpStateVariable
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.search import async_search
+from async_upnp_client.ssdp import SSDP_MX
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,12 +35,16 @@ class UpnpProfileDevice:
     _SERVICE_TYPES = {}  # type: Dict[str, Set[str]]
 
     @classmethod
-    async def async_search(cls, source_ip: Optional[IPv4Address] = None) -> Set[Mapping[str, str]]:
+    async def async_search(cls,
+                           source_ip: Optional[IPv4Address] = None,
+                           timeout: int = SSDP_MX) -> Set[Mapping[str, str]]:
         """
         Search for this device type.
 
         This only returns search info, not a profile itself.
 
+        :param source_ip Source IP to scan from
+        :param timeout Timeout to use
         :return: Set of devices (dicts) found
         """
         responses = set()
@@ -47,7 +52,7 @@ class UpnpProfileDevice:
         async def on_response(data: Mapping[str, str]) -> None:
             if 'st' in data and data['st'] in cls.DEVICE_TYPES:
                 responses.add(data)
-        await async_search(async_callback=on_response, source_ip=source_ip)
+        await async_search(async_callback=on_response, source_ip=source_ip, timeout=timeout)
 
         return responses
 
