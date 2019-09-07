@@ -140,10 +140,10 @@ class UpnpFactory:
 
         # data type
         data_type = state_variable_xml.findtext('service:dataType', None, NS)
-        if data_type not in STATE_VARIABLE_TYPE_MAPPING:
+        if data_type is None or \
+           data_type not in STATE_VARIABLE_TYPE_MAPPING:
             raise UpnpError('Unsupported data type: %s' % (data_type, ))
-        data_type = data_type
-        data_type_python = STATE_VARIABLE_TYPE_MAPPING[data_type]
+        data_type_mapping = STATE_VARIABLE_TYPE_MAPPING[data_type]
 
         # default value
         default_value = state_variable_xml.findtext('service:defaultValue', None, NS)
@@ -167,7 +167,7 @@ class UpnpFactory:
                  if v.text is not None]
 
         type_info = StateVariableTypeInfo(data_type=data_type,
-                                          data_type_python=data_type_python,
+                                          data_type_mapping=data_type_mapping,
                                           default_value=default_value,
                                           allowed_value_range=allowed_value_range,
                                           allowed_values=allowed_values,
@@ -185,8 +185,13 @@ class UpnpFactory:
         validators = []
 
         data_type_upnp = type_info.data_type
-        data_type = STATE_VARIABLE_TYPE_MAPPING[data_type_upnp]
+        data_type_mapping = STATE_VARIABLE_TYPE_MAPPING[data_type_upnp]
+        data_type = data_type_mapping['type']
         validators.append(data_type)
+
+        data_type_validator = data_type_mapping.get('validator')
+        if data_type_validator:
+            validators.append(data_type_validator)
 
         if not self._properties['disable_state_variable_validation']:
             if type_info.allowed_values:

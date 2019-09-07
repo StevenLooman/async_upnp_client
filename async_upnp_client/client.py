@@ -641,19 +641,23 @@ class UpnpStateVariable(Generic[T]):
         return self._state_variable_info.xml
 
     @property
-    def data_type_python(self) -> Callable[[str], Any]:
+    def data_type_mapping(self) -> Mapping[str, Callable]:
         """Get the data type (coercer) for this State Variable."""
         type_info = self._state_variable_info.type_info
-        return type_info.data_type_python
+        return type_info.data_type_mapping
+
+    @property
+    def data_type_python(self) -> Callable[[str], Any]:
+        """Get the Python data type for this State Variable."""
+        return self.data_type_mapping['type']
 
     @property
     def min_value(self) -> Optional[T]:
         """Min value for this UpnpStateVariable, if defined."""
-        data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
         min_ = type_info.allowed_value_range.get('min')
-        if data_type == int and min_ is not None:
-            value = data_type(min_)  # type: T
+        if min_ is not None:
+            value = self.coerce_python(min_)  # type: T
             return value
 
         return None
@@ -661,11 +665,10 @@ class UpnpStateVariable(Generic[T]):
     @property
     def max_value(self) -> Optional[T]:
         """Max value for this UpnpStateVariable, if defined."""
-        data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
         max_ = type_info.allowed_value_range.get('max')
-        if data_type == int and max_ is not None:
-            value = data_type(max_)  # type: T
+        if max_ is not None:
+            value = self.coerce_python(max_)  # type: T
             return value
 
         return None
@@ -673,10 +676,9 @@ class UpnpStateVariable(Generic[T]):
     @property
     def allowed_values(self) -> List[T]:
         """List with allowed values for this UpnpStateVariable, if defined."""
-        data_type = self.data_type_python
         type_info = self._state_variable_info.type_info
         allowed_values = type_info.allowed_values or []
-        return [data_type(allowed_value) for allowed_value in allowed_values]
+        return [self.coerce_python(allowed_value) for allowed_value in allowed_values]
 
     @property
     def send_events(self) -> bool:
@@ -701,8 +703,7 @@ class UpnpStateVariable(Generic[T]):
         type_info = self._state_variable_info.type_info
         default_value = type_info.default_value
         if default_value is not None:
-            data_type = self.data_type_python
-            value = data_type(default_value)  # type: T
+            value = self.coerce_python(default_value)  # type: T
             return value
 
         return None
@@ -740,7 +741,7 @@ class UpnpStateVariable(Generic[T]):
 
         If an event was received with an invalid value for this StateVariable
         (e.g., 'abc' for a 'ui4' StateVariable), then this will return
-        UpnpStateVariable.UPNP_VALUE_ERROR.
+        UpnpStateVariable.UPNP_VALUE_ERROR instead of None.
         """
         return self._value
 
@@ -760,17 +761,14 @@ class UpnpStateVariable(Generic[T]):
 
     def coerce_python(self, upnp_value: str) -> Any:
         """Coerce value from UPNP to python."""
-        data_type = self.data_type_python
-        if data_type == bool:
-            return upnp_value == '1'
-        return data_type(upnp_value)
+        coercer = self.data_type_mapping['in']
+        return coercer(upnp_value)
 
     def coerce_upnp(self, value: Any) -> str:
         """Coerce value from python to UPNP."""
-        data_type = self.data_type_python
-        if data_type == bool:
-            return '1' if value else '0'
-        return str(value)
+        coercer = self.data_type_mapping['out']
+        coerced_value = coercer(value)  # type: str
+        return coerced_value
 
     @property
     def updated_at(self) -> Optional[datetime]:

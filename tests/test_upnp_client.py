@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Unit tests for upnp_client."""
 
+from datetime import datetime
+
 from typing import Dict, List
 
 import defusedxml.ElementTree as ET  # type: ignore
@@ -180,6 +182,31 @@ class TestUpnpStateVariable:
         sv.upnp_value = 'abc'
         assert sv.value is None
         assert sv.value_unchecked is UpnpStateVariable.UPNP_VALUE_ERROR
+
+    @pytest.mark.asyncio
+    async def test_value_date_time(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r, disable_state_variable_validation=True)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        sv = service.state_variable('SV1')
+
+        # should be ok
+        sv.upnp_value = '1985-04-12T10:15:30'
+        assert sv.value == datetime(1985, 4, 12, 10, 15, 30)
+
+    @pytest.mark.asyncio
+    async def test_value_date_time_tz(self):
+        r = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(r, disable_state_variable_validation=True)
+        device = await factory.async_create_device('http://localhost:1234/dmr')
+        service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+        sv = service.state_variable('SV2')
+
+        # should be ok
+        sv.upnp_value = '1985-04-12T10:15:30+0400'
+        assert sv.value == datetime(1985, 4, 12, 10, 15, 30, tzinfo=sv.value.tzinfo)
+        assert sv.value.tzinfo is not None
 
     @pytest.mark.asyncio
     async def test_send_events(self):

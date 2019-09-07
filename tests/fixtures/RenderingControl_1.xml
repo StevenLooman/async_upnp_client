@@ -25,7 +25,7 @@
         </argument>
       </argumentList>
     </action>
-    <action> 
+    <action>
       <name>SetMute</name>
       <argumentList>
         <argument>
@@ -45,7 +45,7 @@
         </argument>
       </argumentList>
     </action>
-    <action> 
+    <action>
       <name>GetVolume</name>
       <argumentList>
         <argument>
@@ -65,7 +65,7 @@
         </argument>
       </argumentList>
     </action>
-    <action> 
+    <action>
       <name>SetVolume</name>
       <argumentList>
         <argument>
@@ -88,15 +88,15 @@
   </actionList>
   <serviceStateTable>
     <stateVariable sendEvents="yes">
-      <name>LastChange</name> 
+      <name>LastChange</name>
       <dataType>string</dataType>
     </stateVariable>
     <stateVariable sendEvents="no">
-      <name>Mute</name>  
+      <name>Mute</name>
       <dataType>boolean</dataType>
     </stateVariable>
     <stateVariable> <!-- no sendEvents/sendEventsAttribute set -->
-      <name>Volume</name>  
+      <name>Volume</name>
       <dataType>ui2</dataType>
       <allowedValueRange>
         <minimum>0</minimum>
@@ -104,17 +104,25 @@
         <step>1</step>
       </allowedValueRange>
     </stateVariable>
-    <stateVariable sendEvents="no"> 
-      <name>A_ARG_TYPE_Channel</name>  
+    <stateVariable sendEvents="no">
+      <name>A_ARG_TYPE_Channel</name>
       <dataType>string</dataType>
       <allowedValueList>
         <allowedValue>Master</allowedValue>
       </allowedValueList>
     </stateVariable>
     <stateVariable>
-      <name>A_ARG_TYPE_InstanceID</name>  
+      <name>A_ARG_TYPE_InstanceID</name>
       <dataType>ui4</dataType>
       <sendEventsAttribute>no</sendEventsAttribute> <!-- 'old' style -->
+    </stateVariable>
+    <stateVariable>
+      <name>SV1</name>
+      <dataType>dateTime</dataType>
+    </stateVariable>
+    <stateVariable>
+      <name>SV2</name>
+      <dataType>dateTime.tz</dataType>
     </stateVariable>
   </serviceStateTable>
 </scpd>

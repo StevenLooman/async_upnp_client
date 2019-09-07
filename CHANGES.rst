@@ -3,6 +3,8 @@ Changes
 
 0.14.11 (unreleased)
 
+- Support state varable types: date, dateTime, dateTime.tz, time, time.tz
+
 
 0.14.10 (2019-06-21)
 
