@@ -711,7 +711,7 @@ class UpnpStateVariable(Generic[T]):
     def validate_value(self, value: T) -> None:
         """Validate value."""
         try:
-            self._schema({'value': value})
+            self._schema(value)
         except vol.error.MultipleInvalid:
             raise UpnpValueError(self.name, value)
 

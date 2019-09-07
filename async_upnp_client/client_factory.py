@@ -221,7 +221,7 @@ class UpnpFactory:
                 default_value = data_type(default_value)
             key.default = default_value
 
-        return vol.Schema({key: vol.All(*validators)})
+        return vol.Schema(vol.All(*validators))
 
     def create_actions(self, scpd_xml: ET.Element, state_variables: Sequence[UpnpStateVariable]) \
             -> List[UpnpAction]:
