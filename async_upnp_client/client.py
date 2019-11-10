@@ -588,9 +588,9 @@ class UpnpAction:
             if not arg:
                 if self._properties['disable_unknown_out_argument_error']:
                     continue
-                else:
-                    raise UpnpError('Invalid response, unknown argument: %s, %s' %
-                                    (name, ET.tostring(xml, encoding='unicode')))
+
+                raise UpnpError('Invalid response, unknown argument: %s, %s' %
+                                (name, ET.tostring(xml, encoding='unicode')))
 
             try:
                 arg.upnp_value = unescape(arg_xml.text or '')

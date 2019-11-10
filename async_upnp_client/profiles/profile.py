@@ -7,7 +7,7 @@ from datetime import timedelta
 from ipaddress import IPv4Address
 from typing import Dict, List, Mapping, Optional, Sequence, Set  # noqa: F401
 
-from async_upnp_client.client import EventCallbackType  # noqa: F401
+from async_upnp_client.client import EventCallbackType  # noqa: F401, pylint: disable=unused-import
 from async_upnp_client.client import UpnpAction
 from async_upnp_client.client import UpnpDevice
 from async_upnp_client.client import UpnpService

@@ -3,7 +3,7 @@
 
 import asyncio
 from asyncio.events import AbstractEventLoop
-from asyncio.events import AbstractServer  # noqa: F401
+from asyncio.events import AbstractServer  # noqa: F401, pylint: disable=unused-import
 import logging
 import socket
 from typing import Any, Mapping, Optional, Tuple, Union  # noqa: F401
