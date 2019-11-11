@@ -3,6 +3,8 @@ Changes
 
 0.14.12 (unreleased)
 
+- Improve parsing of state variable types: date, dateTime, dateTime.tz, time, time.tz
+
 
 0.14.11 (2019-09-08)
 

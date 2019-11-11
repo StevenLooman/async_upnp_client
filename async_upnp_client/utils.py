@@ -2,11 +2,12 @@
 """Utils for async_upnp_client."""
 
 import re
-
 from collections.abc import MutableMapping
-from datetime import timedelta
-from typing import Any, Dict, Generator, Mapping, Optional  # noqa: F401
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Dict, Generator, Mapping, Optional  # noqa: F401
 from urllib.parse import urljoin
+
+from voluptuous import Invalid  # type: ignore
 
 
 class CaseInsensitiveDict(MutableMapping):
@@ -107,3 +108,44 @@ def absolute_url(device_url: str, url: str) -> str:
         return url
 
     return urljoin(device_url, url)
+
+
+def require_tzinfo(value: Any) -> Any:
+    """Require tzinfo."""
+    if value.tzinfo is None:
+        raise Invalid('Requires tzinfo')
+    return value
+
+
+def parse_date_time(value: str) -> Any:
+    """Parse a date/time/date_time value."""
+    # fix up timezone part
+    utc = timezone(timedelta(hours=0))
+    if value[-6] in ['+', '-'] and value[-3] == ':':
+        value = value[:-3] + value[-2:]
+    matchers = {
+        r"\d{4}-\d{2}-\d{2}$":  # date
+        lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
+        r"\d{2}:\d{2}:\d{2}$":  # time
+        lambda s: datetime.strptime(value, "%H:%M:%S").time(),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$":  # datetime
+        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S"),
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$":  # datetime
+        lambda s: datetime.strptime(value, "%Y-%m-%d %H:%M:%S"),
+        r"\d{2}:\d{2}:\d{2}[+-]\d{4}$":  # time.tz
+        lambda s: datetime.strptime(value, "%H:%M:%S%z").timetz(),
+        r"\d{2}:\d{2}:\d{2} [+-]\d{4}$":  # time.tz
+        lambda s: datetime.strptime(value, "%H:%M:%S %z").timetz(),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$":  # datetime.tz
+        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%Sz").replace(tzinfo=utc),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$":  # datetime.tz
+        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%Sz").replace(tzinfo=utc),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$":  # datetime.tz
+        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z"),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$":  # datetime.tz
+        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S %z"),
+    }  # type: Mapping[str, Callable]
+    for pattern, parser in matchers.items():
+        if re.match(pattern, value):
+            return parser(value)
+    raise ValueError("Unknown date/time: " + value)

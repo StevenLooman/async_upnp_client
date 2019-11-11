@@ -1,9 +1,10 @@
 """Unit tests for dlna."""
 
-from datetime import timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 from async_upnp_client.utils import CaseInsensitiveDict
 from async_upnp_client.utils import str_to_time
+from async_upnp_client.utils import parse_date_time
 
 
 def test_case_insensitive_dict():
@@ -39,3 +40,17 @@ def test_str_to_time():
 
     assert str_to_time('') is None
     assert str_to_time(' ') is None
+
+def test_parse_date_time():
+    tz0 = timezone(timedelta(hours=0))
+    tz1 = timezone(timedelta(hours=1))
+    assert parse_date_time('2012-07-19') == date(2012, 7, 19)
+    assert parse_date_time('12:28:14') == time(12, 28, 14)
+    assert parse_date_time('2012-07-19 12:28:14') == datetime(2012, 7, 19, 12, 28, 14)
+    assert parse_date_time('2012-07-19T12:28:14') == datetime(2012, 7, 19, 12, 28, 14)
+    assert parse_date_time('12:28:14+01:00') == time(12, 28, 14, tzinfo=tz1)
+    assert parse_date_time('12:28:14 +01:00') == time(12, 28, 14, tzinfo=tz1)
+    assert parse_date_time('2012-07-19T12:28:14z') == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz0)
+    assert parse_date_time('2012-07-19T12:28:14Z') == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz0)
+    assert parse_date_time('2012-07-19T12:28:14+01:00') == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz1)
+    assert parse_date_time('2012-07-19T12:28:14 +01:00') == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz1)

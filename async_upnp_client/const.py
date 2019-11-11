@@ -5,10 +5,11 @@ from datetime import date
 from datetime import datetime
 from datetime import time
 
-from typing import Any, Callable, List, Mapping, NamedTuple, Optional, Sequence  # noqa: F401
+from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence  # noqa: F401
 
 from xml.etree import ElementTree as ET
-from voluptuous import Invalid  # type: ignore
+
+from async_upnp_client.utils import parse_date_time, require_tzinfo
 
 
 NS = {
@@ -18,13 +19,6 @@ NS = {
     'event': 'urn:schemas-upnp-org:event-1-0',
     'control': 'urn:schemas-upnp-org:control-1-0',
 }
-
-
-def require_tzinfo(value: Any) -> Any:
-    """Require tzinfo."""
-    if value.tzinfo is None:
-        raise Invalid('Requires tzinfo')
-    return value
 
 
 STATE_VARIABLE_TYPE_MAPPING = {
@@ -53,29 +47,29 @@ STATE_VARIABLE_TYPE_MAPPING = {
     'uuid': {'type': str, 'in': str, 'out': str},
     'date': {
         'type': date,
-        'in': lambda s: datetime.strptime(s, "%Y-%m-%d").date(),
+        'in': parse_date_time,
         'out': lambda d: d.isoformat()
     },
     'dateTime': {
         'type': datetime,
-        'in': lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%S"),
+        'in': parse_date_time,
         'out': lambda dt: dt.isoformat('T', 'seconds')
     },
     'dateTime.tz': {
         'type': datetime,
         'validator': require_tzinfo,
-        'in': lambda s: datetime.strptime(s, "%Y-%m-%dT%H:%M:%S%z"),
+        'in': parse_date_time,
         'out': lambda dt: dt.isoformat('T', 'seconds')
     },
     'time': {
         'type': time,
-        'in': lambda s: datetime.strptime(s, "%H:%M:%S").time(),
+        'in': parse_date_time,
         'out': lambda t: t.isoformat('seconds')
     },
     'time.tz': {
         'type': time,
         'validator': require_tzinfo,
-        'in': lambda s: datetime.strptime(s, "%H:%M:%S%z").timetz(),
+        'in': parse_date_time,
         'out': lambda t: t.isoformat('T', 'seconds')
     },
 }  # type: Mapping[str, Mapping[str, Callable]]
