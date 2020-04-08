@@ -168,6 +168,11 @@ class UpnpDevice:
         return self._device_info.url
 
     @property
+    def device_type(self) -> str:
+        """Get the device type of this device."""
+        return self._device_info.device_type
+
+    @property
     def xml(self) -> ET.Element:
         """Get the XML description for this device."""
         return self._device_info.xml

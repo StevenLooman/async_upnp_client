@@ -97,6 +97,11 @@ class UpnpProfileDevice:
         """Get the UDN of the device."""
         return self.device.udn
 
+    @property
+    def device_type(self) -> str:
+        """Get the device type of this device."""
+        return self.device.device_type
+
     def _service(self, service_type_abbreviation: str) -> Optional[UpnpService]:
         """Get UpnpService by service_type or alias."""
         if not self.device:

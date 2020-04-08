@@ -1,7 +1,11 @@
 Changes
 =======
 
-0.14.12 (unreleased)
+0.14.13 (unreleased)
+
+- Expose `device_type` on `UpnpDevice` and `UpnpProfileDevice`
+
+0.14.12 (2019-11-12)
 
 - Improve parsing of state variable types: date, dateTime, dateTime.tz, time, time.tz
 
