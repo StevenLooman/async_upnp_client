@@ -40,7 +40,7 @@ class AiohttpRequester(UpnpRequester):
     """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
 
     def __init__(self, timeout: int = 5) -> None:
-        """Initializer."""
+        """Initialize."""
         self._timeout = timeout
 
     async def async_do_http_request(self,
@@ -81,7 +81,7 @@ class AiohttpSessionRequester(UpnpRequester):
                  session: aiohttp.ClientSession,
                  with_sleep: bool = False,
                  timeout: int = 5) -> None:
-        """Initializer."""
+        """Initialize."""
         self._session = session
         self._with_sleep = with_sleep
         self._timeout = timeout
@@ -124,7 +124,7 @@ class AiohttpNotifyServer:
                  listen_host: Optional[str] = None,
                  callback_url: Optional[str] = None,
                  loop: Optional[AbstractEventLoop] = None) -> None:
-        """Initializer."""
+        """Initialize."""
         # pylint: disable=too-many-arguments
         self._listen_port = listen_port
         self._listen_host = listen_host or get_local_ip()

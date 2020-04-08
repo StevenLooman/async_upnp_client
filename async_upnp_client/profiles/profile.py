@@ -62,7 +62,7 @@ class UpnpProfileDevice:
         return await cls.async_search()
 
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
-        """Initializer."""
+        """Initialize."""
         self.device = device
         self._event_handler = event_handler
         self.on_event = None

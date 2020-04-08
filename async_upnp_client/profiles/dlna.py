@@ -89,7 +89,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
     """Content Handler to parse DLNA DMR Event data."""
 
     def __init__(self) -> None:
-        """Initializer."""
+        """Initialize."""
         super().__init__()
         self.changes = {}  # type: Dict[str, Dict[str, Any]]
         self._current_instance = None

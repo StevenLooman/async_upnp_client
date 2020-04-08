@@ -14,7 +14,7 @@ class CaseInsensitiveDict(MutableMapping):
     """Case insensitive dict."""
 
     def __init__(self, **kwargs: Any) -> None:
-        """Initializer."""
+        """Initialize."""
         self._data = dict()  # type: Dict[str, Any]
         for key, value in kwargs.items():
             self[key] = value

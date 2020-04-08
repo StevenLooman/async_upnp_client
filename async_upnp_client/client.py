@@ -109,7 +109,7 @@ class UpnpValueError(UpnpError):
     """Invalid value error."""
 
     def __init__(self, name: str, value: Any) -> None:
-        """Initializer."""
+        """Initialize."""
         super().__init__("Invalid value for %s: '%s'" % (name, value))
 
 
@@ -118,7 +118,7 @@ class UpnpDevice:
 
     def __init__(self, requester: UpnpRequester, device_info: DeviceInfo,
                  services: Sequence['UpnpService']) -> None:
-        """Initializer."""
+        """Initialize."""
         self.requester = requester
         self._device_info = device_info
         self.services = {service.service_type: service for service in services}
@@ -204,7 +204,7 @@ class UpnpService:
                  service_info: ServiceInfo,
                  state_variables: Sequence['UpnpStateVariable'],
                  actions: Sequence['UpnpAction']) -> None:
-        """Initializer."""
+        """Initialize."""
         # pylint: disable=too-many-arguments
         self.requester = requester
         self._service_info = service_info
@@ -363,7 +363,7 @@ class UpnpAction:
                      argument_info: ActionArgumentInfo,
                      state_variable: 'UpnpStateVariable') \
                 -> None:
-            """Initializer."""
+            """Initialize."""
             self._argument_info = argument_info
             self._related_state_variable = state_variable
             self._value = None
@@ -427,7 +427,7 @@ class UpnpAction:
 
     def __init__(self, action_info: ActionInfo, arguments: List['UpnpAction.Argument'],
                  disable_unknown_out_argument_error: bool = False) -> None:
-        """Initializer."""
+        """Initialize."""
         self._action_info = action_info
         self._arguments = arguments
         self._service = None  # type: Optional[UpnpService]
@@ -616,7 +616,7 @@ class UpnpStateVariable(Generic[T]):
     UPNP_VALUE_ERROR = object()
 
     def __init__(self, state_variable_info: StateVariableInfo, schema: vol.Schema) -> None:
-        """Initializer."""
+        """Initialize."""
         self._state_variable_info = state_variable_info
         self._schema = schema
 

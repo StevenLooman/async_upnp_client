@@ -36,7 +36,7 @@ class UpnpEventHandler:
     """
 
     def __init__(self, callback_url: str, requester: UpnpRequester) -> None:
-        """Initializer."""
+        """Initialize."""
         self._callback_url = callback_url
         self._requester = requester
 

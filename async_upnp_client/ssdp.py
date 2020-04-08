@@ -79,7 +79,7 @@ class SsdpProtocol(BaseProtocol):
                  on_connect: Optional[Callable[[DatagramTransport], Awaitable]] = None,
                  on_data: Optional[Callable[[str, MutableMapping[str, str]], Awaitable]] = None) \
             -> None:
-        """Initializer."""
+        """Initialize."""
         self.loop = loop
         self.on_connect = on_connect
         self.on_data = on_data

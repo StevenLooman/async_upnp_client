@@ -286,7 +286,7 @@ async def advertisements(advertisement_args: Any) -> None:
 
 
 async def async_main() -> None:
-    """Asunc main."""
+    """Async main."""
     if args.debug:
         _LOGGER.setLevel(logging.DEBUG)
         _LOGGER_TRAFFIC.setLevel(logging.INFO)
@@ -305,7 +305,7 @@ async def async_main() -> None:
 
 
 def main() -> None:
-    """Main."""
+    """Set up async loop and run the main program."""
     loop = asyncio.get_event_loop()
 
     try:

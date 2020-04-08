@@ -27,7 +27,7 @@ class UpnpAdvertisementListener:
                  on_update: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
                  source_ip: Optional[IPv4Address] = None,
                  loop: Optional[AbstractEventLoop] = None) -> None:
-        """Initializer."""
+        """Initialize."""
         # pylint: disable=too-many-arguments
         self.on_alive = on_alive
         self.on_byebye = on_byebye

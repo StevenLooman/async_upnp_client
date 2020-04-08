@@ -40,7 +40,7 @@ class UpnpFactory:
                  requester: UpnpRequester,
                  disable_state_variable_validation: bool = False,
                  disable_unknown_out_argument_error: bool = False) -> None:
-        """Initializer."""
+        """Initialize."""
         self.requester = requester
         self._properties = {
             'disable_state_variable_validation': disable_state_variable_validation,
