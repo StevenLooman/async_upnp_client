@@ -3,10 +3,13 @@ Changes
 
 0.14.14 (unreleased)
 
+- Add support for fetching the serialNumber (@bdraco)
+
 
 0.14.13 (2020-04-08)
 
 - Expose `device_type` on `UpnpDevice` and `UpnpProfileDevice`
+
 
 0.14.12 (2019-11-12)
 
