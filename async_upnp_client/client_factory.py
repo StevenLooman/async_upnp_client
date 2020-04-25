@@ -75,6 +75,7 @@ class UpnpFactory:
             udn=desc_xml.findtext('.//device:UDN', '', NS),
             model_description=desc_xml.findtext('.//device:modelDescription', None, NS),
             model_number=desc_xml.findtext('.//device:modelNumber', None, NS),
+            serial_number=desc_xml.findtext('.//device:serialNumber', None, NS),
             url=description_url,
             xml=desc_xml)
 

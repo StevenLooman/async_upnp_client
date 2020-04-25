@@ -93,6 +93,11 @@ class UpnpProfileDevice:
         return self.device.model_number
 
     @property
+    def serial_number(self) -> Optional[str]:
+        """Get the serial number of this device."""
+        return self.device.serial_number
+
+    @property
     def udn(self) -> str:
         """Get the UDN of the device."""
         return self.device.udn

@@ -81,6 +81,7 @@ DeviceInfo = NamedTuple('DeviceInfo', [
     ('model_name', str),
     ('model_number', Optional[str]),
     ('model_description', Optional[str]),
+    ('serial_number', Optional[str]),
     ('udn', str),
     ('url', str),
     ('xml', ET.Element),
