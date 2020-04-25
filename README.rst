@@ -99,23 +99,26 @@ An example of searching for devices::
 
     $ upnp-client --pprint search
     {
-        "cache-control": "max-age=3600",
-        "date": "Sat, 27 Oct 2018 10:43:42 GMT",
-        "ext": "",
-        "location": "http://192.168.178.1:49152/description.xml",
-        "opt": "\"http://schemas.upnp.org/upnp/1/0/\"; ns=01",
-        "01-nls": "906ad736-cfc4-11e8-9c22-8bb67c653324",
-        "server": "Linux/4.14.26+, UPnP/1.0, Portable SDK for UPnP devices/1.6.20.jfd5",
-        "x-user-agent": "redsonic",
-        "st": "upnp:rootdevice",
-        "usn": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72::upnp:rootdevice",
-        "_timestamp": "2018-10-27 12:43:09.125408"
+        "Cache-Control": "max-age=3600",
+        "Date": "Sat, 27 Oct 2018 10:43:42 GMT",
+        "EXT": "",
+        "Location": "http://192.168.178.1:49152/description.xml",
+        "OPT": "\"http://schemas.upnp.org/upnp/1/0/\"; ns=01",
+        "01-NLS": "906ad736-cfc4-11e8-9c22-8bb67c653324",
+        "Server": "Linux/4.14.26+, UPnP/1.0, Portable SDK for UPnP devices/1.6.20.jfd5",
+        "X-User-Agent": "redsonic",
+        "ST": "upnp:rootdevice",
+        "USN": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72::upnp:rootdevice",
+        "_timestamp": "2018-10-27 12:43:09.125408",
+        "_address": "192.168.178.1:49152",
+        "_udn": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72",
+        "_source": "search"
     }
 
 
-An example of listening for advertisements::
+An example of listening for advertisements, note that the program stays running until you stop it (ctrl-c)::
 
-    $ upnp-client --print advertisements
+    $ upnp-client --pprint advertisements
     {
         "Host": "239.255.255.250:1900",
         "Cache-Control": "max-age=30",
@@ -125,7 +128,7 @@ An example of listening for advertisements::
         "NT": "urn:schemas-wifialliance-org:device:WFADevice:1",
         "USN": "uuid:99cb221c-1f15-c620-dc29-395f415623c6::urn:schemas-wifialliance-org:device:WFADevice:1",
         "_timestamp": "2018-12-23 11:22:47.154293",
-        "_address": "('192.168.178.1', 1900)",
+        "_address": "192.168.178.1:1900",
         "_udn": "uuid:99cb221c-1f15-c620-dc29-395f415623c6",
         "_source": "advertisement"
     }
