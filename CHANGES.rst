@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.14 (unreleased)
+0.14.14 (2020-04-25)
 
 - Add support for fetching the serialNumber (@bdraco)
 
