@@ -293,5 +293,8 @@ class UpnpFactory:
         if status_code != 200:
             raise UpnpError("Received status code: {}".format(status_code))
 
+        if not response_body:
+            return ET.Element('root')
+
         root = DET.fromstring(response_body)  # type: ET.Element
         return root
