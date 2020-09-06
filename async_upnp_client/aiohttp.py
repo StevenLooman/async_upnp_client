@@ -142,7 +142,7 @@ class AiohttpNotifyServer:
         """Start the HTTP server."""
         self._aiohttp_server = aiohttp.web.Server(self._handle_request)
         try:
-            self._server = await self._loop.create_server(self._aiohttp_server,  # type: ignore
+            self._server = await self._loop.create_server(self._aiohttp_server,
                                                           self._listen_host,
                                                           self._listen_port)
         except OSError as error:

@@ -35,8 +35,6 @@ class UpnpRequester:
     Implement method async_do_http_request() in your concrete class.
     """
 
-    # pylint: disable=too-few-public-methods
-
     async def async_http_request(self,
                                  method: str,
                                  url: str,
@@ -210,7 +208,6 @@ class UpnpService:
                  state_variables: Sequence['UpnpStateVariable'],
                  actions: Sequence['UpnpAction']) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
         self.requester = requester
         self._service_info = service_info
         self.state_variables = {sv.name: sv for sv in state_variables}
@@ -722,8 +719,8 @@ class UpnpStateVariable(Generic[T]):
         """Validate value."""
         try:
             self._schema(value)
-        except vol.error.MultipleInvalid:
-            raise UpnpValueError(self.name, value)
+        except vol.error.MultipleInvalid as ex:
+            raise UpnpValueError(self.name, value) from ex
 
     @property
     def value(self) -> Optional[T]:

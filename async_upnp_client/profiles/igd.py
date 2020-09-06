@@ -102,7 +102,6 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_total_packets_received(self) -> Optional[int]:
         """Get total packets received."""
-        # pylint: disable=invalid-name
         action = self._action('WANCIC', 'GetTotalPacketsReceived')
         if not action:
             return None
@@ -145,7 +144,6 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_common_link_properties(self) -> Optional[CommonLinkProperties]:
         """Get common link properties."""
-        # pylint: disable=invalid-name
         action = self._action('WANCIC', 'GetCommonLinkProperties')
         if not action:
             return None
@@ -183,7 +181,6 @@ class IgdDevice(UpnpProfileDevice):
         :param port_mapping_index Index of port mapping entry
         :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        # pylint: disable=invalid-name
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetGenericPortMappingEntry')
         if not action:
@@ -215,7 +212,6 @@ class IgdDevice(UpnpProfileDevice):
         :param protocol Protocol, 'TCP' or 'UDP'
         :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        # pylint: disable=invalid-name
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetSpecificPortMappingEntry')
         if not action:
@@ -395,7 +391,6 @@ class IgdDevice(UpnpProfileDevice):
 
         :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        # pylint: disable=invalid-name
         services = services or ['WANIPC', 'WANPPP']
         action = self._any_action(services, 'GetPortMappingNumberOfEntries')
         if not action:
@@ -423,7 +418,6 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_default_connection_service(self) -> Optional[str]:
         """Get default connection service."""
-        # pylint: disable=invalid-name
         action = self._action('L3FWD', 'GetDefaultConnectionService')
         if not action:
             return None
@@ -438,7 +432,6 @@ class IgdDevice(UpnpProfileDevice):
 
         :param service default connection service
         """
-        # pylint: disable=invalid-name
         action = self._action('L3FWD', 'SetDefaultConnectionService')
         if not action:
             return

@@ -182,7 +182,6 @@ class UpnpFactory:
     def _state_variable_create_schema(self, type_info: StateVariableTypeInfo) -> vol.Schema:
         """Create schema."""
         # construct validators
-        # pylint: disable=no-self-use
         validators = []
 
         data_type_upnp = type_info.data_type

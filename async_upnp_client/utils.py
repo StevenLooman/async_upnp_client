@@ -2,7 +2,7 @@
 """Utils for async_upnp_client."""
 
 import re
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping, Mapping as abcMapping
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Generator, Mapping, Optional  # noqa: F401
 from urllib.parse import urljoin
@@ -53,7 +53,7 @@ class CaseInsensitiveDict(MutableMapping):
 
     def __eq__(self, other: Any) -> bool:
         """Compare for equality."""
-        if not isinstance(other, Mapping):
+        if not isinstance(other, abcMapping) and not isinstance(other, dict):
             return NotImplemented
 
         dict_a = {self._ci_key(key): value for key, value in self.items()}
