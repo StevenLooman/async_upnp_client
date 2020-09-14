@@ -4,6 +4,7 @@ Changes
 0.14.15 (unreleased)
 
 - Do not crash on empty XML file (@ekandler)
+- Option to not print LastChange subscription variable (@kitlaan)
 
 
 0.14.14 (2020-04-25)

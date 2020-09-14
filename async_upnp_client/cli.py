@@ -53,6 +53,7 @@ subparser = subparsers.add_parser('subscribe', help='Subscribe to services')
 subparser.add_argument('device', help='URL to device description XML')
 subparser.add_argument('service', nargs='+', help='service type or part or abbreviation')
 subparser.add_argument('--bind', help='ip[:port], e.g., 192.168.0.10:8090')
+subparser.add_argument('--nolastchange', action='store_true', help='Do not show LastChange events')
 subparser = subparsers.add_parser('search', help='Search for devices')
 subparser.add_argument('--bind', help='ip, e.g., 192.168.0.10')
 subparser.add_argument('--service_type', help='service type to search for', default=SSDP_ST_ALL)
@@ -114,13 +115,16 @@ def on_event(service: UpnpService, service_variables: Sequence[UpnpStateVariable
         'service_type': service.service_type,
         'state_variables': {sv.name: sv.value for sv in service_variables},
     }
-    print(json.dumps(obj, indent=pprint_indent))
 
-    # do some additional handling for DLNA LastChange state variable
+    # special handling for DLNA LastChange state variable
     if len(service_variables) == 1 and \
        service_variables[0].name == 'LastChange':
+        if not args.nolastchange:
+            print(json.dumps(obj, indent=pprint_indent))
         last_change = service_variables[0]
         dlna_handle_notify_last_change(last_change)
+    else:
+        print(json.dumps(obj, indent=pprint_indent))
 
 
 async def call_action(description_url: str, call_action_args: Sequence) -> None:
