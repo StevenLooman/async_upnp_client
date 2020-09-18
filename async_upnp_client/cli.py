@@ -9,9 +9,10 @@ import logging
 import operator
 import sys
 import time
+from datetime import datetime
 import urllib.parse
 from ipaddress import IPv4Address
-from typing import Any, Mapping, Optional, Sequence, Tuple
+from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 from async_upnp_client import UpnpDevice
 from async_upnp_client import UpnpFactory
@@ -43,6 +44,7 @@ parser.add_argument('--debug-traffic', action='store_true', help='Show network t
 parser.add_argument('--pprint', action='store_true', help='Pretty-print (indent) JSON output')
 parser.add_argument('--timeout', type=int, help='Timeout for connection', default=5)
 parser.add_argument('--strict', action='store_true', help='Be strict about invalid data received')
+parser.add_argument('--iso8601', action='store_true', help='Print timestamp in ISO8601 format')
 subparsers = parser.add_subparsers(title='Command', dest='command')
 subparsers.required = True
 
@@ -72,6 +74,13 @@ async def create_device(description_url: str) -> UpnpDevice:
     disable_validation = not args.strict
     factory = UpnpFactory(requester, disable_state_variable_validation=disable_validation)
     return await factory.async_create_device(description_url)
+
+
+def get_timestamp() -> Union[str, float]:
+    """Timestamp depending on configuration."""
+    if args.iso8601:
+        return datetime.now().isoformat(' ')
+    return time.time()
 
 
 def bind_host_port() -> Tuple[str, int]:
@@ -109,7 +118,7 @@ def on_event(service: UpnpService, service_variables: Sequence[UpnpStateVariable
                   service,
                   ','.join([sv.name for sv in service_variables]))
     obj = {
-        'timestamp': time.time(),
+        'timestamp': get_timestamp(),
         'service_id': service.service_id,
         'service_type': service.service_type,
         'state_variables': {sv.name: sv.value for sv in service_variables},
@@ -191,7 +200,7 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
                   '\n'.join(['%s:%s' % (key, value) for key, value in coerced_args.items()]))
 
     obj = {
-        'timestamp': time.time(),
+        'timestamp': get_timestamp(),
         'service_id': service.service_id,
         'service_type': service.service_type,
         'action': action.name,
