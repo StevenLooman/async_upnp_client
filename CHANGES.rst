@@ -5,6 +5,7 @@ Changes
 
 - Do not crash on empty XML file (@ekandler)
 - Option to print timestamp in ISO8601 (@kitlaan)
+- Option to not print LastChange subscription variable (@kitlaan)
 
 
 0.14.14 (2020-04-25)
