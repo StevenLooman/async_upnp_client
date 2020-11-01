@@ -85,7 +85,7 @@ class SsdpProtocol(BaseProtocol):
         self.on_data = on_data
 
         self.on_con_lost = loop.create_future()
-        self.transport = None  # type: Optional[DatagramTransport]
+        self.transport: Optional[DatagramTransport] = None
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""

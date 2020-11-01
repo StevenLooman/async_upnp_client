@@ -9,6 +9,7 @@ Changes
 - Test with Python 3.8 (@scop)
 - Less stricter version pinning of `python-didl-lite` (@fabaff)
 - Drop Python 3.5 support, upgrade `pytest`/`pytest-asyncio`
+- Convert type comments to annotations
 
 
 0.14.14 (2020-04-25)

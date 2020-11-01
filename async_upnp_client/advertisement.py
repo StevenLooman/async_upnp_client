@@ -6,7 +6,7 @@ from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address
 import logging
 import socket
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional  # noqa: F401
+from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
 from async_upnp_client.ssdp import SSDP_ALIVE
 from async_upnp_client.ssdp import SSDP_BYEBYE
@@ -32,8 +32,8 @@ class UpnpAdvertisementListener:
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
-        self._loop = loop or asyncio.get_event_loop()  # type: AbstractEventLoop
-        self._transport = None  # type: Optional[asyncio.DatagramTransport]
+        self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
+        self._transport: Optional[asyncio.DatagramTransport] = None
 
         self._connect = self._create_protocol(source_ip)
 

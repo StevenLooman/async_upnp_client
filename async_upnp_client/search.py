@@ -24,7 +24,7 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
                        loop: Optional[AbstractEventLoop] = None) -> None:
     """Discover devices via SSDP."""
     source_ip = source_ip or IPv4Address('0.0.0.0')
-    loop_ = loop or asyncio.get_event_loop()  # type: AbstractEventLoop
+    loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
 
     # create socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)

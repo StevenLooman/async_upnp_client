@@ -4,7 +4,7 @@
 import re
 from collections.abc import MutableMapping, Mapping as abcMapping
 from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Dict, Generator, Mapping, Optional  # noqa: F401
+from typing import Any, Callable, Dict, Generator, Mapping, Optional
 from urllib.parse import urljoin
 
 from voluptuous import Invalid  # type: ignore
@@ -15,7 +15,7 @@ class CaseInsensitiveDict(MutableMapping):
 
     def __init__(self, **kwargs: Any) -> None:
         """Initialize."""
-        self._data = dict()  # type: Dict[str, Any]
+        self._data: Dict[str, Any] = dict()
         for key, value in kwargs.items():
             self[key] = value
 
@@ -123,7 +123,7 @@ def parse_date_time(value: str) -> Any:
     utc = timezone(timedelta(hours=0))
     if value[-6] in ['+', '-'] and value[-3] == ':':
         value = value[:-3] + value[-2:]
-    matchers = {
+    matchers: Mapping[str, Callable] = {
         r"\d{4}-\d{2}-\d{2}$":  # date
         lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
         r"\d{2}:\d{2}:\d{2}$":  # time
@@ -144,7 +144,7 @@ def parse_date_time(value: str) -> Any:
         lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z"),
         r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$":  # datetime.tz
         lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S %z"),
-    }  # type: Mapping[str, Callable]
+    }
     for pattern, parser in matchers.items():
         if re.match(pattern, value):
             return parser(value)

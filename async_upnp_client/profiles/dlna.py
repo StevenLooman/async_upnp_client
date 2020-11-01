@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from datetime import timedelta
 from enum import Enum
-from typing import Any, Dict, List, Mapping, Optional, Sequence  # noqa: F401
+from typing import Any, List, Mapping, MutableMapping, Optional, Sequence
 from xml.sax.handler import ContentHandler
 from xml.sax.handler import ErrorHandler
 from urllib.parse import quote_plus
@@ -91,7 +91,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
     def __init__(self) -> None:
         """Initialize."""
         super().__init__()
-        self.changes = {}  # type: Dict[str, Dict[str, Any]]
+        self.changes: MutableMapping[str, MutableMapping[str, Any]] = {}
         self._current_instance = None
 
     def startElement(self, name: str, attrs: Mapping) -> None:
@@ -129,7 +129,7 @@ class DlnaDmrEventErrorHandler(ErrorHandler):
         _LOGGER.debug("Fatal error during parsing: %s", exception)
 
 
-def _parse_last_change_event(text: str) -> Dict[str, Dict[str, str]]:
+def _parse_last_change_event(text: str) -> Mapping[str, Mapping[str, str]]:
     """
     Parse a LastChange event.
 
@@ -155,7 +155,7 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     if state_var.name != 'LastChange':
         raise UpnpError('Call this only on state variable LastChange')
 
-    event_data = state_var.value  # type: Optional[str]
+    event_data: Optional[str] = state_var.value
     if not event_data:
         _LOGGER.debug('No event data on state_variable')
         return
@@ -302,7 +302,7 @@ class DmrDevice(UpnpProfileDevice):
         if state_var is None:
             raise UpnpError('Missing StateVariable RC/%s' % (var_name, ))
 
-        value = state_var.value  # type: Optional[float]
+        value: Optional[float] = state_var.value
         if value is None:
             _LOGGER.debug('Got no value for %s', var_name)
             return None
@@ -414,7 +414,7 @@ class DmrDevice(UpnpProfileDevice):
         state_var = self._state_variable('RC', 'Mute')
         if not state_var:
             return None
-        value = state_var.value  # type: Optional[bool]
+        value: Optional[bool] = state_var.value
         if value is None:
             _LOGGER.debug('Got no value for Volume_mute')
             return None
@@ -735,7 +735,7 @@ class DmrDevice(UpnpProfileDevice):
         item = didl_item_type(id="0", parent_id="-1", title=media_title,
                               restricted="false", resources=[resource])
 
-        xml_string = didl_lite.to_xml_string(item)  # type: bytes
+        xml_string: bytes = didl_lite.to_xml_string(item)
         return xml_string.decode('utf-8')
 
     @property
@@ -743,7 +743,7 @@ class DmrDevice(UpnpProfileDevice):
         """Check if device has Play controls."""
         return self._action('CM', 'GetProtocolInfo') is not None
 
-    async def async_get_protocol_info(self) -> Dict[str, List[str]]:
+    async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
         """Get protocol info."""
         action = self._action('CM', 'GetProtocolInfo')
         if not action:
@@ -782,7 +782,7 @@ class DmrDevice(UpnpProfileDevice):
             return None
 
         item = items[0]
-        title = item.title  # type: str
+        title: str = item.title
         return title
 
     @property

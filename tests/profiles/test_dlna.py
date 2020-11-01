@@ -56,7 +56,7 @@ class TestUpnpEventHandler:
 
     @pytest.mark.asyncio
     async def test_on_notify_dlna_event(self):
-        changed_vars = []  # type: List[UpnpStateVariable]
+        changed_vars: List[UpnpStateVariable] = []
 
         def on_event(self, changed_state_variables):
             nonlocal changed_vars

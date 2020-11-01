@@ -87,7 +87,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        total_bytes_received = result['NewTotalBytesReceived']  # type: int
+        total_bytes_received: int = result['NewTotalBytesReceived']
         return total_bytes_received
 
     async def async_get_total_bytes_sent(self) -> Optional[int]:
@@ -97,7 +97,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        total_bytes_sent = result['NewTotalBytesSent']  # type: int
+        total_bytes_sent: int = result['NewTotalBytesSent']
         return total_bytes_sent
 
     async def async_get_total_packets_received(self) -> Optional[int]:
@@ -107,7 +107,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        total_packets_received = result['NewTotalPacketsReceived']  # type: int
+        total_packets_received: int = result['NewTotalPacketsReceived']
         return total_packets_received
 
     async def async_get_total_packets_sent(self) -> Optional[int]:
@@ -117,7 +117,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        total_packets_sent = result['NewTotalPacketsSent']  # type: int
+        total_packets_sent: int = result['NewTotalPacketsSent']
         return total_packets_sent
 
     async def async_get_enabled_for_internet(self) -> Optional[bool]:
@@ -127,7 +127,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        enabled_for_internet = result['NewEnabledForInternet']  # type: bool
+        enabled_for_internet: bool = result['NewEnabledForInternet']
         return enabled_for_internet
 
     async def async_set_enabled_for_internet(self, enabled: bool) -> None:
@@ -168,7 +168,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        external_ip_address = result['NewExternalIPAddress']  # type: str
+        external_ip_address: str = result['NewExternalIPAddress']
         return external_ip_address
 
     async def async_get_generic_port_mapping_entry(self,
@@ -423,7 +423,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        default_connection_service = result['NewDefaultConnectionService']  # type: str
+        default_connection_service: str = result['NewDefaultConnectionService']
         return default_connection_service
 
     async def async_set_default_connection_service(self, service: str) -> None:

@@ -5,8 +5,8 @@ import logging
 import urllib.parse
 from datetime import datetime
 from datetime import timezone
-from typing import Any, Callable, Dict, Generic, List
-from typing import Mapping, Optional, Sequence, Tuple, TypeVar, Union  # noqa: F401
+from typing import Any, Callable, Generic, List
+from typing import Mapping, Optional, Sequence, Tuple, TypeVar, Union
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
@@ -213,8 +213,8 @@ class UpnpService:
         self.state_variables = {sv.name: sv for sv in state_variables}
         self.actions = {ac.name: ac for ac in actions}
 
-        self.on_event = None  # type: Optional[EventCallbackType]
-        self._device = None  # type: Optional[UpnpDevice]
+        self.on_event: Optional[EventCallbackType] = None
+        self._device: Optional[UpnpDevice] = None
 
         # bind state variables to ourselves
         for state_var in state_variables:
@@ -253,22 +253,22 @@ class UpnpService:
     @property
     def scpd_url(self) -> str:
         """Get full SCPD-url for this UpnpService."""
-        url = urllib.parse.urljoin(self.device.device_url,
-                                   self._service_info.scpd_url)  # type: str
+        url: str = urllib.parse.urljoin(self.device.device_url,
+                                        self._service_info.scpd_url)
         return url
 
     @property
     def control_url(self) -> str:
         """Get full control-url for this UpnpService."""
-        url = urllib.parse.urljoin(self.device.device_url,
-                                   self._service_info.control_url)  # type: str
+        url: str = urllib.parse.urljoin(self.device.device_url,
+                                        self._service_info.control_url)
         return url
 
     @property
     def event_sub_url(self) -> str:
         """Get full event sub-url for this UpnpService."""
-        url = urllib.parse.urljoin(self.device.device_url,
-                                   self._service_info.event_sub_url)  # type: str
+        url: str = urllib.parse.urljoin(self.device.device_url,
+                                        self._service_info.event_sub_url)
         return url
 
     @property
@@ -308,7 +308,7 @@ class UpnpService:
         """Get UPnpAction by name."""
         return self.actions[name]
 
-    async def async_call_action(self, action: 'UpnpAction', **kwargs: Any) -> Dict[str, Any]:
+    async def async_call_action(self, action: 'UpnpAction', **kwargs: Any) -> Mapping[str, Any]:
         """
         Call a UpnpAction.
 
@@ -432,7 +432,7 @@ class UpnpAction:
         """Initialize."""
         self._action_info = action_info
         self._arguments = arguments
-        self._service = None  # type: Optional[UpnpService]
+        self._service: Optional[UpnpService] = None
         self._properties = {
             'disable_unknown_out_argument_error': disable_unknown_out_argument_error,
         }
@@ -508,7 +508,7 @@ class UpnpAction:
             return arg
         return None
 
-    async def async_call(self, **kwargs: Any) -> Dict[str, Any]:
+    async def async_call(self, **kwargs: Any) -> Mapping[str, Any]:
         """Call an action with arguments."""
         # do request
         url, headers, body = self.create_request(**kwargs)
@@ -527,7 +527,7 @@ class UpnpAction:
                                             response_body)
         return response_args
 
-    def create_request(self, **kwargs: Any) -> Tuple[str, Dict[str, str], str]:
+    def create_request(self, **kwargs: Any) -> Tuple[str, Mapping[str, str], str]:
         """Create headers and headers for this to-be-called UpnpAction."""
         # build URL
         control_url = self.service.control_url
@@ -563,7 +563,7 @@ class UpnpAction:
         return "\n".join(arg_strs)
 
     def parse_response(self, service_type: str, response_headers: Mapping, response_body: str) \
-            -> Dict[str, Any]:
+            -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
         xml = DET.fromstring(response_body)
@@ -581,7 +581,7 @@ class UpnpAction:
             _LOGGER.debug("Error during unescape of: %s", response_body)
             raise
 
-    def _parse_response_args(self, service_type: str, xml: ET.Element) -> Dict[str, Any]:
+    def _parse_response_args(self, service_type: str, xml: ET.Element) -> Mapping[str, Any]:
         """Parse response arguments."""
         args = {}
         query = ".//{{{0}}}{1}Response".format(service_type, self.name)
@@ -622,9 +622,9 @@ class UpnpStateVariable(Generic[T]):
         self._state_variable_info = state_variable_info
         self._schema = schema
 
-        self._service = None  # type: Optional[UpnpService]
-        self._value = None  # type: Optional[Any]  # None, T or UPNP_VALUE_ERROR
-        self._updated_at = None  # type: Optional[datetime]
+        self._service: Optional[UpnpService] = None
+        self._value: Optional[Any] = None  # None, T or UPNP_VALUE_ERROR
+        self._updated_at: Optional[datetime] = None
 
     @property
     def service(self) -> UpnpService:
@@ -664,7 +664,7 @@ class UpnpStateVariable(Generic[T]):
         type_info = self._state_variable_info.type_info
         min_ = type_info.allowed_value_range.get('min')
         if min_ is not None:
-            value = self.coerce_python(min_)  # type: T
+            value: T = self.coerce_python(min_)
             return value
 
         return None
@@ -675,7 +675,7 @@ class UpnpStateVariable(Generic[T]):
         type_info = self._state_variable_info.type_info
         max_ = type_info.allowed_value_range.get('max')
         if max_ is not None:
-            value = self.coerce_python(max_)  # type: T
+            value: T = self.coerce_python(max_)
             return value
 
         return None
@@ -696,7 +696,7 @@ class UpnpStateVariable(Generic[T]):
     @property
     def name(self) -> str:
         """Name of the UpnpStatevariable."""
-        name = self._state_variable_info.name  # type: str
+        name: str = self._state_variable_info.name
         return name
 
     @property
@@ -710,7 +710,7 @@ class UpnpStateVariable(Generic[T]):
         type_info = self._state_variable_info.type_info
         default_value = type_info.default_value
         if default_value is not None:
-            value = self.coerce_python(default_value)  # type: T
+            value: T = self.coerce_python(default_value)
             return value
 
         return None
@@ -774,7 +774,7 @@ class UpnpStateVariable(Generic[T]):
     def coerce_upnp(self, value: Any) -> str:
         """Coerce value from python to UPNP."""
         coercer = self.data_type_mapping['out']
-        coerced_value = coercer(value)  # type: str
+        coerced_value: str = coercer(value)
         return coerced_value
 
     @property

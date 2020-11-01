@@ -3,7 +3,7 @@
 
 import logging
 import urllib.parse
-from typing import Any, Dict, List, Optional, Sequence  # noqa: F401
+from typing import Any, Dict, List, Optional, Sequence
 from xml.etree import ElementTree as ET
 
 import defusedxml.ElementTree as DET  # type: ignore
@@ -150,7 +150,7 @@ class UpnpFactory:
         default_value = state_variable_xml.findtext('service:defaultValue', None, NS)
 
         # allowed value ranges
-        allowed_value_range = {}  # type: Dict[str, Optional[str]]
+        allowed_value_range: Dict[str, Optional[str]] = {}
         allowed_value_range_el = state_variable_xml.find('service:allowedValueRange', NS)
         if allowed_value_range_el is not None:
             allowed_value_range = {
@@ -160,7 +160,7 @@ class UpnpFactory:
             }
 
         # allowed value list
-        allowed_values = None  # type: Optional[List[str]]
+        allowed_values: Optional[List[str]] = None
         allowed_value_list_el = state_variable_xml.find('service:allowedValueList', NS)
         if allowed_value_list_el is not None:
             allowed_values = \
@@ -214,7 +214,7 @@ class UpnpFactory:
 
         if type_info.default_value is not None and \
            type_info.default_value != '':
-            default_value = type_info.default_value  # type: Any
+            default_value: Any = type_info.default_value
             if data_type == bool:
                 default_value = default_value == '1'
             else:
@@ -251,7 +251,7 @@ class UpnpFactory:
         # pylint: disable=no-self-use
 
         # build arguments
-        args = []  # type: List[ActionArgumentInfo]
+        args: List[ActionArgumentInfo] = []
         for argument_xml in action_xml.findall('.//service:argument', NS):
             argument_name = argument_xml.findtext('service:name', None, NS)
             if argument_name is None:
@@ -295,5 +295,5 @@ class UpnpFactory:
         if not response_body:
             return ET.Element('root')
 
-        root = DET.fromstring(response_body)  # type: ET.Element
+        root: ET.Element = DET.fromstring(response_body)
         return root

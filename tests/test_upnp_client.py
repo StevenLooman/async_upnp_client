@@ -409,10 +409,10 @@ class TestUpnpService:
 
     @pytest.mark.asyncio
     async def test_call_action(self):
-        responses = {
+        responses: Mapping = {
             ('POST', 'http://localhost:1234/upnp/control/RenderingControl1'):
                 (200, {}, read_file('action_GetVolume.xml'))
-        }  # type: Dict
+        }
         responses.update(RESPONSE_MAP)
         r = UpnpTestRequester(responses)
         factory = UpnpFactory(r)
@@ -477,7 +477,7 @@ class TestUpnpEventHandler:
 
     @pytest.mark.asyncio
     async def test_on_notify_upnp_event(self):
-        changed_vars = []  # type: List[UpnpStateVariable]
+        changed_vars: List[UpnpStateVariable] = []
 
         def on_event(self, changed_state_variables):
             nonlocal changed_vars

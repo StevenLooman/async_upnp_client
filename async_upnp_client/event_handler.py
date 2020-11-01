@@ -6,7 +6,7 @@ import urllib.parse
 from datetime import datetime
 from datetime import timedelta
 from http import HTTPStatus
-from typing import Dict, Mapping, NamedTuple, Optional, Tuple  # noqa: F401
+from typing import Dict, Mapping, NamedTuple, Optional, Tuple
 
 import defusedxml.ElementTree as DET  # type: ignore
 
@@ -40,8 +40,8 @@ class UpnpEventHandler:
         self._callback_url = callback_url
         self._requester = requester
 
-        self._subscriptions = {}  # type: Dict[str, SubscriptionInfo]
-        self._backlog = {}  # type: Dict[str, Tuple[Mapping, str]]
+        self._subscriptions: Dict[str, SubscriptionInfo] = {}
+        self._backlog: Dict[str, Tuple[Mapping, str]] = {}
 
     @property
     def callback_url(self) -> str:
@@ -188,7 +188,7 @@ class UpnpEventHandler:
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
         if 'sid' in response_headers and response_headers['sid']:
-            new_sid = response_headers['sid']  # type: str
+            new_sid: str = response_headers['sid']
             if new_sid != sid:
                 del self._subscriptions[sid]
                 sid = new_sid

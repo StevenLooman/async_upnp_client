@@ -5,9 +5,9 @@ import logging
 
 from datetime import timedelta
 from ipaddress import IPv4Address
-from typing import Dict, List, Mapping, Optional, Sequence, Set  # noqa: F401
+from typing import Dict, List, Mapping, Optional, Sequence, Set
 
-from async_upnp_client.client import EventCallbackType  # noqa: F401, pylint: disable=unused-import
+from async_upnp_client.client import EventCallbackType  # pylint: disable=unused-import
 from async_upnp_client.client import UpnpAction
 from async_upnp_client.client import UpnpDevice
 from async_upnp_client.client import UpnpService
@@ -30,9 +30,9 @@ class UpnpProfileDevice:
     Override _SERVICE_TYPES for aliases.
     """
 
-    DEVICE_TYPES = []  # type: List[str]
+    DEVICE_TYPES: List[str] = []
 
-    _SERVICE_TYPES = {}  # type: Dict[str, Set[str]]
+    _SERVICE_TYPES: Dict[str, Set[str]] = {}
 
     @classmethod
     async def async_search(cls,
@@ -160,7 +160,7 @@ class UpnpProfileDevice:
             if not self._interesting_service(service):
                 continue
 
-            on_event = self._on_event  # type: EventCallbackType
+            on_event: EventCallbackType = self._on_event
             service.on_event = on_event
             if self._event_handler.sid_for_service(service) is None:
                 _LOGGER.debug('Subscribing to service: %s', service)

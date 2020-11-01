@@ -3,10 +3,10 @@
 
 import asyncio
 from asyncio.events import AbstractEventLoop
-from asyncio.events import AbstractServer  # noqa: F401, pylint: disable=unused-import
+from asyncio.events import AbstractServer  # pylint: disable=unused-import
 import logging
 import socket
-from typing import Any, Mapping, Optional, Tuple, Union  # noqa: F401
+from typing import Any, Mapping, Optional, Tuple, Union
 
 import aiohttp
 import aiohttp.web
@@ -30,7 +30,7 @@ def get_local_ip(target_host: Optional[str] = None) -> str:
     try:
         temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         temp_sock.connect((target_host, target_port))
-        local_ip = temp_sock.getsockname()[0]  # type: str
+        local_ip: str = temp_sock.getsockname()[0]
         return local_ip
     finally:
         temp_sock.close()
@@ -57,9 +57,9 @@ class AiohttpRequester(UpnpRequester):
             async with aiohttp.ClientSession() as session:
                 async with session.request(method, url, headers=headers, data=body) as response:
                     status = response.status
-                    resp_headers = response.headers or {}
+                    resp_headers: Mapping = response.headers or {}
 
-                    resp_body = None  # type: Union[str, bytes, None]
+                    resp_body: Union[str, bytes, None] = None
                     if body_type == 'text':
                         resp_body = await response.text()
                     elif body_type == 'raw':
@@ -102,9 +102,9 @@ class AiohttpSessionRequester(UpnpRequester):
         async with async_timeout.timeout(self._timeout):
             async with self._session.request(method, url, headers=headers, data=body) as response:
                 status = response.status
-                resp_headers = response.headers or {}
+                resp_headers: Mapping = response.headers or {}
 
-                resp_body = None  # type: Union[str, bytes, None]
+                resp_body: Union[str, bytes, None] = None
                 if body_type == 'text':
                     resp_body = await response.text()
                 elif body_type == 'raw':
@@ -133,8 +133,8 @@ class AiohttpNotifyServer:
                 self._listen_host, self._listen_port)
         self._loop = loop or asyncio.get_event_loop()
 
-        self._aiohttp_server = None  # type: Optional[aiohttp.web.Server]
-        self._server = None  # type: Optional[AbstractServer]
+        self._aiohttp_server: Optional[aiohttp.web.Server] = None
+        self._server: Optional[AbstractServer] = None
 
         self.event_handler = UpnpEventHandler(self._callback_url, requester)
 

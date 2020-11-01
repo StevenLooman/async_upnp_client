@@ -5,7 +5,7 @@ from datetime import date
 from datetime import datetime
 from datetime import time
 
-from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence  # noqa: F401
+from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence
 
 from xml.etree import ElementTree as ET
 
@@ -21,7 +21,7 @@ NS = {
 }
 
 
-STATE_VARIABLE_TYPE_MAPPING = {
+STATE_VARIABLE_TYPE_MAPPING: Mapping[str, Mapping[str, Callable]] = {
     'ui1': {'type': int, 'in': int, 'out': str},
     'ui2': {'type': int, 'in': int, 'out': str},
     'ui4': {'type': int, 'in': int, 'out': str},
@@ -72,7 +72,7 @@ STATE_VARIABLE_TYPE_MAPPING = {
         'in': parse_date_time,
         'out': lambda t: t.isoformat('T', 'seconds')
     },
-}  # type: Mapping[str, Mapping[str, Callable]]
+}
 
 DeviceInfo = NamedTuple('DeviceInfo', [
     ('device_type', str),
