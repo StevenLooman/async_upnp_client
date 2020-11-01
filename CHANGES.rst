@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.15 (unreleased)
+0.14.15 (2020-11-01)
 
 - Do not crash on empty XML file (@ekandler)
 - Option to print timestamp in ISO8601 (@kitlaan)
