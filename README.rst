@@ -9,7 +9,7 @@ Status
 ------
 
 .. image:: https://img.shields.io/travis/StevenLooman/async_upnp_client.svg
-   :target: https://travis-ci.org/StevenLooman/async_upnp_client/branches
+   :target: https://travis-ci.com/StevenLooman/async_upnp_client/branches
 
 .. image:: https://img.shields.io/pypi/v/async_upnp_client.svg
    :target: https://pypi.python.org/pypi/async_upnp_client
