@@ -7,6 +7,8 @@ Changes
 - Option to print timestamp in ISO8601 (@kitlaan)
 - Option to not print LastChange subscription variable (@kitlaan)
 - Test with Python 3.8 (@scop)
+- Less stricter version pinning of `python-didl-lite` (@fabaff)
+- Drop Python 3.5 support, upgrade `pytest`/`pytest-asyncio`
 
 
 0.14.14 (2020-04-25)

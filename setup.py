@@ -43,8 +43,8 @@ INSTALL_REQUIRES=[
 
 
 TEST_REQUIRES=[
-    'pytest',
-    'pytest-asyncio',
+    'pytest~=6.1.2',
+    'pytest-asyncio~=0.14.0',
 ]
 
 
