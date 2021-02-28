@@ -6,6 +6,7 @@
 .mypy_cache
 .pytest_cache
 .tox
+.venv
 __pycache__
 build
 dist
