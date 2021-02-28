@@ -36,7 +36,7 @@ PACKAGES = (
 INSTALL_REQUIRES=[
     'voluptuous>=0.11.1',
     'aiohttp>=3.3.2',
-    'async-timeout>=3.0.0',
+    'async-timeout>=3.0,<4.0',
     'python-didl-lite~=1.2.4',
     'defusedxml>=0.5.0',
 ]
