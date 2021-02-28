@@ -39,9 +39,12 @@ def get_local_ip(target_host: Optional[str] = None) -> str:
 class AiohttpRequester(UpnpRequester):
     """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
 
-    def __init__(self, timeout: int = 5) -> None:
+    def __init__(self,
+                 timeout: int = 5,
+                 http_headers: Optional[Mapping[str, str]] = None) -> None:
         """Initialize."""
         self._timeout = timeout
+        self._http_headers = http_headers or {}
 
     async def async_do_http_request(self,
                                     method: str,
@@ -52,10 +55,14 @@ class AiohttpRequester(UpnpRequester):
             -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
+        req_headers = {
+            **self._http_headers,
+            **(headers or {})
+        }
 
         async with async_timeout.timeout(self._timeout):
             async with aiohttp.ClientSession() as session:
-                async with session.request(method, url, headers=headers, data=body) as response:
+                async with session.request(method, url, headers=req_headers, data=body) as response:
                     status = response.status
                     resp_headers: Mapping = response.headers or {}
 
@@ -80,11 +87,13 @@ class AiohttpSessionRequester(UpnpRequester):
     def __init__(self,
                  session: aiohttp.ClientSession,
                  with_sleep: bool = False,
-                 timeout: int = 5) -> None:
+                 timeout: int = 5,
+                 http_headers: Optional[Mapping[str, str]] = None) -> None:
         """Initialize."""
         self._session = session
         self._with_sleep = with_sleep
         self._timeout = timeout
+        self._http_headers = http_headers or {}
 
     async def async_do_http_request(self,
                                     method: str,
@@ -95,12 +104,17 @@ class AiohttpSessionRequester(UpnpRequester):
             -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
+        req_headers = {
+            **self._http_headers,
+            **(headers or {})
+        }
 
         if self._with_sleep:
             await asyncio.sleep(0.01)
 
         async with async_timeout.timeout(self._timeout):
-            async with self._session.request(method, url, headers=headers, data=body) as response:
+            async with self._session.request(method, url, headers=req_headers, data=body) \
+                    as response:
                 status = response.status
                 resp_headers: Mapping = response.headers or {}
 
