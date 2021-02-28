@@ -7,6 +7,7 @@ from setuptools.command.test import test as TestCommand
 
 
 class PyTest(TestCommand):
+
     def finalize_options(self):
         TestCommand.finalize_options(self)
         self.test_args = [
@@ -36,7 +37,7 @@ PACKAGES = (
 INSTALL_REQUIRES=[
     'voluptuous>=0.11.1',
     'aiohttp>=3.3.2',
-    'async-timeout>=3.0.0',
+    'async-timeout>=3.0,<4.0',
     'python-didl-lite~=1.2.4',
     'defusedxml>=0.5.0',
 ]
@@ -61,9 +62,10 @@ setup(
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
     ],
     packages=PACKAGES,
     package_data={

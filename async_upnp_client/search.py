@@ -26,7 +26,7 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
     source_ip = source_ip or IPv4Address('0.0.0.0')
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
 
-    # create socket
+    # Create socket.
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((source_ip.compressed, 0))
@@ -41,15 +41,15 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
         headers['_source'] = 'search'
         await async_callback(headers)
 
-    # create protocol and send discovery packet
+    # Create protocol and send discovery packet.
     connect = loop_.create_datagram_endpoint(
         lambda: SsdpProtocol(loop_, on_connect=on_connect, on_data=on_data),
         sock=sock,
     )
     transport, _ = await connect
 
-    # wait for devices to respond
+    # Wait for devices to respond.
     await asyncio.sleep(timeout)
 
-    # fin
+    # Fin.
     transport.close()
