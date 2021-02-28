@@ -485,6 +485,9 @@ class UpnpAction:
         The python type is expected.
         """
         for arg in self.in_arguments():
+            if arg.name not in kwargs:
+                raise UpnpError(f"Missing argument: {arg.name}")
+
             value = kwargs[arg.name]
             arg.validate_value(value)
 

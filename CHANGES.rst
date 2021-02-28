@@ -3,6 +3,8 @@ Changes
 
 0.14.16 (unreleased)
 
+- Nicer error message on invalid Action Argument
+
 
 0.14.15 (2020-11-01)
 
