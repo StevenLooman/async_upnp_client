@@ -5,6 +5,7 @@ Changes
 
 - Added ability to set additional HTTP headers (#51)
 - Nicer error message on invalid Action Argument
+- Store raw received argument value (#50)
 
 
 0.14.15 (2020-11-01)

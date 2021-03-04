@@ -369,6 +369,7 @@ class UpnpAction:
             self._argument_info = argument_info
             self._related_state_variable = state_variable
             self._value = None
+            self.raw_upnp_value: Optional[str] = None
 
         def validate_value(self, value: Any) -> None:
             """Validate value against related UpnpStateVariable."""
@@ -602,6 +603,7 @@ class UpnpAction:
                 raise UpnpError('Invalid response, unknown argument: %s, %s' %
                                 (name, ET.tostring(xml, encoding='unicode')))
 
+            arg.raw_upnp_value = arg_xml.text
             try:
                 arg.upnp_value = unescape(arg_xml.text or '')
             except AttributeError:
