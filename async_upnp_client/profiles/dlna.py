@@ -777,7 +777,7 @@ class DmrDevice(UpnpProfileDevice):
         if not xml or xml == 'NOT_IMPLEMENTED':
             return None
 
-        items = didl_lite.from_xml_string(xml)
+        items = didl_lite.from_xml_string(xml, strict=False)
         if not items:
             return None
 
@@ -796,7 +796,7 @@ class DmrDevice(UpnpProfileDevice):
         if not xml or xml == 'NOT_IMPLEMENTED':
             return None
 
-        items = didl_lite.from_xml_string(xml)
+        items = didl_lite.from_xml_string(xml, strict=False)
         if not items:
             return None
 
