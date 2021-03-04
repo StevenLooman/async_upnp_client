@@ -1,7 +1,7 @@
 language: python
-sudo: false
+os: linux
 dist: focal
-matrix:
+jobs:
   fast_finish: true
   include:
     - python: "3.6"
