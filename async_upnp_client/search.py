@@ -51,7 +51,7 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
         """Handle data."""
         headers['_source'] = 'search'
         if target_ip:
-            if headers['_address'] != f"{str(target_ip)}":
+            if headers['_address'].partition(":")[0] != f"{str(target_ip)}":
                 return
         await async_callback(headers)
 
