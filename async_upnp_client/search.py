@@ -6,7 +6,7 @@ from asyncio.events import AbstractEventLoop
 import logging
 import socket
 from ipaddress import IPv4Address
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional, Tuple
+from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
 from async_upnp_client.ssdp import SSDP_MX
 from async_upnp_client.ssdp import SSDP_ST_ALL
@@ -32,7 +32,7 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
         target = (str(target_ip), SSDP_PORT)
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
-        target_data = SSDP_TARGET 
+        target_data = SSDP_TARGET
     else:
         target = SSDP_TARGET
         target_data = SSDP_TARGET
