@@ -25,6 +25,7 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
                        loop: Optional[AbstractEventLoop] = None,
                        target_ip: Optional[IPv4Address] = None) -> None:
     """Discover devices via SSDP."""
+    # pylint: disable=too-many-arguments
     source_ip = source_ip or IPv4Address('0.0.0.0')
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
 
