@@ -19,7 +19,7 @@ jobs:
     - python: "3.9"
       env: TOXENV=typing
     - python: "3.9"
-      env: TOXENV=pydocstyle
+      env: TOXENV=black
 install: pip install -U tox
 script: tox
 services:
