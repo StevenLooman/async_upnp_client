@@ -16,11 +16,10 @@ import logging
 from async_upnp_client import UpnpFactory
 from async_upnp_client.aiohttp import AiohttpRequester
 
-
 logging.basicConfig(level=logging.INFO)
 
 
-target = 'http://192.168.178.11:49152/description.xml'
+target = "http://192.168.178.11:49152/description.xml"
 
 
 async def main():
@@ -33,13 +32,13 @@ async def main():
     print("Device: {}".format(device))
 
     # get RenderingControle-service
-    service = device.service('urn:schemas-upnp-org:service:RenderingControl:1')
+    service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
     print("Service: {}".format(service))
 
     # perform GetVolume action
-    get_volume = service.action('GetVolume')
+    get_volume = service.action("GetVolume")
     print("Action: {}".format(get_volume))
-    result = await get_volume.async_call(InstanceID=0, Channel='Master')
+    result = await get_volume.async_call(InstanceID=0, Channel="Master")
     print("Action result: {}".format(result))
 
 

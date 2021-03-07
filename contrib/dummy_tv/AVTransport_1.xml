@@ -333,7 +333,7 @@
         </argument>
       </argumentList>
     </action>
-    
+
     <action>
       <name>GetCurrentTransportActions</name>
       <argumentList>
@@ -417,7 +417,7 @@
     </action>
 
   </actionList>
-   
+
   <serviceStateTable>
     <stateVariable sendEvents="no">
       <name>TransportState</name>
@@ -595,7 +595,7 @@
       <name>A_ARG_TYPE_PrefetchURIMetaData</name>
       <dataType>string</dataType>
     </stateVariable>
- 
+
    <stateVariable sendEvents="no">
       <name>A_ARG_TYPE_SeekMode</name>
       <dataType>string</dataType>

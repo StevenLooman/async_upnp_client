@@ -38,7 +38,7 @@ Changes
 
 0.14.11 (2019-09-08)
 
-- Support state varable types: date, dateTime, dateTime.tz, time, time.tz
+- Support state variable types: date, dateTime, dateTime.tz, time, time.tz
 
 
 0.14.10 (2019-06-21)
@@ -103,7 +103,7 @@ Changes
 - Add __repr__ for UpnpAction.Argument and UPnpService.Action (@rytilahti)
 - Support advertisements and rename discovery to search
 - Use defusedxml to parse XML (@scop)
-- Fix UpnpProfileDevice.async_search() + add UpnpProfileDevice.upnp_discover() for backwards compatiblity
+- Fix UpnpProfileDevice.async_search() + add UpnpProfileDevice.upnp_discover() for backwards compatibility
 - Add work-around for win32-platform when using `upnp-client search`
 - Minor changes
 - Typing fixes + automated type checking
@@ -112,7 +112,7 @@ Changes
 
 0.13.8 (2018-12-29)
 
-- Send content-type/charset on call-action, increasing compatiblity (@tsvi)
+- Send content-type/charset on call-action, increasing compatibility (@tsvi)
 
 
 0.13.7 (2018-12-15)

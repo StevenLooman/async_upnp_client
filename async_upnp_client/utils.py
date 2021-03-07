@@ -2,12 +2,13 @@
 """Utils for async_upnp_client."""
 
 import re
-from collections.abc import MutableMapping, Mapping as abcMapping
+from collections.abc import Mapping as abcMapping
+from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Dict, Generator, Mapping, Optional
 from urllib.parse import urljoin
 
-from voluptuous import Invalid  # type: ignore
+from voluptuous import Invalid
 
 
 class CaseInsensitiveDict(MutableMapping):
@@ -70,12 +71,12 @@ def time_to_str(time: timedelta) -> str:
     """Convert timedelta to str/units."""
     total_seconds = abs(time.total_seconds())
     target = {
-        'sign': '-' if time.total_seconds() < 0 else '',
-        'hours': int(total_seconds // 3600),
-        'minutes': int(total_seconds // 60),
-        'seconds': int(total_seconds % 60),
+        "sign": "-" if time.total_seconds() < 0 else "",
+        "hours": int(total_seconds // 3600),
+        "minutes": int(total_seconds // 60),
+        "seconds": int(total_seconds % 60),
     }
-    return '{sign}{hours}:{minutes}:{seconds}'.format(**target)
+    return "{sign}{hours}:{minutes}:{seconds}".format(**target)
 
 
 def str_to_time(string: str) -> Optional[timedelta]:
@@ -85,15 +86,17 @@ def str_to_time(string: str) -> Optional[timedelta]:
     if not match:
         return None
 
-    sign = -1 if match.group('sign') == '-' else 1
-    hours = int(match.group('h'))
-    minutes = int(match.group('m'))
-    seconds = int(match.group('s'))
-    if match.group('ms'):
-        msec = int(match.group('ms'))
+    sign = -1 if match.group("sign") == "-" else 1
+    hours = int(match.group("h"))
+    minutes = int(match.group("m"))
+    seconds = int(match.group("s"))
+    if match.group("ms"):
+        msec = int(match.group("ms"))
     else:
         msec = 0
-    return sign * timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec)
+    return sign * timedelta(
+        hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec
+    )
 
 
 def absolute_url(device_url: str, url: str) -> str:
@@ -103,8 +106,7 @@ def absolute_url(device_url: str, url: str) -> str:
     If url is already an absolute url (i.e., starts with http:/https:),
     then the url itself is returned.
     """
-    if url.startswith('http:') or \
-       url.startswith('https:'):
+    if url.startswith("http:") or url.startswith("https:"):
         return url
 
     return urljoin(device_url, url)
@@ -113,7 +115,7 @@ def absolute_url(device_url: str, url: str) -> str:
 def require_tzinfo(value: Any) -> Any:
     """Require tzinfo."""
     if value.tzinfo is None:
-        raise Invalid('Requires tzinfo')
+        raise Invalid("Requires tzinfo")
     return value
 
 
@@ -121,29 +123,39 @@ def parse_date_time(value: str) -> Any:
     """Parse a date/time/date_time value."""
     # fix up timezone part
     utc = timezone(timedelta(hours=0))
-    if value[-6] in ['+', '-'] and value[-3] == ':':
+    if value[-6] in ["+", "-"] and value[-3] == ":":
         value = value[:-3] + value[-2:]
     matchers: Mapping[str, Callable] = {
-        r"\d{4}-\d{2}-\d{2}$":  # date
-        lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
-        r"\d{2}:\d{2}:\d{2}$":  # time
-        lambda s: datetime.strptime(value, "%H:%M:%S").time(),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$":  # datetime
-        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S"),
-        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$":  # datetime
-        lambda s: datetime.strptime(value, "%Y-%m-%d %H:%M:%S"),
-        r"\d{2}:\d{2}:\d{2}[+-]\d{4}$":  # time.tz
-        lambda s: datetime.strptime(value, "%H:%M:%S%z").timetz(),
-        r"\d{2}:\d{2}:\d{2} [+-]\d{4}$":  # time.tz
-        lambda s: datetime.strptime(value, "%H:%M:%S %z").timetz(),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$":  # datetime.tz
-        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%Sz").replace(tzinfo=utc),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$":  # datetime.tz
-        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%Sz").replace(tzinfo=utc),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$":  # datetime.tz
-        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z"),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$":  # datetime.tz
-        lambda s: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S %z"),
+        # date
+        r"\d{4}-\d{2}-\d{2}$": lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
+        r"\d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(value, "%H:%M:%S").time(),
+        # datetime
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(
+            value, "%Y-%m-%dT%H:%M:%S"
+        ),
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(
+            value, "%Y-%m-%d %H:%M:%S"
+        ),
+        # time.tz
+        r"\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda s: datetime.strptime(
+            value, "%H:%M:%S%z"
+        ).timetz(),
+        r"\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda s: datetime.strptime(
+            value, "%H:%M:%S %z"
+        ).timetz(),
+        # datetime.tz
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$": lambda s: datetime.strptime(
+            value, "%Y-%m-%dT%H:%M:%Sz"
+        ).replace(tzinfo=utc),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$": lambda s: datetime.strptime(
+            value, "%Y-%m-%dT%H:%M:%Sz"
+        ).replace(tzinfo=utc),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda s: datetime.strptime(
+            value, "%Y-%m-%dT%H:%M:%S%z"
+        ),
+        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda s: datetime.strptime(
+            value, "%Y-%m-%dT%H:%M:%S %z"
+        ),
     }
     for pattern, parser in matchers.items():
         if re.match(pattern, value):

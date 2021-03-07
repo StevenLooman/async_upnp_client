@@ -2,18 +2,19 @@
 """UPnP discovery via Simple Service Discovery Protocol (SSDP)."""
 
 import asyncio
-from asyncio.events import AbstractEventLoop
-from ipaddress import IPv4Address
 import logging
 import socket
+from asyncio.events import AbstractEventLoop
+from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
-from async_upnp_client.ssdp import SSDP_ALIVE
-from async_upnp_client.ssdp import SSDP_BYEBYE
-from async_upnp_client.ssdp import SSDP_TARGET
-from async_upnp_client.ssdp import SSDP_UPDATE
-from async_upnp_client.ssdp import SsdpProtocol
-
+from async_upnp_client.ssdp import (
+    SSDP_ALIVE,
+    SSDP_BYEBYE,
+    SSDP_TARGET,
+    SSDP_UPDATE,
+    SsdpProtocol,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -21,12 +22,14 @@ _LOGGER = logging.getLogger(__name__)
 class UpnpAdvertisementListener:
     """UPnP Advertisement listener."""
 
-    def __init__(self,
-                 on_alive: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
-                 on_byebye: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
-                 on_update: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
-                 source_ip: Optional[IPv4Address] = None,
-                 loop: Optional[AbstractEventLoop] = None) -> None:
+    def __init__(
+        self,
+        on_alive: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+        on_byebye: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+        on_update: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
+        source_ip: Optional[IPv4Address] = None,
+        loop: Optional[AbstractEventLoop] = None,
+    ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
         self.on_alive = on_alive
@@ -39,7 +42,7 @@ class UpnpAdvertisementListener:
 
     def _create_protocol(self, source_ip: Optional[IPv4Address]) -> Awaitable:
         """Create a socket to listen on."""
-        source_ip = source_ip or IPv4Address('0.0.0.0')
+        source_ip = source_ip or IPv4Address("0.0.0.0")
 
         # create socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -47,9 +50,11 @@ class UpnpAdvertisementListener:
         sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, source_ip.packed)
 
         # multicast
-        sock.setsockopt(socket.IPPROTO_IP,
-                        socket.IP_ADD_MEMBERSHIP,
-                        IPv4Address(SSDP_TARGET[0]).packed + source_ip.packed)
+        sock.setsockopt(
+            socket.IPPROTO_IP,
+            socket.IP_ADD_MEMBERSHIP,
+            IPv4Address(SSDP_TARGET[0]).packed + source_ip.packed,
+        )
         sock.bind(SSDP_TARGET)
 
         # create protocol and send discovery packet
@@ -59,15 +64,19 @@ class UpnpAdvertisementListener:
         )
         return connect
 
-    async def _on_data(self, request_line: str, headers: MutableMapping[str, str]) -> None:
+    async def _on_data(
+        self, request_line: str, headers: MutableMapping[str, str]
+    ) -> None:
         """Handle data."""
-        _LOGGER.debug('UpnpAdvertisementListener._on_data: %s, %s', request_line, headers)
-        if 'NTS' not in headers:
-            _LOGGER.debug('Got unknown packet: %s, %s', request_line, headers)
+        _LOGGER.debug(
+            "UpnpAdvertisementListener._on_data: %s, %s", request_line, headers
+        )
+        if "NTS" not in headers:
+            _LOGGER.debug("Got unknown packet: %s, %s", request_line, headers)
             return
 
-        headers['_source'] = 'advertisement'
-        data_type = headers['NTS']
+        headers["_source"] = "advertisement"
+        data_type = headers["NTS"]
         if data_type == SSDP_ALIVE and self.on_alive:
             await self.on_alive(headers)
         elif data_type == SSDP_BYEBYE and self.on_byebye:

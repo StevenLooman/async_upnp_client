@@ -3,29 +3,39 @@
 
 import logging
 import urllib.parse
-from datetime import datetime
-from datetime import timezone
-from typing import Any, Callable, Generic, List
-from typing import Mapping, Optional, Sequence, Tuple, TypeVar, Union
+from datetime import datetime, timezone
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    Union,
+)
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape, unescape
 
-import defusedxml.ElementTree as DET  # type: ignore
-import voluptuous as vol  # type: ignore
+import defusedxml.ElementTree as DET
+import voluptuous as vol
 
-from async_upnp_client.const import NS
-from async_upnp_client.const import ActionInfo
-from async_upnp_client.const import ActionArgumentInfo
-from async_upnp_client.const import DeviceInfo
-from async_upnp_client.const import ServiceInfo
-from async_upnp_client.const import StateVariableInfo
-
+from async_upnp_client.const import (
+    NS,
+    ActionArgumentInfo,
+    ActionInfo,
+    DeviceInfo,
+    ServiceInfo,
+    StateVariableInfo,
+)
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 
 
-EventCallbackType = Callable[['UpnpService', Sequence['UpnpStateVariable']], None]
+EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
 
 
 class UpnpRequester:
@@ -35,13 +45,14 @@ class UpnpRequester:
     Implement method async_do_http_request() in your concrete class.
     """
 
-    async def async_http_request(self,
-                                 method: str,
-                                 url: str,
-                                 headers: Optional[Mapping[str, str]] = None,
-                                 body: Optional[str] = None,
-                                 body_type: str = 'text') \
-            -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    async def async_http_request(
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Mapping[str, str]] = None,
+        body: Optional[str] = None,
+        body_type: str = "text",
+    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """
         Do a HTTP request.
 
@@ -54,36 +65,41 @@ class UpnpRequester:
         :return status code, headers, body
         """
         # pylint: disable=too-many-arguments
-        _LOGGER_TRAFFIC.debug('Sending request:\n%s %s\n%s\n%s\n',
-                              method,
-                              url,
-                              '\n'.join([key + ": " + value
-                                         for key, value in (headers or {}).items()]),
-                              body or '')
-        response_status, response_headers, response_body = \
-            await self.async_do_http_request(method,
-                                             url,
-                                             headers=headers,
-                                             body=body,
-                                             body_type=body_type)
+        _LOGGER_TRAFFIC.debug(
+            "Sending request:\n%s %s\n%s\n%s\n",
+            method,
+            url,
+            "\n".join([key + ": " + value for key, value in (headers or {}).items()]),
+            body or "",
+        )
+        (
+            response_status,
+            response_headers,
+            response_body,
+        ) = await self.async_do_http_request(
+            method, url, headers=headers, body=body, body_type=body_type
+        )
 
-        log_response_body = response_body if body_type == 'text' \
-            else 'async_upnp_client: OMITTING BODY'
-        _LOGGER_TRAFFIC.debug('Got response:\n%s\n%s\n\n%s',
-                              response_status,
-                              '\n'.join([key + ": " + value
-                                         for key, value in response_headers.items()]),
-                              log_response_body)
+        log_response_body = (
+            response_body if body_type == "text" else "async_upnp_client: OMITTING BODY"
+        )
+        _LOGGER_TRAFFIC.debug(
+            "Got response:\n%s\n%s\n\n%s",
+            response_status,
+            "\n".join([key + ": " + value for key, value in response_headers.items()]),
+            log_response_body,
+        )
 
         return response_status, response_headers, response_body
 
-    async def async_do_http_request(self,
-                                    method: str,
-                                    url: str,
-                                    headers: Optional[Mapping[str, str]] = None,
-                                    body: Optional[str] = None,
-                                    body_type: str = 'text') \
-            -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    async def async_do_http_request(
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Mapping[str, str]] = None,
+        body: Optional[str] = None,
+        body_type: str = "text",
+    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """
         Actually do a HTTP request.
 
@@ -114,8 +130,12 @@ class UpnpValueError(UpnpError):
 class UpnpDevice:
     """UPnP Device representation."""
 
-    def __init__(self, requester: UpnpRequester, device_info: DeviceInfo,
-                 services: Sequence['UpnpService']) -> None:
+    def __init__(
+        self,
+        requester: UpnpRequester,
+        device_info: DeviceInfo,
+        services: Sequence["UpnpService"],
+    ) -> None:
         """Initialize."""
         self.requester = requester
         self._device_info = device_info
@@ -184,13 +204,13 @@ class UpnpDevice:
         """Check if service by service_type is available."""
         return service_type in self.services
 
-    def service(self, service_type: str) -> 'UpnpService':
+    def service(self, service_type: str) -> "UpnpService":
         """Get service by service_type."""
         return self.services[service_type]
 
     async def async_ping(self) -> None:
         """Ping the device."""
-        await self.requester.async_http_request('GET', self.device_url)
+        await self.requester.async_http_request("GET", self.device_url)
 
     def __str__(self) -> str:
         """To string."""
@@ -202,11 +222,13 @@ class UpnpService:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(self,
-                 requester: UpnpRequester,
-                 service_info: ServiceInfo,
-                 state_variables: Sequence['UpnpStateVariable'],
-                 actions: Sequence['UpnpAction']) -> None:
+    def __init__(
+        self,
+        requester: UpnpRequester,
+        service_info: ServiceInfo,
+        state_variables: Sequence["UpnpStateVariable"],
+        actions: Sequence["UpnpAction"],
+    ) -> None:
         """Initialize."""
         self.requester = requester
         self._service_info = service_info
@@ -228,7 +250,7 @@ class UpnpService:
     def device(self) -> UpnpDevice:
         """Get parent UpnpDevice."""
         if not self._device:
-            raise UpnpError('UpnpService not bound to UpnpDevice')
+            raise UpnpError("UpnpService not bound to UpnpDevice")
 
         return self._device
 
@@ -236,7 +258,7 @@ class UpnpService:
     def device(self, device: UpnpDevice) -> None:
         """Set parent UpnpDevice."""
         if self._device:
-            raise UpnpError('UpnpService already bound to UpnpDevice')
+            raise UpnpError("UpnpService already bound to UpnpDevice")
 
         self._device = device
 
@@ -253,22 +275,25 @@ class UpnpService:
     @property
     def scpd_url(self) -> str:
         """Get full SCPD-url for this UpnpService."""
-        url: str = urllib.parse.urljoin(self.device.device_url,
-                                        self._service_info.scpd_url)
+        url: str = urllib.parse.urljoin(
+            self.device.device_url, self._service_info.scpd_url
+        )
         return url
 
     @property
     def control_url(self) -> str:
         """Get full control-url for this UpnpService."""
-        url: str = urllib.parse.urljoin(self.device.device_url,
-                                        self._service_info.control_url)
+        url: str = urllib.parse.urljoin(
+            self.device.device_url, self._service_info.control_url
+        )
         return url
 
     @property
     def event_sub_url(self) -> str:
         """Get full event sub-url for this UpnpService."""
-        url: str = urllib.parse.urljoin(self.device.device_url,
-                                        self._service_info.event_sub_url)
+        url: str = urllib.parse.urljoin(
+            self.device.device_url, self._service_info.event_sub_url
+        )
         return url
 
     @property
@@ -278,21 +303,19 @@ class UpnpService:
 
     def has_state_variable(self, name: str) -> bool:
         """Check if self has state variable called name."""
-        if name not in self.state_variables and \
-           '}' in name:
+        if name not in self.state_variables and "}" in name:
             # possibly messed up namespaces, try again without namespace
-            name = name.split('}')[1]
+            name = name.split("}")[1]
 
         return name in self.state_variables
 
-    def state_variable(self, name: str) -> 'UpnpStateVariable':
+    def state_variable(self, name: str) -> "UpnpStateVariable":
         """Get UPnpStateVariable by name."""
         state_var = self.state_variables.get(name, None)
 
         # possibly messed up namespaces, try again without namespace
-        if not state_var and \
-           '}' in name:
-            name = name.split('}')[1]
+        if not state_var and "}" in name:
+            name = name.split("}")[1]
             state_var = self.state_variables.get(name, None)
 
         if state_var is None:
@@ -304,11 +327,13 @@ class UpnpService:
         """Check if self has action called name."""
         return name in self.actions
 
-    def action(self, name: str) -> 'UpnpAction':
+    def action(self, name: str) -> "UpnpAction":
         """Get UPnpAction by name."""
         return self.actions[name]
 
-    async def async_call_action(self, action: 'UpnpAction', **kwargs: Any) -> Mapping[str, Any]:
+    async def async_call_action(
+        self, action: "UpnpAction", **kwargs: Any
+    ) -> Mapping[str, Any]:
         """
         Call a UpnpAction.
 
@@ -326,7 +351,7 @@ class UpnpService:
 
         for name, value in changes.items():
             if not self.has_state_variable(name):
-                _LOGGER.debug('State variable %s does not exist, ignoring', name)
+                _LOGGER.debug("State variable %s does not exist, ignoring", name)
                 continue
 
             state_var = self.state_variable(name)
@@ -334,7 +359,7 @@ class UpnpService:
                 state_var.upnp_value = value
                 changed_state_variables.append(state_var)
             except UpnpValueError:
-                _LOGGER.error('Got invalid value for %s: %s', state_var, value)
+                _LOGGER.error("Got invalid value for %s: %s", state_var, value)
 
         if self.on_event:
             # pylint: disable=not-callable
@@ -342,14 +367,14 @@ class UpnpService:
 
     def __str__(self) -> str:
         """To string."""
-        udn = 'unbound'
+        udn = "unbound"
         if self._device:
             udn = self._device.udn
         return "<UpnpService({}, {})>".format(self.service_id, udn)
 
     def __repr__(self) -> str:
         """To repr."""
-        udn = 'unbound'
+        udn = "unbound"
         if self._device:
             udn = self._device.udn
         return "<UpnpService({}, {})>".format(self.service_id, udn)
@@ -361,10 +386,9 @@ class UpnpAction:
     class Argument:
         """Representation of an Argument of an Action."""
 
-        def __init__(self,
-                     argument_info: ActionArgumentInfo,
-                     state_variable: 'UpnpStateVariable') \
-                -> None:
+        def __init__(
+            self, argument_info: ActionArgumentInfo, state_variable: "UpnpStateVariable"
+        ) -> None:
             """Initialize."""
             self._argument_info = argument_info
             self._related_state_variable = state_variable
@@ -386,7 +410,7 @@ class UpnpAction:
             return self._argument_info.direction
 
         @property
-        def related_state_variable(self) -> 'UpnpStateVariable':
+        def related_state_variable(self) -> "UpnpStateVariable":
             """Get the related state variable."""
             return self._related_state_variable
 
@@ -428,14 +452,18 @@ class UpnpAction:
             """To repr."""
             return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
 
-    def __init__(self, action_info: ActionInfo, arguments: List['UpnpAction.Argument'],
-                 disable_unknown_out_argument_error: bool = False) -> None:
+    def __init__(
+        self,
+        action_info: ActionInfo,
+        arguments: List["UpnpAction.Argument"],
+        disable_unknown_out_argument_error: bool = False,
+    ) -> None:
         """Initialize."""
         self._action_info = action_info
         self._arguments = arguments
         self._service: Optional[UpnpService] = None
         self._properties = {
-            'disable_unknown_out_argument_error': disable_unknown_out_argument_error,
+            "disable_unknown_out_argument_error": disable_unknown_out_argument_error,
         }
 
     @property
@@ -444,7 +472,7 @@ class UpnpAction:
         return self._action_info.name
 
     @property
-    def arguments(self) -> List['UpnpAction.Argument']:
+    def arguments(self) -> List["UpnpAction.Argument"]:
         """Get the arguments."""
         return self._arguments
 
@@ -457,7 +485,7 @@ class UpnpAction:
     def service(self) -> UpnpService:
         """Get parent UpnpService."""
         if not self._service:
-            raise UpnpError('UpnpAction not bound to UpnpService')
+            raise UpnpError("UpnpAction not bound to UpnpService")
 
         return self._service
 
@@ -465,7 +493,7 @@ class UpnpAction:
     def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
         if self._service:
-            raise UpnpError('UpnpAction already bound to UpnpService')
+            raise UpnpError("UpnpAction already bound to UpnpService")
 
         self._service = service
 
@@ -492,16 +520,17 @@ class UpnpAction:
             value = kwargs[arg.name]
             arg.validate_value(value)
 
-    def in_arguments(self) -> List['UpnpAction.Argument']:
+    def in_arguments(self) -> List["UpnpAction.Argument"]:
         """Get all in-arguments."""
-        return [arg for arg in self.arguments if arg.direction == 'in']
+        return [arg for arg in self.arguments if arg.direction == "in"]
 
-    def out_arguments(self) -> List['UpnpAction.Argument']:
+    def out_arguments(self) -> List["UpnpAction.Argument"]:
         """Get all out-arguments."""
-        return [arg for arg in self.arguments if arg.direction == 'out']
+        return [arg for arg in self.arguments if arg.direction == "out"]
 
-    def argument(self, name: str, direction: Optional[str] = None) \
-            -> Optional['UpnpAction.Argument']:
+    def argument(
+        self, name: str, direction: Optional[str] = None
+    ) -> Optional["UpnpAction.Argument"]:
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self.arguments:
             if arg.name != name:
@@ -516,19 +545,24 @@ class UpnpAction:
         """Call an action with arguments."""
         # do request
         url, headers, body = self.create_request(**kwargs)
-        status_code, response_headers, response_body = \
-            await self.service.requester.async_http_request('POST', url, headers, body)
+        (
+            status_code,
+            response_headers,
+            response_body,
+        ) = await self.service.requester.async_http_request("POST", url, headers, body)
         if not isinstance(response_body, str):
-            raise UpnpError('Did not receive a body')
+            raise UpnpError("Did not receive a body")
 
         if status_code != 200:
-            raise UpnpError('Error during async_call(), status: %s, body: %s' %
-                            (status_code, response_body))
+            raise UpnpError(
+                "Error during async_call(), status: %s, body: %s"
+                % (status_code, response_body)
+            )
 
         # parse body
-        response_args = self.parse_response(self.service.service_type,
-                                            response_headers,
-                                            response_body)
+        response_args = self.parse_response(
+            self.service.service_type, response_headers, response_body
+        )
         return response_args
 
     def create_request(self, **kwargs: Any) -> Tuple[str, Mapping[str, str], str]:
@@ -539,45 +573,52 @@ class UpnpAction:
         # construct SOAP body
         service_type = self.service.service_type
         soap_args = self._format_request_args(**kwargs)
-        body = '<?xml version="1.0"?>' \
-               '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"' \
-               ' xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">' \
-               '<s:Body>' \
-               '<u:{1} xmlns:u="{0}">' \
-               '{2}' \
-               '</u:{1}>' \
-               '</s:Body>' \
-               '</s:Envelope>'.format(service_type, self.name, soap_args)
+        body = (
+            '<?xml version="1.0"?>'
+            '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"'
+            ' xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">'
+            "<s:Body>"
+            '<u:{1} xmlns:u="{0}">'
+            "{2}"
+            "</u:{1}>"
+            "</s:Body>"
+            "</s:Envelope>".format(service_type, self.name, soap_args)
+        )
 
         # construct SOAP header
         soap_action = "{0}#{1}".format(service_type, self.name)
         headers = {
-            'SOAPAction': u'"{0}"'.format(soap_action),
-            'Host': urllib.parse.urlparse(control_url).netloc,
-            'Content-Type': 'text/xml; charset="utf-8"',
-            'Content-Length': str(len(body)),
+            "SOAPAction": '"{0}"'.format(soap_action),
+            "Host": urllib.parse.urlparse(control_url).netloc,
+            "Content-Type": 'text/xml; charset="utf-8"',
+            "Content-Length": str(len(body)),
         }
 
         return control_url, headers, body
 
     def _format_request_args(self, **kwargs: Any) -> str:
         self.validate_arguments(**kwargs)
-        arg_strs = ["<{0}>{1}</{0}>".format(arg.name, escape(arg.coerce_upnp(kwargs[arg.name])))
-                    for arg in self.in_arguments()]
+        arg_strs = [
+            "<{0}>{1}</{0}>".format(arg.name, escape(arg.coerce_upnp(kwargs[arg.name])))
+            for arg in self.in_arguments()
+        ]
         return "\n".join(arg_strs)
 
-    def parse_response(self, service_type: str, response_headers: Mapping, response_body: str) \
-            -> Mapping[str, Any]:
+    def parse_response(
+        self, service_type: str, response_headers: Mapping, response_body: str
+    ) -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
         xml = DET.fromstring(response_body)
 
-        query = './/soap_envelope:Body/soap_envelope:Fault'
+        query = ".//soap_envelope:Body/soap_envelope:Fault"
         if xml.find(query, NS):
-            error_code = xml.findtext('.//control:errorCode', None, NS)
-            error_description = xml.findtext('.//control:errorDescription', None, NS)
-            raise UpnpError('Error during call_action, error_code: %s, error_description: %s' % (
-                error_code, error_description))
+            error_code = xml.findtext(".//control:errorCode", None, NS)
+            error_description = xml.findtext(".//control:errorDescription", None, NS)
+            raise UpnpError(
+                "Error during call_action, error_code: %s, error_description: %s"
+                % (error_code, error_description)
+            )
 
         try:
             return self._parse_response_args(service_type, xml)
@@ -585,27 +626,33 @@ class UpnpAction:
             _LOGGER.debug("Error during unescape of: %s", response_body)
             raise
 
-    def _parse_response_args(self, service_type: str, xml: ET.Element) -> Mapping[str, Any]:
+    def _parse_response_args(
+        self, service_type: str, xml: ET.Element
+    ) -> Mapping[str, Any]:
         """Parse response arguments."""
         args = {}
         query = ".//{{{0}}}{1}Response".format(service_type, self.name)
         response = xml.find(query, NS)
         if response is None:
-            raise UpnpError('Invalid response: %s' % (ET.tostring(xml, encoding='unicode'),))
+            raise UpnpError(
+                "Invalid response: %s" % (ET.tostring(xml, encoding="unicode"),)
+            )
 
-        for arg_xml in response.findall('./'):
+        for arg_xml in response.findall("./"):
             name = arg_xml.tag
-            arg = self.argument(name, 'out')
+            arg = self.argument(name, "out")
             if not arg:
-                if self._properties['disable_unknown_out_argument_error']:
+                if self._properties["disable_unknown_out_argument_error"]:
                     continue
 
-                raise UpnpError('Invalid response, unknown argument: %s, %s' %
-                                (name, ET.tostring(xml, encoding='unicode')))
+                raise UpnpError(
+                    "Invalid response, unknown argument: %s, %s"
+                    % (name, ET.tostring(xml, encoding="unicode"))
+                )
 
             arg.raw_upnp_value = arg_xml.text
             try:
-                arg.upnp_value = unescape(arg_xml.text or '')
+                arg.upnp_value = unescape(arg_xml.text or "")
             except AttributeError:
                 _LOGGER.debug("Error during unescape of: %s", arg_xml.text)
                 raise
@@ -614,7 +661,7 @@ class UpnpAction:
         return args
 
 
-T = TypeVar('T')  # pylint: disable=invalid-name
+T = TypeVar("T")  # pylint: disable=invalid-name
 
 
 class UpnpStateVariable(Generic[T]):
@@ -622,7 +669,9 @@ class UpnpStateVariable(Generic[T]):
 
     UPNP_VALUE_ERROR = object()
 
-    def __init__(self, state_variable_info: StateVariableInfo, schema: vol.Schema) -> None:
+    def __init__(
+        self, state_variable_info: StateVariableInfo, schema: vol.Schema
+    ) -> None:
         """Initialize."""
         self._state_variable_info = state_variable_info
         self._schema = schema
@@ -635,7 +684,7 @@ class UpnpStateVariable(Generic[T]):
     def service(self) -> UpnpService:
         """Get parent UpnpService."""
         if not self._service:
-            raise UpnpError('UpnpStateVariable not bound to UpnpService')
+            raise UpnpError("UpnpStateVariable not bound to UpnpService")
 
         return self._service
 
@@ -643,7 +692,7 @@ class UpnpStateVariable(Generic[T]):
     def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
         if self._service:
-            raise UpnpError('UpnpStateVariable already bound to UpnpService')
+            raise UpnpError("UpnpStateVariable already bound to UpnpService")
 
         self._service = service
 
@@ -661,13 +710,13 @@ class UpnpStateVariable(Generic[T]):
     @property
     def data_type_python(self) -> Callable[[str], Any]:
         """Get the Python data type for this State Variable."""
-        return self.data_type_mapping['type']
+        return self.data_type_mapping["type"]
 
     @property
     def min_value(self) -> Optional[T]:
         """Min value for this UpnpStateVariable, if defined."""
         type_info = self._state_variable_info.type_info
-        min_ = type_info.allowed_value_range.get('min')
+        min_ = type_info.allowed_value_range.get("min")
         if min_ is not None:
             value: T = self.coerce_python(min_)
             return value
@@ -678,7 +727,7 @@ class UpnpStateVariable(Generic[T]):
     def max_value(self) -> Optional[T]:
         """Max value for this UpnpStateVariable, if defined."""
         type_info = self._state_variable_info.type_info
-        max_ = type_info.allowed_value_range.get('max')
+        max_ = type_info.allowed_value_range.get("max")
         if max_ is not None:
             value: T = self.coerce_python(max_)
             return value
@@ -773,12 +822,12 @@ class UpnpStateVariable(Generic[T]):
 
     def coerce_python(self, upnp_value: str) -> Any:
         """Coerce value from UPNP to python."""
-        coercer = self.data_type_mapping['in']
+        coercer = self.data_type_mapping["in"]
         return coercer(upnp_value)
 
     def coerce_upnp(self, value: Any) -> str:
         """Coerce value from python to UPNP."""
-        coercer = self.data_type_mapping['out']
+        coercer = self.data_type_mapping["out"]
         coerced_value: str = coercer(value)
         return coerced_value
 

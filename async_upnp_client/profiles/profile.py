@@ -2,20 +2,20 @@
 """UPnP base-profile module."""
 
 import logging
-
 from datetime import timedelta
 from ipaddress import IPv4Address
 from typing import Dict, List, Mapping, Optional, Sequence, Set
 
 from async_upnp_client.client import EventCallbackType  # pylint: disable=unused-import
-from async_upnp_client.client import UpnpAction
-from async_upnp_client.client import UpnpDevice
-from async_upnp_client.client import UpnpService
-from async_upnp_client.client import UpnpStateVariable
+from async_upnp_client.client import (
+    UpnpAction,
+    UpnpDevice,
+    UpnpService,
+    UpnpStateVariable,
+)
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.search import async_search
 from async_upnp_client.ssdp import SSDP_MX
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,9 +35,9 @@ class UpnpProfileDevice:
     _SERVICE_TYPES: Dict[str, Set[str]] = {}
 
     @classmethod
-    async def async_search(cls,
-                           source_ip: Optional[IPv4Address] = None,
-                           timeout: int = SSDP_MX) -> Set[Mapping[str, str]]:
+    async def async_search(
+        cls, source_ip: Optional[IPv4Address] = None, timeout: int = SSDP_MX
+    ) -> Set[Mapping[str, str]]:
         """
         Search for this device type.
 
@@ -50,9 +50,12 @@ class UpnpProfileDevice:
         responses = set()
 
         async def on_response(data: Mapping[str, str]) -> None:
-            if 'st' in data and data['st'] in cls.DEVICE_TYPES:
+            if "st" in data and data["st"] in cls.DEVICE_TYPES:
                 responses.add(data)
-        await async_search(async_callback=on_response, source_ip=source_ip, timeout=timeout)
+
+        await async_search(
+            async_callback=on_response, source_ip=source_ip, timeout=timeout
+        )
 
         return responses
 
@@ -121,8 +124,9 @@ class UpnpProfileDevice:
 
         return None
 
-    def _state_variable(self, service_name: str,
-                        state_variable_name: str) -> Optional[UpnpStateVariable]:
+    def _state_variable(
+        self, service_name: str, state_variable_name: str
+    ) -> Optional[UpnpStateVariable]:
         """Get state_variable from service."""
         service = self._service(service_name)
         if not service:
@@ -163,25 +167,27 @@ class UpnpProfileDevice:
             on_event: EventCallbackType = self._on_event
             service.on_event = on_event
             if self._event_handler.sid_for_service(service) is None:
-                _LOGGER.debug('Subscribing to service: %s', service)
-                success, _ = \
-                    await self._event_handler.async_subscribe(service, timeout=SUBSCRIBE_TIMEOUT)
+                _LOGGER.debug("Subscribing to service: %s", service)
+                success, _ = await self._event_handler.async_subscribe(
+                    service, timeout=SUBSCRIBE_TIMEOUT
+                )
                 if not success:
-                    _LOGGER.debug('Failed subscribing to: %s', service)
+                    _LOGGER.debug("Failed subscribing to: %s", service)
             else:
-                _LOGGER.debug('Resubscribing to service: %s', service)
-                success, _ = \
-                    await self._event_handler.async_resubscribe(service, timeout=SUBSCRIBE_TIMEOUT)
+                _LOGGER.debug("Resubscribing to service: %s", service)
+                success, _ = await self._event_handler.async_resubscribe(
+                    service, timeout=SUBSCRIBE_TIMEOUT
+                )
 
                 # could not renew subscription, try subscribing again
                 if not success:
-                    _LOGGER.debug('Failed resubscribing to: %s', service)
+                    _LOGGER.debug("Failed resubscribing to: %s", service)
 
-                    success, _ = \
-                        await self._event_handler.async_subscribe(service,
-                                                                  timeout=SUBSCRIBE_TIMEOUT)
+                    success, _ = await self._event_handler.async_subscribe(
+                        service, timeout=SUBSCRIBE_TIMEOUT
+                    )
                     if not success:
-                        _LOGGER.debug('Failed subscribing to: %s', service)
+                        _LOGGER.debug("Failed subscribing to: %s", service)
 
         return SUBSCRIBE_TIMEOUT
 
@@ -189,7 +195,9 @@ class UpnpProfileDevice:
         """Unsubscribe from all subscribed services."""
         await self._event_handler.async_unsubscribe_all()
 
-    def _on_event(self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]) -> None:
+    def _on_event(
+        self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
+    ) -> None:
         """
         State variable(s) changed. Override to handle events.
 

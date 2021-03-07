@@ -1,32 +1,36 @@
 # -*- coding: utf-8 -*-
 """UPnP discovery via Simple Service Discovery Protocol (SSDP)."""
 import asyncio
-from asyncio import DatagramTransport
-from asyncio.events import AbstractEventLoop
 import logging
 import socket
+from asyncio import DatagramTransport
+from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
-from async_upnp_client.ssdp import SSDP_MX
-from async_upnp_client.ssdp import SSDP_ST_ALL
-from async_upnp_client.ssdp import SSDP_TARGET
-from async_upnp_client.ssdp import SSDP_PORT
-from async_upnp_client.ssdp import SsdpProtocol
-from async_upnp_client.ssdp import build_ssdp_search_packet
+from async_upnp_client.ssdp import (
+    SSDP_MX,
+    SSDP_PORT,
+    SSDP_ST_ALL,
+    SSDP_TARGET,
+    SsdpProtocol,
+    build_ssdp_search_packet,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
-                       timeout: int = SSDP_MX,
-                       service_type: str = SSDP_ST_ALL,
-                       source_ip: Optional[IPv4Address] = None,
-                       loop: Optional[AbstractEventLoop] = None,
-                       target_ip: Optional[IPv4Address] = None) -> None:
+async def async_search(
+    async_callback: Callable[[Mapping[str, str]], Awaitable],
+    timeout: int = SSDP_MX,
+    service_type: str = SSDP_ST_ALL,
+    source_ip: Optional[IPv4Address] = None,
+    loop: Optional[AbstractEventLoop] = None,
+    target_ip: Optional[IPv4Address] = None,
+) -> None:
     """Discover devices via SSDP."""
     # pylint: disable=too-many-arguments
-    source_ip = source_ip or IPv4Address('0.0.0.0')
+    source_ip = source_ip or IPv4Address("0.0.0.0")
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
 
     if target_ip:
@@ -50,9 +54,9 @@ async def async_search(async_callback: Callable[[Mapping[str, str]], Awaitable],
 
     async def on_data(_: str, headers: MutableMapping[str, str]) -> None:
         """Handle data."""
-        headers['_source'] = 'search'
+        headers["_source"] = "search"
         if target_ip:
-            if headers['_address'].partition(":")[0] != f"{str(target_ip)}":
+            if headers["_address"].partition(":")[0] != f"{str(target_ip)}":
                 return
         await async_callback(headers)
 
