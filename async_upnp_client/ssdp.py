@@ -15,7 +15,8 @@ from typing import cast
 from async_upnp_client.utils import CaseInsensitiveDict
 
 
-SSDP_TARGET = ('239.255.255.250', 1900)
+SSDP_PORT = 1900
+SSDP_TARGET = ('239.255.255.250', SSDP_PORT)
 SSDP_ST_ALL = 'ssdp:all'
 SSDP_ST_ROOTDEVICE = 'upnp:rootdevice'
 SSDP_MX = 4
