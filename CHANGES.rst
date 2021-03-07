@@ -7,6 +7,7 @@ Changes
 - Nicer error message on invalid Action Argument
 - Store raw received argument value (#50)
 - Be less strict about didl-lite
+- Allow targeted announces (#53, @elupus)
 
 
 0.14.15 (2020-11-01)
