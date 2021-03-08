@@ -5,10 +5,11 @@ import email
 import logging
 import socket
 import sys
+from urllib.parse import urlsplit, urlunsplit
 from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
-from ipaddress import IPv4Address, IPv6Address
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, Union, cast
 
 from async_upnp_client.utils import CaseInsensitiveDict
@@ -54,6 +55,31 @@ def get_host_port_string(addr: AddressTupleVXType) -> str:
     return "{}:{}".format(host, addr[1])
 
 
+def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
+    """Adjust a url with correction for link local scope."""
+    if len(addr) < 4:
+        return url
+
+    addr = cast(AddressTupleV6Type, addr)
+
+    if not addr[3]:
+        return url
+
+    data = urlsplit(url)
+    try:
+        address = ip_address(data.hostname)
+    except ValueError:
+        return url
+
+    if not address.is_link_local:
+        return url
+
+    netloc = "[{}%{}]".format(data.hostname, addr[3])
+    if data.port:
+        netloc += ":{}".format(data.port)
+    return urlunsplit(data._replace(netloc=netloc))
+
+
 def build_ssdp_search_packet(
     ssdp_target: AddressTupleVXType, ssdp_mx: int, ssdp_st: str
 ) -> bytes:
@@ -94,6 +120,10 @@ def decode_ssdp_packet(data: bytes, addr: AddressTupleVXType) -> Tuple[str, Case
     header_lines = b"\n".join(lines[1:])
     email_headers = email.message_from_bytes(header_lines)
     headers = CaseInsensitiveDict(**dict(email_headers.items()))
+
+    # adjust some headers
+    if "location" in headers:
+        headers["location"] = get_adjusted_url(headers["location"], addr)
 
     # own data
     headers["_timestamp"] = datetime.now()

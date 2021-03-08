@@ -76,19 +76,33 @@ def test_decode_ssdp_packet():
         "_timestamp": ANY
     }
 
-    request_line, headers = decode_ssdp_packet(msg, ("addr", 123, 0, 3))
+
+def test_decode_ssdp_packet_v6():
+    """Test SSDP response decoding."""
+    msg = (
+        b"HTTP/1.1 200 OK\r\n"
+        b"Cache-Control: max-age=1900\r\n"
+        b"Location: http://[fe80::2]:80/RootDevice.xml\r\n"
+        b"Server: UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0\r\n"
+        b"ST:urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1\r\n"
+        b"USN: uuid:...::WANCommonInterfaceConfig:1\r\n"
+        b"EXT:\r\n\r\n"
+    )
+
+    request_line, headers = decode_ssdp_packet(msg, ("fe80::1", 123, 0, 3))
 
     assert request_line == "HTTP/1.1 200 OK"
 
     assert headers == {
         "cache-control": "max-age=1900",
-        "location": "http://192.168.1.1:80/RootDevice.xml",
+        "location": "http://[fe80::2%3]:80/RootDevice.xml",
         "server": "UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0",
         "st": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
         "usn": "uuid:...::WANCommonInterfaceConfig:1",
         "ext": "",
-        "_host": "addr%3",
+        "_host": "fe80::1%3",
         "_port": 123,
         "_udn": "uuid:...",
         "_timestamp": ANY
     }
+
