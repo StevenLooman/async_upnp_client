@@ -3,15 +3,22 @@
 
 import email
 import logging
+import socket
+import sys
 from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
-from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, cast
+from ipaddress import IPv4Address, IPv6Address
+from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, Union, cast
 
 from async_upnp_client.utils import CaseInsensitiveDict
 
 SSDP_PORT = 1900
-SSDP_TARGET = ("239.255.255.250", SSDP_PORT)
+SSDP_IP_V4 = "239.255.255.250"
+SSDP_IP_V6 = "[FF02::C]"
+SSDP_TARGET_V4 = (SSDP_IP_V4, SSDP_PORT)
+SSDP_TARGET_V6 = (SSDP_IP_V6, SSDP_PORT)
+SSDP_TARGET = SSDP_TARGET_V4
 SSDP_ST_ALL = "ssdp:all"
 SSDP_ST_ROOTDEVICE = "upnp:rootdevice"
 SSDP_MX = 4
@@ -23,6 +30,11 @@ SSDP_BYEBYE = "ssdp:byebye"
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
+
+IPvXAddress = Union[IPv4Address, IPv6Address]
+AddressTupleV4Type = Tuple[str, int]
+AddressTupleV6Type = Tuple[str, int, int, int]
+AddressTupleVXType = Union[AddressTupleV4Type, AddressTupleV6Type]
 
 
 def build_ssdp_search_packet(
@@ -101,11 +113,23 @@ class SsdpProtocol(BaseProtocol):
             callback = self.on_connect(self.transport)
             self.loop.create_task(callback)
 
-    def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
+    def datagram_received(
+        self, data: bytes, addr: AddressTupleVXType
+    ) -> None:
         """Handle a discovery-response."""
         _LOGGER_TRAFFIC.debug("Received packet from %s:\n%s", addr, data)
 
-        address = "{}:{}".format(*addr)
+        host = addr[0]
+        if len(addr) == 4:
+            addr = cast(AddressTupleV6Type, addr)
+            if addr[3]:
+                host += "%" + str(addr[3])
+
+        if ":" in host:
+            host = "[{}]".format(host)
+
+        address = "{}:{}".format(host, addr[1])
+
         if is_valid_ssdp_packet(data) and self.on_data:
             request_line, headers = decode_ssdp_packet(data, address)
             callback = self.on_data(request_line, headers)
@@ -118,3 +142,52 @@ class SsdpProtocol(BaseProtocol):
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
+
+
+def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:
+    """Deduce a bind ip address from a target address potentially including scope."""
+    if isinstance(target_ip, IPv6Address):
+        scope_id = getattr(target_ip, "scope_id", None)
+        if scope_id:
+            return IPv6Address("::%" + scope_id)
+        return IPv6Address("::")
+    return IPv4Address("0.0.0.0")
+
+
+def get_ssdp_socket(
+    source_ip: IPvXAddress, target_ip: IPvXAddress
+) -> Tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
+    """Create a socket to listen on."""
+    target = socket.getaddrinfo(
+        str(target_ip), SSDP_PORT, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
+    )[0]
+    source = socket.getaddrinfo(
+        str(source_ip), 0, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
+    )[0]
+    _LOGGER.debug("Creating socket on %s to %s", source, target)
+
+    # create socket
+    sock = socket.socket(source[0], source[1], source[2])
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+    # multicast
+    if target_ip.is_multicast:
+        if source[0] == socket.AF_INET6:
+            sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 2)
+            addr = cast(AddressTupleV6Type, source[4])
+            if addr[3]:
+                mreq = target_ip.packed + addr[3].to_bytes(4, sys.byteorder)
+                sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
+                sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_IF, addr[3])
+            else:
+                _LOGGER.debug("Skipping setting multicast interface")
+        else:
+            sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, source_ip.packed)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
+            sock.setsockopt(
+                socket.IPPROTO_IP,
+                socket.IP_ADD_MEMBERSHIP,
+                target_ip.packed + source_ip.packed,
+            )
+
+    return sock, source[4], target[4]
