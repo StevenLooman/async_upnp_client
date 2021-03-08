@@ -44,13 +44,13 @@ async def async_search(
 
     # We use the standard target in the data of the announce since
     # many implementations will ignore the request otherwise
-    if isinstance(target_ip, IPv6Address):
+    if target_ip.version == 6:
         target_data = SSDP_TARGET_V6
     else:
         target_data = SSDP_TARGET_V4
     sock.bind(source)
 
-    if not getattr(target_ip, "is_multicast", True):
+    if not target_ip.is_multicast:
         target_host = get_host_string(target)
     else:
         target_host = ""
