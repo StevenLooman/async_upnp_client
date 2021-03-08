@@ -20,6 +20,7 @@ def test_ssdp_search_packet():
         "\r\n".encode()
     )
 
+
 def test_ssdp_search_packet_v6():
     """Test SSDP search packet generation."""
     msg = build_ssdp_search_packet(("FF02::C", 1900, 0, 2), 4, "ssdp:all")
@@ -31,6 +32,7 @@ def test_ssdp_search_packet_v6():
         "ST:ssdp:all\r\n"
         "\r\n".encode()
     )
+
 
 def test_is_valid_ssdp_packet():
     """Test SSDP response validation."""
@@ -105,4 +107,3 @@ def test_decode_ssdp_packet_v6():
         "_udn": "uuid:...",
         "_timestamp": ANY
     }
-
