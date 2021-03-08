@@ -15,7 +15,7 @@ from async_upnp_client.ssdp import (
     SSDP_TARGET_V4,
     SSDP_TARGET_V6,
     SsdpProtocol,
-    build_ssdp_search_packet,
+    build_ssdp_search_packet, get_host_string,
     get_source_ip_from_target_ip,
     get_ssdp_socket,
 )
@@ -50,6 +50,11 @@ async def async_search(
         target_data = SSDP_TARGET_V4
     sock.bind(source)
 
+    if not getattr(target_ip, "is_multicast", True):
+        target_host = get_host_string(target)
+    else:
+        target_host = ""
+
     async def on_connect(transport: DatagramTransport) -> None:
         """Handle connection made."""
         packet = build_ssdp_search_packet(target_data, timeout, service_type)
@@ -58,10 +63,8 @@ async def async_search(
     async def on_data(_: str, headers: MutableMapping[str, str]) -> None:
         """Handle data."""
         headers["_source"] = "search"
-        is_multicast = getattr(target_ip, "is_multicast", True)
-        if not is_multicast:
-            if headers["_address"].partition(":")[0] != f"{str(target_ip)}":
-                return
+        if target_host and target_host != headers["_host"]:
+            return
         await async_callback(headers)
 
     # Create protocol and send discovery packet.

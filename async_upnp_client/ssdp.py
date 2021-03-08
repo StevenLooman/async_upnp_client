@@ -15,7 +15,7 @@ from async_upnp_client.utils import CaseInsensitiveDict
 
 SSDP_PORT = 1900
 SSDP_IP_V4 = "239.255.255.250"
-SSDP_IP_V6 = "[FF02::C]"
+SSDP_IP_V6 = "FF02::C"
 SSDP_TARGET_V4 = (SSDP_IP_V4, SSDP_PORT)
 SSDP_TARGET_V6 = (SSDP_IP_V6, SSDP_PORT)
 SSDP_TARGET = SSDP_TARGET_V4
@@ -37,18 +37,35 @@ AddressTupleV6Type = Tuple[str, int, int, int]
 AddressTupleVXType = Union[AddressTupleV4Type, AddressTupleV6Type]
 
 
+def get_host_string(addr: AddressTupleVXType) -> str:
+    """Construct host string from address tuple."""
+    if len(addr) >= 3:
+        addr = cast(AddressTupleV6Type, addr)
+        if addr[3]:
+            return "{}%{}".format(addr[0], addr[3])
+    return addr[0]
+
+
+def get_host_port_string(addr: AddressTupleVXType) -> str:
+    """Return a properly escaped host port pair."""
+    host = get_host_string(addr)
+    if ":" in host:
+        return "[{}]:{}".format(host, addr[1])
+    return "{}:{}".format(host, addr[1])
+
+
 def build_ssdp_search_packet(
-    ssdp_target: Tuple[str, int], ssdp_mx: int, ssdp_st: str
+    ssdp_target: AddressTupleVXType, ssdp_mx: int, ssdp_st: str
 ) -> bytes:
     """Construct a SSDP packet."""
     return (
         "M-SEARCH * HTTP/1.1\r\n"
-        "HOST:{target}:{port}\r\n"
+        "HOST:{target}\r\n"
         'MAN:"ssdp:discover"\r\n'
         "MX:{mx}\r\n"
         "ST:{st}\r\n"
         "\r\n".format(
-            target=ssdp_target[0], port=ssdp_target[1], mx=ssdp_mx, st=ssdp_st
+            target=get_host_port_string(ssdp_target), mx=ssdp_mx, st=ssdp_st
         ).encode()
     )
 
@@ -66,7 +83,7 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
     )
 
 
-def decode_ssdp_packet(data: bytes, addr: str) -> Tuple[str, CaseInsensitiveDict]:
+def decode_ssdp_packet(data: bytes, addr: AddressTupleVXType) -> Tuple[str, CaseInsensitiveDict]:
     """Decode a message."""
     lines = data.split(b"\n")
 
@@ -80,7 +97,9 @@ def decode_ssdp_packet(data: bytes, addr: str) -> Tuple[str, CaseInsensitiveDict
 
     # own data
     headers["_timestamp"] = datetime.now()
-    headers["_address"] = addr
+    headers["_host"] = get_host_string(addr)
+    headers["_port"] = addr[1]
+
     if "usn" in headers and "uuid:" in headers["usn"]:
         parts = str(headers["usn"]).split("::")
         headers["_udn"] = parts[0]
@@ -119,19 +138,8 @@ class SsdpProtocol(BaseProtocol):
         """Handle a discovery-response."""
         _LOGGER_TRAFFIC.debug("Received packet from %s:\n%s", addr, data)
 
-        host = addr[0]
-        if len(addr) == 4:
-            addr = cast(AddressTupleV6Type, addr)
-            if addr[3]:
-                host += "%" + str(addr[3])
-
-        if ":" in host:
-            host = "[{}]".format(host)
-
-        address = "{}:{}".format(host, addr[1])
-
         if is_valid_ssdp_packet(data) and self.on_data:
-            request_line, headers = decode_ssdp_packet(data, address)
+            request_line, headers = decode_ssdp_packet(data, addr)
             callback = self.on_data(request_line, headers)
             self.loop.create_task(callback)
 
