@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.15.1 (unreleased)
+
+
 0.15.0 (2021-03-13)
 
 - Added ability to set additional HTTP headers (#51)
