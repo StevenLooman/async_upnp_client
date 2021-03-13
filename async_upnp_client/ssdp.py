@@ -123,6 +123,7 @@ def decode_ssdp_packet(data: bytes, addr: AddressTupleVXType) -> Tuple[str, Case
 
     # adjust some headers
     if "location" in headers:
+        headers["_location_original"] = headers["location"]
         headers["location"] = get_adjusted_url(headers["location"], addr)
 
     # own data
