@@ -9,6 +9,7 @@ Changes
 - Be less strict about didl-lite
 - Allow targeted announces (#53, @elupus)
 - Rename `async_upnp_client.traffic` logger to `async_upnp_client.traffic.upnp` and add `async_upnp_client.traffic.ssdp` logger
+- Added `DeviceUpdater` to support updating the `UpnpDevice` inline on changes to `BOOTID.UPNP.ORG`/`CONFIGID.UPNP.ORG`/`LOCATION`
 
 
 0.14.15 (2020-11-01)

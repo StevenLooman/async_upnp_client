@@ -135,8 +135,11 @@ class UpnpDevice:
         requester: UpnpRequester,
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
+        boot_id: Optional[str] = None,
+        config_id: Optional[str] = None,
     ) -> None:
         """Initialize."""
+        # pylint: disable=too-many-arguments
         self.requester = requester
         self._device_info = device_info
         self.services = {service.service_type: service for service in services}
@@ -144,6 +147,12 @@ class UpnpDevice:
         # bind services to ourselves
         for service in services:
             service.device = self
+
+        self.boot_id: Optional[str] = boot_id
+        self.config_id: Optional[str] = config_id
+
+        # Just initialized, mark available.
+        self.available = True
 
     @property
     def name(self) -> str:
@@ -257,9 +266,6 @@ class UpnpService:
     @device.setter
     def device(self, device: UpnpDevice) -> None:
         """Set parent UpnpDevice."""
-        if self._device:
-            raise UpnpError("UpnpService already bound to UpnpDevice")
-
         self._device = device
 
     @property
@@ -492,9 +498,6 @@ class UpnpAction:
     @service.setter
     def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
-        if self._service:
-            raise UpnpError("UpnpAction already bound to UpnpService")
-
         self._service = service
 
     def __str__(self) -> str:
@@ -691,9 +694,6 @@ class UpnpStateVariable(Generic[T]):
     @service.setter
     def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
-        if self._service:
-            raise UpnpError("UpnpStateVariable already bound to UpnpService")
-
         self._service = service
 
     @property
