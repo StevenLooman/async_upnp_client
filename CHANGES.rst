@@ -8,7 +8,7 @@ Changes
 - Store raw received argument value (#50)
 - Be less strict about didl-lite
 - Allow targeted announces (#53, @elupus)
-- Support ipv6 search and advertisements (%54, @elupus)
+- Support ipv6 search and advertisements (#54, @elupus)
 
 
 0.14.15 (2020-11-01)
