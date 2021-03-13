@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.14.16 (unreleased)
+0.15.0 (2021-03-13)
 
 - Added ability to set additional HTTP headers (#51)
 - Nicer error message on invalid Action Argument
