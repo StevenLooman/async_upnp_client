@@ -11,7 +11,7 @@ import sys
 import time
 import urllib.parse
 from datetime import datetime
-from ipaddress import IPv4Address
+from ipaddress import ip_address
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
@@ -69,10 +69,16 @@ subparser.add_argument(
 subparser = subparsers.add_parser("search", help="Search for devices")
 subparser.add_argument("--bind", help="ip, e.g., 192.168.0.10")
 subparser.add_argument(
+    "--target", help="ip, e.g., 192.168.0.10 or FF02::C to request from"
+)
+subparser.add_argument(
     "--service_type", help="service type to search for", default=SSDP_ST_ALL
 )
 subparser = subparsers.add_parser("advertisements", help="Listen for advertisements")
 subparser.add_argument("--bind", help="ip, e.g., 192.168.0.10")
+subparser.add_argument(
+    "--target", help="ip, e.g., 239.255.255.250 or FF02::C to listen to"
+)
 
 args = parser.parse_args()
 pprint_indent = 4 if args.pprint else None
@@ -295,11 +301,14 @@ async def search(search_args: Any) -> None:
     timeout = args.timeout
     service_type = search_args.service_type
     source_ip = search_args.bind
+    target_ip = search_args.target
     if sys.platform == "win32" and not source_ip:
         _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
         source_ip = "0.0.0.0"  # force to IPv4 to prevent asyncio crash/WinError 10022
     if source_ip:
-        source_ip = IPv4Address(source_ip)
+        source_ip = ip_address(source_ip)
+    if target_ip:
+        target_ip = ip_address(target_ip)
 
     async def on_response(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
@@ -308,6 +317,7 @@ async def search(search_args: Any) -> None:
     await async_ssdp_search(
         service_type=service_type,
         source_ip=source_ip,
+        target_ip=target_ip,
         timeout=timeout,
         async_callback=on_response,
     )
@@ -316,11 +326,14 @@ async def search(search_args: Any) -> None:
 async def advertisements(advertisement_args: Any) -> None:
     """Listen for advertisements."""
     source_ip = advertisement_args.bind
+    target_ip = advertisement_args.target
     if sys.platform == "win32" and not source_ip:
         _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
         source_ip = "0.0.0.0"  # force to IPv4 to prevent asyncio crash/WinError 10022
     if source_ip:
-        source_ip = IPv4Address(source_ip)
+        source_ip = ip_address(source_ip)
+    if target_ip:
+        target_ip = ip_address(target_ip)
 
     async def on_notify(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
@@ -331,6 +344,7 @@ async def advertisements(advertisement_args: Any) -> None:
         on_byebye=on_notify,
         on_update=on_notify,
         source_ip=source_ip,
+        target_ip=target_ip,
     )
     await listener.async_start()
     try:

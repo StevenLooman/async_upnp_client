@@ -139,7 +139,8 @@ An example of searching for devices::
         "ST": "upnp:rootdevice",
         "USN": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72::upnp:rootdevice",
         "_timestamp": "2018-10-27 12:43:09.125408",
-        "_address": "192.168.178.1:49152",
+        "_host": "192.168.178.1",
+        "_port": 49152
         "_udn": "uuid:e3a17dd5-9d85-3131-3c34-b827eb498d72",
         "_source": "search"
     }
@@ -157,7 +158,8 @@ An example of listening for advertisements, note that the program stays running 
         "NT": "urn:schemas-wifialliance-org:device:WFADevice:1",
         "USN": "uuid:99cb221c-1f15-c620-dc29-395f415623c6::urn:schemas-wifialliance-org:device:WFADevice:1",
         "_timestamp": "2018-12-23 11:22:47.154293",
-        "_address": "192.168.178.1:1900",
+        "_host": "192.168.178.1",
+        "_port": 1900
         "_udn": "uuid:99cb221c-1f15-c620-dc29-395f415623c6",
         "_source": "advertisement"
     }
