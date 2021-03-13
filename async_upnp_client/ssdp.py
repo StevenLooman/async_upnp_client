@@ -22,7 +22,7 @@ SSDP_BYEBYE = "ssdp:byebye"
 
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
+_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
 def build_ssdp_search_packet(
@@ -103,7 +103,7 @@ class SsdpProtocol(BaseProtocol):
 
     def datagram_received(self, data: bytes, addr: Tuple[str, int]) -> None:
         """Handle a discovery-response."""
-        _LOGGER_TRAFFIC.debug("Received packet from %s:\n%s", addr, data)
+        _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
 
         address = "{}:{}".format(*addr)
         if is_valid_ssdp_packet(data) and self.on_data:

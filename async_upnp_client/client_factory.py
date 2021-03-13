@@ -153,7 +153,7 @@ class UpnpFactory:
             )
         else:
             _LOGGER.debug(
-                "Invalid XML for state variable/send events:\n%s",
+                "Invalid XML for state variable/send events: %s",
                 ET.tostring(state_variable_xml, encoding="unicode"),
             )
 

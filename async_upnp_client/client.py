@@ -32,7 +32,7 @@ from async_upnp_client.const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
+_LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
@@ -65,7 +65,7 @@ class UpnpRequester:
         :return status code, headers, body
         """
         # pylint: disable=too-many-arguments
-        _LOGGER_TRAFFIC.debug(
+        _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
             method,
             url,
@@ -83,7 +83,7 @@ class UpnpRequester:
         log_response_body = (
             response_body if body_type == "text" else "async_upnp_client: OMITTING BODY"
         )
-        _LOGGER_TRAFFIC.debug(
+        _LOGGER_TRAFFIC_UPNP.debug(
             "Got response:\n%s\n%s\n\n%s",
             response_status,
             "\n".join([key + ": " + value for key, value in response_headers.items()]),

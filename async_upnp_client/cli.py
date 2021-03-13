@@ -346,8 +346,8 @@ async def async_main() -> None:
     """Async main."""
     if args.debug:
         _LOGGER.setLevel(logging.DEBUG)
-        _LOGGER_TRAFFIC.setLevel(logging.INFO)
         _LOGGER_LIB.setLevel(logging.DEBUG)
+        _LOGGER_TRAFFIC.setLevel(logging.INFO)
     if args.debug_traffic:
         _LOGGER_TRAFFIC.setLevel(logging.DEBUG)
 

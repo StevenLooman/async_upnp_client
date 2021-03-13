@@ -8,6 +8,7 @@ Changes
 - Store raw received argument value (#50)
 - Be less strict about didl-lite
 - Allow targeted announces (#53, @elupus)
+- Rename `async_upnp_client.traffic` logger to `async_upnp_client.traffic.upnp` and add `async_upnp_client.traffic.ssdp` logger
 
 
 0.14.15 (2020-11-01)
