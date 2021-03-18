@@ -3,6 +3,7 @@ Changes
 
 0.15.1 (unreleased)
 
+- Try to fix invalid device encodings
 
 0.15.0 (2021-03-13)
 
