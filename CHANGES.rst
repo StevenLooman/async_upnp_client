@@ -2,7 +2,7 @@ Changes
 =======
 
 0.15.1 (unreleased)
-
+- Added support for PAUSED_PLAYBACK state (#56, @brgerig)
 
 0.15.0 (2021-03-13)
 
