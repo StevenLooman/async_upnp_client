@@ -264,7 +264,8 @@ class DmrDevice(UpnpProfileDevice):
         state_value = (state_var.value or "").strip().lower()
         if state_value == "playing":
             return DeviceState.PLAYING
-        if state_value == "paused":
+        if state_value == "paused" or \
+           state_value == "paused_playback":
             return DeviceState.PAUSED
 
         return DeviceState.IDLE
