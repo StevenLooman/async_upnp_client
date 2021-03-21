@@ -68,8 +68,10 @@ class AiohttpRequester(UpnpRequester):
                         try:
                             resp_body = await response.text()
                         except UnicodeDecodeError as exception:
-                            resp_body = await response.read()
-                            resp_body = resp_body.decode(exception.encoding, errors='replace')
+                            resp_body_bytes = await response.read()
+                            resp_body = resp_body_bytes.decode(
+                                exception.encoding, errors="replace"
+                            )
                     elif body_type == "raw":
                         resp_body = await response.read()
                     elif body_type == "ignore":
