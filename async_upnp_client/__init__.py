@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """UPnP module."""
 
+from async_upnp_client.advertisement import UpnpAdvertisementListener  # noqa: F401
 from async_upnp_client.client import UpnpAction  # noqa: F401
 from async_upnp_client.client import UpnpDevice  # noqa: F401
 from async_upnp_client.client import UpnpError  # noqa: F401

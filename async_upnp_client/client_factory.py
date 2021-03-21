@@ -35,7 +35,7 @@ class UpnpFactory:
     """
     Factory for UpnpService and friends.
 
-    Use UpnpFactory.async_create_services() to instantiate UpnpServices from a device XML.
+    Use UpnpFactory.async_create_device() to instantiate UpnpDevice from a device XML.
     You have probably received this URL from netdisco, for example.
     """
 
@@ -52,7 +52,12 @@ class UpnpFactory:
             "disable_unknown_out_argument_error": disable_unknown_out_argument_error,
         }
 
-    async def async_create_device(self, description_url: str) -> UpnpDevice:
+    async def async_create_device(
+        self,
+        description_url: str,
+        boot_id: Optional[str] = None,
+        config_id: Optional[str] = None,
+    ) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         root = await self._async_get_url_xml(description_url)
 
@@ -67,7 +72,7 @@ class UpnpFactory:
             service = await self.async_create_service(service_desc_xml, description_url)
             services.append(service)
 
-        return UpnpDevice(self.requester, device_desc, services)
+        return UpnpDevice(self.requester, device_desc, services, boot_id, config_id)
 
     def _device_parse_xml(
         self, device_description_xml: ET.Element, description_url: str
@@ -153,7 +158,7 @@ class UpnpFactory:
             )
         else:
             _LOGGER.debug(
-                "Invalid XML for state variable/send events:\n%s",
+                "Invalid XML for state variable/send events: %s",
                 ET.tostring(state_variable_xml, encoding="unicode"),
             )
 

@@ -5,12 +5,12 @@ import email
 import logging
 import socket
 import sys
-from urllib.parse import urlsplit, urlunsplit
 from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, Union, cast
+from urllib.parse import urlsplit, urlunsplit
 
 from async_upnp_client.utils import CaseInsensitiveDict
 
@@ -30,7 +30,7 @@ SSDP_BYEBYE = "ssdp:byebye"
 
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
+_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 IPvXAddress = Union[IPv4Address, IPv6Address]
 AddressTupleV4Type = Tuple[str, int]
@@ -109,7 +109,9 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
     )
 
 
-def decode_ssdp_packet(data: bytes, addr: AddressTupleVXType) -> Tuple[str, CaseInsensitiveDict]:
+def decode_ssdp_packet(
+    data: bytes, addr: AddressTupleVXType
+) -> Tuple[str, CaseInsensitiveDict]:
     """Decode a message."""
     lines = data.split(b"\n")
 
@@ -163,11 +165,9 @@ class SsdpProtocol(BaseProtocol):
             callback = self.on_connect(self.transport)
             self.loop.create_task(callback)
 
-    def datagram_received(
-        self, data: bytes, addr: AddressTupleVXType
-    ) -> None:
+    def datagram_received(self, data: bytes, addr: AddressTupleVXType) -> None:
         """Handle a discovery-response."""
-        _LOGGER_TRAFFIC.debug("Received packet from %s:\n%s", addr, data)
+        _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
 
         if is_valid_ssdp_packet(data) and self.on_data:
             request_line, headers = decode_ssdp_packet(data, addr)
