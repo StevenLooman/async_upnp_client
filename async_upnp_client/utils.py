@@ -73,7 +73,7 @@ def time_to_str(time: timedelta) -> str:
     target = {
         "sign": "-" if time.total_seconds() < 0 else "",
         "hours": int(total_seconds // 3600),
-        "minutes": int(total_seconds // 60),
+        "minutes": int(total_seconds % 3600 // 60),
         "seconds": int(total_seconds % 60),
     }
     return "{sign}{hours}:{minutes}:{seconds}".format(**target)
