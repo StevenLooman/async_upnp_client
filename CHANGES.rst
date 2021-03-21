@@ -3,6 +3,7 @@ Changes
 
 0.15.1 (unreleased)
 
+- Fix timespan formatting for content > 1h
 - Try to fix invalid device encodings
 
 0.15.0 (2021-03-13)
