@@ -1,13 +1,17 @@
 Changes
 =======
 
-0.14.16 (unreleased)
+0.15.1 (unreleased)
+
+
+0.15.0 (2021-03-13)
 
 - Added ability to set additional HTTP headers (#51)
 - Nicer error message on invalid Action Argument
 - Store raw received argument value (#50)
 - Be less strict about didl-lite
 - Allow targeted announces (#53, @elupus)
+- Support ipv6 search and advertisements (#54, @elupus)
 - Rename `async_upnp_client.traffic` logger to `async_upnp_client.traffic.upnp` and add `async_upnp_client.traffic.ssdp` logger
 - Added `DeviceUpdater` to support updating the `UpnpDevice` inline on changes to `BOOTID.UPNP.ORG`/`CONFIGID.UPNP.ORG`/`LOCATION`
 

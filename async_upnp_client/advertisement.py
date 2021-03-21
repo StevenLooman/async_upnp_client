@@ -3,7 +3,6 @@
 
 import asyncio
 import logging
-import socket
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
@@ -11,9 +10,12 @@ from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 from async_upnp_client.ssdp import (
     SSDP_ALIVE,
     SSDP_BYEBYE,
-    SSDP_TARGET,
+    SSDP_IP_V4,
     SSDP_UPDATE,
+    IPvXAddress,
     SsdpProtocol,
+    get_source_ip_from_target_ip,
+    get_ssdp_socket,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,7 +30,8 @@ class UpnpAdvertisementListener:
         on_alive: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
         on_byebye: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
         on_update: Optional[Callable[[Mapping[str, str]], Awaitable]] = None,
-        source_ip: Optional[IPv4Address] = None,
+        source_ip: Optional[IPvXAddress] = None,
+        target_ip: Optional[IPvXAddress] = None,
         loop: Optional[AbstractEventLoop] = None,
     ) -> None:
         """Initialize."""
@@ -39,24 +42,20 @@ class UpnpAdvertisementListener:
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[asyncio.DatagramTransport] = None
 
-        self._connect = self._create_protocol(source_ip)
+        self._connect = self._create_protocol(source_ip, target_ip)
 
-    def _create_protocol(self, source_ip: Optional[IPv4Address]) -> Awaitable:
+    def _create_protocol(
+        self, source_ip: Optional[IPvXAddress], target_ip: Optional[IPvXAddress]
+    ) -> Awaitable:
         """Create a socket to listen on."""
-        source_ip = source_ip or IPv4Address("0.0.0.0")
+        if target_ip is None:
+            target_ip = IPv4Address(SSDP_IP_V4)
+        if source_ip is None:
+            source_ip = get_source_ip_from_target_ip(target_ip)
 
-        # create socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, source_ip.packed)
-
-        # multicast
-        sock.setsockopt(
-            socket.IPPROTO_IP,
-            socket.IP_ADD_MEMBERSHIP,
-            IPv4Address(SSDP_TARGET[0]).packed + source_ip.packed,
-        )
-        sock.bind(SSDP_TARGET)
+        # construct a socket for use with this pairs of endpoints
+        sock, _, target = get_ssdp_socket(source_ip, target_ip)
+        sock.bind(target)
 
         # create protocol and send discovery packet
         connect = self._loop.create_datagram_endpoint(
