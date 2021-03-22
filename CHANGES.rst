@@ -2,7 +2,13 @@ Changes
 =======
 
 0.15.1 (unreleased)
+
+- Fix timespan formatting for content > 1h
+- Try to fix invalid device encodings
+- Rename `async_upnp_client.traffic` logger to `async_upnp_client.traffic.upnp` and add `async_upnp_client.traffic.ssdp` logger
+- Added `DeviceUpdater` to support updating the `UpnpDevice` inline on changes to `BOOTID.UPNP.ORG`/`CONFIGID.UPNP.ORG`/`LOCATION`
 - Added support for PAUSED_PLAYBACK state (#56, @brgerig)
+
 
 0.15.0 (2021-03-13)
 

@@ -8,17 +8,18 @@ from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
 from async_upnp_client.ssdp import (
-    IPvXAddress,
     SSDP_ALIVE,
     SSDP_BYEBYE,
     SSDP_IP_V4,
     SSDP_UPDATE,
+    IPvXAddress,
     SsdpProtocol,
     get_source_ip_from_target_ip,
     get_ssdp_socket,
 )
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
 class UpnpAdvertisementListener:
@@ -67,9 +68,12 @@ class UpnpAdvertisementListener:
         self, request_line: str, headers: MutableMapping[str, str]
     ) -> None:
         """Handle data."""
-        _LOGGER.debug(
+        _LOGGER_TRAFFIC_SSDP.debug(
             "UpnpAdvertisementListener._on_data: %s, %s", request_line, headers
         )
+        if headers.get("MAN") == '"ssdp:discover"':
+            # Ignore discover packets.
+            return
         if "NTS" not in headers:
             _LOGGER.debug("Got unknown packet: %s, %s", request_line, headers)
             return
@@ -85,9 +89,11 @@ class UpnpAdvertisementListener:
 
     async def async_start(self) -> None:
         """Start listening for notifications."""
+        _LOGGER.debug("Start listening for notifications")
         self._transport, _ = await self._connect
 
     async def async_stop(self) -> None:
         """Stop listening for notifications."""
+        _LOGGER.debug("Stop listening for notifications")
         if self._transport:
             self._transport.close()

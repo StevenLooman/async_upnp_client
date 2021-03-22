@@ -8,19 +8,21 @@ from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
 from async_upnp_client.ssdp import (
-    IPvXAddress,
     SSDP_IP_V4,
     SSDP_MX,
     SSDP_ST_ALL,
     SSDP_TARGET_V4,
     SSDP_TARGET_V6,
+    IPvXAddress,
     SsdpProtocol,
-    build_ssdp_search_packet, get_host_string,
+    build_ssdp_search_packet,
+    get_host_string,
     get_source_ip_from_target_ip,
     get_ssdp_socket,
 )
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
 async def async_search(
@@ -58,10 +60,15 @@ async def async_search(
     async def on_connect(transport: DatagramTransport) -> None:
         """Handle connection made."""
         packet = build_ssdp_search_packet(target_data, timeout, service_type)
+        _LOGGER.debug("Sending M-SEARCH packet")
+        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
         transport.sendto(packet, target)
 
-    async def on_data(_: str, headers: MutableMapping[str, str]) -> None:
+    async def on_data(request_line: str, headers: MutableMapping[str, str]) -> None:
         """Handle data."""
+        _LOGGER.debug(
+            "Received response, request line: %s, headers: %s", request_line, headers
+        )
         headers["_source"] = "search"
         if target_host and target_host != headers["_host"]:
             return

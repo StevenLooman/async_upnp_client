@@ -32,7 +32,7 @@ from async_upnp_client.const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
+_LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
@@ -65,7 +65,7 @@ class UpnpRequester:
         :return status code, headers, body
         """
         # pylint: disable=too-many-arguments
-        _LOGGER_TRAFFIC.debug(
+        _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
             method,
             url,
@@ -83,7 +83,7 @@ class UpnpRequester:
         log_response_body = (
             response_body if body_type == "text" else "async_upnp_client: OMITTING BODY"
         )
-        _LOGGER_TRAFFIC.debug(
+        _LOGGER_TRAFFIC_UPNP.debug(
             "Got response:\n%s\n%s\n\n%s",
             response_status,
             "\n".join([key + ": " + value for key, value in response_headers.items()]),
@@ -135,8 +135,11 @@ class UpnpDevice:
         requester: UpnpRequester,
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
+        boot_id: Optional[str] = None,
+        config_id: Optional[str] = None,
     ) -> None:
         """Initialize."""
+        # pylint: disable=too-many-arguments
         self.requester = requester
         self._device_info = device_info
         self.services = {service.service_type: service for service in services}
@@ -144,6 +147,12 @@ class UpnpDevice:
         # bind services to ourselves
         for service in services:
             service.device = self
+
+        self.boot_id: Optional[str] = boot_id
+        self.config_id: Optional[str] = config_id
+
+        # Just initialized, mark available.
+        self.available = True
 
     @property
     def name(self) -> str:
@@ -257,9 +266,6 @@ class UpnpService:
     @device.setter
     def device(self, device: UpnpDevice) -> None:
         """Set parent UpnpDevice."""
-        if self._device:
-            raise UpnpError("UpnpService already bound to UpnpDevice")
-
         self._device = device
 
     @property
@@ -492,9 +498,6 @@ class UpnpAction:
     @service.setter
     def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
-        if self._service:
-            raise UpnpError("UpnpAction already bound to UpnpService")
-
         self._service = service
 
     def __str__(self) -> str:
@@ -691,9 +694,6 @@ class UpnpStateVariable(Generic[T]):
     @service.setter
     def service(self, service: UpnpService) -> None:
         """Set parent UpnpService."""
-        if self._service:
-            raise UpnpError("UpnpStateVariable already bound to UpnpService")
-
         self._service = service
 
     @property
