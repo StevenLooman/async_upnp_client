@@ -19,9 +19,14 @@ from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
 _LOGGER = logging.getLogger(__name__)
 
 
-DeviceState = Enum(
-    "DeviceState", "ON PLAYING PAUSED IDLE"
-)  # pylint: disable=invalid-name
+DeviceState = Enum("DeviceState", "ON PLAYING PAUSED IDLE")
+
+
+TransportState = Enum(
+    "TransportState",
+    "STOPPED PLAYING TRANSITIONING PAUSED_PLAYBACK PAUSED_RECORDING RECORDING NO_MEDIA_PRESENT "
+    "VENDOR_DEFINED",
+)
 
 
 class DlnaOrgOp(Enum):
@@ -256,7 +261,12 @@ class DmrDevice(UpnpProfileDevice):
 
     @property
     def state(self) -> DeviceState:
-        """Get current state."""
+        """
+        Get current state.
+
+        This property is deprecated and will be removed in a future version!
+        Please use `transport_state` instead.
+        """
         state_var = self._state_variable("AVT", "TransportState")
         if not state_var:
             return DeviceState.ON
@@ -264,10 +274,25 @@ class DmrDevice(UpnpProfileDevice):
         state_value = (state_var.value or "").strip().lower()
         if state_value == "playing":
             return DeviceState.PLAYING
-        if state_value in ('paused', 'paused_playback'):
+        if state_value in ("paused", "paused_playback"):
             return DeviceState.PAUSED
 
         return DeviceState.IDLE
+
+    @property
+    def transport_state(self) -> Optional[TransportState]:
+        """Get transport state."""
+        state_var = self._state_variable("AVT", "TransportState")
+        if not state_var:
+            return None
+
+        state_value = (state_var.value or "").strip().upper()
+        for member in TransportState:
+            if member.name == state_value:
+                return member
+
+        # Unknown state; return VENDOR_DEFINED.
+        return TransportState.VENDOR_DEFINED
 
     @property
     def _has_current_transport_actions(self) -> bool:

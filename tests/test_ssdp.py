@@ -76,7 +76,7 @@ def test_decode_ssdp_packet():
         "_host": "addr",
         "_port": 123,
         "_udn": "uuid:...",
-        "_timestamp": ANY
+        "_timestamp": ANY,
     }
 
 
@@ -107,5 +107,5 @@ def test_decode_ssdp_packet_v6():
         "_host": "fe80::1%3",
         "_port": 123,
         "_udn": "uuid:...",
-        "_timestamp": ANY
+        "_timestamp": ANY,
     }
