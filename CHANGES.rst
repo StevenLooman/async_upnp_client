@@ -7,6 +7,9 @@ Changes
 - Try to fix invalid device encodings
 - Rename `async_upnp_client.traffic` logger to `async_upnp_client.traffic.upnp` and add `async_upnp_client.traffic.ssdp` logger
 - Added `DeviceUpdater` to support updating the `UpnpDevice` inline on changes to `BOOTID.UPNP.ORG`/`CONFIGID.UPNP.ORG`/`LOCATION`
+- DLNA set_transport_uri: Allow supplying own meta_data (e.g. received from a content directory)
+- DLNA set_transport_uri: Backwards incompatible change: Only media_uri and media_title are required.
+-                         To override mime_type, upnp_class or dlna_features create meta_data via construct_play_media_metadata()
 
 
 0.15.0 (2021-03-13)
