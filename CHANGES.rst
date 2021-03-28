@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.15.1 (unreleased)
+0.16.0 (unreleased)
 
 - Fix timespan formatting for content > 1h
 - Try to fix invalid device encodings
