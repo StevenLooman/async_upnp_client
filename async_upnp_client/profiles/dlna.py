@@ -762,7 +762,6 @@ class DmrDevice(UpnpProfileDevice):
         )
 
         xml_string: bytes = didl_lite.to_xml_string(item)
-        print("Got result:", xml_string.decode('utf-8'))
         return xml_string.decode("utf-8")
 
     @property
