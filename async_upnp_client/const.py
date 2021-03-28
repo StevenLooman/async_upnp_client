@@ -16,6 +16,16 @@ NS = {
 }
 
 
+MIME_TO_UPNP_CLASS_MAPPING: Mapping[str, str] = {
+    "audio": "object.item.audioItem",
+    "video": "object.item.videoItem",
+    "image": "object.item.imageItem",
+    "application/dash+xml": "object.item.videoItem",
+    "application/x-mpegurl": "object.item.videoItem",
+    "application/vnd.apple.mpegurl": "object.item.videoItem"
+}
+
+
 STATE_VARIABLE_TYPE_MAPPING: Mapping[str, Mapping[str, Callable]] = {
     "ui1": {"type": int, "in": int, "out": str},
     "ui2": {"type": int, "in": int, "out": str},

@@ -10,6 +10,9 @@ Changes
 - Added support for PAUSED_PLAYBACK state (#56, @brgerig)
 - Add `DmrDevice.transport_state`, deprecate `DmrDevice.state`
 - Ignore prefix/namespace in DLNA-Events for better compatibility
+- DLNA set_transport_uri: Allow supplying own meta_data (e.g. received from a content directory)
+- DLNA set_transport_uri: Backwards incompatible change: Only media_uri and media_title are required.
+                          To override mime_type, upnp_class or dlna_features create meta_data via construct_play_media_metadata()
 
 
 0.15.0 (2021-03-13)

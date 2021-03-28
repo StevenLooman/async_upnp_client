@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+from mimetypes import guess_type
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, List, Mapping, MutableMapping, Optional, Sequence
@@ -15,6 +16,7 @@ from didl_lite import didl_lite
 from async_upnp_client import UpnpError, UpnpService, UpnpStateVariable
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
+from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -642,10 +644,7 @@ class DmrDevice(UpnpProfileDevice):
         self,
         media_url: str,
         media_title: str,
-        mime_type: str,
-        upnp_class: str,
-        override_mime_type: Optional[str] = None,
-        override_dlna_features: Optional[str] = None,
+        meta_data: Optional[str] = None
     ) -> None:
         """Play a piece of media."""
         # pylint: disable=too-many-arguments
@@ -664,14 +663,11 @@ class DmrDevice(UpnpProfileDevice):
         )
 
         # queue media
-        meta_data = await self._construct_play_media_metadata(
-            media_url,
-            media_title,
-            mime_type,
-            upnp_class,
-            override_mime_type=override_mime_type,
-            override_dlna_features=override_dlna_features,
-        )
+        if not meta_data:
+            meta_data = await self.construct_play_media_metadata(
+                media_url,
+                media_title
+            )
         action = self._action("AVT", "SetAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetAVTransportURI")
@@ -713,13 +709,14 @@ class DmrDevice(UpnpProfileDevice):
 
         return None
 
-    async def _construct_play_media_metadata(
+    async def construct_play_media_metadata(
         self,
         media_url: str,
         media_title: str,
-        mime_type: str,
-        upnp_class: str,
+        default_mime_type: Optional[str] = None,
+        default_upnp_class: Optional[str] = None,
         override_mime_type: Optional[str] = None,
+        override_upnp_class: Optional[str] = None,
         override_dlna_features: Optional[str] = None,
     ) -> str:
         """
@@ -729,56 +726,64 @@ class DmrDevice(UpnpProfileDevice):
 
         :arg media_url URL to media
         :arg media_title
-        :arg mime_type Suggested mime type, will be overridden by source if possible
-        :arg upnp_class UPnP class
-        :arg override_mime_type Enfore mime_type, even if source reports a different mime_type
+        :arg default_mime_type Suggested mime type, will be overridden by source if possible
+        :arg default_upnp_class Suggested UPnP class, will be used as fallback for autodetection
+        :arg override_mime_type Enforce mime_type, even if source reports a different mime_type
+        :arg override_upnp_class Enforce upnp_class, even if autodetection finds something useable
         :arg override_dlna_features Enforce DLNA features, even if source reports different features
         :return String containing metadata
         """
-        # pylint: disable=too-many-arguments, too-many-locals
-        media_info = {
-            "mime_type": mime_type,
-            "dlna_features": "*",
-        }
+        # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
+        mime_type = override_mime_type or ""
+        upnp_class = override_upnp_class or ""
+        dlna_features = override_dlna_features or "*"
 
-        # do a HEAD/GET, to retrieve content-type/mime-type
-        try:
-            headers = await self._fetch_headers(
-                media_url, {"GetContentFeatures.dlna.org": "1"}
-            )
-            if headers:
-                if "Content-Type" in headers:
-                    media_info["mime_type"] = headers["Content-Type"]
-
-                if "ContentFeatures.dlna.org" in headers:
-                    media_info["dlna_features"] = headers["contentFeatures.dlna.org"]
-        except Exception:  # pylint: disable=broad-except
-            pass
-
-        # use CM/GetProtocolInfo to improve on dlna_features
-        if self.has_get_protocol_info:
-            protocol_info_entries = (
-                await self._async_get_sink_protocol_info_for_mime_type(
-                    media_info["mime_type"]
+        if None in (override_mime_type, override_dlna_features):
+            # do a HEAD/GET, to retrieve content-type/mime-type
+            try:
+                headers = await self._fetch_headers(
+                    media_url, {"GetContentFeatures.dlna.org": "1"}
                 )
-            )
-            for entry in protocol_info_entries:
-                if entry[3] == "*":
-                    # device accepts anything, send this
-                    media_info["dlna_features"] = "*"
+                if headers:
+                    if not override_mime_type and "Content-Type" in headers:
+                        mime_type = headers["Content-Type"]
+                    if not override_dlna_features and "ContentFeatures.dlna.org" in headers:
+                        dlna_features = headers["contentFeatures.dlna.org"]
+            except Exception:  # pylint: disable=broad-except
+                pass
 
-        # allow overriding of mime_type/dlna_features
-        if override_mime_type:
-            media_info["mime_type"] = override_mime_type
-        if override_dlna_features:
-            media_info["dlna_features"] = override_dlna_features
+            if not mime_type:
+                _type = guess_type(media_url.split('?')[0])
+                mime_type = _type[0] or ""
+                if not mime_type:
+                    mime_type = default_mime_type or 'application/octet-stream'
+
+            # use CM/GetProtocolInfo to improve on dlna_features
+            if not override_dlna_features and dlna_features != "*" and self.has_get_protocol_info:
+                protocol_info_entries = (
+                    await self._async_get_sink_protocol_info_for_mime_type(mime_type)
+                )
+                for entry in protocol_info_entries:
+                    if entry[3] == "*":
+                        # device accepts anything, send this
+                        dlna_features = "*"
+
+        # Try to derive a basic upnp_class from mime_type
+        if not override_upnp_class:
+            mime_type = mime_type.lower()
+            for _mime, _class in MIME_TO_UPNP_CLASS_MAPPING.items():
+                if mime_type.startswith(_mime):
+                    upnp_class = _class
+                    break
+            else:
+                upnp_class = default_upnp_class or 'object.item'
 
         # build DIDL-Lite item + resource
         didl_item_type = didl_lite.type_by_upnp_class(upnp_class)
         if not didl_item_type:
             raise UpnpError("Unknown DIDL-lite type")
 
-        protocol_info = "http-get:*:{mime_type}:{dlna_features}".format(**media_info)
+        protocol_info = f"http-get:*:{mime_type}:{dlna_features}"
         resource = didl_lite.Resource(uri=media_url, protocol_info=protocol_info)
         item = didl_item_type(
             id="0",
