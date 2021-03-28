@@ -9,6 +9,7 @@ Changes
 - Added `DeviceUpdater` to support updating the `UpnpDevice` inline on changes to `BOOTID.UPNP.ORG`/`CONFIGID.UPNP.ORG`/`LOCATION`
 - Added support for PAUSED_PLAYBACK state (#56, @brgerig)
 - Add `DmrDevice.transport_state`, deprecate `DmrDevice.state`
+- Ignore prefix/namespace in DLNA-Events for better compatibility
 
 
 0.15.0 (2021-03-13)

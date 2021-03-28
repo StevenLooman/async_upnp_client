@@ -102,18 +102,25 @@ class DlnaDmrEventContentHandler(ContentHandler):
             self._current_instance = attrs.get("val", "0")
         else:
             current_instance = self._current_instance or "0"  # safety
+
             if current_instance not in self.changes:
                 self.changes[current_instance] = {}
 
-            # if channel is given, we're only interested in the Master channel
+            # If channel is given, we're only interested in the Master channel.
             if attrs.get("channel") not in (None, "Master"):
                 return
+
+            # Strip namespace prefix.
+            if ":" in name:
+                index = name.find(":") + 1
+                name = name[index:]
 
             self.changes[current_instance][name] = attrs.get("val")
 
     def endElement(self, name: str) -> None:
         """Handle endElement."""
-        self._current_instance = None
+        if name == "InstanceID":
+            self._current_instance = None
 
 
 class DlnaDmrEventErrorHandler(ErrorHandler):
