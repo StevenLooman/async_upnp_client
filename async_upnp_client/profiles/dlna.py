@@ -21,9 +21,14 @@ from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
 _LOGGER = logging.getLogger(__name__)
 
 
-DeviceState = Enum(
-    "DeviceState", "ON PLAYING PAUSED IDLE"
-)  # pylint: disable=invalid-name
+DeviceState = Enum("DeviceState", "ON PLAYING PAUSED IDLE")
+
+
+TransportState = Enum(
+    "TransportState",
+    "STOPPED PLAYING TRANSITIONING PAUSED_PLAYBACK PAUSED_RECORDING RECORDING NO_MEDIA_PRESENT "
+    "VENDOR_DEFINED",
+)
 
 
 class DlnaOrgOp(Enum):
@@ -99,18 +104,25 @@ class DlnaDmrEventContentHandler(ContentHandler):
             self._current_instance = attrs.get("val", "0")
         else:
             current_instance = self._current_instance or "0"  # safety
+
             if current_instance not in self.changes:
                 self.changes[current_instance] = {}
 
-            # if channel is given, we're only interested in the Master channel
+            # If channel is given, we're only interested in the Master channel.
             if attrs.get("channel") not in (None, "Master"):
                 return
+
+            # Strip namespace prefix.
+            if ":" in name:
+                index = name.find(":") + 1
+                name = name[index:]
 
             self.changes[current_instance][name] = attrs.get("val")
 
     def endElement(self, name: str) -> None:
         """Handle endElement."""
-        self._current_instance = None
+        if name == "InstanceID":
+            self._current_instance = None
 
 
 class DlnaDmrEventErrorHandler(ErrorHandler):
@@ -258,7 +270,12 @@ class DmrDevice(UpnpProfileDevice):
 
     @property
     def state(self) -> DeviceState:
-        """Get current state."""
+        """
+        Get current state.
+
+        This property is deprecated and will be removed in a future version!
+        Please use `transport_state` instead.
+        """
         state_var = self._state_variable("AVT", "TransportState")
         if not state_var:
             return DeviceState.ON
@@ -266,10 +283,25 @@ class DmrDevice(UpnpProfileDevice):
         state_value = (state_var.value or "").strip().lower()
         if state_value == "playing":
             return DeviceState.PLAYING
-        if state_value == "paused":
+        if state_value in ("paused", "paused_playback"):
             return DeviceState.PAUSED
 
         return DeviceState.IDLE
+
+    @property
+    def transport_state(self) -> Optional[TransportState]:
+        """Get transport state."""
+        state_var = self._state_variable("AVT", "TransportState")
+        if not state_var:
+            return None
+
+        state_value = (state_var.value or "").strip().upper()
+        for member in TransportState:
+            if member.name == state_value:
+                return member
+
+        # Unknown state; return VENDOR_DEFINED.
+        return TransportState.VENDOR_DEFINED
 
     @property
     def _has_current_transport_actions(self) -> bool:
