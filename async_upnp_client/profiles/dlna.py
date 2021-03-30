@@ -3,9 +3,9 @@
 
 import asyncio
 import logging
-from mimetypes import guess_type
 from datetime import datetime, timedelta
 from enum import Enum
+from mimetypes import guess_type
 from typing import Any, List, Mapping, MutableMapping, Optional, Sequence
 from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
@@ -14,9 +14,9 @@ from defusedxml.sax import parseString
 from didl_lite import didl_lite
 
 from async_upnp_client import UpnpError, UpnpService, UpnpStateVariable
+from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
-from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -641,10 +641,7 @@ class DmrDevice(UpnpProfileDevice):
         return self._action("AVT", "SetAVTransportURI") is not None
 
     async def async_set_transport_uri(
-        self,
-        media_url: str,
-        media_title: str,
-        meta_data: Optional[str] = None
+        self, media_url: str, media_title: str, meta_data: Optional[str] = None
     ) -> None:
         """Play a piece of media."""
         # pylint: disable=too-many-arguments
@@ -664,10 +661,7 @@ class DmrDevice(UpnpProfileDevice):
 
         # queue media
         if not meta_data:
-            meta_data = await self.construct_play_media_metadata(
-                media_url,
-                media_title
-            )
+            meta_data = await self.construct_play_media_metadata(media_url, media_title)
         action = self._action("AVT", "SetAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetAVTransportURI")
@@ -729,7 +723,7 @@ class DmrDevice(UpnpProfileDevice):
         :arg default_mime_type Suggested mime type, will be overridden by source if possible
         :arg default_upnp_class Suggested UPnP class, will be used as fallback for autodetection
         :arg override_mime_type Enforce mime_type, even if source reports a different mime_type
-        :arg override_upnp_class Enforce upnp_class, even if autodetection finds something useable
+        :arg override_upnp_class Enforce upnp_class, even if autodetection finds something usable
         :arg override_dlna_features Enforce DLNA features, even if source reports different features
         :return String containing metadata
         """
@@ -747,19 +741,26 @@ class DmrDevice(UpnpProfileDevice):
                 if headers:
                     if not override_mime_type and "Content-Type" in headers:
                         mime_type = headers["Content-Type"]
-                    if not override_dlna_features and "ContentFeatures.dlna.org" in headers:
+                    if (
+                        not override_dlna_features
+                        and "ContentFeatures.dlna.org" in headers
+                    ):
                         dlna_features = headers["contentFeatures.dlna.org"]
             except Exception:  # pylint: disable=broad-except
                 pass
 
             if not mime_type:
-                _type = guess_type(media_url.split('?')[0])
+                _type = guess_type(media_url.split("?")[0])
                 mime_type = _type[0] or ""
                 if not mime_type:
-                    mime_type = default_mime_type or 'application/octet-stream'
+                    mime_type = default_mime_type or "application/octet-stream"
 
             # use CM/GetProtocolInfo to improve on dlna_features
-            if not override_dlna_features and dlna_features != "*" and self.has_get_protocol_info:
+            if (
+                not override_dlna_features
+                and dlna_features != "*"
+                and self.has_get_protocol_info
+            ):
                 protocol_info_entries = (
                     await self._async_get_sink_protocol_info_for_mime_type(mime_type)
                 )
@@ -776,7 +777,7 @@ class DmrDevice(UpnpProfileDevice):
                     upnp_class = _class
                     break
             else:
-                upnp_class = default_upnp_class or 'object.item'
+                upnp_class = default_upnp_class or "object.item"
 
         # build DIDL-Lite item + resource
         didl_item_type = didl_lite.type_by_upnp_class(upnp_class)

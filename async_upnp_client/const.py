@@ -22,7 +22,7 @@ MIME_TO_UPNP_CLASS_MAPPING: Mapping[str, str] = {
     "image": "object.item.imageItem",
     "application/dash+xml": "object.item.videoItem",
     "application/x-mpegurl": "object.item.videoItem",
-    "application/vnd.apple.mpegurl": "object.item.videoItem"
+    "application/vnd.apple.mpegurl": "object.item.videoItem",
 }
 
 
