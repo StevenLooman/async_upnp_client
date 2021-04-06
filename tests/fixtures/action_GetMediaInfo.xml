@@ -1,0 +1,16 @@
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+            xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetMediaInfoResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+            <NrTracks>1</NrTracks>
+            <MediaDuration>00:00:01</MediaDuration>
+            <CurrentURI>uri://1.mp3</CurrentURI>
+            <CurrentURIMetaData>&lt;DIDL-Lite xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot; xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot; xmlns:dlna=&quot;urn:schemas-dlna-org:metadata-1-0/&quot; xmlns:sec=&quot;http://www.sec.co.kr/&quot; xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; xmlns:xbmc=&quot;urn:schemas-xbmc-org:metadata-1-0/&quot;&gt;&lt;item id=&quot;&quot; parentID=&quot;&quot; refID=&quot;&quot; restricted=&quot;1&quot;&gt;&lt;upnp:artist&gt;A &amp;amp; B &amp;gt; C&lt;/upnp:artist&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;</CurrentURIMetaData>
+            <NextURI></NextURI>
+            <NextURIMetaData></NextURIMetaData>
+            <PlayMedium>NONE</PlayMedium>
+            <RecordMedium>NOT_IMPLEMENTED</RecordMedium>
+            <WriteStatus>NOT_IMPLEMENTED</WriteStatus>
+        </u:GetMediaInfoResponse>
+    </s:Body>
+</s:Envelope>

@@ -378,6 +378,40 @@ class TestUpnpAction:
             pass
 
     @pytest.mark.asyncio
+    async def test_parse_response_escape(self):
+        """Test calling an action and properly (not) escaping the response."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://localhost:1234/dmr")
+        service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+        action = service.action("GetMediaInfo")
+
+        service_type = "urn:schemas-upnp-org:service:AVTransport:1"
+        response = read_file("action_GetMediaInfo.xml")
+        result = action.parse_response(service_type, {}, response)
+        assert result == {
+            "CurrentURI": "uri://1.mp3",
+            "CurrentURIMetaData": "<DIDL-Lite "
+            'xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" '
+            'xmlns:dc="http://purl.org/dc/elements/1.1/" '
+            'xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/" '
+            'xmlns:sec="http://www.sec.co.kr/" '
+            'xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" '
+            'xmlns:xbmc="urn:schemas-xbmc-org:metadata-1-0/">'
+            '<item id="" parentID="" refID="" restricted="1">'
+            "<upnp:artist>A &amp; B &gt; C</upnp:artist>"
+            "</item>"
+            "</DIDL-Lite>",
+            "MediaDuration": "00:00:01",
+            "NextURI": "",
+            "NextURIMetaData": "",
+            "NrTracks": 1,
+            "PlayMedium": "NONE",
+            "RecordMedium": "NOT_IMPLEMENTED",
+            "WriteStatus": "NOT_IMPLEMENTED",
+        }
+
+    @pytest.mark.asyncio
     async def test_unknown_out_argument(self):
         """Test calling an actino and handling an unknown out-argument."""
         requester = UpnpTestRequester(RESPONSE_MAP)

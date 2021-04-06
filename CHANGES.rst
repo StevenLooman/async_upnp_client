@@ -3,6 +3,8 @@ Changes
 
 0.16.1 (unreleased)
 
+- Don't double-unescape action responses (#50)
+
 
 0.16.0 (2021-03-30)
 

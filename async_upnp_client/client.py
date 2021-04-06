@@ -17,7 +17,7 @@ from typing import (
     Union,
 )
 from xml.etree import ElementTree as ET
-from xml.sax.saxutils import escape, unescape
+from xml.sax.saxutils import escape
 
 import defusedxml.ElementTree as DET
 import voluptuous as vol
@@ -626,7 +626,7 @@ class UpnpAction:
         try:
             return self._parse_response_args(service_type, xml)
         except AttributeError:
-            _LOGGER.debug("Error during unescape of: %s", response_body)
+            _LOGGER.debug("Could not parse response: %s", response_body)
             raise
 
     def _parse_response_args(
@@ -654,11 +654,7 @@ class UpnpAction:
                 )
 
             arg.raw_upnp_value = arg_xml.text
-            try:
-                arg.upnp_value = unescape(arg_xml.text or "")
-            except AttributeError:
-                _LOGGER.debug("Error during unescape of: %s", arg_xml.text)
-                raise
+            arg.upnp_value = arg_xml.text or ""
             args[name] = arg.value
 
         return args

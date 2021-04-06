@@ -67,7 +67,7 @@ class TestUpnpEventHandler:
         """Test handling an event.."""
         changed_vars: List[UpnpStateVariable] = []
 
-        def on_event(self, changed_state_variables):
+        def on_event(_self, changed_state_variables):
             nonlocal changed_vars
             changed_vars += changed_state_variables
 
