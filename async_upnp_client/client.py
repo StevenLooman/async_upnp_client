@@ -217,6 +217,13 @@ class UpnpDevice:
         """Get service by service_type."""
         return self.services[service_type]
 
+    def service_id(self, service_id: str) -> Optional["UpnpService"]:
+        """Get service by service_id."""
+        for service in self.services.values():
+            if service.service_id == service_id:
+                return service
+        return None
+
     async def async_ping(self) -> None:
         """Ping the device."""
         await self.requester.async_http_request("GET", self.device_url)

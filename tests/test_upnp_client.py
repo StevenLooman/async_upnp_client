@@ -32,6 +32,9 @@ class TestUpnpStateVariable:
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         assert service
 
+        service_by_id = device.service_id("urn:upnp-org:serviceId:RenderingControl")
+        assert service_by_id == service
+
         state_var = service.state_variable("Volume")
         assert state_var
 
