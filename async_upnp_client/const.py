@@ -75,6 +75,17 @@ STATE_VARIABLE_TYPE_MAPPING: Mapping[str, Mapping[str, Callable]] = {
     },
 }
 
+DeviceIcon = NamedTuple(
+    "DeviceIcon",
+    [
+        ("mimetype", str),
+        ("width", int),
+        ("height", int),
+        ("depth", int),
+        ("url", str),
+    ],
+)
+
 DeviceInfo = NamedTuple(
     "DeviceInfo",
     [
@@ -87,6 +98,7 @@ DeviceInfo = NamedTuple(
         ("serial_number", Optional[str]),
         ("udn", str),
         ("url", str),
+        ("icons", Sequence[DeviceIcon]),
         ("xml", ET.Element),
     ],
 )

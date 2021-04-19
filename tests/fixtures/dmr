@@ -11,6 +11,36 @@
     <modelDescription>Dummy TV DMR</modelDescription>
     <modelName>DummyTV v1</modelName>
     <UDN>uuid:00000000-0000-0000-0000-000000000000</UDN>
+    <iconList>
+        <icon>
+            <mimetype>image/jpeg</mimetype>
+            <width>48</width>
+            <height>48</height>
+            <depth>24</depth>
+            <url>/device_icon_48.jpg</url>
+        </icon>
+        <icon>
+            <mimetype>image/jpeg</mimetype>
+            <width>120</width>
+            <height>120</height>
+            <depth>24</depth>
+            <url>/device_icon_120.jpg</url>
+        </icon>
+        <icon>
+            <mimetype>image/png</mimetype>
+            <width>48</width>
+            <height>48</height>
+            <depth>24</depth>
+            <url>/device_icon_48.png</url>
+        </icon>
+        <icon>
+            <mimetype>image/png</mimetype>
+            <width>120</width>
+            <height>120</height>
+            <depth>24</depth>
+            <url>/device_icon_120.png</url>
+        </icon>
+    </iconList>
     <serviceList>
       <service>
         <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>

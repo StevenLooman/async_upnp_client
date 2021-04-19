@@ -3,6 +3,7 @@ Changes
 
 0.18.1 (unreleased)
 
+- Add `UpnpDevice.icons` and `UpnpProfileDevice.icon` to get URLs to device icons (@chishm)
 
 0.18.0 (2021-05-23)
 
