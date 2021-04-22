@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.16.1 (unreleased)
+0.16.1 (2021-04-22)
 
 - Don't double-unescape action responses (#50)
 - Add `UpnpDevice.service_id()` to get service by service_id. (@bazwilliams)
