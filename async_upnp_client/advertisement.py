@@ -39,30 +39,11 @@ class UpnpAdvertisementListener:
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
+        self.target_ip = target_ip or IPv4Address(SSDP_IP_V4)
+        self.source_ip = source_ip or get_source_ip_from_target_ip(self.target_ip)
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
-        self._transport: Optional[asyncio.DatagramTransport] = None
 
-        self._connect = self._create_protocol(source_ip, target_ip)
-
-    def _create_protocol(
-        self, source_ip: Optional[IPvXAddress], target_ip: Optional[IPvXAddress]
-    ) -> Awaitable:
-        """Create a socket to listen on."""
-        if target_ip is None:
-            target_ip = IPv4Address(SSDP_IP_V4)
-        if source_ip is None:
-            source_ip = get_source_ip_from_target_ip(target_ip)
-
-        # construct a socket for use with this pairs of endpoints
-        sock, _, target = get_ssdp_socket(source_ip, target_ip)
-        sock.bind(target)
-
-        # create protocol and send discovery packet
-        connect = self._loop.create_datagram_endpoint(
-            lambda: SsdpProtocol(self._loop, on_data=self._on_data),
-            sock=sock,
-        )
-        return connect
+        self._transport: Optional[asyncio.BaseTransport] = None
 
     async def _on_data(
         self, request_line: str, headers: MutableMapping[str, str]
@@ -90,7 +71,16 @@ class UpnpAdvertisementListener:
     async def async_start(self) -> None:
         """Start listening for notifications."""
         _LOGGER.debug("Start listening for notifications")
-        self._transport, _ = await self._connect
+
+        # Construct a socket for use with this pairs of endpoints.
+        sock, _, target = get_ssdp_socket(self.source_ip, self.target_ip)
+        sock.bind(target)
+
+        # Create protocol and send discovery packet.
+        self._transport, _ = await self._loop.create_datagram_endpoint(
+            lambda: SsdpProtocol(self._loop, on_data=self._on_data),
+            sock=sock,
+        )
 
     async def async_stop(self) -> None:
         """Stop listening for notifications."""
