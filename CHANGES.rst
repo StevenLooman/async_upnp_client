@@ -5,6 +5,7 @@ Changes
 
 - Don't double-unescape action responses (#50)
 - Add `UpnpDevice.service_id()` to get service by service_id. (@bazwilliams)
+- Fix 'was never awaited'-warning
 
 
 0.16.0 (2021-03-30)
