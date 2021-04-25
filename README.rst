@@ -54,14 +54,14 @@ Steps for releasing:
 
 - Switch to master: `git checkout master`
 - Merge development to master: `git merge development`
-- Update `setup.py` to set version and commit: `git add setup.py && git commit -m "Releasing <version>"`
+- Update `setup.py` and `CHANGES.rst` to set version and commit: `git add setup.py CHANGES.rst && git commit -m "Releasing <version>"`
 - Tag release: `git tag <version>`
 - Checkout tag: `git checkout <version>`
 - Build: `rm -rf build dist && python setup.py build sdist`
 - Upload using twine: `twine upload dist/*`
 - Switch to development: `git checkout development`
 - Merge master to development: `git merge master`
-- Update `setup.py` to set version and commit `git add setup.py && git commit -m "Continuing development"`
+- Update `setup.py` and `CHANGES.rst` to set version and commit `git add setup.py CHANGES.rst && git commit -m "Continuing development"`
 - Push to github: `git push --all && git push --tags`
 
 
