@@ -80,6 +80,40 @@ def test_decode_ssdp_packet():
     }
 
 
+def test_decode_ssdp_packet_missing_ending():
+    """Test SSDP response decoding with a missing end line."""
+    msg = (
+        b"HTTP/1.1 200 OK\r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n"
+        b"DATE:Sun, 25 Apr 2021 16:08:06 GMT\r\n"
+        b"EXT:\r\n"
+        b"LOCATION: http://192.168.107.148:8088/description\r\n"
+        b"SERVER: Ubuntu/10.04 UPnP/1.1 Harmony/16.3\r\n"
+        b"ST: urn:myharmony-com:device:harmony:1\r\n"
+        b"USN: uuid:dc6a8cf155c97e5200c6a1a1997591756f2e2a3c::urn:myharmony-com:device:harmony:1\r\n"
+        b"BOOTID.UPNP.ORG:1619366886\r\n"
+    )
+    request_line, headers = decode_ssdp_packet(msg, ("addr", 123))
+
+    assert request_line == "HTTP/1.1 200 OK"
+
+    assert headers == {
+        "cache-control": "max-age = 1800",
+        "date": "Sun, 25 Apr 2021 16:08:06 GMT",
+        "location": "http://192.168.107.148:8088/description",
+        "server": "Ubuntu/10.04 UPnP/1.1 Harmony/16.3",
+        "st": "urn:myharmony-com:device:harmony:1",
+        "usn": "uuid:dc6a8cf155c97e5200c6a1a1997591756f2e2a3c::urn:myharmony-com:device:harmony:1",
+        "bootid.upnp.org": "1619366886",
+        "ext": "",
+        "_location_original": "http://192.168.107.148:8088/description",
+        "_host": "addr",
+        "_port": 123,
+        "_udn": "uuid:dc6a8cf155c97e5200c6a1a1997591756f2e2a3c",
+        "_timestamp": ANY,
+    }
+
+
 def test_decode_ssdp_packet_v6():
     """Test SSDP response decoding."""
     msg = (

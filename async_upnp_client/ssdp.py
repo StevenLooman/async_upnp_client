@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """SSPD protocol handler."""
 
-import email
 import logging
 import socket
 import sys
@@ -11,6 +10,8 @@ from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, Union, cast
 from urllib.parse import urlsplit, urlunsplit
+
+from aiohttp.http_parser import HeadersParser
 
 from async_upnp_client.utils import CaseInsensitiveDict
 
@@ -113,15 +114,16 @@ def decode_ssdp_packet(
     data: bytes, addr: AddressTupleVXType
 ) -> Tuple[str, CaseInsensitiveDict]:
     """Decode a message."""
-    lines = data.split(b"\n")
+    lines = data.replace(b"\r\n", b"\n").split(b"\n")
 
     # request_line
     request_line = lines[0].strip().decode()
 
-    # parse headers
-    header_lines = b"\n".join(lines[1:])
-    email_headers = email.message_from_bytes(header_lines)
-    headers = CaseInsensitiveDict(**dict(email_headers.items()))
+    if lines and lines[-1] != b"":
+        lines.append(b"")
+
+    parsed_headers, _ = HeadersParser().parse_headers(lines)
+    headers = CaseInsensitiveDict(**parsed_headers)
 
     # adjust some headers
     if "location" in headers:
