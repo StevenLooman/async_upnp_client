@@ -619,7 +619,7 @@ class UpnpAction:
     ) -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
-        xml = DET.fromstring(response_body)
+        xml = DET.fromstring(response_body.rstrip(" \t\r\n\0"))
 
         query = ".//soap_envelope:Body/soap_envelope:Fault"
         if xml.find(query, NS):
