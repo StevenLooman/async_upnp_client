@@ -3,7 +3,6 @@
 
 import asyncio
 import logging
-import socket
 from asyncio.events import AbstractEventLoop, AbstractServer
 from typing import Any, Mapping, Optional, Tuple, Union
 
@@ -14,23 +13,6 @@ import async_timeout
 from async_upnp_client import UpnpEventHandler, UpnpRequester
 
 _LOGGER = logging.getLogger(__name__)
-
-
-EXTERNAL_IP = "1.1.1.1"
-
-
-def get_local_ip(target_host: Optional[str] = None) -> str:
-    """Try to get the local IP of this machine, used to talk to target_url."""
-    target_host = target_host or EXTERNAL_IP
-    target_port = 80
-
-    try:
-        temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        temp_sock.connect((target_host, target_port))
-        local_ip: str = temp_sock.getsockname()[0]
-        return local_ip
-    finally:
-        temp_sock.close()
 
 
 class AiohttpRequester(UpnpRequester):

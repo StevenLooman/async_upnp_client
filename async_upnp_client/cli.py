@@ -16,14 +16,11 @@ from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
 from async_upnp_client.advertisement import UpnpAdvertisementListener
-from async_upnp_client.aiohttp import (
-    AiohttpNotifyServer,
-    AiohttpRequester,
-    get_local_ip,
-)
+from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_ST_ALL
+from async_upnp_client.utils import get_local_ip
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
