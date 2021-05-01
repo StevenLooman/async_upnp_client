@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """UPnP base-profile module."""
 
+import asyncio
 import logging
 from datetime import timedelta
 from ipaddress import IPv4Address
@@ -224,8 +225,18 @@ class UpnpProfileDevice:
         return min(timeouts)
 
     async def async_unsubscribe_services(self) -> None:
-        """Unsubscribe from all subscribed services."""
-        await self._event_handler.async_unsubscribe_all()
+        """Unsubscribe from all of our subscribed services."""
+        for service in self.device.services.values():
+            try:
+                await self._event_handler.async_unsubscribe(service)
+            except UpnpError as err:
+                _LOGGER.debug("Failed unsubscribing from: %s, reason: %s", service, err)
+            except KeyError:
+                _LOGGER.warning(
+                    "%s was already unsubscribed. AiohttpNotifyServer was "
+                    "probably stopped before we could unsubscribe.",
+                    service,
+                )
 
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
