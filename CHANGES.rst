@@ -3,6 +3,7 @@ Changes
 
 0.18.1 (unreleased)
 
+- Defer event callback URL determination until event subscriptions are created (@chishm)
 
 0.18.0 (2021-05-23)
 

@@ -5,12 +5,15 @@ import logging
 import urllib.parse
 from datetime import datetime, timedelta
 from http import HTTPStatus
+import socket
+from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Dict, Mapping, NamedTuple, Optional, Tuple
 
 import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpError, UpnpRequester, UpnpService
 from async_upnp_client.const import NS
+from async_upnp_client.utils import async_get_local_ip, get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
@@ -30,18 +33,65 @@ class UpnpEventHandler:
     subscribe/resubscribe/unsubscribe handle subscriptions.
     """
 
-    def __init__(self, callback_url: str, requester: UpnpRequester) -> None:
-        """Initialize."""
+    def __init__(
+        self,
+        callback_url: str,
+        requester: UpnpRequester,
+        listen_ports: Optional[Mapping[AddressFamily, int]] = None,
+    ) -> None:
+        """Initialize.
+
+        callback_url can be a normal URL or a format string with {host} and
+            {port} placeholders that will be filled based on how the device is
+            connected.
+        listen_ports is a mapping of IP version to the local listening port,
+            used to determine callback_url for devices.
+        """
         self._callback_url = callback_url
         self._requester = requester
 
+        self.listen_ports = listen_ports or {}
+
+        self._listen_ip: Optional[str] = None
         self._subscriptions: Dict[str, SubscriptionInfo] = {}
         self._backlog: Dict[str, Tuple[Mapping, str]] = {}
 
     @property
     def callback_url(self) -> str:
-        """Return callback URL on which we are callable."""
-        return self._callback_url
+        """Return callback URL on which we are callable.
+
+        This URL should work for most cases, but makes assumptions about how
+        a device will connect. Use callback_url_for_service to get a more
+        specific URL.
+        """
+        if not self._listen_ip:
+            self._listen_ip = get_local_ip()
+        port = self.listen_ports.get(socket.AF_INET)
+        if not port and "{port}" in self._callback_url:
+            raise ValueError("callback_url format requires a listening port")
+        return self._callback_url.format(host=self._listen_ip, port=port)
+
+    async def async_callback_url_for_service(self, service: UpnpService) -> str:
+        """Determine a URL for the service to call back on.
+
+        This can vary based on the service device's IP address.
+        """
+        _LOGGER.debug("Determine callback URL for: %s", service)
+
+        # Shortcut when callback_url can be determined without connecting to the
+        # service device
+        if "{host}" not in self._callback_url and (
+            len(self.listen_ports) == 1 or "{port}" not in self._callback_url
+        ):
+            return self.callback_url
+
+        # Figure out how this host connects to the device, then infer how the
+        # device can connect back
+        device_host = urllib.parse.urlparse(service.device.device_url).netloc
+        addr_family, local_host = await async_get_local_ip(device_host)
+        port = self.listen_ports[addr_family]
+
+        return self._callback_url.format(host=local_host, port=port)
 
     def sid_for_service(self, service: UpnpService) -> Optional[str]:
         """Get the service connected to SID."""
@@ -112,7 +162,7 @@ class UpnpEventHandler:
 
     async def async_subscribe(
         self,
-        service: "UpnpService",
+        service: UpnpService,
         timeout: timedelta = timedelta(seconds=1800),
     ) -> Tuple[bool, Optional[str], Optional[timedelta]]:
         """
@@ -123,16 +173,16 @@ class UpnpEventHandler:
         :param service UpnpService to subscribe to self
         :param timeout Timeout of subscription
         """
-        _LOGGER.debug(
-            "Subscribing to: %s, callback URL: %s", service, self.callback_url
-        )
+        callback_url = await self.async_callback_url_for_service(service)
+
+        _LOGGER.debug("Subscribing to: %s, callback URL: %s", service, callback_url)
 
         # do SUBSCRIBE request
         headers = {
             "NT": "upnp:event",
             "TIMEOUT": "Second-" + str(timeout.seconds),
             "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
-            "CALLBACK": "<{}>".format(self.callback_url),
+            "CALLBACK": "<{}>".format(callback_url),
         }
         response_status, response_headers, _ = await self._requester.async_http_request(
             "SUBSCRIBE", service.event_sub_url, headers
