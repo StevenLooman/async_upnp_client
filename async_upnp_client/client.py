@@ -641,6 +641,13 @@ class UpnpAction:
         args = {}
         query = ".//{{{0}}}{1}Response".format(service_type, self.name)
         response = xml.find(query, NS)
+
+        # Strip version number from service type to be more tolerant to incomplete namespace.
+        if response is None and ":" in service_type and self._non_strict:
+            service_type_funny = ":".join(service_type.split(":")[:-1])
+            query = ".//{{{0}}}{1}Response".format(service_type_funny, self.name)
+            response = xml.find(query, NS)
+
         if response is None:
             raise UpnpError(
                 "Invalid response: %s" % (ET.tostring(xml, encoding="unicode"),)

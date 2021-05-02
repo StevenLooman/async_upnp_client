@@ -415,6 +415,23 @@ class TestUpnpAction:
         }
 
     @pytest.mark.asyncio
+    async def test_parse_response_no_service_type_version(self):
+        """Test calling and action and handling a response without service type number."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://localhost:1234/dmr")
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        action = service.action("GetVolume")
+
+        service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
+        response = read_file("action_GetVolumeNoServiceTypeNumber.xml")
+        try:
+            action.parse_response(service_type, {}, response)
+            assert False
+        except UpnpError:
+            pass
+
+    @pytest.mark.asyncio
     async def test_unknown_out_argument(self):
         """Test calling an actino and handling an unknown out-argument."""
         requester = UpnpTestRequester(RESPONSE_MAP)
