@@ -469,15 +469,13 @@ class UpnpAction:
         self,
         action_info: ActionInfo,
         arguments: List["UpnpAction.Argument"],
-        disable_unknown_out_argument_error: bool = False,
+        non_strict: bool = False,
     ) -> None:
         """Initialize."""
         self._action_info = action_info
         self._arguments = arguments
         self._service: Optional[UpnpService] = None
-        self._properties = {
-            "disable_unknown_out_argument_error": disable_unknown_out_argument_error,
-        }
+        self._non_strict = non_strict
 
     @property
     def name(self) -> str:
@@ -652,7 +650,7 @@ class UpnpAction:
             name = arg_xml.tag
             arg = self.argument(name, "out")
             if not arg:
-                if self._properties["disable_unknown_out_argument_error"]:
+                if self._non_strict:
                     continue
 
                 raise UpnpError(

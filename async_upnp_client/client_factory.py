@@ -44,13 +44,15 @@ class UpnpFactory:
         requester: UpnpRequester,
         disable_state_variable_validation: bool = False,
         disable_unknown_out_argument_error: bool = False,
+        non_strict: bool = False,
     ) -> None:
         """Initialize."""
         self.requester = requester
-        self._properties = {
-            "disable_state_variable_validation": disable_state_variable_validation,
-            "disable_unknown_out_argument_error": disable_unknown_out_argument_error,
-        }
+        self._non_strict = (
+            non_strict
+            or disable_unknown_out_argument_error
+            or disable_state_variable_validation
+        )
 
     async def async_create_device(
         self,
@@ -225,7 +227,7 @@ class UpnpFactory:
         if data_type_validator:
             validators.append(data_type_validator)
 
-        if not self._properties["disable_state_variable_validation"]:
+        if not self._non_strict:
             if type_info.allowed_values:
                 allowed_values = [
                     data_type(allowed_value)
@@ -276,14 +278,7 @@ class UpnpFactory:
             UpnpAction.Argument(arg_info, svs[arg_info.state_variable_name])
             for arg_info in action_info.arguments
         ]
-        disable_unknown_out_argument_error = self._properties[
-            "disable_unknown_out_argument_error"
-        ]
-        return UpnpAction(
-            action_info,
-            arguments,
-            disable_unknown_out_argument_error=disable_unknown_out_argument_error,
-        )
+        return UpnpAction(action_info, arguments, non_strict=self._non_strict)
 
     def _action_parse_xml(self, action_xml: ET.Element) -> ActionInfo:
         """Parse XML for action."""

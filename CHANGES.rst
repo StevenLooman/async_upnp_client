@@ -1,7 +1,9 @@
 Changes
 =======
 
-0.16.3 (unreleased)
+0.17.0 (unreleased)
+
+- Add UpnpFactory non_strict option, replacing disable_state_variable_validation and disable_unknown_out_argument_error
 
 - Strip spaces, line endings and null characters before parsing XML (@apal0934)
 

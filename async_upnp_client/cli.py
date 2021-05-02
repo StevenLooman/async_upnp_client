@@ -90,10 +90,8 @@ async def create_device(description_url: str) -> UpnpDevice:
     """Create UpnpDevice."""
     timeout = args.timeout
     requester = AiohttpRequester(timeout)
-    disable_validation = not args.strict
-    factory = UpnpFactory(
-        requester, disable_state_variable_validation=disable_validation
-    )
+    non_strict = not args.strict
+    factory = UpnpFactory(requester, non_strict=non_strict)
     return await factory.async_create_device(description_url)
 
 

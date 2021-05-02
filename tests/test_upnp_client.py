@@ -137,7 +137,7 @@ class TestUpnpStateVariable:
     async def test_value_min_max_validation_disable(self):
         """Test if min/max validations can be disabled."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester, disable_state_variable_validation=True)
+        factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Volume")
@@ -178,7 +178,7 @@ class TestUpnpStateVariable:
     async def test_value_upnp_value_error(self):
         """Test handling invalid values in response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester, disable_state_variable_validation=True)
+        factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Volume")
@@ -196,7 +196,7 @@ class TestUpnpStateVariable:
     async def test_value_date_time(self):
         """Test parsing of datetime."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester, disable_state_variable_validation=True)
+        factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("SV1")
@@ -209,7 +209,7 @@ class TestUpnpStateVariable:
     async def test_value_date_time_tz(self):
         """Test parsing of date_time with a timezone."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester, disable_state_variable_validation=True)
+        factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("SV2")
@@ -434,7 +434,7 @@ class TestUpnpAction:
         except UpnpError:
             pass
 
-        factory = UpnpFactory(requester, disable_unknown_out_argument_error=True)
+        factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device(link_service)
         service = device.service(service_type)
         action = service.action(test_action)
