@@ -3,6 +3,7 @@ Changes
 
 0.16.3 (unreleased)
 
+- Strip spaces, line endings and null characters before parsing XML (@apal0934)
 
 0.16.2 (2021-04-25)
 
