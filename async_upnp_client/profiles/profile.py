@@ -159,6 +159,7 @@ class UpnpProfileDevice:
 
     async def async_subscribe_services(self) -> timedelta:
         """(Re-)Subscribe to services."""
+        timeouts: List[timedelta] = []
         for service in self.device.services.values():
             # ensure we are interested in this service_type
             if not self._interesting_service(service):
@@ -168,14 +169,16 @@ class UpnpProfileDevice:
             service.on_event = on_event
             if self._event_handler.sid_for_service(service) is None:
                 _LOGGER.debug("Subscribing to service: %s", service)
-                success, _ = await self._event_handler.async_subscribe(
+                success, _, timeout = await self._event_handler.async_subscribe(
                     service, timeout=SUBSCRIBE_TIMEOUT
                 )
                 if not success:
                     _LOGGER.debug("Failed subscribing to: %s", service)
+                elif timeout:
+                    timeouts.append(timeout)
             else:
                 _LOGGER.debug("Resubscribing to service: %s", service)
-                success, _ = await self._event_handler.async_resubscribe(
+                success, _, timeout = await self._event_handler.async_resubscribe(
                     service, timeout=SUBSCRIBE_TIMEOUT
                 )
 
@@ -183,13 +186,20 @@ class UpnpProfileDevice:
                 if not success:
                     _LOGGER.debug("Failed resubscribing to: %s", service)
 
-                    success, _ = await self._event_handler.async_subscribe(
+                    success, _, timeout = await self._event_handler.async_subscribe(
                         service, timeout=SUBSCRIBE_TIMEOUT
                     )
                     if not success:
                         _LOGGER.debug("Failed subscribing to: %s", service)
+                    elif timeout:
+                        timeouts.append(timeout)
+                elif timeout:
+                    timeouts.append(timeout)
 
-        return SUBSCRIBE_TIMEOUT
+        # To have something...
+        timeouts.append(SUBSCRIBE_TIMEOUT)
+
+        return min(timeouts)
 
     async def async_unsubscribe_services(self) -> None:
         """Unsubscribe from all subscribed services."""

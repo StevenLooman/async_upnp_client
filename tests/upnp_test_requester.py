@@ -32,7 +32,7 @@ class UpnpTestRequester(UpnpRequester):
 
         key = (method, url)
         if key not in self._response_map:
-            raise Exception("Request not in response map")
+            raise KeyError("Request not in response map")
 
         return self._response_map[key]
 
@@ -51,7 +51,7 @@ RESPONSE_MAP = {
     ),
     ("SUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1"): (
         200,
-        {"sid": "uuid:dummy"},
+        {"sid": "uuid:dummy", "timeout": "Second-300"},
         "",
     ),
     ("UNSUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1"): (

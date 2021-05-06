@@ -114,7 +114,7 @@ class UpnpEventHandler:
         self,
         service: "UpnpService",
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> Tuple[bool, Optional[str], Optional[timedelta]]:
         """
         Subscription to a UpnpService.
 
@@ -141,14 +141,25 @@ class UpnpEventHandler:
         # check results
         if response_status != 200:
             _LOGGER.debug("Did not receive 200, but %s", response_status)
-            return False, None
+            return False, None, None
 
         if "sid" not in response_headers:
             _LOGGER.debug("No SID received, aborting subscribe")
-            return False, None
+            return False, None, None
+
+        # Device can give a different TIMEOUT header than what we have provided.
+        new_timeout = timeout
+        if (
+            "timeout" in response_headers
+            and response_headers["timeout"] != "Second-infinite"
+            and "Second-" in response_headers["timeout"]
+        ):
+            response_timeout = response_headers["timeout"]
+            timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
+            new_timeout = timedelta(seconds=timeout_seconds)
 
         sid = response_headers["sid"]
-        renewal_time = datetime.now() + timeout
+        renewal_time = datetime.now() + new_timeout
         self._subscriptions[sid] = SubscriptionInfo(
             service=service,
             timeout=timeout,
@@ -163,13 +174,13 @@ class UpnpEventHandler:
             await self.handle_notify(item[0], item[1])
             del self._backlog[sid]
 
-        return True, sid
+        return True, sid, new_timeout
 
     async def async_resubscribe(
         self,
         service: "UpnpService",
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> Tuple[bool, Optional[str], Optional[timedelta]]:
         """Renew subscription to a UpnpService."""
         _LOGGER.debug("Resubscribing to: %s", service)
 
@@ -190,7 +201,7 @@ class UpnpEventHandler:
         # check results
         if response_status != 200:
             _LOGGER.debug("Did not receive 200, but %s", response_status)
-            return False, None
+            return False, None, None
 
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
@@ -200,7 +211,18 @@ class UpnpEventHandler:
                 del self._subscriptions[sid]
                 sid = new_sid
 
-        renewal_time = datetime.now() + timeout
+        # Device can give a different TIMEOUT header than what we have provided.
+        new_timeout = timeout
+        if (
+            "timeout" in response_headers
+            and response_headers["timeout"] != "Second-infinite"
+            and "Second-" in response_headers["timeout"]
+        ):
+            response_timeout = response_headers["timeout"]
+            timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
+            new_timeout = timedelta(seconds=timeout_seconds)
+
+        renewal_time = datetime.now() + new_timeout
         self._subscriptions[sid] = SubscriptionInfo(
             service=service,
             timeout=timeout,
@@ -208,7 +230,7 @@ class UpnpEventHandler:
         )
         _LOGGER.debug("Got SID: %s, renewal_time: %s", sid, renewal_time)
 
-        return True, sid
+        return True, sid, new_timeout
 
     async def async_resubscribe_all(self) -> None:
         """Renew all current subscription."""

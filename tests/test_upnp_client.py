@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Unit tests for upnp_client."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Mapping
 
 import defusedxml.ElementTree as ET
@@ -527,10 +527,11 @@ class TestUpnpEventHandler:
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        success, sid = await event_handler.async_subscribe(service)
+        success, sid, timeout = await event_handler.async_subscribe(service)
         assert event_handler.service_for_sid("uuid:dummy") == service
         assert success is True
         assert sid == "uuid:dummy"
+        assert timeout == timedelta(seconds=300)
 
     @pytest.mark.asyncio
     async def test_subscribe_renew(self):
@@ -541,15 +542,17 @@ class TestUpnpEventHandler:
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        success, sid = await event_handler.async_subscribe(service)
+        success, sid, timeout = await event_handler.async_subscribe(service)
         assert success is True
         assert sid == "uuid:dummy"
         assert event_handler.service_for_sid("uuid:dummy") == service
+        assert timeout == timedelta(seconds=300)
 
-        success, sid = await event_handler.async_resubscribe(service)
+        success, sid, timeout = await event_handler.async_resubscribe(service)
         assert event_handler.service_for_sid("uuid:dummy") == service
         assert success is True
         assert sid == "uuid:dummy"
+        assert timeout == timedelta(seconds=300)
 
     @pytest.mark.asyncio
     async def test_unsubscribe(self):
@@ -560,10 +563,11 @@ class TestUpnpEventHandler:
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        success, sid = await event_handler.async_subscribe(service)
+        success, sid, timeout = await event_handler.async_subscribe(service)
         assert event_handler.service_for_sid("uuid:dummy") == service
         assert success is True
         assert sid == "uuid:dummy"
+        assert timeout == timedelta(seconds=300)
 
         success, old_sid = await event_handler.async_unsubscribe(service)
         assert event_handler.service_for_sid("uuid:dummy") is None

@@ -5,8 +5,9 @@ Changes
 
 - Add UpnpFactory non_strict option, replacing disable_state_variable_validation and disable_unknown_out_argument_error
 - UpnpAction tries non-versioned service type (#68) in non-strict mode
-
 - Strip spaces, line endings and null characters before parsing XML (@apal0934)
+- Properly parse and return subscription timeout
+
 
 0.16.2 (2021-04-25)
 
