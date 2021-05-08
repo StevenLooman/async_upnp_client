@@ -644,7 +644,6 @@ class DmrDevice(UpnpProfileDevice):
         self, media_url: str, media_title: str, meta_data: Optional[str] = None
     ) -> None:
         """Play a piece of media."""
-        # pylint: disable=too-many-arguments
         # escape media_url
         _LOGGER.debug("Set transport uri: %s", media_url)
         media_url_parts = urlparse(media_url)
@@ -717,15 +716,6 @@ class DmrDevice(UpnpProfileDevice):
         Construct the metadata for play_media command.
 
         This queries the source and takes mime_type/dlna_features from it.
-
-        :arg media_url URL to media
-        :arg media_title
-        :arg default_mime_type Suggested mime type, will be overridden by source if possible
-        :arg default_upnp_class Suggested UPnP class, will be used as fallback for autodetection
-        :arg override_mime_type Enforce mime_type, even if source reports a different mime_type
-        :arg override_upnp_class Enforce upnp_class, even if autodetection finds something usable
-        :arg override_dlna_features Enforce DLNA features, even if source reports different features
-        :return String containing metadata
         """
         # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
         mime_type = override_mime_type or ""

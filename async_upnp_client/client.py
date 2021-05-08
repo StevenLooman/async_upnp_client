@@ -100,17 +100,7 @@ class UpnpRequester:
         body: Optional[str] = None,
         body_type: str = "text",
     ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
-        """
-        Actually do a HTTP request.
-
-        :param method HTTP Method
-        :param url URL to call
-        :param headers Headers to send
-        :param body Body to send
-        :param body_type How to interpret body: 'text', 'raw', 'ignore'
-
-        :return status code, headers, body
-        """
+        """Actually do a HTTP request."""
         # pylint: disable=too-many-arguments
         raise NotImplementedError()
 

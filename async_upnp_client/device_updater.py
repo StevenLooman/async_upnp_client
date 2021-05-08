@@ -5,7 +5,6 @@ from ipaddress import IPv4Address
 from typing import Any, Mapping, Optional
 
 from async_upnp_client import UpnpAdvertisementListener, UpnpDevice, UpnpFactory
-from async_upnp_client.client import UpnpError
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -89,6 +88,7 @@ class DeviceUpdater:
             )
             do_reinit = True
 
+        # Handle CONFIGID.UPNP.ORG.
         config_id = data.get("CONFIGID.UPNP.ORG")
         if config_id and config_id != self._device.config_id:
             _LOGGER.debug(
@@ -106,21 +106,18 @@ class DeviceUpdater:
             )
             do_reinit = True
 
-        if do_reinit:
+        if location and do_reinit:
             await self._reinit_device(location, boot_id, config_id)
 
         # We heard from it, so mark it available.
         self._device.available = True
 
     async def _reinit_device(
-        self, location: Optional[str], boot_id: Optional[str], config_id: Optional[str]
+        self, location: str, boot_id: Optional[str], config_id: Optional[str]
     ) -> None:
         """Reinitialize device."""
         # pylint: disable=protected-access
         _LOGGER.debug("Reinitializing device")
-
-        if location is None:
-            raise UpnpError("Should never happen")
 
         new_device = await self._factory.async_create_device(location)
 

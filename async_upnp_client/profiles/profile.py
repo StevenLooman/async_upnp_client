@@ -6,8 +6,8 @@ from datetime import timedelta
 from ipaddress import IPv4Address
 from typing import Dict, List, Mapping, Optional, Sequence, Set
 
-from async_upnp_client.client import EventCallbackType  # pylint: disable=unused-import
 from async_upnp_client.client import (
+    EventCallbackType,
     UpnpAction,
     UpnpDevice,
     UpnpService,
@@ -68,7 +68,7 @@ class UpnpProfileDevice:
         """Initialize."""
         self.device = device
         self._event_handler = event_handler
-        self.on_event = None
+        self.on_event: Optional[EventCallbackType] = None
 
     @property
     def name(self) -> str:
@@ -215,5 +215,4 @@ class UpnpProfileDevice:
         :param state_variables State variables which have been changed.
         """
         if self.on_event:
-            # pylint: disable=not-callable
-            self.on_event(service, state_variables)
+            self.on_event(service, state_variables)  # pylint: disable=not-callable

@@ -4,7 +4,7 @@
 import asyncio
 import os.path
 from copy import copy
-from typing import Mapping, Tuple, Union
+from typing import Mapping, Optional, Tuple, Union
 
 from async_upnp_client import UpnpRequester
 
@@ -24,7 +24,12 @@ class UpnpTestRequester(UpnpRequester):
         self._response_map = copy(response_map)
 
     async def async_do_http_request(
-        self, method, url, headers=None, body=None, body_type="text"
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Mapping[str, str]] = None,
+        body: Optional[str] = None,
+        body_type: str = "text",
     ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
