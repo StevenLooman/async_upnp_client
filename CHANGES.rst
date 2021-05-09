@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.17.0 (unreleased)
+0.17.0 (2021-05-09)
 
 - Add UpnpFactory non_strict option, replacing disable_state_variable_validation and disable_unknown_out_argument_error
 - UpnpAction tries non-versioned service type (#68) in non-strict mode
