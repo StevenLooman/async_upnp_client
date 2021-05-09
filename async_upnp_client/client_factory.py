@@ -330,8 +330,10 @@ class UpnpFactory:
         if status_code != 200:
             raise UpnpError("Received status code: {}".format(status_code))
 
-        if not response_body:
-            return ET.Element("root")
-
-        root: ET.Element = DET.fromstring(response_body)
-        return root
+        description: str = (response_body or "").rstrip(" \t\r\n\0")  # type: ignore
+        try:
+            element: ET.Element = DET.fromstring(description)
+            return element
+        except ET.ParseError as err:
+            _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, description)
+            raise

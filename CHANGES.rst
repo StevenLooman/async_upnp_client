@@ -7,6 +7,7 @@ Changes
 - UpnpAction tries non-versioned service type (#68) in non-strict mode
 - Strip spaces, line endings and null characters before parsing XML (@apal0934)
 - Properly parse and return subscription timeout
+- More strip spaces, line engines and null characters before parsing XML
 
 
 0.16.2 (2021-04-25)
