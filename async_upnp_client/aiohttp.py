@@ -90,7 +90,7 @@ class AiohttpSessionRequester(UpnpRequester):
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
         body_type: str = "text",
-    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping[str, str], Union[str, bytes, None]]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
