@@ -78,13 +78,13 @@ class SSDPListener:
         """Start the listener."""
         if self.target_ip is None:
             if self.source_ip and self.source_ip.version == 6:
-                target_ip: IPvXAddress = IPv6Address(SSDP_IP_V6)
+                self.target_ip = IPv6Address(SSDP_IP_V6)
             else:
-                target_ip = IPv4Address(SSDP_IP_V4)
+                self.target_ip = IPv4Address(SSDP_IP_V4)
         if self.source_ip is None:
-            source_ip = get_source_ip_from_target_ip(target_ip)
+            self.source_ip = get_source_ip_from_target_ip(target_ip)
 
-        sock, source, self._target = get_ssdp_socket(source_ip, target_ip)
+        sock, source, self._target = get_ssdp_socket(self.source_ip, self.target_ip)
 
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
