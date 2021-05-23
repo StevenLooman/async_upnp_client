@@ -1,6 +1,11 @@
 Changes
 =======
 
+0.18.0 (2021-05-23)
+
+- Add SSDPListener which is now the underlying code path for async_search and can be used as a long running listener (@bdraco)
+
+
 0.17.0 (2021-05-09)
 
 - Add UpnpFactory non_strict option, replacing disable_state_variable_validation and disable_unknown_out_argument_error
