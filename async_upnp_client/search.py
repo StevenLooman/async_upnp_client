@@ -45,9 +45,9 @@ class SSDPListener:
         self.target_ip = target_ip
         self.timeout = timeout
         self.loop = loop
-        self.target_host: Optional[str] = None
-        self.target: Optional[str] = None
-        self.transport: Optional[DatagramTransport] = None
+        self._target_host: Optional[str] = None
+        self._target: Optional[str] = None
+        self._transport: Optional[DatagramTransport] = None
 
     def async_search(self) -> None:
         """Start an SSDP search."""
@@ -56,8 +56,8 @@ class SSDPListener:
         )
         _LOGGER.debug("Sending M-SEARCH packet")
         _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
-        assert self.transport is not None
-        self.transport.sendto(packet, self.target)
+        assert self._transport is not None
+        self._transport.sendto(packet, self._target)
 
     async def _async_on_data(
         self, request_line: str, headers: MutableMapping[str, str]
@@ -66,12 +66,12 @@ class SSDPListener:
             "Received response, request line: %s, headers: %s", request_line, headers
         )
         headers["_source"] = "search"
-        if self.target_host and self.target_host != headers["_host"]:
+        if self._target_host and self._target_host != headers["_host"]:
             return
         await self.async_callback(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
-        self.transport = transport
+        self._transport = transport
         self.async_search()
 
     async def async_start(self) -> None:
@@ -84,7 +84,7 @@ class SSDPListener:
         if self.source_ip is None:
             source_ip = get_source_ip_from_target_ip(target_ip)
 
-        sock, source, self.target = get_ssdp_socket(source_ip, target_ip)
+        sock, source, self._target = get_ssdp_socket(source_ip, target_ip)
 
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
@@ -94,9 +94,9 @@ class SSDPListener:
             self.target_data = SSDP_TARGET_V4
 
         if not target_ip.is_multicast:
-            self.target_host = get_host_string(self.target)
+            self._target_host = get_host_string(self._target)
         else:
-            self.target_host = ""
+            self._target_host = ""
 
         sock.bind(source)
         loop = self.loop or asyncio.get_running_loop()
@@ -110,8 +110,8 @@ class SSDPListener:
 
     def async_stop(self) -> None:
         """Stop the listener."""
-        assert self.transport is not None
-        self.transport.close()
+        if self._transport:
+            self._transport.close()
 
 
 async def async_search(
