@@ -26,7 +26,7 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
-class SSDPListener:
+class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
     """Class to listen for SSDP."""
 
     def __init__(
@@ -46,13 +46,17 @@ class SSDPListener:
         self.timeout = timeout
         self.loop = loop
         self._target_host: Optional[str] = None
+        self._target_data: Optional[
+            Union[Tuple[str, int], Tuple[str, int, int, int]]
+        ] = None
         self._target: Optional[Union[Tuple[str, int], Tuple[str, int, int, int]]] = None
         self._transport: Optional[DatagramTransport] = None
 
     def async_search(self) -> None:
         """Start an SSDP search."""
+        assert self._target_data is not None
         packet = build_ssdp_search_packet(
-            self.target_data, self.timeout, self.service_type
+            self._target_data, self.timeout, self.service_type
         )
         _LOGGER.debug("Sending M-SEARCH packet")
         _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
@@ -89,9 +93,9 @@ class SSDPListener:
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
         if self.target_ip.version == 6:
-            self.target_data = SSDP_TARGET_V6
+            self._target_data = SSDP_TARGET_V6
         else:
-            self.target_data = SSDP_TARGET_V4
+            self._target_data = SSDP_TARGET_V4
 
         if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self._target)
