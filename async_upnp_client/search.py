@@ -82,18 +82,18 @@ class SSDPListener:
             else:
                 self.target_ip = IPv4Address(SSDP_IP_V4)
         if self.source_ip is None:
-            self.source_ip = get_source_ip_from_target_ip(target_ip)
+            self.source_ip = get_source_ip_from_target_ip(self.target_ip)
 
         sock, source, self._target = get_ssdp_socket(self.source_ip, self.target_ip)
 
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
-        if target_ip.version == 6:
+        if self.target_ip.version == 6:
             self.target_data = SSDP_TARGET_V6
         else:
             self.target_data = SSDP_TARGET_V4
 
-        if not target_ip.is_multicast:
+        if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self._target)
         else:
             self._target_host = ""
