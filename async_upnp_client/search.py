@@ -5,7 +5,7 @@ import logging
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
+from typing import Awaitable, Callable, Mapping, MutableMapping, Optional, Tuple, Union
 
 from async_upnp_client.ssdp import (
     SSDP_IP_V4,
@@ -46,7 +46,7 @@ class SSDPListener:
         self.timeout = timeout
         self.loop = loop
         self._target_host: Optional[str] = None
-        self._target: Optional[str] = None
+        self._target: Optional[Union[Tuple[str, int], Tuple[str, int, int, int]]] = None
         self._transport: Optional[DatagramTransport] = None
 
     def async_search(self) -> None:
