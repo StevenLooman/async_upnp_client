@@ -1,13 +1,57 @@
-*.pyc
-*.egg*
-.cache/
+# Visual Studio Code
+.vscode/*
+!.vscode/cSpell.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+
+# IntelliJ IDEA
+.idea
+*.iml
+
+# pytest
+.pytest_cache
+.cache
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+.eggs
+parts
+bin
+var
+sdist
+develop-eggs
+.installed.cfg
+lib
+lib64
+pip-wheel-metadata
+
+# Unit test / coverage reports
 .coverage
-.idea/
-.mypy_cache/
-.pytest_cache/
-.tox/
-.venv/
-__pycache__
-build/
-dist/
+.tox
+coverage.xml
+nosetests.xml
+htmlcov/
+test-reports/
+test-results.xml
+test-output.xml
 cov.xml
+
+# mypy
+/.mypy_cache/*
+/.dmypy.json
+
+# venv stuff
+pyvenv.cfg
+pip-selfcheck.json
+venv
+.venv
+Pipfile*
+share/*
+/Scripts/
+
+# GITHUB Proposed Python stuff:
+*.py[cod]
