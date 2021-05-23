@@ -54,7 +54,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
 
     def async_search(self) -> None:
         """Start an SSDP search."""
-        assert self._target_data is not None
+        assert self._target_data is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(
             self._target_data, self.timeout, self.service_type
         )
