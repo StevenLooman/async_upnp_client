@@ -1,5 +1,7 @@
 """Unit tests for aiohttp."""
 
+from socket import AddressFamily
+
 import pytest
 
 from async_upnp_client.aiohttp import AiohttpNotifyServer
@@ -42,6 +44,10 @@ class TestAiohttpNotifyServer:
         assert server._aiohttp_server is not None
         assert server._server is not None
         assert len(server.event_handler.listen_ports) >= 1
+        for family, port in server.event_handler.listen_ports.items():
+            assert family in (AddressFamily.AF_INET, AddressFamily.AF_INET6)
+            assert isinstance(port, int)
+            assert 1 <= port <= 65535
         addr_family, host = await async_get_local_ip()
         port = server.event_handler.listen_ports[addr_family]
         expect_callback_url = "http://{host}:{port}/notify".format(host=host, port=port)

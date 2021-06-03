@@ -166,7 +166,7 @@ class AiohttpNotifyServer:
         # All ports that the event server is listening on (maybe multiple IP stacks)
         if self._server.sockets:
             listen_ports = {
-                AddressFamily(sock.family): sock.getsockname()[0]
+                AddressFamily(sock.family): sock.getsockname()[1]
                 for sock in self._server.sockets
             }
         else:
@@ -174,6 +174,7 @@ class AiohttpNotifyServer:
             listen_ports = {}
 
         # Set event_handler's listen_ports  for it to format the callback_url correctly
+        _LOGGER.debug("event_handler listening on %s", listen_ports)
         self.event_handler.listen_ports = listen_ports
 
     async def stop_server(self) -> None:
