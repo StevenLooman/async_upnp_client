@@ -2,6 +2,7 @@
 """Unit tests for upnp_client."""
 
 from datetime import datetime, timedelta
+import socket
 from typing import List, Mapping
 
 import defusedxml.ElementTree as ET
@@ -532,6 +533,22 @@ class TestUpnpEventHandler:
         assert success is True
         assert sid == "uuid:dummy"
         assert timeout == timedelta(seconds=300)
+        callback_url = await event_handler.async_callback_url_for_service(service)
+        assert callback_url == "http://localhost:11302"
+
+    @pytest.mark.asyncio
+    async def test_deferred_callback_url(self):
+        """Test creating a UpnpEventHandler with unspecified host and port."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://localhost:1234/dmr")
+        event_handler = UpnpEventHandler(
+            "http://{host}:{port}", requester, {socket.AF_INET: 11302}
+        )
+
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        callback_url = await event_handler.async_callback_url_for_service(service)
+        assert callback_url == "http://127.0.0.1:11302"
 
     @pytest.mark.asyncio
     async def test_subscribe_renew(self):
