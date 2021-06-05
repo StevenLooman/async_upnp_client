@@ -1,8 +1,18 @@
 """Unit tests for dlna."""
 
 from datetime import date, datetime, time, timedelta, timezone
+import ipaddress
+import socket
 
-from async_upnp_client.utils import CaseInsensitiveDict, parse_date_time, str_to_time
+import pytest
+
+from async_upnp_client.utils import (
+    CaseInsensitiveDict,
+    parse_date_time,
+    str_to_time,
+    get_local_ip,
+    async_get_local_ip,
+)
 
 
 def test_case_insensitive_dict():
@@ -68,3 +78,35 @@ def test_parse_date_time():
     assert parse_date_time("2012-07-19T12:28:14 +01:00") == datetime(
         2012, 7, 19, 12, 28, 14, tzinfo=tz1
     )
+
+
+TEST_ADDRESSES = [
+    None,
+    "8.8.8.8",
+    "8.8.8.8:80",
+    "http://8.8.8.8",
+    "google.com",
+    "http://google.com",
+    "http://google.com:443",
+]
+
+
+@pytest.mark.parametrize("target_url", TEST_ADDRESSES)
+def test_get_local_ip(target_url):
+    """Test getting of a local IP that is not loopback."""
+    local_ip_str = get_local_ip(target_url)
+    local_ip = ipaddress.ip_address(local_ip_str)
+    assert not local_ip.is_loopback
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("target_url", TEST_ADDRESSES)
+async def test_async_get_local_ip(target_url):
+    """Test getting of a local IP that is not loopback."""
+    addr_family, local_ip_str = await async_get_local_ip(target_url)
+    local_ip = ipaddress.ip_address(local_ip_str)
+    assert not local_ip.is_loopback
+    if local_ip.version == 4:
+        assert addr_family == socket.AddressFamily.AF_INET
+    else:
+        assert addr_family == socket.AddressFamily.AF_INET6

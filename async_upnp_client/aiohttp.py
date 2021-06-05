@@ -3,8 +3,8 @@
 
 import asyncio
 import logging
-import socket
 from asyncio.events import AbstractEventLoop, AbstractServer
+from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Any, Mapping, Optional, Tuple, Union
 
 import aiohttp
@@ -14,23 +14,6 @@ import async_timeout
 from async_upnp_client import UpnpEventHandler, UpnpRequester
 
 _LOGGER = logging.getLogger(__name__)
-
-
-EXTERNAL_IP = "1.1.1.1"
-
-
-def get_local_ip(target_host: Optional[str] = None) -> str:
-    """Try to get the local IP of this machine, used to talk to target_url."""
-    target_host = target_host or EXTERNAL_IP
-    target_port = 80
-
-    try:
-        temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        temp_sock.connect((target_host, target_port))
-        local_ip: str = temp_sock.getsockname()[0]
-        return local_ip
-    finally:
-        temp_sock.close()
 
 
 class AiohttpRequester(UpnpRequester):
@@ -136,10 +119,12 @@ class AiohttpSessionRequester(UpnpRequester):
 class AiohttpNotifyServer:
     """AIO HTTP Server to handle incoming events."""
 
+    CALLBACK_URL_FMT = "http://{host}:{port}/notify"
+
     def __init__(
         self,
         requester: UpnpRequester,
-        listen_port: int,
+        listen_port: int = 0,
         listen_host: Optional[str] = None,
         callback_url: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
@@ -147,16 +132,20 @@ class AiohttpNotifyServer:
         """Initialize."""
         # pylint: disable=too-many-arguments
         self._listen_port = listen_port
-        self._listen_host = listen_host or get_local_ip()
-        self._callback_url = callback_url or "http://{}:{}/notify".format(
-            self._listen_host, self._listen_port
-        )
+        self._listen_host = listen_host
         self._loop = loop or asyncio.get_event_loop()
 
         self._aiohttp_server: Optional[aiohttp.web.Server] = None
         self._server: Optional[AbstractServer] = None
 
-        self.event_handler = UpnpEventHandler(self._callback_url, requester)
+        # callback_url may contain format fields for filling in once the server
+        # is started and listening ports are known
+        callback_url = callback_url or self.CALLBACK_URL_FMT
+        callback_url = callback_url.format(
+            host=self._listen_host or "{host}",
+            port=self._listen_port or "{port}",
+        )
+        self.event_handler = UpnpEventHandler(callback_url, requester)
 
     async def start_server(self) -> None:
         """Start the HTTP server."""
@@ -172,14 +161,34 @@ class AiohttpNotifyServer:
                 self._listen_port,
                 error,
             )
+            raise
+
+        # All ports that the event server is listening on (maybe multiple IP stacks)
+        if self._server.sockets:
+            listen_ports = {
+                AddressFamily(sock.family): sock.getsockname()[1]
+                for sock in self._server.sockets
+            }
+        else:
+            _LOGGER.warning("No listening sockets for AiohttpNotifyServer")
+            listen_ports = {}
+
+        # Set event_handler's listen_ports  for it to format the callback_url correctly
+        _LOGGER.debug("event_handler listening on %s", listen_ports)
+        self.event_handler.listen_ports = listen_ports
 
     async def stop_server(self) -> None:
         """Stop the HTTP server."""
+        await self.event_handler.async_unsubscribe_all()
+        self.event_handler.listen_ports = {}
+
         if self._aiohttp_server:
             await self._aiohttp_server.shutdown(10)
+            self._aiohttp_server = None
 
         if self._server:
             self._server.close()
+            self._server = None
 
     async def _handle_request(self, request: Any) -> aiohttp.web.Response:
         """Handle incoming requests."""
@@ -187,6 +196,10 @@ class AiohttpNotifyServer:
         if request.method != "NOTIFY":
             _LOGGER.debug("Not notify")
             return aiohttp.web.Response(status=405)
+
+        if not self.event_handler:
+            _LOGGER.debug("Event handler not created yet")
+            return aiohttp.web.Response(status=503, reason="Server not fully started")
 
         headers = request.headers
         body = await request.text()

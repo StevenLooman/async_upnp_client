@@ -9,18 +9,13 @@ import logging
 import operator
 import sys
 import time
-import urllib.parse
 from datetime import datetime
 from ipaddress import ip_address
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
 from async_upnp_client.advertisement import UpnpAdvertisementListener
-from async_upnp_client.aiohttp import (
-    AiohttpNotifyServer,
-    AiohttpRequester,
-    get_local_ip,
-)
+from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_ST_ALL
@@ -32,8 +27,6 @@ _LOGGER_LIB = logging.getLogger("async_upnp_client")
 _LOGGER_LIB.setLevel(logging.ERROR)
 _LOGGER_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 _LOGGER_TRAFFIC.setLevel(logging.ERROR)
-
-DEFAULT_PORT = 11302
 
 
 parser = argparse.ArgumentParser(description="upnp_client")
@@ -102,21 +95,20 @@ def get_timestamp() -> Union[str, float]:
     return time.time()
 
 
-def bind_host_port() -> Tuple[str, int]:
+def bind_host_port() -> Tuple[Optional[str], int]:
     """Determine listening host/port."""
     bind = args.bind
 
     if not bind:
-        # figure out listening host ourselves
-        target_url = args.device
-        parsed = urllib.parse.urlparse(target_url)
-        target_host = parsed.hostname
-        bind = get_local_ip(target_host)
+        # Listen on any address, on a random port
+        return None, 0
 
-    if ":" not in bind:
-        bind = bind + ":" + str(DEFAULT_PORT)
+    if ":" in bind:
+        host, port = bind.split(":")
+    else:
+        host = bind
+        port = 0
 
-    host, port = bind.split(":")
     return host, int(port)
 
 
