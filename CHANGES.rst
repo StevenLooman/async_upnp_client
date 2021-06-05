@@ -3,6 +3,7 @@ Changes
 
 0.18.1 (unreleased)
 
+- Rename `profiles.dlna.DlanOrgFlags` to `DlnaOrgFlags` to fix a typo (@chishm)
 
 0.18.0 (2021-05-23)
 
