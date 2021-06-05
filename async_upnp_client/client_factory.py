@@ -22,11 +22,14 @@ from async_upnp_client.const import (
     STATE_VARIABLE_TYPE_MAPPING,
     ActionArgumentInfo,
     ActionInfo,
+    DeviceIcon,
     DeviceInfo,
     ServiceInfo,
     StateVariableInfo,
     StateVariableTypeInfo,
 )
+from async_upnp_client.utils import absolute_url
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -82,6 +85,20 @@ class UpnpFactory:
         """Parse device description XML."""
         # pylint: disable=no-self-use
         desc_xml = device_description_xml
+
+        icons = []
+        for icon_xml in desc_xml.iterfind(".//device:iconList/device:icon", NS):
+            icon_url = icon_xml.findtext("./device:url", "", NS)
+            icon_url = absolute_url(description_url, icon_url)
+            icon = DeviceIcon(
+                mimetype=icon_xml.findtext("./device:mimetype", "", NS),
+                width=int(icon_xml.findtext("./device:width", 0, NS)),
+                height=int(icon_xml.findtext("./device:height", 0, NS)),
+                depth=int(icon_xml.findtext("./device:depth", 0, NS)),
+                url=icon_url,
+            )
+            icons.append(icon)
+
         return DeviceInfo(
             device_type=desc_xml.findtext(".//device:deviceType", "", NS),
             friendly_name=desc_xml.findtext(".//device:friendlyName", "", NS),
@@ -92,6 +109,7 @@ class UpnpFactory:
             model_number=desc_xml.findtext(".//device:modelNumber", None, NS),
             serial_number=desc_xml.findtext(".//device:serialNumber", None, NS),
             url=description_url,
+            icons=icons,
             xml=desc_xml,
         )
 

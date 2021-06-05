@@ -69,6 +69,7 @@ class UpnpProfileDevice:
         self.device = device
         self._event_handler = event_handler
         self.on_event: Optional[EventCallbackType] = None
+        self._icon: Optional[str] = None
 
     @property
     def name(self) -> str:
@@ -109,6 +110,27 @@ class UpnpProfileDevice:
     def device_type(self) -> str:
         """Get the device type of this device."""
         return self.device.device_type
+
+    @property
+    def icon(self) -> Optional[str]:
+        """Get a URL for the biggest icon for this device."""
+        if not self.device.icons:
+            return None
+        if not self._icon:
+            icon_mime_preference = {"image/png": 3, "image/jpeg": 2, "image/gif": 1}
+            icons = [icon for icon in self.device.icons if icon.url]
+            icons = sorted(
+                icons,
+                # Sort by area, then colour depth, then prefered mimetype
+                key=lambda icon: (
+                    icon.width * icon.height,
+                    icon.depth,
+                    icon_mime_preference.get(icon.mimetype, 0),
+                ),
+                reverse=True,
+            )
+            self._icon = icons[0].url
+        return self._icon
 
     def _service(self, service_type_abbreviation: str) -> Optional[UpnpService]:
         """Get UpnpService by service_type or alias."""

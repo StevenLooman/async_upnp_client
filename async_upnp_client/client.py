@@ -26,6 +26,7 @@ from async_upnp_client.const import (
     NS,
     ActionArgumentInfo,
     ActionInfo,
+    DeviceIcon,
     DeviceInfo,
     ServiceInfo,
     StateVariableInfo,
@@ -193,6 +194,11 @@ class UpnpDevice:
     def device_type(self) -> str:
         """Get the device type of this device."""
         return self._device_info.device_type
+
+    @property
+    def icons(self) -> Sequence[DeviceIcon]:
+        """Get the icons for this device."""
+        return self._device_info.icons
 
     @property
     def xml(self) -> ET.Element:

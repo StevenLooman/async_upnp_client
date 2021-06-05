@@ -5,6 +5,7 @@ Changes
 
 - Rename `profiles.dlna.DlanOrgFlags` to `DlnaOrgFlags` to fix a typo (@chishm)
 - Defer event callback URL determination until event subscriptions are created (@chishm)
+- Add `UpnpDevice.icons` and `UpnpProfileDevice.icon` to get URLs to device icons (@chishm)
 
 0.18.0 (2021-05-23)
 
