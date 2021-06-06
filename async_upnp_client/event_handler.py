@@ -4,25 +4,21 @@
 import asyncio
 import logging
 import urllib.parse
-from datetime import datetime, timedelta
+import weakref
+from datetime import timedelta
 from http import HTTPStatus
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Dict, Mapping, NamedTuple, Optional, Tuple
+from typing import Dict, Mapping, Optional, Tuple, Union
 
 import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpError, UpnpRequester, UpnpService
 from async_upnp_client.const import NS
+from async_upnp_client.exceptions import UpnpResponseError, UpnpSIDError
 from async_upnp_client.utils import async_get_local_ip, get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
-
-
-SubscriptionInfo = NamedTuple(
-    "SubscriptionInfo",
-    [("service", UpnpService), ("timeout", timedelta), ("renewal_time", datetime)],
-)
 
 
 class UpnpEventHandler:
@@ -53,7 +49,9 @@ class UpnpEventHandler:
         self.listen_ports = listen_ports or {}
 
         self._listen_ip: Optional[str] = None
-        self._subscriptions: Dict[str, SubscriptionInfo] = {}
+        self._subscriptions = (
+            weakref.WeakValueDictionary()
+        )  # type: weakref.WeakValueDictionary [str, UpnpService]
         self._backlog: Dict[str, Tuple[Mapping, str]] = {}
 
     @property
@@ -95,18 +93,38 @@ class UpnpEventHandler:
 
     def sid_for_service(self, service: UpnpService) -> Optional[str]:
         """Get the service connected to SID."""
-        for sid, entry in self._subscriptions.items():
-            if entry.service == service:
+        for sid, subscribed_service in self._subscriptions.items():
+            if subscribed_service == service:
                 return sid
 
         return None
 
     def service_for_sid(self, sid: str) -> Optional[UpnpService]:
         """Get a UpnpService for SID."""
-        if sid not in self._subscriptions:
-            return None
+        return self._subscriptions.get(sid)
 
-        return self._subscriptions[sid].service
+    def _sid_and_service(
+        self, service_or_sid: Union[UpnpService, str]
+    ) -> Tuple[str, UpnpService]:
+        """Resolve a SID or service to both SID and service.
+
+        :raise KeyError: Cannot determine SID from UpnpService, or vice versa.
+        """
+        sid: Optional[str]
+        service: Optional[UpnpService]
+
+        if isinstance(service_or_sid, UpnpService):
+            service = service_or_sid
+            sid = self.sid_for_service(service)
+            if not sid:
+                raise KeyError("Unknown UpnpService {}".format(service))
+        else:
+            sid = service_or_sid
+            service = self.service_for_sid(sid)
+            if not service:
+                raise KeyError("Unknown SID {}".format(sid))
+
+        return sid, service
 
     async def handle_notify(self, headers: Mapping[str, str], body: str) -> HTTPStatus:
         """Handle a NOTIFY request."""
@@ -129,11 +147,13 @@ class UpnpEventHandler:
                 "Sending response: %s", HTTPStatus.PRECONDITION_FAILED
             )
             return HTTPStatus.PRECONDITION_FAILED
+
         sid = headers["SID"]
+        service = self._subscriptions.get(sid)
 
         # SID not known yet? store it in the backlog
         # Some devices don't behave nicely and send events before the SUBSCRIBE call is done.
-        if sid not in self._subscriptions:
+        if not service:
             _LOGGER.debug("Storing NOTIFY in backlog for SID: %s", sid)
             self._backlog[sid] = (
                 headers,
@@ -154,7 +174,6 @@ class UpnpEventHandler:
                 changes[name] = value
 
         # send changes to service
-        service = self._subscriptions[sid].service
         service.notify_changed_state_variables(changes)
 
         _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", HTTPStatus.OK)
@@ -198,7 +217,6 @@ class UpnpEventHandler:
             return False, None, None
 
         # Device can give a different TIMEOUT header than what we have provided.
-        new_timeout = timeout
         if (
             "timeout" in response_headers
             and response_headers["timeout"] != "Second-infinite"
@@ -206,16 +224,11 @@ class UpnpEventHandler:
         ):
             response_timeout = response_headers["timeout"]
             timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
-            new_timeout = timedelta(seconds=timeout_seconds)
+            timeout = timedelta(seconds=timeout_seconds)
 
         sid = response_headers["sid"]
-        renewal_time = datetime.now() + new_timeout
-        self._subscriptions[sid] = SubscriptionInfo(
-            service=service,
-            timeout=timeout,
-            renewal_time=renewal_time,
-        )
-        _LOGGER.debug("Got SID: %s, renewal_time: %s", sid, renewal_time)
+        self._subscriptions[sid] = service
+        _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
 
         # replay any backlog we have for this service
         if sid in self._backlog:
@@ -224,21 +237,19 @@ class UpnpEventHandler:
             await self.handle_notify(item[0], item[1])
             del self._backlog[sid]
 
-        return True, sid, new_timeout
+        return True, sid, timeout
 
     async def async_resubscribe(
         self,
-        service: "UpnpService",
+        service_or_sid: Union[UpnpService, str],
         timeout: timedelta = timedelta(seconds=1800),
     ) -> Tuple[bool, Optional[str], Optional[timedelta]]:
         """Renew subscription to a UpnpService."""
-        _LOGGER.debug("Resubscribing to: %s", service)
+        _LOGGER.debug("Resubscribing to: %s", service_or_sid)
+
+        sid, service = self._sid_and_service(service_or_sid)
 
         # do SUBSCRIBE request
-        sid = self.sid_for_service(service)
-        if not sid:
-            raise UpnpError("Could not find SID for service")
-
         headers = {
             "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
             "SID": sid,
@@ -262,7 +273,6 @@ class UpnpEventHandler:
                 sid = new_sid
 
         # Device can give a different TIMEOUT header than what we have provided.
-        new_timeout = timeout
         if (
             "timeout" in response_headers
             and response_headers["timeout"] != "Second-infinite"
@@ -270,37 +280,29 @@ class UpnpEventHandler:
         ):
             response_timeout = response_headers["timeout"]
             timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
-            new_timeout = timedelta(seconds=timeout_seconds)
+            timeout = timedelta(seconds=timeout_seconds)
 
-        renewal_time = datetime.now() + new_timeout
-        self._subscriptions[sid] = SubscriptionInfo(
-            service=service,
-            timeout=timeout,
-            renewal_time=renewal_time,
-        )
-        _LOGGER.debug("Got SID: %s, renewal_time: %s", sid, renewal_time)
+        self._subscriptions[sid] = service
+        _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
 
-        return True, sid, new_timeout
+        return True, sid, timeout
 
     async def async_resubscribe_all(self) -> None:
         """Renew all current subscription."""
         await asyncio.gather(
-            *(self.async_resubscribe(entry.service)
-              for entry in self._subscriptions.values())
+            *(self.async_resubscribe(sid) for sid in self._subscriptions)
         )
 
     async def async_unsubscribe(
-        self, service: "UpnpService"
+        self,
+        service_or_sid: Union[UpnpService, str],
     ) -> Tuple[bool, Optional[str]]:
         """Unsubscribe from a UpnpService."""
+        sid, service = self._sid_and_service(service_or_sid)
+
         _LOGGER.debug("Unsubscribing from: %s, device: %s", service, service.device)
 
         # do UNSUBSCRIBE request
-        sid = self.sid_for_service(service)
-        if not sid:
-            _LOGGER.debug("Could not determine SID to unsubscribe")
-            return False, None
-
         headers = {
             "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
             "SID": sid,
@@ -321,7 +323,7 @@ class UpnpEventHandler:
 
     async def async_unsubscribe_all(self) -> None:
         """Unsubscribe all subscriptions."""
-        services = self._subscriptions.copy()
+        sids = list(self._subscriptions)
         await asyncio.gather(
-            *(self.async_unsubscribe(entry.service) for entry in services.values())
+            *(self.async_unsubscribe(sid) for sid in sids)
         )
