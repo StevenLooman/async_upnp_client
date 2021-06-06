@@ -6,7 +6,6 @@ import logging
 import urllib.parse
 from datetime import datetime, timedelta
 from http import HTTPStatus
-import socket
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Dict, Mapping, NamedTuple, Optional, Tuple
 
@@ -67,7 +66,7 @@ class UpnpEventHandler:
         """
         if not self._listen_ip:
             self._listen_ip = get_local_ip()
-        port = self.listen_ports.get(socket.AF_INET)
+        port = self.listen_ports.get(AddressFamily.AF_INET)
         if not port and "{port}" in self._callback_url:
             raise ValueError("callback_url format requires a listening port")
         return self._callback_url.format(host=self._listen_ip, port=port)
