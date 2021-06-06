@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Unit tests for upnp_client."""
 
-from datetime import datetime, timedelta
 import socket
+from datetime import datetime, timedelta
 from typing import List, Mapping
 
 import defusedxml.ElementTree as ET
@@ -425,7 +425,24 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("action_GetVolumeNoServiceTypeNumber.xml")
+        response = read_file("action_GetVolumeInvalidServiceType.xml")
+        try:
+            action.parse_response(service_type, {}, response)
+            assert False
+        except UpnpError:
+            pass
+
+    @pytest.mark.asyncio
+    async def test_parse_response_no_service_type_version_2(self):
+        """Test calling and action and handling a response without service type number."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://localhost:1234/dmr")
+        service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+        action = service.action("GetTransportInfo")
+
+        service_type = "urn:schemas-upnp-org:service:AVTransport:1"
+        response = read_file("action_GetTransportInfoInvalidServiceType.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
