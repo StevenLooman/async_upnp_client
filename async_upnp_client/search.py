@@ -103,7 +103,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
             self._target_host = ""
 
         sock.bind(source)
-        loop = self.loop or asyncio.get_running_loop()
+        loop = self.loop or asyncio.get_event_loop()
 
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(

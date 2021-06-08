@@ -3,10 +3,10 @@
 
 import asyncio
 import re
+import socket
 from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
-import socket
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Any, Callable, Dict, Generator, Mapping, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
@@ -203,7 +203,7 @@ async def async_get_local_ip(
 ) -> Tuple[AddressFamily, str]:
     """Try to get the local IP of this machine, used to talk to target_url."""
     target_addr = _target_url_to_addr(target_url)
-    loop = loop or asyncio.get_running_loop()
+    loop = loop or asyncio.get_event_loop()
 
     # Create a UDP connection to the target. This won't cause any network
     # traffic but will assign a local IP to the socket.
