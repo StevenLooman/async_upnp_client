@@ -12,9 +12,14 @@ from typing import Dict, Mapping, Optional, Tuple, Union
 
 import defusedxml.ElementTree as DET
 
-from async_upnp_client.client import UpnpError, UpnpRequester, UpnpService
+from async_upnp_client.client import UpnpRequester, UpnpService
 from async_upnp_client.const import NS
-from async_upnp_client.exceptions import UpnpResponseError, UpnpSIDError
+from async_upnp_client.exceptions import (
+    UpnpError,
+    UpnpResponseError,
+    UpnpSIDError,
+    UpnpConnectionError,
+)
 from async_upnp_client.utils import async_get_local_ip, get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
@@ -183,14 +188,21 @@ class UpnpEventHandler:
         self,
         service: UpnpService,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[bool, Optional[str], Optional[timedelta]]:
+    ) -> Tuple[str, timedelta]:
         """
         Subscription to a UpnpService.
 
         Be sure to re-subscribe before the subscription timeout passes.
 
-        :param service UpnpService to subscribe to self
-        :param timeout Timeout of subscription
+        :param service: UpnpService to subscribe to self
+        :param timeout: Timeout of subscription
+        :return: SID (subscription ID), renewal timeout (may be different to
+            supplied timeout)
+        :raise UpnpResponseError: Error in response to subscription request
+        :raise UpnpSIDError: No SID received for subscription
+        :raise UpnpConnectionError: Device might be offline.
+        :raise UpnpCommunicationError (or subclass): Error while performing
+            subscription request.
         """
         callback_url = await self.async_callback_url_for_service(service)
 
@@ -210,11 +222,11 @@ class UpnpEventHandler:
         # check results
         if response_status != 200:
             _LOGGER.debug("Did not receive 200, but %s", response_status)
-            return False, None, None
+            raise UpnpResponseError(status=response_status, headers=response_headers)
 
         if "sid" not in response_headers:
             _LOGGER.debug("No SID received, aborting subscribe")
-            return False, None, None
+            raise UpnpSIDError
 
         # Device can give a different TIMEOUT header than what we have provided.
         if (
@@ -237,14 +249,25 @@ class UpnpEventHandler:
             await self.handle_notify(item[0], item[1])
             del self._backlog[sid]
 
-        return True, sid, timeout
+        return sid, timeout
 
     async def async_resubscribe(
         self,
         service_or_sid: Union[UpnpService, str],
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[bool, Optional[str], Optional[timedelta]]:
-        """Renew subscription to a UpnpService."""
+    ) -> Tuple[str, timedelta]:
+        """Renew subscription to a UpnpService.
+
+        :param service_or_sid: UpnpService or existing SID to resubscribe
+        :param timeout: Timeout of subscription
+        :return: SID (subscription ID), renewal timeout (may be different to
+            supplied timeout)
+        :raise aiohttp.ClientError: HTTP protocol error during subscription
+            request
+        :raise asyncio.TimeoutError: Subscription request timed out
+        :raise UpnpSubscriptionError: Error in response to subscription request
+        :raise ValueError: Supplied service_or_sid is not known.
+        """
         _LOGGER.debug("Resubscribing to: %s", service_or_sid)
 
         sid, service = self._sid_and_service(service_or_sid)
@@ -262,7 +285,7 @@ class UpnpEventHandler:
         # check results
         if response_status != 200:
             _LOGGER.debug("Did not receive 200, but %s", response_status)
-            return False, None, None
+            raise UpnpResponseError(status=response_status, headers=response_headers)
 
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
@@ -285,7 +308,7 @@ class UpnpEventHandler:
         self._subscriptions[sid] = service
         _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
 
-        return True, sid, timeout
+        return sid, timeout
 
     async def async_resubscribe_all(self) -> None:
         """Renew all current subscription."""
@@ -296,7 +319,7 @@ class UpnpEventHandler:
     async def async_unsubscribe(
         self,
         service_or_sid: Union[UpnpService, str],
-    ) -> Tuple[bool, Optional[str]]:
+    ) -> str:
         """Unsubscribe from a UpnpService."""
         sid, service = self._sid_and_service(service_or_sid)
 
@@ -307,23 +330,24 @@ class UpnpEventHandler:
             "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
             "SID": sid,
         }
-        response_status, _, _ = await self._requester.async_http_request(
+        response_status, response_headers, _ = await self._requester.async_http_request(
             "UNSUBSCRIBE", service.event_sub_url, headers
         )
 
         # check results
         if response_status != 200:
             _LOGGER.debug("Did not receive 200, but %s", response_status)
-            return False, None
+            raise UpnpResponseError(status=response_status, headers=response_headers)
 
         # remove registration
         if sid in self._subscriptions:
             del self._subscriptions[sid]
-        return True, sid
+        return sid
 
     async def async_unsubscribe_all(self) -> None:
         """Unsubscribe all subscriptions."""
         sids = list(self._subscriptions)
         await asyncio.gather(
-            *(self.async_unsubscribe(sid) for sid in sids)
+            *(self.async_unsubscribe(sid) for sid in sids),
+            return_exceptions=True,
         )
