@@ -12,6 +12,13 @@ import aiohttp.web
 import async_timeout
 
 from async_upnp_client import UpnpEventHandler, UpnpRequester
+from async_upnp_client.exceptions import (
+    UpnpCommunicationError,
+    UpnpClientResponseError,
+    UpnpConnectionError,
+    UpnpConnectionTimeoutError,
+    UpnpServerOSError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,27 +45,42 @@ class AiohttpRequester(UpnpRequester):
         # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
 
-        async with async_timeout.timeout(self._timeout):
-            async with aiohttp.ClientSession() as session:
-                async with session.request(
-                    method, url, headers=req_headers, data=body
-                ) as response:
-                    status = response.status
-                    resp_headers: Mapping = response.headers or {}
+        try:
+            async with async_timeout.timeout(self._timeout):
+                async with aiohttp.ClientSession() as session:
+                    async with session.request(
+                        method, url, headers=req_headers, data=body
+                    ) as response:
+                        status = response.status
+                        resp_headers: Mapping = response.headers or {}
 
-                    resp_body: Union[str, bytes, None] = None
-                    if body_type == "text":
-                        try:
-                            resp_body = await response.text()
-                        except UnicodeDecodeError as exception:
-                            resp_body_bytes = await response.read()
-                            resp_body = resp_body_bytes.decode(
-                                exception.encoding, errors="replace"
-                            )
-                    elif body_type == "raw":
-                        resp_body = await response.read()
-                    elif body_type == "ignore":
-                        resp_body = None
+                        resp_body: Union[str, bytes, None] = None
+                        if body_type == "text":
+                            try:
+                                resp_body = await response.text()
+                            except UnicodeDecodeError as exception:
+                                resp_body_bytes = await response.read()
+                                resp_body = resp_body_bytes.decode(
+                                    exception.encoding, errors="replace"
+                                )
+                        elif body_type == "raw":
+                            resp_body = await response.read()
+                        elif body_type == "ignore":
+                            resp_body = None
+        except asyncio.TimeoutError as err:
+            raise UpnpConnectionTimeoutError from err
+        except aiohttp.ClientConnectionError as err:
+            raise UpnpConnectionError from err
+        except aiohttp.ClientResponseError as err:
+            raise UpnpClientResponseError(
+                request_info=err.request_info,
+                history=err.history,
+                status=err.status,
+                message=err.message,
+                headers=err.headers,
+            ) from err
+        except aiohttp.ClientError as err:
+            raise UpnpCommunicationError from err
 
         return status, resp_headers, resp_body
 
@@ -98,20 +120,35 @@ class AiohttpSessionRequester(UpnpRequester):
         if self._with_sleep:
             await asyncio.sleep(0.01)
 
-        async with async_timeout.timeout(self._timeout):
-            async with self._session.request(
-                method, url, headers=req_headers, data=body
-            ) as response:
-                status = response.status
-                resp_headers: Mapping = response.headers or {}
+        try:
+            async with async_timeout.timeout(self._timeout):
+                async with self._session.request(
+                    method, url, headers=req_headers, data=body
+                ) as response:
+                    status = response.status
+                    resp_headers: Mapping = response.headers or {}
 
-                resp_body: Union[str, bytes, None] = None
-                if body_type == "text":
-                    resp_body = await response.text()
-                elif body_type == "raw":
-                    resp_body = await response.read()
-                elif body_type == "ignore":
-                    resp_body = None
+                    resp_body: Union[str, bytes, None] = None
+                    if body_type == "text":
+                        resp_body = await response.text()
+                    elif body_type == "raw":
+                        resp_body = await response.read()
+                    elif body_type == "ignore":
+                        resp_body = None
+        except asyncio.TimeoutError as err:
+            raise UpnpConnectionTimeoutError from err
+        except aiohttp.ClientConnectionError as err:
+            raise UpnpConnectionError from err
+        except aiohttp.ClientResponseError as err:
+            raise UpnpClientResponseError(
+                request_info=err.request_info,
+                history=err.history,
+                status=err.status,
+                message=err.message,
+                headers=err.headers,
+            ) from err
+        except aiohttp.ClientError as err:
+            raise UpnpCommunicationError from err
 
         return status, resp_headers, resp_body
 
@@ -154,14 +191,17 @@ class AiohttpNotifyServer:
             self._server = await self._loop.create_server(
                 self._aiohttp_server, self._listen_host, self._listen_port
             )
-        except OSError as error:
+        except OSError as err:
             _LOGGER.error(
                 "Failed to create HTTP server at %s:%d: %s",
                 self._listen_host,
                 self._listen_port,
-                error,
+                err,
             )
-            raise
+            raise UpnpServerOSError(
+                err.errno,
+                err.strerror,
+            ) from err
 
         # All ports that the event server is listening on (maybe multiple IP stacks)
         if self._server.sockets:
