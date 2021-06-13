@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import time
 from datetime import timedelta
 from ipaddress import IPv4Address
 from typing import Dict, List, Mapping, Optional, Sequence, Set
@@ -14,6 +15,7 @@ from async_upnp_client.client import (
     UpnpService,
     UpnpStateVariable,
 )
+from async_upnp_client.exceptions import UpnpError, UpnpConnectionError
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.search import async_search
 from async_upnp_client.ssdp import SSDP_MX
@@ -22,6 +24,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 SUBSCRIBE_TIMEOUT = timedelta(minutes=9)
+RESUBSCRIBE_TOLERANCE = timedelta(minutes=1)
+RESUBSCRIBE_TOLERANCE_SECS = RESUBSCRIBE_TOLERANCE.total_seconds()
 
 
 class UpnpProfileDevice:
@@ -71,6 +75,9 @@ class UpnpProfileDevice:
         self._event_handler = event_handler
         self.on_event: Optional[EventCallbackType] = None
         self._icon: Optional[str] = None
+        # Map of SID to renewal timestamp (monotonic clock seconds)
+        self._subscriptions: Dict[str, float] = {}
+        self._resubscriber_task: Optional[asyncio.Task] = None
 
     @property
     def name(self) -> str:
@@ -180,62 +187,161 @@ class UpnpProfileDevice:
 
         return False
 
-    async def async_subscribe_services(self) -> timedelta:
-        """(Re-)Subscribe to services."""
-        timeouts: List[timedelta] = []
-        for service in self.device.services.values():
-            # ensure we are interested in this service_type
-            if not self._interesting_service(service):
+    async def _async_resubscribe_services(
+        self, now: Optional[float] = None, notify_errors: bool = False
+    ) -> None:
+        """Renew existing subscriptions.
+
+        :param now: time.monotonic reference for current time
+        :param notify_errors: Call on_event in case of error instead of raising
+        """
+        if now is None:
+            now = time.monotonic()
+        renewal_threshold = now - RESUBSCRIBE_TOLERANCE_SECS
+
+        _LOGGER.debug("Resubscribing to services with threshold %f", renewal_threshold)
+
+        for sid, renewal_time in list(self._subscriptions.items()):
+            if renewal_time < renewal_threshold:
+                _LOGGER.debug("Skipping %s with renewal_time %f", sid, renewal_time)
+                continue
+            _LOGGER.debug("Resubscribing to %s with renewal_time %f", sid, renewal_time)
+            # Subscription is going to be changed, no matter what
+            del self._subscriptions[sid]
+            # Determine service for on_event call in case of failure
+            service = self._event_handler.service_for_sid(sid)
+            if not service:
+                _LOGGER.error("Subscription for %s was lost", sid)
                 continue
 
-            on_event: EventCallbackType = self._on_event
-            service.on_event = on_event
-            if self._event_handler.sid_for_service(service) is None:
-                _LOGGER.debug("Subscribing to service: %s", service)
-                success, _, timeout = await self._event_handler.async_subscribe(
-                    service, timeout=SUBSCRIBE_TIMEOUT
+            try:
+                new_sid, timeout = await self._event_handler.async_resubscribe(
+                    sid, timeout=SUBSCRIBE_TIMEOUT
                 )
-                if not success:
-                    _LOGGER.debug("Failed subscribing to: %s", service)
-                elif timeout:
-                    timeouts.append(timeout)
+            except UpnpError as err:
+                if isinstance(err, UpnpConnectionError):
+                    # Device has gone offline
+                    self.device.available = False
+                _LOGGER.error("Failed (re-)subscribing to: %s, reason: %s", sid, err)
+                if notify_errors:
+                    # Notify event listeners that something has changed
+                    self._on_event(service, [])
+                else:
+                    raise
             else:
-                _LOGGER.debug("Resubscribing to service: %s", service)
-                success, _, timeout = await self._event_handler.async_resubscribe(
-                    service, timeout=SUBSCRIBE_TIMEOUT
-                )
+                self._subscriptions[new_sid] = now + timeout.total_seconds()
 
-                # could not renew subscription, try subscribing again
-                if not success:
-                    _LOGGER.debug("Failed resubscribing to: %s", service)
+    async def _resubscribe_loop(self) -> None:
+        """Periodically resubscribes to current subscriptions."""
+        _LOGGER.debug("_resubscribe_loop started")
+        while self._subscriptions:
+            next_renewal = min(self._subscriptions.values())
+            wait_time = next_renewal - time.monotonic() - RESUBSCRIBE_TOLERANCE_SECS
+            _LOGGER.debug("Resubscribing in %f seconds", wait_time)
+            if wait_time > 0:
+                await asyncio.sleep(wait_time)
 
-                    success, _, timeout = await self._event_handler.async_subscribe(
+            await self._async_resubscribe_services(notify_errors=True)
+
+        _LOGGER.debug("_resubscribe_loop ended because of no subscriptions")
+
+    async def _update_resubscriber_task(self) -> None:
+        """Start or stop the resubscriber task, depending on having subscriptions."""
+        # Clear out done task to make later logic easier
+        if self._resubscriber_task and self._resubscriber_task.cancelled():
+            self._resubscriber_task = None
+
+        if self._subscriptions and not self._resubscriber_task:
+            _LOGGER.debug("Creating resubscribe_task")
+            # pylint: disable=fixme
+            # TODO: Use create_task instead of ensure_future with Python 3.8+
+            # self._resubscriber_task = asyncio.create_task(
+            # self._resubscribe_loop(),
+            # name=f"UpnpProfileDevice({self.name})._resubscriber_task",
+            # )
+            self._resubscriber_task = asyncio.ensure_future(self._resubscribe_loop())
+
+        if not self._subscriptions and self._resubscriber_task:
+            _LOGGER.debug("Cancelling resubscribe_task")
+            self._resubscriber_task.cancel()
+            try:
+                await self._resubscriber_task
+            except asyncio.CancelledError:
+                pass
+            self._resubscriber_task = None
+
+    async def async_subscribe_services(
+        self, auto_resubscribe: bool = False
+    ) -> Optional[timedelta]:
+        """(Re-)Subscribe to services.
+
+        :param auto_resubscribe: Automatically resubscribe to subscriptions
+            before they expire. If this is enabled, failure to resubscribe will
+            be indicated by on_event being called with the failed service and an
+            empty state_variables list.
+        :return: time until this next needs to be called, or None if manual
+            resubscription is not needed.
+        :raise UpnpError or subclass: Failed to subscribe to all interesting
+            services.
+        """
+        # Using time.monotonic to avoid problems with system clock changes
+        now = time.monotonic()
+
+        try:
+            if self._subscriptions:
+                # Resubscribe existing subscriptions
+                await self._async_resubscribe_services(now)
+            else:
+                # Subscribe to services we are interested in
+                for service in self.device.services.values():
+                    if not self._interesting_service(service):
+                        continue
+                    _LOGGER.debug("Subscribing to service: %s", service)
+                    service.on_event = self._on_event
+                    new_sid, timeout = await self._event_handler.async_subscribe(
                         service, timeout=SUBSCRIBE_TIMEOUT
                     )
-                    if not success:
-                        _LOGGER.debug("Failed subscribing to: %s", service)
-                    elif timeout:
-                        timeouts.append(timeout)
-                elif timeout:
-                    timeouts.append(timeout)
+                    self._subscriptions[new_sid] = now + timeout.total_seconds()
+        except UpnpError as err:
+            _LOGGER.error("Failed subscribing to service: %s", err)
+            # Unsubscribe anything that was subscribed, no half-done subscriptions
+            try:
+                await self.async_unsubscribe_services()
+            except UpnpError:
+                pass
+            raise
 
-        # To have something...
-        timeouts.append(SUBSCRIBE_TIMEOUT)
+        if not self._subscriptions:
+            return None
 
-        return min(timeouts)
+        if auto_resubscribe:
+            await self._update_resubscriber_task()
+            return None
+
+        lowest_timeout_delta = min(self._subscriptions.values()) - now
+        resubcription_timeout = (
+            timedelta(seconds=lowest_timeout_delta) - RESUBSCRIBE_TOLERANCE
+        )
+        return max(resubcription_timeout, timedelta(seconds=0))
 
     async def async_unsubscribe_services(self) -> None:
         """Unsubscribe from all of our subscribed services."""
-        for service in self.device.services.values():
+        # Delete list of subscriptions and cancel renewal before unsubcribing
+        # to avoid unsub-resub race.
+        subscriptions = self._subscriptions
+        self._subscriptions = {}
+        await self._update_resubscriber_task()
+
+        for sid in subscriptions:
             try:
-                await self._event_handler.async_unsubscribe(service)
+                await self._event_handler.async_unsubscribe(sid)
             except UpnpError as err:
-                _LOGGER.debug("Failed unsubscribing from: %s, reason: %s", service, err)
+                _LOGGER.debug("Failed unsubscribing to: %s, reason: %s", sid, err)
             except KeyError:
                 _LOGGER.warning(
                     "%s was already unsubscribed. AiohttpNotifyServer was "
                     "probably stopped before we could unsubscribe.",
-                    service,
+                    sid,
                 )
 
     def _on_event(

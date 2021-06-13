@@ -45,3 +45,6 @@ class TestUpnpProfileDevice:
         profile = DmrDevice(device, event_handler=event_handler)
 
         assert profile.icon == "http://localhost:1234/device_icon_120.png"
+
+
+# TODO: Test resubscribe
