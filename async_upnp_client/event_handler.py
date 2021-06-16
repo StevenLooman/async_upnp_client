@@ -251,27 +251,13 @@ class UpnpEventHandler:
 
         return sid, timeout
 
-    async def async_resubscribe(
+    async def _async_do_resubscribe(
         self,
-        service_or_sid: Union[UpnpService, str],
+        service: UpnpService,
+        sid: str,
         timeout: timedelta = timedelta(seconds=1800),
     ) -> Tuple[str, timedelta]:
-        """Renew subscription to a UpnpService.
-
-        :param service_or_sid: UpnpService or existing SID to resubscribe
-        :param timeout: Timeout of subscription
-        :return: SID (subscription ID), renewal timeout (may be different to
-            supplied timeout)
-        :raise aiohttp.ClientError: HTTP protocol error during subscription
-            request
-        :raise asyncio.TimeoutError: Subscription request timed out
-        :raise UpnpSubscriptionError: Error in response to subscription request
-        :raise ValueError: Supplied service_or_sid is not known.
-        """
-        _LOGGER.debug("Resubscribing to: %s", service_or_sid)
-
-        sid, service = self._sid_and_service(service_or_sid)
-
+        """Perform only a resubscribe, caller can retry subscribe if this fails."""
         # do SUBSCRIBE request
         headers = {
             "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
@@ -309,6 +295,49 @@ class UpnpEventHandler:
         _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
 
         return sid, timeout
+
+    async def async_resubscribe(
+        self,
+        service_or_sid: Union[UpnpService, str],
+        timeout: timedelta = timedelta(seconds=1800),
+    ) -> Tuple[str, timedelta]:
+        """Renew subscription to a UpnpService.
+
+        :param service_or_sid: UpnpService or existing SID to resubscribe
+        :param timeout: Timeout of subscription
+        :return: SID (subscription ID), renewal timeout (may be different to
+            supplied timeout)
+        :raise KeyError: Supplied service_or_sid is not known.
+        :raise UpnpResponseError: Error in response to subscription request
+        :raise UpnpSIDError: No SID received for subscription
+        :raise UpnpConnectionError: Device might be offline.
+        :raise UpnpCommunicationError (or subclass): Error while performing
+            subscription request.
+        """
+        _LOGGER.debug("Resubscribing to: %s", service_or_sid)
+
+        # Try a regular resubscribe. If that fails, delete old subscription and
+        # do a full subscribe again.
+
+        sid, service = self._sid_and_service(service_or_sid)
+        try:
+            return await self._async_do_resubscribe(service, sid, timeout)
+        except UpnpConnectionError as err:
+            _LOGGER.debug(
+                "Resubscribe for %s failed: %s. Device offline, not retrying.",
+                service_or_sid,
+                err,
+            )
+            del self._subscriptions[sid]
+            raise
+        except UpnpError as err:
+            _LOGGER.debug(
+                "Resubscribe for %s failed: %s. Trying full subscribe.",
+                service_or_sid,
+                err,
+            )
+        del self._subscriptions[sid]
+        return await self.async_subscribe(service, timeout)
 
     async def async_resubscribe_all(self) -> None:
         """Renew all current subscription."""
