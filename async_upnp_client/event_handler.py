@@ -323,7 +323,15 @@ class UpnpEventHandler:
         """Unsubscribe from a UpnpService."""
         sid, service = self._sid_and_service(service_or_sid)
 
-        _LOGGER.debug("Unsubscribing from: %s, device: %s", service, service.device)
+        _LOGGER.debug(
+            "Unsubscribing from SID: %s, service: %s device: %s",
+            sid,
+            service,
+            service.device,
+        )
+
+        # Remove registration before potential device errors
+        del self._subscriptions[sid]
 
         # do UNSUBSCRIBE request
         headers = {
@@ -339,9 +347,6 @@ class UpnpEventHandler:
             _LOGGER.debug("Did not receive 200, but %s", response_status)
             raise UpnpResponseError(status=response_status, headers=response_headers)
 
-        # remove registration
-        if sid in self._subscriptions:
-            del self._subscriptions[sid]
         return sid
 
     async def async_unsubscribe_all(self) -> None:
