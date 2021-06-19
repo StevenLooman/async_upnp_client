@@ -7,6 +7,7 @@ Changes
 - Defer event callback URL determination until event subscriptions are created (@chishm)
 - Add `UpnpDevice.icons` and `UpnpProfileDevice.icon` to get URLs to device icons (@chishm)
 - Add more non-strict parsing of action responses (#68)
+- Stick with `asyncio.get_event_loop()` for Python 3.6 compatibility
 - asyncio and aiohttp exceptions are wrapped in exceptions derived from `UpnpError` to hide implementation details and make catching easier (@chishm)
 - `UpnpProfileDevice` can resubscribe to services automatically, using an asyncio task (@chishm)
 
