@@ -31,6 +31,7 @@ from async_upnp_client.const import (
     ServiceInfo,
     StateVariableInfo,
 )
+from async_upnp_client.exceptions import UpnpError, UpnpValueError
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
@@ -53,7 +54,7 @@ class UpnpRequester:
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
         body_type: str = "text",
-    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping[str, str], Union[str, bytes, None]]:
         """
         Do a HTTP request.
 
@@ -100,22 +101,10 @@ class UpnpRequester:
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
         body_type: str = "text",
-    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping[str, str], Union[str, bytes, None]]:
         """Actually do a HTTP request."""
         # pylint: disable=too-many-arguments
         raise NotImplementedError()
-
-
-class UpnpError(Exception):
-    """UpnpError."""
-
-
-class UpnpValueError(UpnpError):
-    """Invalid value error."""
-
-    def __init__(self, name: str, value: Any) -> None:
-        """Initialize."""
-        super().__init__("Invalid value for %s: '%s'" % (name, value))
 
 
 class UpnpDevice:
