@@ -344,6 +344,11 @@ class UpnpProfileDevice:
                     sid,
                 )
 
+    @property
+    def is_subscribed(self) -> bool:
+        """Get current service subscription state."""
+        return bool(self._subscriptions)
+
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
     ) -> None:
