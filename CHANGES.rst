@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.18.1 (unreleased)
+0.19.0 (2021-06-19)
 
 - Rename `profiles.dlna.DlanOrgFlags` to `DlnaOrgFlags` to fix a typo (@chishm)
 - Defer event callback URL determination until event subscriptions are created (@chishm)
