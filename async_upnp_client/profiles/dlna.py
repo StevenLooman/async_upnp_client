@@ -202,17 +202,23 @@ class DmrDevice(UpnpProfileDevice):
         },
     }
 
-    async def async_update(self) -> None:
-        """Retrieve the latest data."""
+    async def async_update(self, do_ping: bool = True) -> None:
+        """Retrieve the latest data.
+
+        :param do_ping: Poll device to check if it is available (online).
+        """
         # call GetTransportInfo/GetPositionInfo regularly
         avt_service = self._service("AVT")
         if avt_service:
-            await self._async_poll_transport_info()
+            if not self.is_subscribed or do_ping:
+                # CurrentTransportState is evented, so don't need to poll when subscribed
+                await self._async_poll_transport_info()
 
             if self.state == DeviceState.PLAYING or self.state == DeviceState.PAUSED:
                 # playing something, get position info
+                # RelativeTimePosition is *never* evented, must always poll
                 await self._async_poll_position_info()
-        else:
+        elif do_ping:
             await self.device.async_ping()
 
     async def _async_poll_transport_info(self) -> None:
