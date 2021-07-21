@@ -123,7 +123,7 @@ def decode_ssdp_packet(
         lines.append(b"")
 
     parsed_headers, _ = HeadersParser().parse_headers(lines)
-    headers = CaseInsensitiveDict(**parsed_headers)
+    headers = CaseInsensitiveDict(**dict(parsed_headers))
 
     # adjust some headers
     if "location" in headers:

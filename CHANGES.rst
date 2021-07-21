@@ -3,6 +3,8 @@ Changes
 
 0.19.1 (unreleased)
 
+- Work around duplicate headers in SSDP responses (#74)
+
 
 0.19.0 (2021-06-19)
 

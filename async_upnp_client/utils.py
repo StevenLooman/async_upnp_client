@@ -17,6 +17,11 @@ EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
 
 
+def _ci_key(key: str) -> str:
+    """Get storable key from key."""
+    return key.lower()
+
+
 class CaseInsensitiveDict(MutableMapping):
     """Case insensitive dict."""
 
@@ -26,24 +31,19 @@ class CaseInsensitiveDict(MutableMapping):
         for key, value in kwargs.items():
             self[key] = value
 
-    def _ci_key(self, key: str) -> str:
-        """Get storable key from key."""
-        # pylint: disable=no-self-use
-        return key.lower()
-
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
-        key_ci = self._ci_key(key)
+        key_ci = _ci_key(key)
         self._data[key_ci] = (key, value)
 
     def __getitem__(self, key: str) -> Any:
         """Get item."""
-        ci_key = self._ci_key(key)
+        ci_key = _ci_key(key)
         return self._data[ci_key][1]
 
     def __delitem__(self, key: str) -> None:
         """Del item."""
-        ci_key = self._ci_key(key)
+        ci_key = _ci_key(key)
         del self._data[ci_key]
 
     def __len__(self) -> int:
@@ -63,13 +63,13 @@ class CaseInsensitiveDict(MutableMapping):
         if not isinstance(other, abcMapping) and not isinstance(other, dict):
             return NotImplemented
 
-        dict_a = {self._ci_key(key): value for key, value in self.items()}
-        dict_b = {self._ci_key(key): value for key, value in other.items()}
+        dict_a = {_ci_key(key): value for key, value in self.items()}
+        dict_b = {_ci_key(key): value for key, value in other.items()}
         return dict_a == dict_b
 
     def __hash__(self) -> int:
         """Get hash."""
-        ci_dict = {self._ci_key(key): value for key, value in self.items()}
+        ci_dict = {_ci_key(key): value for key, value in self.items()}
         return hash(tuple(sorted(ci_dict.items())))
 
 

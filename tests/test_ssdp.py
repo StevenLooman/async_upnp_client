@@ -114,6 +114,23 @@ def test_decode_ssdp_packet_missing_ending():
     }
 
 
+def test_decode_ssdp_packet_duplicate_header():
+    """Test SSDP response decoding with a duplicate header."""
+    msg = (
+        b"HTTP/1.1 200 OK\r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
+    )
+    _, headers = decode_ssdp_packet(msg, ("addr", 123))
+
+    assert headers == {
+        "cache-control": "max-age = 1800",
+        "_host": "addr",
+        "_port": 123,
+        "_timestamp": ANY,
+    }
+
+
 def test_decode_ssdp_packet_v6():
     """Test SSDP response decoding."""
     msg = (
