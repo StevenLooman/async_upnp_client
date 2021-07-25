@@ -1,7 +1,9 @@
 Changes
 =======
 
-0.19.2 (unreleased)
+0.20.0 (unreleased)
+
+- Clean up `UpnpRequester`: Remove `body_type` parameter
 
 
 0.19.1 (2021-07-21)

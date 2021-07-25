@@ -347,7 +347,7 @@ class UpnpFactory:
         if status_code != 200:
             raise UpnpError("Received status code: {}".format(status_code))
 
-        description: str = (response_body or "").rstrip(" \t\r\n\0")  # type: ignore
+        description: str = (response_body or "").rstrip(" \t\r\n\0")
         try:
             element: ET.Element = DET.fromstring(description)
             return element

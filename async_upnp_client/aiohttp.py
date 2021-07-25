@@ -5,7 +5,7 @@ import asyncio
 import logging
 from asyncio.events import AbstractEventLoop, AbstractServer
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Mapping, Optional, Tuple, Union
+from typing import Any, Mapping, Optional, Tuple
 
 import aiohttp
 import aiohttp.web
@@ -39,8 +39,7 @@ class AiohttpRequester(UpnpRequester):
         url: str,
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
-        body_type: str = "text",
-    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
@@ -53,26 +52,13 @@ class AiohttpRequester(UpnpRequester):
                     ) as response:
                         status = response.status
                         resp_headers: Mapping = response.headers or {}
-
-                        resp_body: Union[str, bytes, None] = None
-                        if body_type == "text":
-                            try:
-                                resp_body = await response.text()
-                            except UnicodeDecodeError as exception:
-                                resp_body_bytes = await response.read()
-                                resp_body = resp_body_bytes.decode(
-                                    exception.encoding, errors="replace"
-                                )
-                        elif body_type == "raw":
-                            resp_body = await response.read()
-                        elif body_type == "ignore":
-                            resp_body = None
+                        resp_body = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError from err
         except aiohttp.ClientConnectionError as err:
             raise UpnpConnectionError from err
         except aiohttp.ClientResponseError as err:
-            raise UpnpClientResponseError(  # type: ignore
+            raise UpnpClientResponseError(
                 request_info=err.request_info,
                 history=err.history,
                 status=err.status,
@@ -111,8 +97,7 @@ class AiohttpSessionRequester(UpnpRequester):
         url: str,
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
-        body_type: str = "text",
-    ) -> Tuple[int, Mapping[str, str], Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping[str, str], str]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
@@ -127,20 +112,13 @@ class AiohttpSessionRequester(UpnpRequester):
                 ) as response:
                     status = response.status
                     resp_headers: Mapping = response.headers or {}
-
-                    resp_body: Union[str, bytes, None] = None
-                    if body_type == "text":
-                        resp_body = await response.text()
-                    elif body_type == "raw":
-                        resp_body = await response.read()
-                    elif body_type == "ignore":
-                        resp_body = None
+                    resp_body = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError from err
         except aiohttp.ClientConnectionError as err:
             raise UpnpConnectionError from err
         except aiohttp.ClientResponseError as err:
-            raise UpnpClientResponseError(  # type: ignore
+            raise UpnpClientResponseError(
                 request_info=err.request_info,
                 history=err.history,
                 status=err.status,

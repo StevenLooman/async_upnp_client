@@ -693,16 +693,12 @@ class DmrDevice(UpnpProfileDevice):
         requester = self.device.requester
 
         # try a HEAD first
-        status, headers, _ = await requester.async_http_request(
-            "HEAD", url, headers=headers, body_type="ignore"
-        )
+        status, headers, _ = await requester.async_http_request("HEAD", url, headers)
         if 200 <= status < 300:
             return headers
 
         # then try a GET
-        status, headers, _ = await requester.async_http_request(
-            "GET", url, headers=headers, body_type="ignore"
-        )
+        status, headers, _ = await requester.async_http_request("GET", url, headers)
         if 200 <= status < 300:
             return headers
 

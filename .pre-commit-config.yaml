@@ -40,4 +40,6 @@ repos:
     rev: 'v0.910'
     hooks:
       - id: mypy
+        args: [--ignore-missing-imports]
+        additional_dependencies: [aiohttp>=3.7.4]
         files: ^async_upnp_client/.+\.py$

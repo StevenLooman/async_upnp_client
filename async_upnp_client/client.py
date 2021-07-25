@@ -14,7 +14,6 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
-    Union,
 )
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
@@ -53,8 +52,7 @@ class UpnpRequester:
         url: str,
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
-        body_type: str = "text",
-    ) -> Tuple[int, Mapping[str, str], Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping[str, str], str]:
         """
         Do a HTTP request.
 
@@ -62,7 +60,6 @@ class UpnpRequester:
         :param url URL to call
         :param headers Headers to send
         :param body Body to send
-        :param body_type How to interpret body: 'text', 'raw', 'ignore'
 
         :return status code, headers, body
         """
@@ -78,18 +75,13 @@ class UpnpRequester:
             response_status,
             response_headers,
             response_body,
-        ) = await self.async_do_http_request(
-            method, url, headers=headers, body=body, body_type=body_type
-        )
+        ) = await self.async_do_http_request(method, url, headers=headers, body=body)
 
-        log_response_body = (
-            response_body if body_type == "text" else "async_upnp_client: OMITTING BODY"
-        )
         _LOGGER_TRAFFIC_UPNP.debug(
             "Got response:\n%s\n%s\n\n%s",
             response_status,
             "\n".join([key + ": " + value for key, value in response_headers.items()]),
-            log_response_body,
+            response_body,
         )
 
         return response_status, response_headers, response_body
@@ -100,8 +92,7 @@ class UpnpRequester:
         url: str,
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
-        body_type: str = "text",
-    ) -> Tuple[int, Mapping[str, str], Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping[str, str], str]:
         """Actually do a HTTP request."""
         # pylint: disable=too-many-arguments
         raise NotImplementedError()
