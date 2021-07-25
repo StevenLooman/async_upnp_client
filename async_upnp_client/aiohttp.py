@@ -13,8 +13,8 @@ import async_timeout
 
 from async_upnp_client import UpnpEventHandler, UpnpRequester
 from async_upnp_client.exceptions import (
-    UpnpCommunicationError,
     UpnpClientResponseError,
+    UpnpCommunicationError,
     UpnpConnectionError,
     UpnpConnectionTimeoutError,
     UpnpServerOSError,
@@ -72,7 +72,7 @@ class AiohttpRequester(UpnpRequester):
         except aiohttp.ClientConnectionError as err:
             raise UpnpConnectionError from err
         except aiohttp.ClientResponseError as err:
-            raise UpnpClientResponseError(
+            raise UpnpClientResponseError(  # type: ignore
                 request_info=err.request_info,
                 history=err.history,
                 status=err.status,
@@ -140,7 +140,7 @@ class AiohttpSessionRequester(UpnpRequester):
         except aiohttp.ClientConnectionError as err:
             raise UpnpConnectionError from err
         except aiohttp.ClientResponseError as err:
-            raise UpnpClientResponseError(
+            raise UpnpClientResponseError(  # type: ignore
                 request_info=err.request_info,
                 history=err.history,
                 status=err.status,

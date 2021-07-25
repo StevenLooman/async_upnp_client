@@ -30,7 +30,6 @@ from async_upnp_client.const import (
 )
 from async_upnp_client.utils import absolute_url
 
-
 _LOGGER = logging.getLogger(__name__)
 
 

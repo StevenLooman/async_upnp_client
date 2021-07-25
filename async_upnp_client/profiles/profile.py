@@ -15,8 +15,8 @@ from async_upnp_client.client import (
     UpnpService,
     UpnpStateVariable,
 )
-from async_upnp_client.exceptions import UpnpError, UpnpConnectionError
 from async_upnp_client.event_handler import UpnpEventHandler
+from async_upnp_client.exceptions import UpnpConnectionError, UpnpError
 from async_upnp_client.search import async_search
 from async_upnp_client.ssdp import SSDP_MX
 
@@ -129,7 +129,7 @@ class UpnpProfileDevice:
             icons = [icon for icon in self.device.icons if icon.url]
             icons = sorted(
                 icons,
-                # Sort by area, then colour depth, then prefered mimetype
+                # Sort by area, then colour depth, then preferred mimetype
                 key=lambda icon: (
                     icon.width * icon.height,
                     icon.depth,
