@@ -206,6 +206,7 @@ def get_ssdp_socket(
     # create socket
     sock = socket.socket(source[0], source[1], source[2])
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # multicast
     if target_ip.is_multicast:

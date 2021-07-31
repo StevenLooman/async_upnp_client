@@ -5,6 +5,7 @@ Changes
 
 - Clean up `UpnpRequester`: Remove `body_type` parameter
 - Allow for overriding the `target` in `ssdp.SSDPListener.async_search()`
+- Set SO_BROADCAST flag, fixes `Permission denied` error when sending to global broadcast address
 
 
 0.19.1 (2021-07-21)
