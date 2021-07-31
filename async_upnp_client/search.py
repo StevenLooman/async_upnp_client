@@ -5,7 +5,7 @@ import logging
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
 from async_upnp_client.ssdp import (
     SSDP_IP_V4,
@@ -14,6 +14,7 @@ from async_upnp_client.ssdp import (
     SSDP_ST_ALL,
     SSDP_TARGET_V4,
     SSDP_TARGET_V6,
+    AddressTupleVXType,
     IPvXAddress,
     SsdpProtocol,
     build_ssdp_search_packet,
@@ -46,13 +47,13 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         self.timeout = timeout
         self.loop = loop
         self._target_host: Optional[str] = None
-        self._target_data: Optional[
-            Union[Tuple[str, int], Tuple[str, int, int, int]]
-        ] = None
-        self._target: Optional[Union[Tuple[str, int], Tuple[str, int, int, int]]] = None
+        self._target_data: Optional[AddressTupleVXType] = None
+        self._target: Optional[AddressTupleVXType] = None
         self._transport: Optional[DatagramTransport] = None
 
-    def async_search(self) -> None:
+    def async_search(
+        self, override_target: Optional[AddressTupleVXType] = None
+    ) -> None:
         """Start an SSDP search."""
         assert self._target_data is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(
@@ -61,7 +62,8 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         _LOGGER.debug("Sending M-SEARCH packet")
         _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
         assert self._transport is not None
-        self._transport.sendto(packet, self._target)
+        target = override_target or self._target
+        self._transport.sendto(packet, target)
 
     async def _async_on_data(
         self, request_line: str, headers: MutableMapping[str, str]
