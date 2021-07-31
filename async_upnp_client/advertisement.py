@@ -42,7 +42,6 @@ class UpnpAdvertisementListener:
         self.target_ip = target_ip or IPv4Address(SSDP_IP_V4)
         self.source_ip = source_ip or get_source_ip_from_target_ip(self.target_ip)
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
-
         self._transport: Optional[asyncio.BaseTransport] = None
 
     async def _on_data(

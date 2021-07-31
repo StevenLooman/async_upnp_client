@@ -8,11 +8,12 @@ from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, Union, cast
+from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_parser import HeadersParser
 
+from async_upnp_client.const import AddressTupleV6Type, AddressTupleVXType, IPvXAddress
 from async_upnp_client.utils import CaseInsensitiveDict
 
 SSDP_PORT = 1900
@@ -32,11 +33,6 @@ SSDP_BYEBYE = "ssdp:byebye"
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
-
-IPvXAddress = Union[IPv4Address, IPv6Address]
-AddressTupleV4Type = Tuple[str, int]
-AddressTupleV6Type = Tuple[str, int, int, int]
-AddressTupleVXType = Union[AddressTupleV4Type, AddressTupleV6Type]
 
 
 def get_host_string(addr: AddressTupleVXType) -> str:

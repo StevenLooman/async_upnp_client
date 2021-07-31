@@ -2,10 +2,16 @@
 """Constants module."""
 
 from datetime import date, datetime, time
-from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence
+from ipaddress import IPv4Address, IPv6Address
+from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 from xml.etree import ElementTree as ET
 
 from async_upnp_client.utils import parse_date_time, require_tzinfo
+
+IPvXAddress = Union[IPv4Address, IPv6Address]
+AddressTupleV4Type = Tuple[str, int]
+AddressTupleV6Type = Tuple[str, int, int, int]
+AddressTupleVXType = Union[AddressTupleV4Type, AddressTupleV6Type]
 
 NS = {
     "soap_envelope": "http://schemas.xmlsoap.org/soap/envelope/",
