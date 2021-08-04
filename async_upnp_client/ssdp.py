@@ -157,6 +157,7 @@ class SsdpProtocol(BaseProtocol):
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
+        _LOGGER.debug("Connection made, transport: %s", self.transport)
         self.transport = cast(DatagramTransport, transport)
 
         if self.on_connect:
@@ -175,10 +176,11 @@ class SsdpProtocol(BaseProtocol):
     def error_received(self, exc: Exception) -> None:
         """Handle an error."""
         # pylint: disable=no-self-use
-        _LOGGER.debug("Received error: %s", exc)
+        _LOGGER.error("Received error: %s, transport: %s", exc, self.transport)
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
+        _LOGGER.debug("Lost connection, transport: %s", self.transport)
 
 
 def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:

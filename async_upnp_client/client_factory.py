@@ -63,6 +63,7 @@ class UpnpFactory:
         config_id: Optional[str] = None,
     ) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
+        _LOGGER.debug("Creating device, description_url: %s", description_url)
         root = await self._async_get_url_xml(description_url)
 
         # get device info

@@ -59,7 +59,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         packet = build_ssdp_search_packet(
             self._target_data, self.timeout, self.service_type
         )
-        _LOGGER.debug("Sending M-SEARCH packet")
+        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self._transport)
         _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
         assert self._transport is not None
         target = override_target or self._target
