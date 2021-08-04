@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.20.0 (unreleased)
+0.19.2 (2021-08-04)
 
 - Clean up `UpnpRequester`: Remove `body_type` parameter
 - Allow for overriding the `target` in `ssdp.SSDPListener.async_search()`
