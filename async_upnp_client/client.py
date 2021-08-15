@@ -30,7 +30,7 @@ from async_upnp_client.const import (
     ServiceInfo,
     StateVariableInfo,
 )
-from async_upnp_client.exceptions import UpnpError, UpnpValueError
+from async_upnp_client.exceptions import UpnpError, UpnpValueError, UpnpXmlParseError
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
@@ -593,7 +593,11 @@ class UpnpAction:
     ) -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
-        xml = DET.fromstring(response_body.rstrip(" \t\r\n\0"))
+        try:
+            xml = DET.fromstring(response_body.rstrip(" \t\r\n\0"))
+        except ET.ParseError as err:
+            _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
+            raise UpnpXmlParseError(err) from err
 
         query = ".//soap_envelope:Body/soap_envelope:Fault"
         if xml.find(query, NS):
