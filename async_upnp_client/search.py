@@ -38,12 +38,16 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         target_ip: Optional[IPvXAddress] = None,
         timeout: int = SSDP_MX,
         service_type: str = SSDP_ST_ALL,
+        target: Optional[AddressTupleVXType] = None,
+        async_connect_callback: Optional[Callable[[], Awaitable]] = None,
     ) -> None:
         """Init the ssdp listener class."""
         self.async_callback = async_callback
+        self.async_connect_callback = async_connect_callback
         self.service_type = service_type
         self.source_ip = source_ip
         self.target_ip = target_ip
+        self.target = target
         self.timeout = timeout
         self.loop = loop
         self._target_host: Optional[str] = None
@@ -78,6 +82,8 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         self._transport = transport
+        if self.async_connect_callback:
+            await self.async_connect_callback()
         self.async_search()
 
     async def async_start(self) -> None:
@@ -90,14 +96,18 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         if self.source_ip is None:
             self.source_ip = get_source_ip_from_target_ip(self.target_ip)
 
-        sock, source, self._target = get_ssdp_socket(self.source_ip, self.target_ip)
-
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
-        if self.target_ip.version == 6:
+        if self.target:
+            self._target_data = self.target
+        elif self.target_ip.version == 6:
             self._target_data = SSDP_TARGET_V6
         else:
             self._target_data = SSDP_TARGET_V4
+
+        sock, source, self._target = get_ssdp_socket(
+            self.source_ip, self.target_ip, port=self._target_data[1]
+        )
 
         if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self._target)
