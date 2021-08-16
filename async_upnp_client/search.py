@@ -84,7 +84,6 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         self._transport = transport
         if self.async_connect_callback:
             await self.async_connect_callback()
-        self.async_search()
 
     async def async_start(self) -> None:
         """Start the listener."""
@@ -141,9 +140,20 @@ async def async_search(
     """Discover devices via SSDP."""
     # pylint: disable=too-many-arguments
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
+    listener: Optional[SSDPListener] = None
+
+    async def _async_connected():
+        nonlocal listener
+        listener.async_search()
 
     listener = SSDPListener(
-        async_callback, loop_, source_ip, target_ip, timeout, service_type
+        async_callback,
+        loop_,
+        source_ip,
+        target_ip,
+        timeout,
+        service_type,
+        async_connect_callback=_async_connected,
     )
 
     await listener.async_start()
