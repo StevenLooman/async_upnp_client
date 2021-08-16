@@ -18,7 +18,7 @@ from async_upnp_client.advertisement import UpnpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
-from async_upnp_client.ssdp import SSDP_ST_ALL
+from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
@@ -64,6 +64,7 @@ subparser.add_argument("--bind", help="ip, e.g., 192.168.0.10")
 subparser.add_argument(
     "--target", help="ip, e.g., 192.168.0.10 or FF02::C to request from"
 )
+subparser.add_argument("--target_port", help="port, e.g., 1900 or 1892 to request from")
 subparser.add_argument(
     "--service_type", help="service type to search for", default=SSDP_ST_ALL
 )
@@ -292,13 +293,16 @@ async def search(search_args: Any) -> None:
     service_type = search_args.service_type
     source_ip = search_args.bind
     target_ip = search_args.target
+    target_port = search_args.target_port
     if sys.platform == "win32" and not source_ip:
         _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
         source_ip = "0.0.0.0"  # force to IPv4 to prevent asyncio crash/WinError 10022
     if source_ip:
         source_ip = ip_address(source_ip)
     if target_ip:
-        target_ip = ip_address(target_ip)
+        target = (target_ip, int(target_port) or SSDP_PORT)
+    else:
+        target = None
 
     async def on_response(data: Mapping[str, Any]) -> None:
         data = {key: str(value) for key, value in data.items()}
@@ -307,7 +311,7 @@ async def search(search_args: Any) -> None:
     await async_ssdp_search(
         service_type=service_type,
         source_ip=source_ip,
-        target_ip=target_ip,
+        target=target,
         timeout=timeout,
         async_callback=on_response,
     )
