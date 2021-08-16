@@ -87,7 +87,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
                 self._target = (SSDP_IP_V6, SSDP_PORT)
             else:
                 self._target = (SSDP_IP_V4, SSDP_PORT)
-                
+
         if self.source_ip is None:
             self.source_ip = get_source_ip_from_target_ip(self._target[0])
 
