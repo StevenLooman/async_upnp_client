@@ -4,7 +4,7 @@ import asyncio
 import logging
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
-from ipaddress import ip_address, IPv4Address, IPv6Address
+from ipaddress import ip_address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
 from async_upnp_client.ssdp import (
@@ -13,8 +13,6 @@ from async_upnp_client.ssdp import (
     SSDP_MX,
     SSDP_PORT,
     SSDP_ST_ALL,
-    SSDP_TARGET_V4,
-    SSDP_TARGET_V6,
     AddressTupleVXType,
     IPvXAddress,
     SsdpProtocol,
