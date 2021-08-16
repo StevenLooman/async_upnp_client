@@ -18,7 +18,7 @@ from async_upnp_client.advertisement import UpnpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
-from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL
+from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL, AddressTupleVXType
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
@@ -300,7 +300,10 @@ async def search(search_args: Any) -> None:
     if source_ip:
         source_ip = ip_address(source_ip)
     if target_ip:
-        target = (target_ip, int(target_port) or SSDP_PORT)
+        target: Optional[AddressTupleVXType] = (
+            target_ip,
+            int(target_port) or SSDP_PORT,
+        )
     else:
         target = None
 

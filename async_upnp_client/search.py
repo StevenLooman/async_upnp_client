@@ -55,6 +55,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
     ) -> None:
         """Start an SSDP search."""
         assert self._target_host is not None, "Call async_start() first"
+        assert self._target is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(self._target, self.timeout, self.service_type)
         _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self._transport)
         _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
@@ -86,10 +87,10 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
             else:
                 self._target = (SSDP_IP_V4, SSDP_PORT)
 
-        if self.source_ip is None:
-            self.source_ip = get_source_ip_from_target_ip(self._target[0])
-
         target_ip: IPvXAddress = ip_address(self._target[0])
+
+        if self.source_ip is None:
+            self.source_ip = get_source_ip_from_target_ip(target_ip)
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
         sock, source, _ = get_ssdp_socket(
@@ -130,8 +131,9 @@ async def async_search(
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
     listener: Optional[SSDPListener] = None
 
-    async def _async_connected():
+    async def _async_connected() -> None:
         nonlocal listener
+        assert listener is not None
         listener.async_search()
 
     listener = SSDPListener(
