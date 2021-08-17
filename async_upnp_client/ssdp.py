@@ -194,11 +194,14 @@ def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:
 
 
 def get_ssdp_socket(
-    source_ip: IPvXAddress, target_ip: IPvXAddress
+    source_ip: IPvXAddress, target_ip: IPvXAddress, port: Optional[int] = None
 ) -> Tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
     """Create a socket to listen on."""
     target = socket.getaddrinfo(
-        str(target_ip), SSDP_PORT, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
+        str(target_ip),
+        port or SSDP_PORT,
+        type=socket.SOCK_DGRAM,
+        proto=socket.IPPROTO_UDP,
     )[0]
     source = socket.getaddrinfo(
         str(source_ip), 0, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP

@@ -1,7 +1,11 @@
 Changes
 =======
 
-0.19.3 (unreleased)
+0.20.0 (2021-08-17)
+
+- Breaking change: Calling `async_start` on `SSDPListener` no longer calls `async_search` immediately. (#77) @bdraco
+- Breaking change: The `target_ip` argument of `search.SSDPListener` has been dropped and replaced with `target` which takes a `AddressTupleVXType` (#77) @bdraco
+- Breaking change: The `target_ip` argument of `search.async_search` has been dropped and replaced with `target` which takes a `AddressTupleVXType` (#77) @bdraco
 
 - Wrap XML `ParseError` in an error type derived from it and `UpnpError` too (@chishm)
 

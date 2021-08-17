@@ -1,9 +1,12 @@
 """Unit tests for discovery."""
+from ipaddress import IPv4Address
 from unittest.mock import ANY
 
 from async_upnp_client.ssdp import (
+    SSDP_PORT,
     build_ssdp_search_packet,
     decode_ssdp_packet,
+    get_ssdp_socket,
     is_valid_ssdp_packet,
 )
 
@@ -160,3 +163,20 @@ def test_decode_ssdp_packet_v6():
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
+
+
+def test_get_ssdp_socket():
+    """Test get_ssdp_socket accepts a port."""
+    # Without a port, should default to SSDP_PORT
+    _, source_info, target_info = get_ssdp_socket(
+        IPv4Address("127.0.0.1"), IPv4Address("127.0.0.1")
+    )
+    assert source_info == ("127.0.0.1", 0)
+    assert target_info == ("127.0.0.1", SSDP_PORT)
+
+    # With a port
+    _, source_info, target_info = get_ssdp_socket(
+        IPv4Address("127.0.0.1"), IPv4Address("127.0.0.1"), 1234
+    )
+    assert source_info == ("127.0.0.1", 0)
+    assert target_info == ("127.0.0.1", 1234)
