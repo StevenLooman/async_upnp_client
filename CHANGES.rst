@@ -1,6 +1,13 @@
 Changes
 =======
 
+0.20.0 (2021-08-17)
+
+- Breaking change: Calling `async_start` on `SSDPListener` no longer calls `async_search` immediately. (#77) @bdraco
+- Breaking change: The `target_ip` argument of `search.SSDPListener` has been dropped and replaced with `target` which takes a `AddressTupleVXType` (#77) @bdraco
+- Breaking change: The `target_ip` argument of `search.async_search` has been dropped and replaced with `target` which takes a `AddressTupleVXType` (#77) @bdraco
+
+
 0.19.2 (2021-08-04)
 
 - Clean up `UpnpRequester`: Remove `body_type` parameter
