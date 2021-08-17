@@ -3,6 +3,7 @@ Changes
 
 0.19.3 (unreleased)
 
+- Wrap XML `ParseError` in an error type derived from it and `UpnpError` too (@chishm)
 
 0.19.2 (2021-08-04)
 

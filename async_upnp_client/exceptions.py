@@ -3,6 +3,7 @@
 
 import asyncio
 from typing import Any, Optional
+from xml.etree import ElementTree as ET
 
 import aiohttp
 
@@ -15,6 +16,16 @@ class UpnpError(Exception):
 
 class UpnpContentError(UpnpError):
     """Content of UPnP response is invalid."""
+
+
+class UpnpXmlParseError(UpnpError, ET.ParseError):
+    """UPnP response is not valid XML."""
+
+    def __init__(self, orig_err: ET.ParseError) -> None:
+        """Initialize from original ParseError, to match it."""
+        super().__init__(str(orig_err))
+        self.code = orig_err.code
+        self.position = orig_err.position
 
 
 class UpnpValueError(UpnpContentError):

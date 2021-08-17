@@ -28,6 +28,7 @@ from async_upnp_client.const import (
     StateVariableInfo,
     StateVariableTypeInfo,
 )
+from async_upnp_client.exceptions import UpnpXmlParseError
 from async_upnp_client.utils import absolute_url
 
 _LOGGER = logging.getLogger(__name__)
@@ -354,4 +355,4 @@ class UpnpFactory:
             return element
         except ET.ParseError as err:
             _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, description)
-            raise
+            raise UpnpXmlParseError(err) from err
