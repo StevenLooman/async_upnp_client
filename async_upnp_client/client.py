@@ -105,8 +105,6 @@ class UpnpDevice:
         requester: UpnpRequester,
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
-        boot_id: Optional[str] = None,
-        config_id: Optional[str] = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
@@ -118,8 +116,8 @@ class UpnpDevice:
         for service in services:
             service.device = self
 
-        self.boot_id: Optional[str] = boot_id
-        self.config_id: Optional[str] = config_id
+        # SSDP headers.
+        self.ssdp_headers: Mapping[str, Any] = {}
 
         # Just initialized, mark available.
         self.available = True
@@ -127,16 +125,7 @@ class UpnpDevice:
     def reinit(self, device: "UpnpDevice") -> None:
         """Reinitialize self from another device."""
         self.device_info = device.device_info
-
-        self.services = device.services
-        for service in self.services.values():
-            service.device = self
-
-        # XXX TODO: What about event handlers on the services?
-        # XXX TODO: Ssdp 'settings' in own dict? Or bind SsdpDevice?
-
-        self.boot_id = device.boot_id
-        self.config_id = device.config_id
+        self.ssdp_headers = device.ssdp_headers
 
     @property
     def name(self) -> str:

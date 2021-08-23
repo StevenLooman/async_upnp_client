@@ -6,6 +6,7 @@ Changes
 - Breaking change: Rename `advertisement.UpnpAdvertisementListener` to `advertisement.SsdpAdvertisementListener`
 - Breaking change: Rename `search.SSDPListener` to `search.SsdpSearchListener`
 - Add `ssdp_listener.SsdpListener`, class to keep track of devices seen via SSDP advertisements and searches
+- Breaking change: `UpnpDevice.boot_id` and `UpnpDevice.config_id` have been moved to `UpnpDevice.ssdp_headers`, using the respecitive keys from the SSDP headers
 
 
 0.20.0 (2021-08-17)

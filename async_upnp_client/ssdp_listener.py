@@ -1,10 +1,10 @@
 """SSDP Search + Advertisement listener, keeping track of known devices on the network."""
 
-import enum
 import logging
 import re
 from asyncio.events import AbstractEventLoop
 from datetime import datetime, timedelta
+from enum import Enum
 from ipaddress import ip_address
 from typing import (
     Any,
@@ -35,14 +35,10 @@ CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)")
 DEFAULT_MAX_AGE = timedelta(seconds=900)
 
 
-@enum.unique
-class SourceType(enum.Enum):
-    """Source of change."""
-
-    SEARCH = 0
-    ALIVE = 1
-    UPDATED = 2
-    BYEBYE = 3
+SsdpSource = Enum(
+    "SsdpSource",
+    "SEARCH ADVERTISEMENT_ALIVE ADVERTISEMENT_UPDATED ADVERTISEMENT_BYEBYE",
+)
 
 
 def valid_search_headers(headers: Mapping[str, Any]) -> bool:
@@ -121,11 +117,11 @@ class SsdpDevice:
 
     def combined_headers(
         self,
-        notification_type: Union[NotificationType, SearchTarget],
+        device_or_service_type: Union[NotificationType, SearchTarget],
     ) -> Mapping[str, Any]:
         """Get combined headers from search and advertisement for a given NT."""
-        headers = dict(self.search_headers.get(notification_type, {}))
-        headers.update(self.advertisement_headers.get(notification_type, {}))
+        headers = dict(self.search_headers.get(device_or_service_type, {}))
+        headers.update(self.advertisement_headers.get(device_or_service_type, {}))
         return headers
 
     def __repr__(self) -> str:
@@ -136,13 +132,12 @@ class SsdpDevice:
 def headers_differ_from_existing_advertisement(
     ssdp_device: SsdpDevice, key: str, headers: Mapping[str, Any]
 ) -> bool:
-    """Compare against existing search headers to see if anything interesting has changed."""
+    """Compare against existing advertisement headers to see if anything interesting has changed."""
     if key not in ssdp_device.advertisement_headers:
         return False
 
     current_headers = ssdp_device.advertisement_headers[key]
     shared_keys = set(current_headers) - set(headers)
-
     current_filtered = {
         key: value for key, value in current_headers.items() if key in shared_keys
     }
@@ -159,7 +154,6 @@ def headers_differ_from_existing_search(
 
     current_headers = ssdp_device.search_headers[key]
     shared_keys = set(current_headers).intersection(set(headers))
-
     current_filtered = {
         key: value for key, value in current_headers.items() if key in shared_keys
     }
@@ -319,7 +313,7 @@ class SsdpListener:
     def __init__(
         self,
         callback: Callable[
-            [SsdpDevice, Union[NotificationType, SearchTarget], SourceType], Awaitable
+            [SsdpDevice, Union[NotificationType, SearchTarget], SsdpSource], Awaitable
         ],
         source_ip: Optional[IPvXAddress] = None,
         target: Optional[AddressTupleVXType] = None,
@@ -382,7 +376,7 @@ class SsdpListener:
         propagate, ssdp_device, search_target = self._device_tracker.see_search(headers)
 
         if propagate and ssdp_device and search_target:
-            await self.callback(ssdp_device, search_target, SourceType.SEARCH)
+            await self.callback(ssdp_device, search_target, SsdpSource.SEARCH)
 
     async def _on_alive(self, headers: MutableMapping[str, str]) -> None:
         """On alive."""
@@ -393,7 +387,9 @@ class SsdpListener:
         ) = self._device_tracker.see_advertisement(headers)
 
         if propagate and ssdp_device and notification_type:
-            await self.callback(ssdp_device, notification_type, SourceType.ALIVE)
+            await self.callback(
+                ssdp_device, notification_type, SsdpSource.ADVERTISEMENT_ALIVE
+            )
 
     async def _on_byebye(self, headers: MutableMapping[str, str]) -> None:
         """On byebye."""
@@ -404,7 +400,9 @@ class SsdpListener:
         ) = self._device_tracker.unsee_advertisement(headers)
 
         if propagate and ssdp_device and notification_type:
-            await self.callback(ssdp_device, notification_type, SourceType.BYEBYE)
+            await self.callback(
+                ssdp_device, notification_type, SsdpSource.ADVERTISEMENT_BYEBYE
+            )
 
     async def _on_update(self, headers: MutableMapping[str, str]) -> None:
         """On update."""
@@ -415,7 +413,9 @@ class SsdpListener:
         ) = self._device_tracker.see_advertisement(headers)
 
         if propagate and ssdp_device and notification_type:
-            await self.callback(ssdp_device, notification_type, SourceType.UPDATED)
+            await self.callback(
+                ssdp_device, notification_type, SsdpSource.ADVERTISEMENT_UPDATED
+            )
 
     @property
     def devices(self) -> Mapping[str, SsdpDevice]:
