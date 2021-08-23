@@ -5,7 +5,7 @@ import asyncio
 import os.path
 from collections import deque
 from copy import deepcopy
-from typing import Any, Deque, Mapping, MutableMapping, Optional, Tuple, Union
+from typing import Deque, Mapping, MutableMapping, Optional, Tuple, cast
 
 from async_upnp_client import UpnpRequester
 
@@ -13,7 +13,7 @@ from async_upnp_client import UpnpRequester
 def read_file(filename: str) -> str:
     """Read file."""
     path = os.path.join("tests", "fixtures", filename)
-    with open(path, "r") as file:
+    with open(path, encoding="utf8") as file:
         return file.read()
 
 
@@ -22,15 +22,13 @@ class UpnpTestRequester(UpnpRequester):
 
     def __init__(
         self,
-        response_map: Mapping[
-            Tuple[str, str], Tuple[int, Mapping[Any, Any], Union[str, bytes, None]]
-        ],
+        response_map: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]],
     ) -> None:
         """Class initializer."""
         self.response_map: MutableMapping[
             Tuple[str, str],
-            Tuple[int, MutableMapping[Any, Any], Union[str, bytes, None]],
-        ] = deepcopy(response_map)
+            Tuple[int, MutableMapping[str, str], str],
+        ] = deepcopy(cast(MutableMapping, response_map))
         self.exceptions: Deque[Optional[Exception]] = deque()
 
     async def async_do_http_request(
@@ -39,10 +37,8 @@ class UpnpTestRequester(UpnpRequester):
         url: str,
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
-        body_type: str = "text",
-    ) -> Tuple[int, Mapping, Union[str, bytes, None]]:
+    ) -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
-        # pylint: disable=too-many-arguments
         await asyncio.sleep(0.01)
 
         if self.exceptions:
@@ -57,7 +53,7 @@ class UpnpTestRequester(UpnpRequester):
         return self.response_map[key]
 
 
-RESPONSE_MAP = {
+RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
     ("GET", "http://localhost:1234/dmr"): (200, {}, read_file("dmr")),
     ("GET", "http://localhost:1234/RenderingControl_1.xml"): (
         200,

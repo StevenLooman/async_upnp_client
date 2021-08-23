@@ -5,8 +5,6 @@ omit =
     async_upnp_client/aiohttp.py
     async_upnp_client/cli.py
     async_upnp_client/const.py
-    async_upnp_client/profiles/__init__.py
-    async_upnp_client/profiles/dlna.py
     async_upnp_client/profiles/igd.py
     async_upnp_client/profiles/printer.py
     async_upnp_client/search.py

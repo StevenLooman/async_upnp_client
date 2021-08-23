@@ -2,16 +2,17 @@
 """Unit tests for upnp_client."""
 
 import socket
-from datetime import datetime, timedelta
-from typing import List, Mapping
+from datetime import datetime, timedelta, timezone
+from typing import MutableMapping, Sequence
 
 import defusedxml.ElementTree as ET
-import pytest  # type: ignore
+import pytest
 
 from async_upnp_client import (
     UpnpError,
     UpnpEventHandler,
     UpnpFactory,
+    UpnpService,
     UpnpStateVariable,
     UpnpValueError,
 )
@@ -23,7 +24,7 @@ class TestUpnpStateVariable:
     """Tests for UpnpStateVariable."""
 
     @pytest.mark.asyncio
-    async def test_init(self):
+    async def test_init(self) -> None:
         """Test initialization of a UpnpDevice."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -46,7 +47,7 @@ class TestUpnpStateVariable:
         assert argument
 
     @pytest.mark.asyncio
-    async def test_init_xml(self):
+    async def test_init_xml(self) -> None:
         """Test XML is stored on every part of the UpnpDevice."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -63,10 +64,11 @@ class TestUpnpStateVariable:
         assert action.xml is not None
 
         argument = action.argument("InstanceID")
+        assert argument is not None
         assert argument.xml is not None
 
     @pytest.mark.asyncio
-    async def test_set_value_volume(self):
+    async def test_set_value_volume(self) -> None:
         """Test calling parsing/reading values from UpnpStateVariable."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -83,7 +85,7 @@ class TestUpnpStateVariable:
         assert state_var.upnp_value == "20"
 
     @pytest.mark.asyncio
-    async def test_set_value_mute(self):
+    async def test_set_value_mute(self) -> None:
         """Test setting a boolean value."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -108,7 +110,7 @@ class TestUpnpStateVariable:
         assert state_var.upnp_value == "0"
 
     @pytest.mark.asyncio
-    async def test_value_min_max(self):
+    async def test_value_min_max(self) -> None:
         """Test min/max restrictions."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -135,7 +137,7 @@ class TestUpnpStateVariable:
             pass
 
     @pytest.mark.asyncio
-    async def test_value_min_max_validation_disable(self):
+    async def test_value_min_max_validation_disable(self) -> None:
         """Test if min/max validations can be disabled."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
@@ -155,7 +157,7 @@ class TestUpnpStateVariable:
         assert state_var.value == 110
 
     @pytest.mark.asyncio
-    async def test_value_allowed_value(self):
+    async def test_value_allowed_value(self) -> None:
         """Test handling allowed values."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -176,7 +178,7 @@ class TestUpnpStateVariable:
             pass
 
     @pytest.mark.asyncio
-    async def test_value_upnp_value_error(self):
+    async def test_value_upnp_value_error(self) -> None:
         """Test handling invalid values in response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
@@ -194,7 +196,7 @@ class TestUpnpStateVariable:
         assert state_var.value_unchecked is UpnpStateVariable.UPNP_VALUE_ERROR
 
     @pytest.mark.asyncio
-    async def test_value_date_time(self):
+    async def test_value_date_time(self) -> None:
         """Test parsing of datetime."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
@@ -207,23 +209,24 @@ class TestUpnpStateVariable:
         assert state_var.value == datetime(1985, 4, 12, 10, 15, 30)
 
     @pytest.mark.asyncio
-    async def test_value_date_time_tz(self):
+    async def test_value_date_time_tz(self) -> None:
         """Test parsing of date_time with a timezone."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("SV2")
+        assert state_var is not None
 
         # should be ok
         state_var.upnp_value = "1985-04-12T10:15:30+0400"
         assert state_var.value == datetime(
-            1985, 4, 12, 10, 15, 30, tzinfo=state_var.value.tzinfo
+            1985, 4, 12, 10, 15, 30, tzinfo=timezone(timedelta(hours=4))
         )
         assert state_var.value.tzinfo is not None
 
     @pytest.mark.asyncio
-    async def test_send_events(self):
+    async def test_send_events(self) -> None:
         """Test if send_events is properly handled."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -247,7 +250,7 @@ class TestUpnpAction:
     """Tests for UpnpAction."""
 
     @pytest.mark.asyncio
-    async def test_init(self):
+    async def test_init(self) -> None:
         """Test Initializing a UpnpAction."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -259,7 +262,7 @@ class TestUpnpAction:
         assert action.name == "GetVolume"
 
     @pytest.mark.asyncio
-    async def test_valid_arguments(self):
+    async def test_valid_arguments(self) -> None:
         """Test validating arguments of an action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -287,7 +290,7 @@ class TestUpnpAction:
             pass
 
     @pytest.mark.asyncio
-    async def test_format_request(self):
+    async def test_format_request(self) -> None:
         """Test the request an action sends."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -306,7 +309,7 @@ class TestUpnpAction:
         assert root.find(".//DesiredVolume", namespace) is not None
 
     @pytest.mark.asyncio
-    async def test_format_request_escape(self):
+    async def test_format_request_escape(self) -> None:
         """Test escaping the request an action sends."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -337,7 +340,7 @@ class TestUpnpAction:
         assert current_uri_metadata_el.findall("./") == []
 
     @pytest.mark.asyncio
-    async def test_parse_response(self):
+    async def test_parse_response(self) -> None:
         """Test calling an action and handling its response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -351,7 +354,7 @@ class TestUpnpAction:
         assert result == {"CurrentVolume": 3}
 
     @pytest.mark.asyncio
-    async def test_parse_response_empty(self):
+    async def test_parse_response_empty(self) -> None:
         """Test calling an action and handling an empty XML response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -365,7 +368,7 @@ class TestUpnpAction:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_parse_response_error(self):
+    async def test_parse_response_error(self) -> None:
         """Test calling and action and handling an invalid XML response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -382,7 +385,7 @@ class TestUpnpAction:
             pass
 
     @pytest.mark.asyncio
-    async def test_parse_response_escape(self):
+    async def test_parse_response_escape(self) -> None:
         """Test calling an action and properly (not) escaping the response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -416,7 +419,7 @@ class TestUpnpAction:
         }
 
     @pytest.mark.asyncio
-    async def test_parse_response_no_service_type_version(self):
+    async def test_parse_response_no_service_type_version(self) -> None:
         """Test calling and action and handling a response without service type number."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -433,7 +436,7 @@ class TestUpnpAction:
             pass
 
     @pytest.mark.asyncio
-    async def test_parse_response_no_service_type_version_2(self):
+    async def test_parse_response_no_service_type_version_2(self) -> None:
         """Test calling and action and handling a response without service type number."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -450,7 +453,7 @@ class TestUpnpAction:
             pass
 
     @pytest.mark.asyncio
-    async def test_unknown_out_argument(self):
+    async def test_unknown_out_argument(self) -> None:
         """Test calling an actino and handling an unknown out-argument."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         link_service = "http://localhost:1234/dmr"
@@ -484,7 +487,7 @@ class TestUpnpService:
     """Tests for UpnpService."""
 
     @pytest.mark.asyncio
-    async def test_init(self):
+    async def test_init(self) -> None:
         """Test initializing a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -499,7 +502,7 @@ class TestUpnpService:
         assert service.scpd_url == base_url + "/RenderingControl_1.xml"
 
     @pytest.mark.asyncio
-    async def test_state_variables_actions(self):
+    async def test_state_variables_actions(self) -> None:
         """Test eding a UpnpStateVariable."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -513,9 +516,9 @@ class TestUpnpService:
         assert action
 
     @pytest.mark.asyncio
-    async def test_call_action(self):
+    async def test_call_action(self) -> None:
         """Test calling a UpnpAction."""
-        responses: Mapping = {
+        responses: MutableMapping = {
             ("POST", "http://localhost:1234/upnp/control/RenderingControl1"): (
                 200,
                 {},
@@ -537,7 +540,7 @@ class TestUpnpEventHandler:
     """Tests for UPnpEventHandler."""
 
     @pytest.mark.asyncio
-    async def test_subscribe(self):
+    async def test_subscribe(self) -> None:
         """Test subscribing to a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -553,7 +556,7 @@ class TestUpnpEventHandler:
         assert callback_url == "http://localhost:11302"
 
     @pytest.mark.asyncio
-    async def test_deferred_callback_url(self):
+    async def test_deferred_callback_url(self) -> None:
         """Test creating a UpnpEventHandler with unspecified host and port."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -567,7 +570,7 @@ class TestUpnpEventHandler:
         assert callback_url == "http://127.0.0.1:11302"
 
     @pytest.mark.asyncio
-    async def test_subscribe_renew(self):
+    async def test_subscribe_renew(self) -> None:
         """Test renewing an existing subscription to a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -586,7 +589,7 @@ class TestUpnpEventHandler:
         assert timeout == timedelta(seconds=300)
 
     @pytest.mark.asyncio
-    async def test_unsubscribe(self):
+    async def test_unsubscribe(self) -> None:
         """Test unsubscribing from a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -604,21 +607,22 @@ class TestUpnpEventHandler:
         assert old_sid == "uuid:dummy"
 
     @pytest.mark.asyncio
-    async def test_on_notify_upnp_event(self):
+    async def test_on_notify_upnp_event(self) -> None:
         """Test handling of a UPnP event."""
-        changed_vars: List[UpnpStateVariable] = []
+        changed_vars: Sequence[UpnpStateVariable] = []
 
-        def on_event(self, changed_state_variables):
-            # pylint: disable=unused-argument
+        def on_event(
+            _self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]
+        ) -> None:
             nonlocal changed_vars
             changed_vars = changed_state_variables
 
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
+        event_handler = UpnpEventHandler("http://localhost:11302", requester)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         service.on_event = on_event
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
         await event_handler.async_subscribe(service)
 
         headers = {

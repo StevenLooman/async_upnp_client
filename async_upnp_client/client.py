@@ -94,7 +94,6 @@ class UpnpRequester:
         body: Optional[str] = None,
     ) -> Tuple[int, Mapping[str, str], str]:
         """Actually do a HTTP request."""
-        # pylint: disable=too-many-arguments
         raise NotImplementedError()
 
 

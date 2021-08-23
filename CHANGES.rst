@@ -3,6 +3,8 @@ Changes
 
 0.20.1 (unreleased)
 
+- More pylint/mypy
+
 
 0.20.0 (2021-08-17)
 

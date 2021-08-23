@@ -41,7 +41,6 @@ class AiohttpRequester(UpnpRequester):
         body: Optional[str] = None,
     ) -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
-        # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
 
         try:

@@ -11,7 +11,7 @@ from async_upnp_client.ssdp import (
 )
 
 
-def test_ssdp_search_packet():
+def test_ssdp_search_packet() -> None:
     """Test SSDP search packet generation."""
     msg = build_ssdp_search_packet(("239.255.255.250", 1900), 4, "ssdp:all")
     assert (
@@ -24,7 +24,7 @@ def test_ssdp_search_packet():
     )
 
 
-def test_ssdp_search_packet_v6():
+def test_ssdp_search_packet_v6() -> None:
     """Test SSDP search packet generation."""
     msg = build_ssdp_search_packet(("FF02::C", 1900, 0, 2), 4, "ssdp:all")
     assert (
@@ -37,7 +37,7 @@ def test_ssdp_search_packet_v6():
     )
 
 
-def test_is_valid_ssdp_packet():
+def test_is_valid_ssdp_packet() -> None:
     """Test SSDP response validation."""
     assert not is_valid_ssdp_packet(b"")
 
@@ -53,7 +53,7 @@ def test_is_valid_ssdp_packet():
     assert is_valid_ssdp_packet(msg)
 
 
-def test_decode_ssdp_packet():
+def test_decode_ssdp_packet() -> None:
     """Test SSDP response decoding."""
     msg = (
         b"HTTP/1.1 200 OK\r\n"
@@ -83,7 +83,7 @@ def test_decode_ssdp_packet():
     }
 
 
-def test_decode_ssdp_packet_missing_ending():
+def test_decode_ssdp_packet_missing_ending() -> None:
     """Test SSDP response decoding with a missing end line."""
     msg = (
         b"HTTP/1.1 200 OK\r\n"
@@ -93,7 +93,7 @@ def test_decode_ssdp_packet_missing_ending():
         b"LOCATION: http://192.168.107.148:8088/description\r\n"
         b"SERVER: Ubuntu/10.04 UPnP/1.1 Harmony/16.3\r\n"
         b"ST: urn:myharmony-com:device:harmony:1\r\n"
-        b"USN: uuid:dc6a8cf155c97e5200c6a1a1997591756f2e2a3c::urn:myharmony-com:device:harmony:1\r\n"
+        b"USN: uuid:...::urn:myharmony-com:device:harmony:1\r\n"
         b"BOOTID.UPNP.ORG:1619366886\r\n"
     )
     request_line, headers = decode_ssdp_packet(msg, ("addr", 123))
@@ -106,18 +106,18 @@ def test_decode_ssdp_packet_missing_ending():
         "location": "http://192.168.107.148:8088/description",
         "server": "Ubuntu/10.04 UPnP/1.1 Harmony/16.3",
         "st": "urn:myharmony-com:device:harmony:1",
-        "usn": "uuid:dc6a8cf155c97e5200c6a1a1997591756f2e2a3c::urn:myharmony-com:device:harmony:1",
+        "usn": "uuid:...::urn:myharmony-com:device:harmony:1",
         "bootid.upnp.org": "1619366886",
         "ext": "",
         "_location_original": "http://192.168.107.148:8088/description",
         "_host": "addr",
         "_port": 123,
-        "_udn": "uuid:dc6a8cf155c97e5200c6a1a1997591756f2e2a3c",
+        "_udn": "uuid:...",
         "_timestamp": ANY,
     }
 
 
-def test_decode_ssdp_packet_duplicate_header():
+def test_decode_ssdp_packet_duplicate_header() -> None:
     """Test SSDP response decoding with a duplicate header."""
     msg = (
         b"HTTP/1.1 200 OK\r\n"
@@ -134,7 +134,7 @@ def test_decode_ssdp_packet_duplicate_header():
     }
 
 
-def test_decode_ssdp_packet_v6():
+def test_decode_ssdp_packet_v6() -> None:
     """Test SSDP response decoding."""
     msg = (
         b"HTTP/1.1 200 OK\r\n"
@@ -165,7 +165,7 @@ def test_decode_ssdp_packet_v6():
     }
 
 
-def test_get_ssdp_socket():
+def test_get_ssdp_socket() -> None:
     """Test get_ssdp_socket accepts a port."""
     # Without a port, should default to SSDP_PORT
     _, source_info, target_info = get_ssdp_socket(

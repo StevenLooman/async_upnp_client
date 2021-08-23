@@ -1,21 +1,21 @@
 """Unit tests for dlna."""
 
-from datetime import date, datetime, time, timedelta, timezone
 import ipaddress
 import socket
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
 from async_upnp_client.utils import (
     CaseInsensitiveDict,
+    async_get_local_ip,
+    get_local_ip,
     parse_date_time,
     str_to_time,
-    get_local_ip,
-    async_get_local_ip,
 )
 
 
-def test_case_insensitive_dict():
+def test_case_insensitive_dict() -> None:
     """Test CaseInsensitiveDict."""
     ci_dict = CaseInsensitiveDict()
     ci_dict["Key"] = "value"
@@ -24,7 +24,7 @@ def test_case_insensitive_dict():
     assert ci_dict["KEY"] == "value"
 
 
-def test_case_insensitive_dict_dict_equality():
+def test_case_insensitive_dict_dict_equality() -> None:
     """Test CaseInsensitiveDict against dict equality."""
     ci_dict = CaseInsensitiveDict()
     ci_dict["Key"] = "value"
@@ -34,12 +34,12 @@ def test_case_insensitive_dict_dict_equality():
     assert ci_dict == {"KEY": "value"}
 
 
-def test_case_insensitive_dict_equality():
+def test_case_insensitive_dict_equality() -> None:
     """Test CaseInsensitiveDict equality."""
     assert CaseInsensitiveDict(key="value") == CaseInsensitiveDict(KEY="value")
 
 
-def test_str_to_time():
+def test_str_to_time() -> None:
     """Test string to time parsing."""
     assert str_to_time("0:0:10") == timedelta(hours=0, minutes=0, seconds=10)
     assert str_to_time("0:10:0") == timedelta(hours=0, minutes=10, seconds=0)
@@ -56,7 +56,7 @@ def test_str_to_time():
     assert str_to_time(" ") is None
 
 
-def test_parse_date_time():
+def test_parse_date_time() -> None:
     """Test string to datetime parsing."""
     tz0 = timezone(timedelta(hours=0))
     tz1 = timezone(timedelta(hours=1))
@@ -92,7 +92,7 @@ TEST_ADDRESSES = [
 
 
 @pytest.mark.parametrize("target_url", TEST_ADDRESSES)
-def test_get_local_ip(target_url):
+def test_get_local_ip(target_url: str) -> None:
     """Test getting of a local IP that is not loopback."""
     local_ip_str = get_local_ip(target_url)
     local_ip = ipaddress.ip_address(local_ip_str)
@@ -101,12 +101,12 @@ def test_get_local_ip(target_url):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("target_url", TEST_ADDRESSES)
-async def test_async_get_local_ip(target_url):
+async def test_async_get_local_ip(target_url: str) -> None:
     """Test getting of a local IP that is not loopback."""
     addr_family, local_ip_str = await async_get_local_ip(target_url)
     local_ip = ipaddress.ip_address(local_ip_str)
     assert not local_ip.is_loopback
     if local_ip.version == 4:
-        assert addr_family == socket.AddressFamily.AF_INET
+        assert addr_family == socket.AddressFamily.AF_INET  # pylint: disable=no-member
     else:
-        assert addr_family == socket.AddressFamily.AF_INET6
+        assert addr_family == socket.AddressFamily.AF_INET6  # pylint: disable=no-member

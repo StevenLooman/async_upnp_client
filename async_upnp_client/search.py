@@ -31,7 +31,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
 
     def __init__(
         self,
-        async_callback: Callable[[Mapping[str, str]], Awaitable],
+        async_callback: Callable[[MutableMapping[str, str]], Awaitable],
         loop: Optional[AbstractEventLoop] = None,
         source_ip: Optional[IPvXAddress] = None,
         target: Optional[AddressTupleVXType] = None,

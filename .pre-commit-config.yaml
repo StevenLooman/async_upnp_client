@@ -41,5 +41,7 @@ repos:
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
-        additional_dependencies: [aiohttp>=3.7.4]
-        files: ^async_upnp_client/.+\.py$
+        additional_dependencies:
+          - aiohttp>=3.7.4
+          - pytest~=6.2.4
+        files: ^(async_upnp_client|tests)/.+\.py$

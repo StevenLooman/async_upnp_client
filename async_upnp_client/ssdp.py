@@ -8,12 +8,18 @@ from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Awaitable, Callable, MutableMapping, Optional, Tuple, cast
+from typing import Awaitable, Callable, Mapping, MutableMapping, Optional, Tuple, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_parser import HeadersParser
 
-from async_upnp_client.const import AddressTupleV6Type, AddressTupleVXType, IPvXAddress
+from async_upnp_client.const import (
+    AddressTupleV6Type,
+    AddressTupleVXType,
+    IPvXAddress,
+    NotificationSubType,
+    UniqueDeviceName,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 SSDP_PORT = 1900
@@ -25,14 +31,15 @@ SSDP_TARGET = SSDP_TARGET_V4
 SSDP_ST_ALL = "ssdp:all"
 SSDP_ST_ROOTDEVICE = "upnp:rootdevice"
 SSDP_MX = 4
-
-SSDP_ALIVE = "ssdp:alive"
-SSDP_UPDATE = "ssdp:update"
-SSDP_BYEBYE = "ssdp:byebye"
-
+SSDP_DISCOVER = '"ssdp:discover"'
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
+
+
+SSDP_ALIVE = NotificationSubType.SSDP_ALIVE
+SSDP_BYEBYE = NotificationSubType.SSDP_BYEBYE
+SSDP_UPDATE = NotificationSubType.SSDP_UPDATE
 
 
 def get_host_string(addr: AddressTupleVXType) -> str:
@@ -106,6 +113,15 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
     )
 
 
+def udn_from_headers(headers: Mapping[str, str]) -> Optional[UniqueDeviceName]:
+    """Get UDN from USN in headers."""
+    if "usn" in headers and "uuid:" in headers["usn"]:
+        parts = str(headers["usn"]).split("::")
+        return parts[0]
+
+    return None
+
+
 def decode_ssdp_packet(
     data: bytes, addr: AddressTupleVXType
 ) -> Tuple[str, CaseInsensitiveDict]:
@@ -131,9 +147,9 @@ def decode_ssdp_packet(
     headers["_host"] = get_host_string(addr)
     headers["_port"] = addr[1]
 
-    if "usn" in headers and "uuid:" in headers["usn"]:
-        parts = str(headers["usn"]).split("::")
-        headers["_udn"] = parts[0]
+    udn = udn_from_headers(headers)
+    if udn:
+        headers["_udn"] = udn
 
     return request_line, headers
 
@@ -180,7 +196,7 @@ class SsdpProtocol(BaseProtocol):
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
-        _LOGGER.debug("Lost connection, transport: %s", self.transport)
+        _LOGGER.debug("Lost connection, error: %s, transport: %s", exc, self.transport)
 
 
 def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:

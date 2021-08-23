@@ -1,10 +1,11 @@
 """Unit tests for dlna."""
 
-from typing import List
+from typing import List, Sequence
 
-import pytest  # type: ignore
+import pytest
 
 from async_upnp_client import UpnpEventHandler, UpnpFactory, UpnpStateVariable
+from async_upnp_client.client import UpnpService
 from async_upnp_client.profiles.dlna import (
     _parse_last_change_event,
     dlna_handle_notify_last_change,
@@ -13,7 +14,7 @@ from async_upnp_client.profiles.dlna import (
 from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester
 
 
-def test_parse_last_change_event():
+def test_parse_last_change_event() -> None:
     """Test parsing a last change event."""
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0"><TransportState val="PAUSED_PLAYBACK"/></InstanceID>
@@ -23,7 +24,7 @@ def test_parse_last_change_event():
     }
 
 
-def test_parse_last_change_event_multiple_instances():
+def test_parse_last_change_event_multiple_instances() -> None:
     """Test parsing a last change event with multiple instance."""
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0"><TransportState val="PAUSED_PLAYBACK"/></InstanceID>
@@ -35,7 +36,7 @@ def test_parse_last_change_event_multiple_instances():
     }
 
 
-def test_parse_last_change_event_multiple_channels():
+def test_parse_last_change_event_multiple_channels() -> None:
     """Test parsing a last change event with multiple channels."""
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0">
@@ -49,7 +50,7 @@ def test_parse_last_change_event_multiple_channels():
     }
 
 
-def test_parse_last_change_event_invalid_xml():
+def test_parse_last_change_event_invalid_xml() -> None:
     """Test parsing an invalid (non valid XML) last change event."""
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0"><TransportState val="PAUSED_PLAYBACK"></InstanceID>
@@ -59,57 +60,56 @@ def test_parse_last_change_event_invalid_xml():
     }
 
 
-class TestUpnpEventHandler:
-    """Test the UpnpEventHandler."""
+@pytest.mark.asyncio
+async def test_on_notify_dlna_event() -> None:
+    """Test handling an event.."""
+    changed_vars: List[UpnpStateVariable] = []
 
-    @pytest.mark.asyncio
-    async def test_on_notify_dlna_event(self):
-        """Test handling an event.."""
-        changed_vars: List[UpnpStateVariable] = []
+    def on_event(
+        _self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]
+    ) -> None:
+        nonlocal changed_vars
+        changed_vars += changed_state_variables
 
-        def on_event(_self, changed_state_variables):
-            nonlocal changed_vars
-            changed_vars += changed_state_variables
+        assert changed_state_variables
+        if changed_state_variables[0].name == "LastChange":
+            last_change = changed_state_variables[0]
+            assert last_change.name == "LastChange"
 
-            assert changed_state_variables
-            if changed_state_variables[0].name == "LastChange":
-                last_change = changed_state_variables[0]
-                assert last_change.name == "LastChange"
+            dlna_handle_notify_last_change(last_change)
 
-                dlna_handle_notify_last_change(last_change)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://localhost:1234/dmr")
+    service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+    service.on_event = on_event
+    event_handler = UpnpEventHandler("http://localhost:11302", requester)
+    await event_handler.async_subscribe(service)
 
-        r = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(r)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
-        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        service.on_event = on_event
-        event_handler = UpnpEventHandler("http://localhost:11302", r)
-        await event_handler.async_subscribe(service)
+    headers = {
+        "NT": "upnp:event",
+        "NTS": "upnp:propchange",
+        "SID": "uuid:dummy",
+    }
+    body = """
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+    <e:property>
+        <LastChange>
+            &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/RCS/&quot;&gt;
+                &lt;InstanceID val=&quot;0&quot;&gt;
+                    &lt;Mute channel=&quot;Master&quot; val=&quot;0&quot;/&gt;
+                    &lt;Volume channel=&quot;Master&quot; val=&quot;50&quot;/&gt;
+                    &lt;/InstanceID&gt;
+            &lt;/Event&gt;
+        </LastChange>
+    </e:property>
+</e:propertyset>
+"""
 
-        headers = {
-            "NT": "upnp:event",
-            "NTS": "upnp:propchange",
-            "SID": "uuid:dummy",
-        }
-        body = """
-    <e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
-        <e:property>
-            <LastChange>
-                &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/RCS/&quot;&gt;
-                    &lt;InstanceID val=&quot;0&quot;&gt;
-                        &lt;Mute channel=&quot;Master&quot; val=&quot;0&quot;/&gt;
-                        &lt;Volume channel=&quot;Master&quot; val=&quot;50&quot;/&gt;
-                        &lt;/InstanceID&gt;
-                &lt;/Event&gt;
-            </LastChange>
-        </e:property>
-    </e:propertyset>
-    """
+    result = await event_handler.handle_notify(headers, body)
+    assert result == 200
 
-        result = await event_handler.handle_notify(headers, body)
-        assert result == 200
+    assert len(changed_vars) == 3
 
-        assert len(changed_vars) == 3
-
-        state_var = service.state_variable("Volume")
-        assert state_var.value == 50
+    state_var = service.state_variable("Volume")
+    assert state_var.value == 50

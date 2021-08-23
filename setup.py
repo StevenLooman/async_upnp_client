@@ -16,17 +16,19 @@ PACKAGES = (
 
 
 INSTALL_REQUIRES = [
-    "voluptuous>=0.12.1",
-    "aiohttp>=3.7.4",
-    "async-timeout>=3.0,<4.0",
-    "python-didl-lite~=1.2.6",
-    "defusedxml>=0.6.0",
+    "voluptuous >= 0.12.1",
+    "aiohttp >= 3.7.4",
+    "async-timeout >=3.0, <4.0",
+    "python-didl-lite ~= 1.2.6",
+    "defusedxml >= 0.6.0",
 ]
 
 
 TEST_REQUIRES = [
-    "pytest~=6.1.2",
-    "pytest-asyncio~=0.14.0",
+    "pytest ~= 6.2.4",
+    "pytest-asyncio ~= 0.15.1",
+    "pytest-cov ~= 2.12.1",
+    "coverage ~= 5.5",
 ]
 
 

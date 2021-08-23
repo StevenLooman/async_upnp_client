@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Constants module."""
 
+import enum
 from datetime import date, datetime, time
 from ipaddress import IPv4Address, IPv6Address
 from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
@@ -161,3 +162,17 @@ StateVariableInfo = NamedTuple(
         ("xml", ET.Element),
     ],
 )
+
+# Headers
+NotificationType = str  # NT header
+UniqueServiceName = str  # USN header
+SearchTarget = str  # ST header
+UniqueDeviceName = str  # UDN
+
+
+class NotificationSubType(str, enum.Enum):
+    """NTS header."""
+
+    SSDP_ALIVE = "ssdp:alive"
+    SSDP_BYEBYE = "ssdp:byebye"
+    SSDP_UPDATE = "ssdp:update"
