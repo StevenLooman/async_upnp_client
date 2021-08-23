@@ -29,6 +29,7 @@ TEST_REQUIRES = [
     "pytest-asyncio ~= 0.15.1",
     "pytest-cov ~= 2.12.1",
     "coverage ~= 5.5",
+    "asyncmock ~= 0.4.2",
 ]
 
 

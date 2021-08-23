@@ -13,7 +13,7 @@ from async_upnp_client import UpnpRequester
 def read_file(filename: str) -> str:
     """Read file."""
     path = os.path.join("tests", "fixtures", filename)
-    with open(path, encoding="utf8") as file:
+    with open(path, encoding="utf-8") as file:
         return file.read()
 
 

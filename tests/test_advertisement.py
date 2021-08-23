@@ -1,7 +1,12 @@
 """Unit tests for advertisement."""
 
 from datetime import datetime
-from unittest.mock import AsyncMock
+
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # For python 3.6/3.7
+    from mock import AsyncMock  # type: ignore
 
 import pytest
 
