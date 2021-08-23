@@ -33,7 +33,7 @@ class UpnpTestRequester(UpnpRequester):
         ] = deepcopy(cast(MutableMapping, response_map))
         self.exceptions: Deque[Optional[Exception]] = deque()
 
-    async def async_do_http_request(
+    async def async_http_request(
         self,
         method: str,
         url: str,

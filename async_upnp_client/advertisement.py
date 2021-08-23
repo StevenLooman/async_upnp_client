@@ -19,7 +19,6 @@ from async_upnp_client.ssdp import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
 class SsdpAdvertisementListener:
@@ -48,9 +47,6 @@ class SsdpAdvertisementListener:
         self, request_line: str, headers: MutableMapping[str, Any]
     ) -> None:
         """Handle data."""
-        _LOGGER_TRAFFIC_SSDP.debug(
-            "SsdpAdvertisementListener._async_on_data: %s, %s", request_line, headers
-        )
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.
             return
@@ -58,11 +54,7 @@ class SsdpAdvertisementListener:
             _LOGGER.debug("Got unknown packet: %s, %s", request_line, headers)
             return
 
-        _LOGGER.debug(
-            "Received advertisement, request line: %s, headers: %s",
-            request_line,
-            headers,
-        )
+        _LOGGER.debug("Received advertisement, USN: %s", headers.get("USN", "<no USN>"))
 
         headers["_source"] = SsdpSource.ADVERTISEMENT
         notification_sub_type = headers["NTS"]

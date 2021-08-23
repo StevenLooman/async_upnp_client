@@ -5,7 +5,7 @@ import logging
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import ip_address
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
+from typing import Any, Awaitable, Callable, Mapping, MutableMapping, Optional, cast
 
 from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
@@ -24,7 +24,6 @@ from async_upnp_client.ssdp import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
 class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
@@ -58,18 +57,16 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         assert self._target_host is not None, "Call async_start() first"
         assert self._target is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(self._target, self.timeout, self.service_type)
-        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self._transport)
-        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
+
         assert self._transport is not None
+        protocol = cast(SsdpProtocol, self._transport.get_protocol())
         target = override_target or self._target
-        self._transport.sendto(packet, target)
+        protocol.send_ssdp_packet(packet, target)
 
     async def _async_on_data(
-        self, request_line: str, headers: MutableMapping[str, str]
+        self, _request_line: str, headers: MutableMapping[str, Any]
     ) -> None:
-        _LOGGER.debug(
-            "Received response, request line: %s, headers: %s", request_line, headers
-        )
+        _LOGGER.debug("Received response, USN: %s", headers.get("USN", "<no USN>"))
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return

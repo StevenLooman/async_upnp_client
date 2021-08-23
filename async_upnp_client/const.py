@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Constants module."""
 
-import enum
 from datetime import date, datetime, time
+from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
 from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
 from xml.etree import ElementTree as ET
@@ -168,9 +168,10 @@ NotificationType = str  # NT header
 UniqueServiceName = str  # USN header
 SearchTarget = str  # ST header
 UniqueDeviceName = str  # UDN
+DeviceOrServiceType = str
 
 
-class NotificationSubType(str, enum.Enum):
+class NotificationSubType(str, Enum):
     """NTS header."""
 
     SSDP_ALIVE = "ssdp:alive"
@@ -178,8 +179,13 @@ class NotificationSubType(str, enum.Enum):
     SSDP_UPDATE = "ssdp:update"
 
 
-class SsdpSource(str, enum.Enum):
+class SsdpSource(str, Enum):
     """SSDP source."""
 
     ADVERTISEMENT = "advertisement"
     SEARCH = "search"
+
+    # More detailed.
+    ADVERTISEMENT_ALIVE = "advertisement_alive"
+    ADVERTISEMENT_BYEBYE = "advertisement_byebye"
+    ADVERTISEMENT_UPDATE = "advertisement_update"

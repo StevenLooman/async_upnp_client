@@ -33,7 +33,6 @@ from async_upnp_client.const import (
 from async_upnp_client.exceptions import UpnpError, UpnpValueError, UpnpXmlParseError
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
@@ -63,37 +62,6 @@ class UpnpRequester:
 
         :return status code, headers, body
         """
-        # pylint: disable=too-many-arguments
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Sending request:\n%s %s\n%s\n%s\n",
-            method,
-            url,
-            "\n".join([key + ": " + value for key, value in (headers or {}).items()]),
-            body or "",
-        )
-        (
-            response_status,
-            response_headers,
-            response_body,
-        ) = await self.async_do_http_request(method, url, headers=headers, body=body)
-
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Got response:\n%s\n%s\n\n%s",
-            response_status,
-            "\n".join([key + ": " + value for key, value in response_headers.items()]),
-            response_body,
-        )
-
-        return response_status, response_headers, response_body
-
-    async def async_do_http_request(
-        self,
-        method: str,
-        url: str,
-        headers: Optional[Mapping[str, str]] = None,
-        body: Optional[str] = None,
-    ) -> Tuple[int, Mapping[str, str], str]:
-        """Actually do a HTTP request."""
         raise NotImplementedError()
 
 
@@ -125,7 +93,6 @@ class UpnpDevice:
     def reinit(self, device: "UpnpDevice") -> None:
         """Reinitialize self from another device."""
         self.device_info = device.device_info
-        self.ssdp_headers = device.ssdp_headers
 
     @property
     def name(self) -> str:

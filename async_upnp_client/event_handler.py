@@ -23,7 +23,6 @@ from async_upnp_client.exceptions import (
 from async_upnp_client.utils import async_get_local_ip, get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
 class UpnpEventHandler:
@@ -134,13 +133,7 @@ class UpnpEventHandler:
     async def handle_notify(self, headers: Mapping[str, str], body: str) -> HTTPStatus:
         """Handle a NOTIFY request."""
         # ensure valid request
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Incoming request:\nNOTIFY\n%s\n\n%s",
-            "\n".join([key + ": " + value for key, value in headers.items()]),
-            body,
-        )
         if "NT" not in headers or "NTS" not in headers:
-            _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", HTTPStatus.BAD_REQUEST)
             return HTTPStatus.BAD_REQUEST
 
         if (
@@ -148,9 +141,6 @@ class UpnpEventHandler:
             or headers["NTS"] != "upnp:propchange"
             or "SID" not in headers
         ):
-            _LOGGER_TRAFFIC_UPNP.debug(
-                "Sending response: %s", HTTPStatus.PRECONDITION_FAILED
-            )
             return HTTPStatus.PRECONDITION_FAILED
 
         sid = headers["SID"]
@@ -165,7 +155,6 @@ class UpnpEventHandler:
                 body,
             )
 
-            _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", HTTPStatus.OK)
             return HTTPStatus.OK
 
         # decode event and send updates to service
@@ -181,7 +170,6 @@ class UpnpEventHandler:
         # send changes to service
         service.notify_changed_state_variables(changes)
 
-        _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", HTTPStatus.OK)
         return HTTPStatus.OK
 
     async def async_subscribe(

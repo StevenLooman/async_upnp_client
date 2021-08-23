@@ -117,8 +117,8 @@ class DeviceUpdater:
     ) -> None:
         """Reinitialize device."""
         # pylint: disable=protected-access
-        _LOGGER.debug("Reinitializing device")
+        _LOGGER.debug("Reinitializing device, location: %s", location)
 
         new_device = await self._factory.async_create_device(location)
-        new_device.ssdp_headers = ssdp_headers
         self._device.reinit(new_device)
+        self._device.ssdp_headers = ssdp_headers

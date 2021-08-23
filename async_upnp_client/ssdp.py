@@ -198,6 +198,13 @@ class SsdpProtocol(BaseProtocol):
         """Handle connection lost."""
         _LOGGER.debug("Lost connection, error: %s, transport: %s", exc, self.transport)
 
+    def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
+        """Send a SSDP packet."""
+        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self.transport)
+        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
+        assert self.transport is not None
+        self.transport.sendto(packet, target)
+
 
 def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:
     """Deduce a bind ip address from a target address potentially including scope."""

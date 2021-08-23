@@ -264,7 +264,7 @@ class DmrDevice(UpnpProfileDevice):
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
     ) -> None:
-        """State variable(s) changed, let home-assistant know."""
+        """State variable(s) changed, perform callback(s)."""
         # handle DLNA specific event
         for state_variable in state_variables:
             if state_variable.name == "LastChange":
