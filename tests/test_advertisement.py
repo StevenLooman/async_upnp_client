@@ -22,7 +22,8 @@ TEST_HEADERS_DEFAULT = {
     "LOCATION": "http://192.168.1.1:80/RootDevice.xml",
     "BOOTID.UPNP.ORG": "1",
     "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
-    "_timestamp": datetime.fromisoformat("2021-01-01 12:00"),
+    # "_timestamp": datetime.fromisoformat("2021-01-01 12:00"),  # Python 3.7+
+    "_timestamp": datetime.strptime("2021-01-01 12:00", "%Y-%m-%d %H:%M"),
     "_host": "192.168.1.1",
     "_port": "1900",
 }
