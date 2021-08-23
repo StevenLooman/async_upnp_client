@@ -57,7 +57,8 @@ def valid_advertisement_headers(headers: Mapping[str, Any]) -> bool:
 
 def extract_valid_to(headers: Mapping[str, Any]) -> datetime:
     """Extract/create valid to."""
-    match = CACHE_CONTROL_RE.search(headers.get("cache-controle", ""))
+    cache_control = headers.get("cache-control", "")
+    match = CACHE_CONTROL_RE.search(cache_control)
     if match:
         max_age = int(match[1])
         uncache_after = timedelta(seconds=max_age)
