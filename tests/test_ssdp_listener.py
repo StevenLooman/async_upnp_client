@@ -3,7 +3,13 @@
 from datetime import datetime, timedelta
 from ipaddress import ip_address
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
+
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # For python 3.6/3.7
+    from mock import AsyncMock  # type: ignore
 
 import pytest
 
