@@ -20,6 +20,8 @@ def read_file(filename: str) -> str:
 class UpnpTestRequester(UpnpRequester):
     """Test requester."""
 
+    # pylint: disable=too-few-public-methods
+
     def __init__(
         self,
         response_map: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]],

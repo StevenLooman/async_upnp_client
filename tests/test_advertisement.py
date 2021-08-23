@@ -10,7 +10,7 @@ except ImportError:
 
 import pytest
 
-from async_upnp_client.advertisement import UpnpAdvertisementListener
+from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.utils import CaseInsensitiveDict
 
 TEST_REQUEST_LINE = "NOTIFY * HTTP/1.1"
@@ -36,12 +36,12 @@ async def test_receive_ssdp_alive() -> None:
     on_alive = AsyncMock()
     on_byebye = AsyncMock()
     on_update = AsyncMock()
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
     )
     headers = CaseInsensitiveDict(**TEST_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:alive"
-    await listener._on_data(TEST_REQUEST_LINE, headers)
+    await listener._async_on_data(TEST_REQUEST_LINE, headers)
 
     on_alive.assert_called_with(headers)
     on_byebye.assert_not_called()
@@ -55,12 +55,12 @@ async def test_receive_ssdp_byebye() -> None:
     on_alive = AsyncMock()
     on_byebye = AsyncMock()
     on_update = AsyncMock()
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
     )
     headers = CaseInsensitiveDict(**TEST_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:byebye"
-    await listener._on_data(TEST_REQUEST_LINE, headers)
+    await listener._async_on_data(TEST_REQUEST_LINE, headers)
 
     on_alive.assert_not_called()
     on_byebye.assert_called_with(headers)
@@ -74,12 +74,12 @@ async def test_receive_ssdp_update() -> None:
     on_alive = AsyncMock()
     on_byebye = AsyncMock()
     on_update = AsyncMock()
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
     )
     headers = CaseInsensitiveDict(**TEST_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:update"
-    await listener._on_data(TEST_REQUEST_LINE, headers)
+    await listener._async_on_data(TEST_REQUEST_LINE, headers)
 
     on_alive.assert_not_called()
     on_byebye.assert_not_called()

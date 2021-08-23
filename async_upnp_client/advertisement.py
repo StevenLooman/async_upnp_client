@@ -6,7 +6,7 @@ import logging
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport
 from ipaddress import IPv4Address
-from typing import Awaitable, Callable, MutableMapping, Optional
+from typing import Any, Awaitable, Callable, MutableMapping, Optional
 
 from async_upnp_client.const import NotificationSubType
 from async_upnp_client.ssdp import (
@@ -23,8 +23,8 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
-class UpnpAdvertisementListener:
-    """UPnP Advertisement listener."""
+class SsdpAdvertisementListener:
+    """SSDP Advertisement listener."""
 
     def __init__(
         self,
@@ -45,12 +45,12 @@ class UpnpAdvertisementListener:
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[BaseTransport] = None
 
-    async def _on_data(
-        self, request_line: str, headers: MutableMapping[str, str]
+    async def _async_on_data(
+        self, request_line: str, headers: MutableMapping[str, Any]
     ) -> None:
         """Handle data."""
         _LOGGER_TRAFFIC_SSDP.debug(
-            "UpnpAdvertisementListener._on_data: %s, %s", request_line, headers
+            "SsdpAdvertisementListener._async_on_data: %s, %s", request_line, headers
         )
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.
@@ -91,7 +91,7 @@ class UpnpAdvertisementListener:
 
         # Create protocol and send discovery packet.
         self._transport, _ = await self._loop.create_datagram_endpoint(
-            lambda: SsdpProtocol(self._loop, on_data=self._on_data),
+            lambda: SsdpProtocol(self._loop, on_data=self._async_on_data),
             sock=sock,
         )
 

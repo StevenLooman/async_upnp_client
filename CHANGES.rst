@@ -1,9 +1,10 @@
 Changes
 =======
 
-0.20.1 (unreleased)
+0.21.0 (unreleased)
 
-- More pylint/mypy
+- Breaking change: Rename `advertisement.UpnpAdvertisementListener` to `advertisement.SsdpAdvertisementListener`
+- Breaking change: Rename `search.SSDPListener` to `search.SsdpSearchListener`
 
 
 0.20.0 (2021-08-17)

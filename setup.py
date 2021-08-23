@@ -35,7 +35,7 @@ TEST_REQUIRES = [
 
 setup(
     name="async_upnp_client",
-    version="0.20.1.dev0",
+    version="0.21.0.dev0",
     description="Async UPnP Client",
     long_description=LONG_DESCRIPTION,
     url="https://github.com/StevenLooman/async_upnp_client",

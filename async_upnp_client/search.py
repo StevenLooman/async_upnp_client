@@ -26,8 +26,8 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
-class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
-    """Class to listen for SSDP."""
+class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
+    """SSDP Search (response) listener."""
 
     def __init__(
         self,
@@ -129,14 +129,14 @@ async def async_search(
     """Discover devices via SSDP."""
     # pylint: disable=too-many-arguments
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
-    listener: Optional[SSDPListener] = None
+    listener: Optional[SsdpSearchListener] = None
 
     async def _async_connected() -> None:
         nonlocal listener
         assert listener is not None
         listener.async_search()
 
-    listener = SSDPListener(
+    listener = SsdpSearchListener(
         async_callback,
         loop_,
         source_ip,

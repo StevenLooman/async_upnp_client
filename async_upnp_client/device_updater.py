@@ -4,7 +4,7 @@ import logging
 from ipaddress import IPv4Address
 from typing import Any, Mapping, Optional
 
-from async_upnp_client import UpnpAdvertisementListener, UpnpDevice, UpnpFactory
+from async_upnp_client import SsdpAdvertisementListener, UpnpDevice, UpnpFactory
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ class DeviceUpdater:
         """Initialize."""
         self._device = device
         self._factory = factory
-        self._listener = UpnpAdvertisementListener(
+        self._listener = SsdpAdvertisementListener(
             on_alive=self._on_alive,
             on_byebye=self._on_byebye,
             on_update=self._on_update,

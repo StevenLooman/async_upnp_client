@@ -14,7 +14,7 @@ from ipaddress import ip_address
 from typing import Any, Mapping, Optional, Sequence, Tuple, Union
 
 from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
-from async_upnp_client.advertisement import UpnpAdvertisementListener
+from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
@@ -336,7 +336,7 @@ async def advertisements(advertisement_args: Any) -> None:
         data = {key: str(value) for key, value in data.items()}
         print(json.dumps(data, indent=pprint_indent))
 
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_notify,
         on_byebye=on_notify,
         on_update=on_notify,

@@ -4,6 +4,7 @@
 import asyncio
 import re
 import socket
+from collections import defaultdict
 from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,7 @@ from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Any, Callable, Dict, Generator, Mapping, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
+import defusedxml as DET
 from voluptuous import Invalid
 
 EXTERNAL_IP = "1.1.1.1"
@@ -217,3 +219,38 @@ async def async_get_local_ip(
         return sock.family, sockname[0]
     finally:
         transport.close()
+
+
+# Adapted from http://stackoverflow.com/a/10077069
+# to follow the XML to JSON spec
+# https://www.xml.com/pub/a/2006/05/31/converting-between-xml-and-json.html
+def etree_to_dict(tree: DET.ElementTree) -> dict[str, Optional[dict[str, Any]]]:
+    """Convert an ETree object to a dict."""
+    # strip namespace
+    tag_name = tree.tag[tree.tag.find("}") + 1 :]
+
+    tree_dict: dict[str, Optional[dict[str, Any]]] = {
+        tag_name: {} if tree.attrib else None
+    }
+    children = list(tree)
+    if children:
+        child_dict: dict[str, list] = defaultdict(list)
+        for child in map(etree_to_dict, children):
+            for k, val in child.items():
+                child_dict[k].append(val)
+        tree_dict = {
+            tag_name: {k: v[0] if len(v) == 1 else v for k, v in child_dict.items()}
+        }
+    dict_meta = tree_dict[tag_name]
+    if tree.attrib:
+        assert dict_meta is not None
+        dict_meta.update(("@" + k, v) for k, v in tree.attrib.items())
+    if tree.text:
+        text = tree.text.strip()
+        if children or tree.attrib:
+            if text:
+                assert dict_meta is not None
+                dict_meta["#text"] = text
+        else:
+            tree_dict[tag_name] = text
+    return tree_dict
