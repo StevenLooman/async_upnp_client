@@ -11,6 +11,7 @@ except ImportError:
 import pytest
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
+from async_upnp_client.const import SsdpSource
 from async_upnp_client.utils import CaseInsensitiveDict
 
 TEST_REQUEST_LINE = "NOTIFY * HTTP/1.1"
@@ -26,6 +27,7 @@ TEST_HEADERS_DEFAULT = {
     "_timestamp": datetime.strptime("2021-01-01 12:00", "%Y-%m-%d %H:%M"),
     "_host": "192.168.1.1",
     "_port": "1900",
+    "_source": SsdpSource.ADVERTISEMENT,
 }
 
 

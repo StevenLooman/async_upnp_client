@@ -12,3 +12,4 @@ from async_upnp_client.event_handler import UpnpEventHandler  # noqa: F401
 from async_upnp_client.exceptions import UpnpError  # noqa: F401
 from async_upnp_client.exceptions import UpnpValueError  # noqa: F401
 from async_upnp_client.search import SsdpSearchListener  # noqa: F401
+from async_upnp_client.ssdp_listener import SsdpListener  # noqa: F401

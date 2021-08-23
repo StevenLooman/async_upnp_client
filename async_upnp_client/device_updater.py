@@ -120,13 +120,7 @@ class DeviceUpdater:
         _LOGGER.debug("Reinitializing device")
 
         new_device = await self._factory.async_create_device(location)
+        new_device.boot_id = boot_id
+        new_device.config_id = config_id
 
-        self._device._device_info = new_device._device_info
-
-        # Copy new services and update the binding between the original device and new services.
-        self._device.services = new_device.services
-        for service in self._device.services.values():
-            service.device = self._device
-
-        self._device.boot_id = boot_id
-        self._device.config_id = config_id
+        self._device.reinit(new_device)

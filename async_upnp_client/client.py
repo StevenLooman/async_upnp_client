@@ -111,7 +111,7 @@ class UpnpDevice:
         """Initialize."""
         # pylint: disable=too-many-arguments
         self.requester = requester
-        self._device_info = device_info
+        self.device_info = device_info
         self.services = {service.service_type: service for service in services}
 
         # bind services to ourselves
@@ -124,65 +124,79 @@ class UpnpDevice:
         # Just initialized, mark available.
         self.available = True
 
+    def reinit(self, device: "UpnpDevice") -> None:
+        """Reinitialize self from another device."""
+        self.device_info = device.device_info
+
+        self.services = device.services
+        for service in self.services.values():
+            service.device = self
+
+        # XXX TODO: What about event handlers on the services?
+        # XXX TODO: Ssdp 'settings' in own dict? Or bind SsdpDevice?
+
+        self.boot_id = device.boot_id
+        self.config_id = device.config_id
+
     @property
     def name(self) -> str:
         """Get the name of this device."""
-        return self._device_info.friendly_name
+        return self.device_info.friendly_name
 
     @property
     def friendly_name(self) -> str:
         """Get the friendly name of this device, alias for name."""
-        return self._device_info.friendly_name
+        return self.device_info.friendly_name
 
     @property
     def manufacturer(self) -> str:
         """Get the manufacturer of this device."""
-        return self._device_info.manufacturer
+        return self.device_info.manufacturer
 
     @property
     def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
-        return self._device_info.model_description
+        return self.device_info.model_description
 
     @property
     def model_name(self) -> str:
         """Get the model name of this device."""
-        return self._device_info.model_name
+        return self.device_info.model_name
 
     @property
     def model_number(self) -> Optional[str]:
         """Get the model number of this device."""
-        return self._device_info.model_number
+        return self.device_info.model_number
 
     @property
     def serial_number(self) -> Optional[str]:
         """Get the serial number of this device."""
-        return self._device_info.serial_number
+        return self.device_info.serial_number
 
     @property
     def udn(self) -> str:
         """Get UDN of this device."""
-        return self._device_info.udn
+        return self.device_info.udn
 
     @property
     def device_url(self) -> str:
         """Get the URL of this device."""
-        return self._device_info.url
+        return self.device_info.url
 
     @property
     def device_type(self) -> str:
         """Get the device type of this device."""
-        return self._device_info.device_type
+        return self.device_info.device_type
 
     @property
     def icons(self) -> Sequence[DeviceIcon]:
         """Get the icons for this device."""
-        return self._device_info.icons
+        return self.device_info.icons
 
     @property
     def xml(self) -> ET.Element:
         """Get the XML description for this device."""
-        return self._device_info.xml
+        return self.device_info.xml
 
     def has_service(self, service_type: str) -> bool:
         """Check if service by service_type is available."""

@@ -7,6 +7,7 @@ from asyncio.events import AbstractEventLoop
 from ipaddress import ip_address
 from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
 
+from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_IP_V4,
     SSDP_IP_V6,
@@ -69,7 +70,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         _LOGGER.debug(
             "Received response, request line: %s, headers: %s", request_line, headers
         )
-        headers["_source"] = "search"
+        headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
         await self.async_callback(headers)

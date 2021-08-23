@@ -8,7 +8,7 @@ from asyncio.transports import BaseTransport
 from ipaddress import IPv4Address
 from typing import Any, Awaitable, Callable, MutableMapping, Optional
 
-from async_upnp_client.const import NotificationSubType
+from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
     SSDP_IP_V4,
@@ -16,7 +16,6 @@ from async_upnp_client.ssdp import (
     SsdpProtocol,
     get_source_ip_from_target_ip,
     get_ssdp_socket,
-    udn_from_headers,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,10 +64,7 @@ class SsdpAdvertisementListener:
             headers,
         )
 
-        udn = udn_from_headers(headers)
-        if udn:
-            headers["_udn"] = udn
-        headers["_source"] = "advertisement"
+        headers["_source"] = SsdpSource.ADVERTISEMENT
         notification_sub_type = headers["NTS"]
         if notification_sub_type == NotificationSubType.SSDP_ALIVE and self.on_alive:
             await self.on_alive(headers)

@@ -176,3 +176,10 @@ class NotificationSubType(str, enum.Enum):
     SSDP_ALIVE = "ssdp:alive"
     SSDP_BYEBYE = "ssdp:byebye"
     SSDP_UPDATE = "ssdp:update"
+
+
+class SsdpSource(str, enum.Enum):
+    """SSDP source."""
+
+    ADVERTISEMENT = "advertisement"
+    SEARCH = "search"

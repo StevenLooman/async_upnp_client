@@ -3,22 +3,22 @@
 
 import asyncio
 import logging
-import urllib.parse
 import weakref
 from datetime import timedelta
 from http import HTTPStatus
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Dict, Mapping, Optional, Tuple, Union
+from urllib.parse import urlparse
 
 import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpRequester, UpnpService
 from async_upnp_client.const import NS
 from async_upnp_client.exceptions import (
+    UpnpConnectionError,
     UpnpError,
     UpnpResponseError,
     UpnpSIDError,
-    UpnpConnectionError,
 )
 from async_upnp_client.utils import async_get_local_ip, get_local_ip
 
@@ -54,9 +54,9 @@ class UpnpEventHandler:
         self.listen_ports = listen_ports or {}
 
         self._listen_ip: Optional[str] = None
-        self._subscriptions = (
-            weakref.WeakValueDictionary()
-        )  # type: weakref.WeakValueDictionary [str, UpnpService]
+        self._subscriptions: weakref.WeakValueDictionary[
+            str, UpnpService
+        ] = weakref.WeakValueDictionary()
         self._backlog: Dict[str, Tuple[Mapping, str]] = {}
 
     @property
@@ -90,7 +90,7 @@ class UpnpEventHandler:
 
         # Figure out how this host connects to the device, then infer how the
         # device can connect back
-        device_host = urllib.parse.urlparse(service.device.device_url).netloc
+        device_host = urlparse(service.device.device_url).netloc
         addr_family, local_host = await async_get_local_ip(device_host)
         port = self.listen_ports[addr_family]
 
@@ -212,7 +212,7 @@ class UpnpEventHandler:
         headers = {
             "NT": "upnp:event",
             "TIMEOUT": "Second-" + str(timeout.seconds),
-            "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
+            "HOST": urlparse(service.event_sub_url).netloc,
             "CALLBACK": "<{}>".format(callback_url),
         }
         response_status, response_headers, _ = await self._requester.async_http_request(
@@ -260,7 +260,7 @@ class UpnpEventHandler:
         """Perform only a resubscribe, caller can retry subscribe if this fails."""
         # do SUBSCRIBE request
         headers = {
-            "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
+            "HOST": urlparse(service.event_sub_url).netloc,
             "SID": sid,
             "TIMEOUT": "Second-" + str(timeout.total_seconds()),
         }
@@ -364,7 +364,7 @@ class UpnpEventHandler:
 
         # do UNSUBSCRIBE request
         headers = {
-            "HOST": urllib.parse.urlparse(service.event_sub_url).netloc,
+            "HOST": urlparse(service.event_sub_url).netloc,
             "SID": sid,
         }
         response_status, response_headers, _ = await self._requester.async_http_request(
