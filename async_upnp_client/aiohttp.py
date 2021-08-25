@@ -27,6 +27,8 @@ _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 class AiohttpRequester(UpnpRequester):
     """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
 
+    # pylint: disable=too-few-public-methods
+
     def __init__(
         self, timeout: int = 5, http_headers: Optional[Mapping[str, str]] = None
     ) -> None:
@@ -94,6 +96,8 @@ class AiohttpSessionRequester(UpnpRequester):
 
     With pluggable session.
     """
+
+    # pylint: disable=too-few-public-methods
 
     def __init__(
         self,

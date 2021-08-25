@@ -2,9 +2,10 @@
 
 import logging
 from ipaddress import IPv4Address
-from typing import Any, Mapping, Optional
+from typing import Optional
 
 from async_upnp_client import SsdpAdvertisementListener, UpnpDevice, UpnpFactory
+from async_upnp_client.const import SsdpHeaders
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ class DeviceUpdater:
         _LOGGER.debug("Stop listening for notifications.")
         await self._listener.async_stop()
 
-    async def _on_alive(self, headers: Mapping[str, str]) -> None:
+    async def _on_alive(self, headers: SsdpHeaders) -> None:
         """Handle on alive."""
         # Ensure for root devices only.
         if headers.get("nt") != "upnp:rootdevice":
@@ -58,12 +59,12 @@ class DeviceUpdater:
         _LOGGER.debug("Handling alive: %s", headers)
         await self._async_handle_alive_update(headers)
 
-    async def _on_byebye(self, headers: Mapping[str, Any]) -> None:
+    async def _on_byebye(self, headers: SsdpHeaders) -> None:
         """Handle on byebye."""
         _LOGGER.debug("Handling on_byebye: %s", headers)
         self._device.available = False
 
-    async def _on_update(self, headers: Mapping[str, Any]) -> None:
+    async def _on_update(self, headers: SsdpHeaders) -> None:
         """Handle on update."""
         # Ensure for root devices only.
         if headers.get("nt") != "upnp:rootdevice":
@@ -76,7 +77,7 @@ class DeviceUpdater:
         _LOGGER.debug("Handling update: %s", headers)
         await self._async_handle_alive_update(headers)
 
-    async def _async_handle_alive_update(self, headers: Mapping[str, str]) -> None:
+    async def _async_handle_alive_update(self, headers: SsdpHeaders) -> None:
         """Handle on_alive or on_update."""
         do_reinit = False
 
@@ -112,9 +113,7 @@ class DeviceUpdater:
         # We heard from it, so mark it available.
         self._device.available = True
 
-    async def _reinit_device(
-        self, location: str, ssdp_headers: Mapping[str, Any]
-    ) -> None:
+    async def _reinit_device(self, location: str, ssdp_headers: SsdpHeaders) -> None:
         """Reinitialize device."""
         # pylint: disable=protected-access
         _LOGGER.debug("Reinitializing device, location: %s", location)

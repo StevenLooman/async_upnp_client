@@ -5,7 +5,7 @@ import re
 from asyncio.events import AbstractEventLoop
 from datetime import datetime, timedelta
 from ipaddress import ip_address
-from typing import Any, Awaitable, Callable, Mapping, MutableMapping, Optional, Tuple
+from typing import Any, Awaitable, Callable, Mapping, Optional, Tuple
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import (
@@ -15,6 +15,7 @@ from async_upnp_client.const import (
     NotificationSubType,
     NotificationType,
     SearchTarget,
+    SsdpHeaders,
     SsdpSource,
     UniqueDeviceName,
 )
@@ -31,17 +32,17 @@ IGNORED_HEADERS = {
 }
 
 
-def valid_search_headers(headers: Mapping[str, Any]) -> bool:
+def valid_search_headers(headers: SsdpHeaders) -> bool:
     """Validate if this search is usable."""
     return "usn" in headers and "st" in headers
 
 
-def valid_advertisement_headers(headers: Mapping[str, Any]) -> bool:
+def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
     """Validate if this advertisement is usable."""
     return "usn" in headers and "nt" in headers and "nts" in headers
 
 
-def extract_valid_to(headers: Mapping[str, Any]) -> datetime:
+def extract_valid_to(headers: SsdpHeaders) -> datetime:
     """Extract/create valid to."""
     cache_control = headers.get("cache-control", "")
     match = CACHE_CONTROL_RE.search(cache_control)
@@ -78,17 +79,18 @@ class SsdpDevice:
     def combined_headers(
         self,
         device_or_service_type: DeviceOrServiceType,
-    ) -> Mapping[str, Any]:
-        """Get combined headers from search and advertisement for a given device or service type."""
-        headers = dict(self.search_headers.get(device_or_service_type, {}))
+    ) -> SsdpHeaders:
+        """Get headers from search and advertisement for a given device- or service type."""
+        headers = CaseInsensitiveDict()
+        headers.update(self.search_headers.get(device_or_service_type, {}))
         headers.update(self.advertisement_headers.get(device_or_service_type, {}))
         if "_source" in headers:
             del headers["_source"]
         return headers
 
     @property
-    def all_combined_headers(self) -> Mapping[DeviceOrServiceType, Mapping[str, Any]]:
-        """Get all combined headers from search and advertisement for all known device- and service types."""
+    def all_combined_headers(self) -> Mapping[DeviceOrServiceType, SsdpHeaders]:
+        """Get all headers from search and advertisement for all known device- and service types."""
         dsts = set(self.advertisement_headers).union(set(self.search_headers))
         return {dst: self.combined_headers(dst) for dst in dsts}
 
@@ -97,9 +99,7 @@ class SsdpDevice:
         return f"<{type(self).__name__}({self.udn})>"
 
 
-def headers_differ(
-    current_headers: Mapping[str, Any], new_headers: Mapping[str, Any]
-) -> bool:
+def headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
     """Compare headers to see if anything interesting has changed."""
     current_filtered = {
         key: value
@@ -126,7 +126,7 @@ def headers_differ(
 
 
 def headers_differ_from_existing_advertisement(
-    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: Mapping[str, Any]
+    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: SsdpHeaders
 ) -> bool:
     """Compare against existing advertisement headers to see if anything interesting has changed."""
     if dst not in ssdp_device.advertisement_headers:
@@ -134,15 +134,17 @@ def headers_differ_from_existing_advertisement(
 
     current_headers = ssdp_device.advertisement_headers[dst]
     shared_keys = set(current_headers).intersection(headers)
-    current_filtered = {
-        key: value for key, value in current_headers.items() if key in shared_keys
-    }
-    new_filtered = {key: value for key, value in headers.items() if key in shared_keys}
+    current_filtered = CaseInsensitiveDict(
+        **{key: value for key, value in current_headers.items() if key in shared_keys}
+    )
+    new_filtered = CaseInsensitiveDict(
+        **{key: value for key, value in headers.items() if key in shared_keys}
+    )
     return headers_differ(current_filtered, new_filtered)
 
 
 def headers_differ_from_existing_search(
-    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: Mapping[str, Any]
+    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: SsdpHeaders
 ) -> bool:
     """Compare against existing search headers to see if anything interesting has changed."""
     if dst not in ssdp_device.search_headers:
@@ -150,10 +152,12 @@ def headers_differ_from_existing_search(
 
     current_headers = ssdp_device.search_headers[dst]
     shared_keys = set(current_headers).intersection(headers)
-    current_filtered = {
-        key: value for key, value in current_headers.items() if key in shared_keys
-    }
-    new_filtered = {key: value for key, value in headers.items() if key in shared_keys}
+    current_filtered = CaseInsensitiveDict(
+        **{key: value for key, value in current_headers.items() if key in shared_keys}
+    )
+    new_filtered = CaseInsensitiveDict(
+        **{key: value for key, value in headers.items() if key in shared_keys}
+    )
     return headers_differ(current_filtered, new_filtered)
 
 
@@ -165,7 +169,7 @@ class SsdpDeviceTracker:
         self.devices: dict[UniqueDeviceName, SsdpDevice] = {}
 
     def see_search(
-        self, headers: Mapping[str, Any]
+        self, headers: SsdpHeaders
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through a search."""
         if not valid_search_headers(headers):
@@ -205,7 +209,7 @@ class SsdpDeviceTracker:
         return propagate, ssdp_device, search_target
 
     def see_advertisement(
-        self, headers: Mapping[str, Any]
+        self, headers: SsdpHeaders
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through an advertisement."""
         if not valid_advertisement_headers(headers):
@@ -250,8 +254,11 @@ class SsdpDeviceTracker:
 
         return propagate, ssdp_device, notification_type
 
-    def _see_device(self, headers: Mapping[str, Any]) -> Optional[SsdpDevice]:
+    def _see_device(self, headers: SsdpHeaders) -> Optional[SsdpDevice]:
         """See a device through a search."""
+        # Purge any old devices.
+        self.purge_devices()
+
         udn = udn_from_headers(headers)
         if not udn:
             # Ignore broken devices.
@@ -269,13 +276,10 @@ class SsdpDeviceTracker:
         ssdp_device.last_seen = headers["_timestamp"]
         ssdp_device.valid_to = extract_valid_to(headers)
 
-        # Purge any old devices.
-        self.purge_devices()
-
         return ssdp_device
 
     def unsee_advertisement(
-        self, headers: Mapping[str, Any]
+        self, headers: SsdpHeaders
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """Remove a device through an advertisement."""
         if not valid_advertisement_headers(headers):
@@ -296,7 +300,7 @@ class SsdpDeviceTracker:
         notification_type: NotificationType = headers["NT"]
         return propagate, ssdp_device, notification_type
 
-    def get_device(self, headers: Mapping[str, Any]) -> Optional[SsdpDevice]:
+    def get_device(self, headers: SsdpHeaders) -> Optional[SsdpDevice]:
         """Get a device from headers."""
         if "usn" not in headers:
             return None
@@ -384,7 +388,7 @@ class SsdpListener:
         assert self._search_listener is not None, "Call async_start() first"
         self._search_listener.async_search(override_target)
 
-    async def _on_search(self, headers: MutableMapping[str, str]) -> None:
+    async def _on_search(self, headers: SsdpHeaders) -> None:
         """Search callback."""
         (
             propagate,
@@ -395,7 +399,7 @@ class SsdpListener:
         if propagate and ssdp_device and device_or_service_type:
             await self.callback(ssdp_device, device_or_service_type, SsdpSource.SEARCH)
 
-    async def _on_alive(self, headers: MutableMapping[str, str]) -> None:
+    async def _on_alive(self, headers: SsdpHeaders) -> None:
         """On alive."""
         (
             propagate,
@@ -408,7 +412,7 @@ class SsdpListener:
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
             )
 
-    async def _on_byebye(self, headers: MutableMapping[str, str]) -> None:
+    async def _on_byebye(self, headers: SsdpHeaders) -> None:
         """On byebye."""
         (
             propagate,
@@ -421,7 +425,7 @@ class SsdpListener:
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
             )
 
-    async def _on_update(self, headers: MutableMapping[str, str]) -> None:
+    async def _on_update(self, headers: SsdpHeaders) -> None:
         """On update."""
         (
             propagate,

@@ -6,7 +6,7 @@ import re
 import socket
 from collections import defaultdict
 from collections.abc import Mapping as abcMapping
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Any, Callable, Dict, Generator, Mapping, Optional, Tuple
@@ -24,7 +24,7 @@ def _ci_key(key: str) -> str:
     return key.lower()
 
 
-class CaseInsensitiveDict(MutableMapping):
+class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
     def __init__(self, **kwargs: Any) -> None:
@@ -52,7 +52,7 @@ class CaseInsensitiveDict(MutableMapping):
         """Get length."""
         return len(self._data)
 
-    def __iter__(self) -> Generator[Any, None, None]:
+    def __iter__(self) -> Generator[str, None, None]:
         """Get iterator."""
         return (key for key, value in self._data.values())
 

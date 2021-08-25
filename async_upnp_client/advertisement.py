@@ -6,13 +6,14 @@ import logging
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport
 from ipaddress import IPv4Address
-from typing import Any, Awaitable, Callable, MutableMapping, Optional
+from typing import Awaitable, Callable, Optional
 
 from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
     SSDP_IP_V4,
     IPvXAddress,
+    SsdpHeaders,
     SsdpProtocol,
     get_source_ip_from_target_ip,
     get_ssdp_socket,
@@ -26,9 +27,9 @@ class SsdpAdvertisementListener:
 
     def __init__(
         self,
-        on_alive: Optional[Callable[[MutableMapping[str, str]], Awaitable]] = None,
-        on_byebye: Optional[Callable[[MutableMapping[str, str]], Awaitable]] = None,
-        on_update: Optional[Callable[[MutableMapping[str, str]], Awaitable]] = None,
+        on_alive: Optional[Callable[[SsdpHeaders], Awaitable]] = None,
+        on_byebye: Optional[Callable[[SsdpHeaders], Awaitable]] = None,
+        on_update: Optional[Callable[[SsdpHeaders], Awaitable]] = None,
         source_ip: Optional[IPvXAddress] = None,
         target_ip: Optional[IPvXAddress] = None,
         loop: Optional[AbstractEventLoop] = None,
@@ -43,9 +44,7 @@ class SsdpAdvertisementListener:
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[BaseTransport] = None
 
-    async def _async_on_data(
-        self, request_line: str, headers: MutableMapping[str, Any]
-    ) -> None:
+    async def _async_on_data(self, request_line: str, headers: SsdpHeaders) -> None:
         """Handle data."""
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.

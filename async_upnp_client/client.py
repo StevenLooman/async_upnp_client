@@ -3,6 +3,7 @@
 
 import logging
 import urllib.parse
+from abc import ABC
 from datetime import datetime, timezone
 from typing import (
     Any,
@@ -28,9 +29,11 @@ from async_upnp_client.const import (
     DeviceIcon,
     DeviceInfo,
     ServiceInfo,
+    SsdpHeaders,
     StateVariableInfo,
 )
 from async_upnp_client.exceptions import UpnpError, UpnpValueError, UpnpXmlParseError
+from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -38,12 +41,14 @@ _LOGGER = logging.getLogger(__name__)
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
 
 
-class UpnpRequester:
+class UpnpRequester(ABC):
     """
     Abstract base class used for performing async HTTP requests.
 
     Implement method async_do_http_request() in your concrete class.
     """
+
+    # pylint: disable=too-few-public-methods
 
     async def async_http_request(
         self,
@@ -85,7 +90,7 @@ class UpnpDevice:
             service.device = self
 
         # SSDP headers.
-        self.ssdp_headers: Mapping[str, Any] = {}
+        self.ssdp_headers: SsdpHeaders = CaseInsensitiveDict()
 
         # Just initialized, mark available.
         self.available = True
