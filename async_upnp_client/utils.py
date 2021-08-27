@@ -9,10 +9,10 @@ from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Callable, Dict, Generator, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
-import defusedxml as DET
+import defusedxml.ElementTree as DET
 from voluptuous import Invalid
 
 EXTERNAL_IP = "1.1.1.1"
@@ -133,7 +133,7 @@ def parse_date_time(value: str) -> Any:
     utc = timezone(timedelta(hours=0))
     if value[-6] in ["+", "-"] and value[-3] == ":":
         value = value[:-3] + value[-2:]
-    matchers: Mapping[str, Callable] = {
+    matchers: Dict[str, Callable] = {
         # date
         r"\d{4}-\d{2}-\d{2}$": lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
         r"\d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(value, "%H:%M:%S").time(),
@@ -224,17 +224,17 @@ async def async_get_local_ip(
 # Adapted from http://stackoverflow.com/a/10077069
 # to follow the XML to JSON spec
 # https://www.xml.com/pub/a/2006/05/31/converting-between-xml-and-json.html
-def etree_to_dict(tree: DET.ElementTree) -> dict[str, Optional[dict[str, Any]]]:
+def etree_to_dict(tree: DET) -> Dict[str, Optional[Dict[str, Any]]]:
     """Convert an ETree object to a dict."""
     # strip namespace
     tag_name = tree.tag[tree.tag.find("}") + 1 :]
 
-    tree_dict: dict[str, Optional[dict[str, Any]]] = {
+    tree_dict: Dict[str, Optional[Dict[str, Any]]] = {
         tag_name: {} if tree.attrib else None
     }
     children = list(tree)
     if children:
-        child_dict: dict[str, list] = defaultdict(list)
+        child_dict: Dict[str, list] = defaultdict(list)
         for child in map(etree_to_dict, children):
             for k, val in child.items():
                 child_dict[k].append(val)

@@ -4,10 +4,21 @@
 from datetime import date, datetime, time
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
-from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    List,
+    Mapping,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from xml.etree import ElementTree as ET
 
-from async_upnp_client.utils import CaseInsensitiveDict, parse_date_time, require_tzinfo
+from async_upnp_client.utils import parse_date_time, require_tzinfo
 
 IPvXAddress = Union[IPv4Address, IPv6Address]
 AddressTupleV4Type = Tuple[str, int]
@@ -164,7 +175,7 @@ StateVariableInfo = NamedTuple(
 )
 
 # Headers
-SsdpHeaders = CaseInsensitiveDict
+SsdpHeaders = MutableMapping[str, Any]
 NotificationType = str  # NT header
 UniqueServiceName = str  # USN header
 SearchTarget = str  # ST header
