@@ -4,6 +4,7 @@ Changes
 0.20.1 (unreleased)
 
 - More pylint/mypy
+- Fixed NoneType exception in DmrDevice.media_image_url (@mkliche)
 
 
 0.20.0 (2021-08-17)
