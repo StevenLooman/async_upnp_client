@@ -1,8 +1,6 @@
 """Unit tests for search."""
 # pylint: disable=protected-access
 
-from datetime import datetime
-
 try:
     from unittest.mock import AsyncMock
 except ImportError:
@@ -15,20 +13,12 @@ from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp import SSDP_IP_V4
 from async_upnp_client.utils import CaseInsensitiveDict
 
-TEST_REQUEST_LINE = "HTTP/1.1 200 OK"
-TEST_HEADERS_DEFAULT = {
-    "CACHE-CONTROL": "max-age=1800",
-    "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-    "USN": "uuid:...::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-    "LOCATION": "http://192.168.1.1:80/RootDevice.xml",
-    "BOOTID.UPNP.ORG": "1",
-    "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
-    "DATE": "Fri, 1 Jan 2021 12:00:00 GMT",
-    "_timestamp": datetime(2021, 1, 1, 12, 00),
-    "_host": "192.168.1.1",
-    "_port": "1900",
-    "_udn": "uuid:...:",
-}
+from .common import (
+    ADVERTISEMENT_HEADERS_DEFAULT,
+    ADVERTISEMENT_REQUEST_LINE,
+    SEACH_REQUEST_LINE,
+    SEARCH_HEADERS_DEFAULT,
+)
 
 
 @pytest.mark.asyncio
@@ -37,8 +27,8 @@ async def test_receive_search_response() -> None:
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
-    headers = CaseInsensitiveDict(TEST_HEADERS_DEFAULT)
-    await listener._async_on_data(TEST_REQUEST_LINE, headers)
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await listener._async_on_data(SEACH_REQUEST_LINE, headers)
 
     callback.assert_called_with(headers)
 
@@ -68,21 +58,7 @@ async def test_receive_ssdp_alive_advertisement() -> None:
     """Test handling a ssdp alive advertisement, which is ignored."""
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
-    headers = CaseInsensitiveDict(
-        {
-            "CACHE-CONTROL": "max-age=1800",
-            "NTS": "ssdp:alive",
-            "NT": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-            "USN": "uuid:...::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-            "LOCATION": "http://192.168.1.1:80/RootDevice.xml",
-            "BOOTID.UPNP.ORG": "1",
-            "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
-            "_timestamp": datetime(2021, 1, 1, 12, 00),
-            "_host": "192.168.1.1",
-            "_port": "1900",
-            "_udn": "uuid:...:",
-        }
-    )
-    await listener._async_on_data("NOTIFY * HTTP/1.1", headers)
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
 
     callback.assert_not_called()
