@@ -50,7 +50,7 @@ class SsdpAdvertisementListener:
             # Ignore discover packets.
             return
         if "NTS" not in headers:
-            _LOGGER.debug("Got unknown packet: %s, %s", request_line, headers)
+            _LOGGER.debug("Got non-advertisement packet: %s, %s", request_line, headers)
             return
 
         _LOGGER.debug("Received advertisement, USN: %s", headers.get("USN", "<no USN>"))

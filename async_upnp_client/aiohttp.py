@@ -134,7 +134,7 @@ class AiohttpSessionRequester(UpnpRequester):
         )
 
         if self._with_sleep:
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0)
 
         try:
             async with async_timeout.timeout(self._timeout):

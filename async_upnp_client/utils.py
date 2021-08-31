@@ -27,9 +27,11 @@ def _ci_key(key: str) -> str:
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {}
+        for key, value in (data or {}).items():
+            self[key] = value
         for key, value in kwargs.items():
             self[key] = value
 
@@ -54,7 +56,7 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __iter__(self) -> Generator[str, None, None]:
         """Get iterator."""
-        return (key for key, value in self._data.values())
+        return (key for key, _ in self._data.values())
 
     def __repr__(self) -> str:
         """Repr."""

@@ -1,4 +1,4 @@
-"""Unit tests for ssdp listener."""
+"""Unit tests for ssdp_listener."""
 
 from datetime import datetime, timedelta
 from ipaddress import ip_address
@@ -87,16 +87,24 @@ async def test_see_advertisement_alive() -> None:
     """Test seeing a device through an ssdp:alive-advertisement."""
     # pylint: disable=protected-access
     callback = AsyncMock()
-    listener = SsdpListener(callback=callback)
+    listener = SsdpListener(async_callback=callback)
     await listener.async_start()
     advertisement_listener = listener._advertisement_listener
     assert advertisement_listener is not None
 
     # See device for the first time through alive-advertisement.
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
     callback.assert_awaited()
+    assert TEST_UDN in listener.devices
+
+    # See device for the second time through alive-advertisement, not triggering callback.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
+    headers["NTS"] = NotificationSubType.SSDP_ALIVE
+    await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
+    callback.assert_not_awaited()
     assert TEST_UDN in listener.devices
 
     await listener.async_stop()
@@ -108,14 +116,14 @@ async def test_see_advertisement_byebye() -> None:
     """Test seeing a device through an ssdp:byebye-advertisement."""
     # pylint: disable=protected-access
     callback = AsyncMock()
-    listener = SsdpListener(callback=callback)
+    listener = SsdpListener(async_callback=callback)
     await listener.async_start()
     advertisement_listener = listener._advertisement_listener
     assert advertisement_listener is not None
 
     # See device for the first time through byebye-advertisement, not triggering callback.
     callback.reset_mock()
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
     callback.assert_not_awaited()
@@ -123,7 +131,7 @@ async def test_see_advertisement_byebye() -> None:
 
     # See device for the first time through alive-advertisement, triggering callback.
     callback.reset_mock()
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
     callback.assert_awaited()
@@ -131,7 +139,7 @@ async def test_see_advertisement_byebye() -> None:
 
     # See device for the second time through byebye-advertisement, triggering callback.
     callback.reset_mock()
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
     callback.assert_awaited()
@@ -146,14 +154,14 @@ async def test_see_advertisement_update() -> None:
     """Test seeing a device through an ssdp:update-advertisement."""
     # pylint: disable=protected-access
     callback = AsyncMock()
-    listener = SsdpListener(callback=callback)
+    listener = SsdpListener(async_callback=callback)
     await listener.async_start()
     advertisement_listener = listener._advertisement_listener
     assert advertisement_listener is not None
 
     # See device for the first time through alive-advertisement, triggering callback.
     callback.reset_mock()
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
     callback.assert_awaited()
@@ -161,7 +169,7 @@ async def test_see_advertisement_update() -> None:
 
     # See device for the second time through update-advertisement, triggering callback.
     callback.reset_mock()
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_UPDATE
     headers["BOOTID.UPNP.ORG"] = "2"
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
@@ -177,13 +185,13 @@ async def test_see_search() -> None:
     """Test seeing a device through an search."""
     # pylint: disable=protected-access
     callback = AsyncMock()
-    listener = SsdpListener(callback=callback)
+    listener = SsdpListener(async_callback=callback)
     await listener.async_start()
     search_listener = listener._search_listener
     assert search_listener is not None
 
     # See device for the first time through search.
-    headers = CaseInsensitiveDict(**TEST_SEARCH_HEADERS)
+    headers = CaseInsensitiveDict(TEST_SEARCH_HEADERS)
     await search_listener._async_on_data(TEST_SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert TEST_UDN in listener.devices
@@ -197,7 +205,7 @@ async def test_see_search_then_alive() -> None:
     """Test seeing a device through a search."""
     # pylint: disable=protected-access
     callback = AsyncMock()
-    listener = SsdpListener(callback=callback)
+    listener = SsdpListener(async_callback=callback)
     await listener.async_start()
     advertisement_listener = listener._advertisement_listener
     assert advertisement_listener is not None
@@ -205,14 +213,14 @@ async def test_see_search_then_alive() -> None:
     assert search_listener is not None
 
     # See device for the first time through search.
-    headers = CaseInsensitiveDict(**TEST_SEARCH_HEADERS)
+    headers = CaseInsensitiveDict(TEST_SEARCH_HEADERS)
     await search_listener._async_on_data(TEST_SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert TEST_UDN in listener.devices
 
     # See device for the second time through alive-advertisement, not triggering callback.
     callback.reset_mock()
-    headers = CaseInsensitiveDict(**TEST_NOTIFY_HEADERS)
+    headers = CaseInsensitiveDict(TEST_NOTIFY_HEADERS)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(TEST_NOTIFY_REQUEST_LINE, headers)
     callback.assert_not_awaited()
@@ -227,13 +235,13 @@ async def test_purge_devices() -> None:
     """Test if a device is purged when it times out given the value of the CACHE-CONTROL header."""
     # pylint: disable=protected-access
     callback = AsyncMock()
-    listener = SsdpListener(callback=callback)
+    listener = SsdpListener(async_callback=callback)
     await listener.async_start()
     search_listener = listener._search_listener
     assert search_listener is not None
 
     # See device for the first time through alive-advertisement.
-    headers = CaseInsensitiveDict(**TEST_SEARCH_HEADERS)
+    headers = CaseInsensitiveDict(TEST_SEARCH_HEADERS)
     await search_listener._async_on_data(TEST_SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert TEST_UDN in listener.devices

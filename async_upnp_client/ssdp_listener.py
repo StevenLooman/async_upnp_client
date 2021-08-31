@@ -51,7 +51,8 @@ def extract_valid_to(headers: SsdpHeaders) -> datetime:
         uncache_after = timedelta(seconds=max_age)
     else:
         uncache_after = DEFAULT_MAX_AGE
-    return datetime.now() + uncache_after
+    timestamp: datetime = headers["_timestamp"]
+    return timestamp + uncache_after
 
 
 class SsdpDevice:
@@ -135,10 +136,10 @@ def headers_differ_from_existing_advertisement(
     current_headers = ssdp_device.advertisement_headers[dst]
     shared_keys = set(current_headers).intersection(headers)
     current_filtered = CaseInsensitiveDict(
-        **{key: value for key, value in current_headers.items() if key in shared_keys}
+        {key: value for key, value in current_headers.items() if key in shared_keys}
     )
     new_filtered = CaseInsensitiveDict(
-        **{key: value for key, value in headers.items() if key in shared_keys}
+        {key: value for key, value in headers.items() if key in shared_keys}
     )
     return headers_differ(current_filtered, new_filtered)
 
@@ -153,10 +154,10 @@ def headers_differ_from_existing_search(
     current_headers = ssdp_device.search_headers[dst]
     shared_keys = set(current_headers).intersection(headers)
     current_filtered = CaseInsensitiveDict(
-        **{key: value for key, value in current_headers.items() if key in shared_keys}
+        {key: value for key, value in current_headers.items() if key in shared_keys}
     )
     new_filtered = CaseInsensitiveDict(
-        **{key: value for key, value in headers.items() if key in shared_keys}
+        {key: value for key, value in headers.items() if key in shared_keys}
     )
     return headers_differ(current_filtered, new_filtered)
 
@@ -331,7 +332,9 @@ class SsdpListener:
 
     def __init__(
         self,
-        callback: Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], Awaitable],
+        async_callback: Callable[
+            [SsdpDevice, DeviceOrServiceType, SsdpSource], Awaitable
+        ],
         source_ip: Optional[IPvXAddress] = None,
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
@@ -339,7 +342,7 @@ class SsdpListener:
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
-        self.callback = callback
+        self.async_callback = async_callback
         self.source_ip = source_ip
         self.target: AddressTupleVXType = target or (
             SSDP_IP_V4,
@@ -381,7 +384,7 @@ class SsdpListener:
         if self._search_listener:
             self._search_listener.async_stop()
 
-    def async_search(
+    async def async_search(
         self, override_target: Optional[AddressTupleVXType] = None
     ) -> None:
         """Send a SSDP Search packet."""
@@ -397,7 +400,9 @@ class SsdpListener:
         ) = self._device_tracker.see_search(headers)
 
         if propagate and ssdp_device and device_or_service_type:
-            await self.callback(ssdp_device, device_or_service_type, SsdpSource.SEARCH)
+            await self.async_callback(
+                ssdp_device, device_or_service_type, SsdpSource.SEARCH
+            )
 
     async def _on_alive(self, headers: SsdpHeaders) -> None:
         """On alive."""
@@ -408,7 +413,7 @@ class SsdpListener:
         ) = self._device_tracker.see_advertisement(headers)
 
         if propagate and ssdp_device and device_or_service_type:
-            await self.callback(
+            await self.async_callback(
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
             )
 
@@ -421,7 +426,7 @@ class SsdpListener:
         ) = self._device_tracker.unsee_advertisement(headers)
 
         if propagate and ssdp_device and device_or_service_type:
-            await self.callback(
+            await self.async_callback(
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
             )
 
@@ -434,7 +439,7 @@ class SsdpListener:
         ) = self._device_tracker.see_advertisement(headers)
 
         if propagate and ssdp_device and device_or_service_type:
-            await self.callback(
+            await self.async_callback(
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
             )
 

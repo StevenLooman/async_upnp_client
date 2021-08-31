@@ -9,6 +9,7 @@ from typing import Awaitable, Callable, Optional, cast
 
 from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
+    SSDP_DISCOVER,
     SSDP_IP_V4,
     SSDP_IP_V6,
     SSDP_MX,
@@ -64,7 +65,17 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         target = override_target or self._target
         protocol.send_ssdp_packet(packet, target)
 
-    async def _async_on_data(self, _request_line: str, headers: SsdpHeaders) -> None:
+    async def _async_on_data(self, request_line: str, headers: SsdpHeaders) -> None:
+        """Handle data."""
+        if headers.get("MAN") == SSDP_DISCOVER:
+            # Ignore discover packets.
+            return
+        if "NTS" in headers:
+            _LOGGER.debug(
+                "Got non-search response packet: %s, %s", request_line, headers
+            )
+            return
+
         _LOGGER.debug("Received response, USN: %s", headers.get("USN", "<no USN>"))
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
