@@ -4,7 +4,7 @@
 import asyncio
 import logging
 from asyncio.events import AbstractEventLoop
-from asyncio.transports import BaseTransport
+from asyncio.transports import BaseTransport, DatagramTransport
 from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Optional
 
@@ -68,6 +68,9 @@ class SsdpAdvertisementListener:
         ):
             await self.on_update(headers)
 
+    async def _async_on_connect(self, transport: DatagramTransport) -> None:
+        self._transport = transport
+
     async def async_start(self) -> None:
         """Start listening for advertisements."""
         _LOGGER.debug("Start listening for advertisements")
@@ -77,8 +80,12 @@ class SsdpAdvertisementListener:
         sock.bind(target)
 
         # Create protocol and send discovery packet.
-        self._transport, _ = await self._loop.create_datagram_endpoint(
-            lambda: SsdpProtocol(self._loop, on_data=self._async_on_data),
+        await self._loop.create_datagram_endpoint(
+            lambda: SsdpProtocol(
+                self._loop,
+                on_connect=self._async_on_connect,
+                on_data=self._async_on_data,
+            ),
             sock=sock,
         )
 
