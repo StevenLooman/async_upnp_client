@@ -57,7 +57,7 @@ class DescriptionCache:
         return self._cache_xml[location]
 
     async def async_get_description_dict(
-        self, location: str
+        self, location: Optional[str]
     ) -> Optional[Mapping[str, str]]:
         """Get a description as dict, either from cache or download it."""
         if location is None:
