@@ -5,9 +5,11 @@ import logging
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import ip_address
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional
+from typing import Awaitable, Callable, Optional, cast
 
+from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
+    SSDP_DISCOVER,
     SSDP_IP_V4,
     SSDP_IP_V6,
     SSDP_MX,
@@ -15,6 +17,7 @@ from async_upnp_client.ssdp import (
     SSDP_ST_ALL,
     AddressTupleVXType,
     IPvXAddress,
+    SsdpHeaders,
     SsdpProtocol,
     build_ssdp_search_packet,
     get_host_string,
@@ -23,15 +26,14 @@ from async_upnp_client.ssdp import (
 )
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
-class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
-    """Class to listen for SSDP."""
+class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
+    """SSDP Search (response) listener."""
 
     def __init__(
         self,
-        async_callback: Callable[[MutableMapping[str, str]], Awaitable],
+        async_callback: Callable[[SsdpHeaders], Awaitable],
         loop: Optional[AbstractEventLoop] = None,
         source_ip: Optional[IPvXAddress] = None,
         target: Optional[AddressTupleVXType] = None,
@@ -57,19 +59,25 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
         assert self._target_host is not None, "Call async_start() first"
         assert self._target is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(self._target, self.timeout, self.service_type)
-        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self._transport)
-        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
-        assert self._transport is not None
-        target = override_target or self._target
-        self._transport.sendto(packet, target)
 
-    async def _async_on_data(
-        self, request_line: str, headers: MutableMapping[str, str]
-    ) -> None:
-        _LOGGER.debug(
-            "Received response, request line: %s, headers: %s", request_line, headers
-        )
-        headers["_source"] = "search"
+        assert self._transport is not None
+        protocol = cast(SsdpProtocol, self._transport.get_protocol())
+        target = override_target or self._target
+        protocol.send_ssdp_packet(packet, target)
+
+    async def _async_on_data(self, request_line: str, headers: SsdpHeaders) -> None:
+        """Handle data."""
+        if headers.get("MAN") == SSDP_DISCOVER:
+            # Ignore discover packets.
+            return
+        if "NTS" in headers:
+            _LOGGER.debug(
+                "Got non-search response packet: %s, %s", request_line, headers
+            )
+            return
+
+        _LOGGER.debug("Received response, USN: %s", headers.get("USN", "<no USN>"))
+        headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
         await self.async_callback(headers)
@@ -119,7 +127,7 @@ class SSDPListener:  # pylint: disable=too-many-arguments,too-many-instance-attr
 
 
 async def async_search(
-    async_callback: Callable[[Mapping[str, str]], Awaitable],
+    async_callback: Callable[[SsdpHeaders], Awaitable],
     timeout: int = SSDP_MX,
     service_type: str = SSDP_ST_ALL,
     source_ip: Optional[IPvXAddress] = None,
@@ -129,14 +137,14 @@ async def async_search(
     """Discover devices via SSDP."""
     # pylint: disable=too-many-arguments
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
-    listener: Optional[SSDPListener] = None
+    listener: Optional[SsdpSearchListener] = None
 
     async def _async_connected() -> None:
         nonlocal listener
         assert listener is not None
         listener.async_search()
 
-    listener = SSDPListener(
+    listener = SsdpSearchListener(
         async_callback,
         loop_,
         source_ip,

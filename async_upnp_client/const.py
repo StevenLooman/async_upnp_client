@@ -1,10 +1,21 @@
 # -*- coding: utf-8 -*-
 """Constants module."""
 
-import enum
 from datetime import date, datetime, time
+from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
-from typing import Callable, List, Mapping, NamedTuple, Optional, Sequence, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    List,
+    Mapping,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 from xml.etree import ElementTree as ET
 
 from async_upnp_client.utils import parse_date_time, require_tzinfo
@@ -164,15 +175,29 @@ StateVariableInfo = NamedTuple(
 )
 
 # Headers
+SsdpHeaders = MutableMapping[str, Any]
 NotificationType = str  # NT header
 UniqueServiceName = str  # USN header
 SearchTarget = str  # ST header
 UniqueDeviceName = str  # UDN
+DeviceOrServiceType = str
 
 
-class NotificationSubType(str, enum.Enum):
+class NotificationSubType(str, Enum):
     """NTS header."""
 
     SSDP_ALIVE = "ssdp:alive"
     SSDP_BYEBYE = "ssdp:byebye"
     SSDP_UPDATE = "ssdp:update"
+
+
+class SsdpSource(str, Enum):
+    """SSDP source."""
+
+    ADVERTISEMENT = "advertisement"
+    SEARCH = "search"
+
+    # More detailed.
+    ADVERTISEMENT_ALIVE = "advertisement_alive"
+    ADVERTISEMENT_BYEBYE = "advertisement_byebye"
+    ADVERTISEMENT_UPDATE = "advertisement_update"

@@ -60,8 +60,6 @@ class UpnpFactory:
     async def async_create_device(
         self,
         description_url: str,
-        boot_id: Optional[str] = None,
-        config_id: Optional[str] = None,
     ) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         _LOGGER.debug("Creating device, description_url: %s", description_url)
@@ -78,7 +76,7 @@ class UpnpFactory:
             service = await self.async_create_service(service_desc_xml, description_url)
             services.append(service)
 
-        return UpnpDevice(self.requester, device_desc, services, boot_id, config_id)
+        return UpnpDevice(self.requester, device_desc, services)
 
     def _device_parse_xml(
         self, device_description_xml: ET.Element, description_url: str

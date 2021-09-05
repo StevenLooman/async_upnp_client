@@ -21,10 +21,13 @@ from async_upnp_client.exceptions import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+_LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
 class AiohttpRequester(UpnpRequester):
     """Standard AioHttpUpnpRequester, to be used with UpnpFactory."""
+
+    # pylint: disable=too-few-public-methods
 
     def __init__(
         self, timeout: int = 5, http_headers: Optional[Mapping[str, str]] = None
@@ -33,7 +36,7 @@ class AiohttpRequester(UpnpRequester):
         self._timeout = timeout
         self._http_headers = http_headers or {}
 
-    async def async_do_http_request(
+    async def async_http_request(
         self,
         method: str,
         url: str,
@@ -42,6 +45,16 @@ class AiohttpRequester(UpnpRequester):
     ) -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
         req_headers = {**self._http_headers, **(headers or {})}
+
+        _LOGGER_TRAFFIC_UPNP.debug(
+            "Sending request:\n%s %s\n%s\n%s\n",
+            method,
+            url,
+            "\n".join(
+                [key + ": " + value for key, value in (req_headers or {}).items()]
+            ),
+            body or "",
+        )
 
         try:
             async with async_timeout.timeout(self._timeout):
@@ -67,6 +80,13 @@ class AiohttpRequester(UpnpRequester):
         except aiohttp.ClientError as err:
             raise UpnpCommunicationError from err
 
+        _LOGGER_TRAFFIC_UPNP.debug(
+            "Got response:\n%s\n%s\n\n%s",
+            status,
+            "\n".join([key + ": " + value for key, value in resp_headers.items()]),
+            resp_body,
+        )
+
         return status, resp_headers, resp_body
 
 
@@ -76,6 +96,8 @@ class AiohttpSessionRequester(UpnpRequester):
 
     With pluggable session.
     """
+
+    # pylint: disable=too-few-public-methods
 
     def __init__(
         self,
@@ -90,7 +112,7 @@ class AiohttpSessionRequester(UpnpRequester):
         self._timeout = timeout
         self._http_headers = http_headers or {}
 
-    async def async_do_http_request(
+    async def async_http_request(
         self,
         method: str,
         url: str,
@@ -101,8 +123,18 @@ class AiohttpSessionRequester(UpnpRequester):
         # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
 
+        _LOGGER_TRAFFIC_UPNP.debug(
+            "Sending request:\n%s %s\n%s\n%s\n",
+            method,
+            url,
+            "\n".join(
+                [key + ": " + value for key, value in (req_headers or {}).items()]
+            ),
+            body or "",
+        )
+
         if self._with_sleep:
-            await asyncio.sleep(0.01)
+            await asyncio.sleep(0)
 
         try:
             async with async_timeout.timeout(self._timeout):
@@ -126,6 +158,13 @@ class AiohttpSessionRequester(UpnpRequester):
             ) from err
         except aiohttp.ClientError as err:
             raise UpnpCommunicationError from err
+
+        _LOGGER_TRAFFIC_UPNP.debug(
+            "Got response:\n%s\n%s\n\n%s",
+            status,
+            "\n".join([key + ": " + value for key, value in resp_headers.items()]),
+            resp_body,
+        )
 
         return status, resp_headers, resp_body
 
@@ -210,6 +249,15 @@ class AiohttpNotifyServer:
     async def _handle_request(self, request: Any) -> aiohttp.web.Response:
         """Handle incoming requests."""
         _LOGGER.debug("Received request: %s", request)
+
+        headers = request.headers
+        body = await request.text()
+        _LOGGER_TRAFFIC_UPNP.debug(
+            "Incoming request:\nNOTIFY\n%s\n\n%s",
+            "\n".join([key + ": " + value for key, value in headers.items()]),
+            body,
+        )
+
         if request.method != "NOTIFY":
             _LOGGER.debug("Not notify")
             return aiohttp.web.Response(status=405)
@@ -218,11 +266,10 @@ class AiohttpNotifyServer:
             _LOGGER.debug("Event handler not created yet")
             return aiohttp.web.Response(status=503, reason="Server not fully started")
 
-        headers = request.headers
-        body = await request.text()
-
         status = await self.event_handler.handle_notify(headers, body)
         _LOGGER.debug("NOTIFY response status: %s", status)
+        _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", status)
+
         return aiohttp.web.Response(status=status)
 
     @property

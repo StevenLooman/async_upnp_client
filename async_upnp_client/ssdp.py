@@ -8,7 +8,7 @@ from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Awaitable, Callable, Mapping, MutableMapping, Optional, Tuple, cast
+from typing import Awaitable, Callable, Optional, Tuple, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_parser import HeadersParser
@@ -17,7 +17,7 @@ from async_upnp_client.const import (
     AddressTupleV6Type,
     AddressTupleVXType,
     IPvXAddress,
-    NotificationSubType,
+    SsdpHeaders,
     UniqueDeviceName,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
@@ -35,11 +35,6 @@ SSDP_DISCOVER = '"ssdp:discover"'
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
-
-
-SSDP_ALIVE = NotificationSubType.SSDP_ALIVE
-SSDP_BYEBYE = NotificationSubType.SSDP_BYEBYE
-SSDP_UPDATE = NotificationSubType.SSDP_UPDATE
 
 
 def get_host_string(addr: AddressTupleVXType) -> str:
@@ -113,7 +108,7 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
     )
 
 
-def udn_from_headers(headers: Mapping[str, str]) -> Optional[UniqueDeviceName]:
+def udn_from_headers(headers: SsdpHeaders) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
     if "usn" in headers and "uuid:" in headers["usn"]:
         parts = str(headers["usn"]).split("::")
@@ -135,7 +130,7 @@ def decode_ssdp_packet(
         lines.append(b"")
 
     parsed_headers, _ = HeadersParser().parse_headers(lines)
-    headers = CaseInsensitiveDict(**dict(parsed_headers))
+    headers = CaseInsensitiveDict(parsed_headers)
 
     # adjust some headers
     if "location" in headers:
@@ -161,7 +156,7 @@ class SsdpProtocol(BaseProtocol):
         self,
         loop: AbstractEventLoop,
         on_connect: Optional[Callable[[DatagramTransport], Awaitable]] = None,
-        on_data: Optional[Callable[[str, MutableMapping[str, str]], Awaitable]] = None,
+        on_data: Optional[Callable[[str, SsdpHeaders], Awaitable]] = None,
     ) -> None:
         """Initialize."""
         self.loop = loop
@@ -197,6 +192,13 @@ class SsdpProtocol(BaseProtocol):
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
         _LOGGER.debug("Lost connection, error: %s, transport: %s", exc, self.transport)
+
+    def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
+        """Send a SSDP packet."""
+        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self.transport)
+        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
+        assert self.transport is not None
+        self.transport.sendto(packet, target)
 
 
 def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:

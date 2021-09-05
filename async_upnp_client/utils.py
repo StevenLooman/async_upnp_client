@@ -4,13 +4,15 @@
 import asyncio
 import re
 import socket
+from collections import defaultdict
 from collections.abc import Mapping as abcMapping
-from collections.abc import MutableMapping
+from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Callable, Dict, Generator, Mapping, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
+import defusedxml.ElementTree as DET
 from voluptuous import Invalid
 
 EXTERNAL_IP = "1.1.1.1"
@@ -22,12 +24,14 @@ def _ci_key(key: str) -> str:
     return key.lower()
 
 
-class CaseInsensitiveDict(MutableMapping):
+class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {}
+        for key, value in (data or {}).items():
+            self[key] = value
         for key, value in kwargs.items():
             self[key] = value
 
@@ -50,9 +54,9 @@ class CaseInsensitiveDict(MutableMapping):
         """Get length."""
         return len(self._data)
 
-    def __iter__(self) -> Generator[Any, None, None]:
+    def __iter__(self) -> Generator[str, None, None]:
         """Get iterator."""
-        return (key for key, value in self._data.values())
+        return (key for key, _ in self._data.values())
 
     def __repr__(self) -> str:
         """Repr."""
@@ -131,7 +135,7 @@ def parse_date_time(value: str) -> Any:
     utc = timezone(timedelta(hours=0))
     if value[-6] in ["+", "-"] and value[-3] == ":":
         value = value[:-3] + value[-2:]
-    matchers: Mapping[str, Callable] = {
+    matchers: Dict[str, Callable] = {
         # date
         r"\d{4}-\d{2}-\d{2}$": lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
         r"\d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(value, "%H:%M:%S").time(),
@@ -217,3 +221,38 @@ async def async_get_local_ip(
         return sock.family, sockname[0]
     finally:
         transport.close()
+
+
+# Adapted from http://stackoverflow.com/a/10077069
+# to follow the XML to JSON spec
+# https://www.xml.com/pub/a/2006/05/31/converting-between-xml-and-json.html
+def etree_to_dict(tree: DET) -> Dict[str, Optional[Dict[str, Any]]]:
+    """Convert an ETree object to a dict."""
+    # strip namespace
+    tag_name = tree.tag[tree.tag.find("}") + 1 :]
+
+    tree_dict: Dict[str, Optional[Dict[str, Any]]] = {
+        tag_name: {} if tree.attrib else None
+    }
+    children = list(tree)
+    if children:
+        child_dict: Dict[str, list] = defaultdict(list)
+        for child in map(etree_to_dict, children):
+            for k, val in child.items():
+                child_dict[k].append(val)
+        tree_dict = {
+            tag_name: {k: v[0] if len(v) == 1 else v for k, v in child_dict.items()}
+        }
+    dict_meta = tree_dict[tag_name]
+    if tree.attrib:
+        assert dict_meta is not None
+        dict_meta.update(("@" + k, v) for k, v in tree.attrib.items())
+    if tree.text:
+        text = tree.text.strip()
+        if children or tree.attrib:
+            if text:
+                assert dict_meta is not None
+                dict_meta["#text"] = text
+        else:
+            tree_dict[tag_name] = text
+    return tree_dict

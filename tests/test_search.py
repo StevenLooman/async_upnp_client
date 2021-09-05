@@ -1,30 +1,64 @@
 """Unit tests for search."""
 # pylint: disable=protected-access
 
-from typing import Any
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # For python 3.6/3.7
+    from mock import AsyncMock  # type: ignore
 
-from async_upnp_client.search import SSDPListener
+import pytest
+
+from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp import SSDP_IP_V4
+from async_upnp_client.utils import CaseInsensitiveDict
+
+from .common import (
+    ADVERTISEMENT_HEADERS_DEFAULT,
+    ADVERTISEMENT_REQUEST_LINE,
+    SEACH_REQUEST_LINE,
+    SEARCH_HEADERS_DEFAULT,
+)
+
+
+@pytest.mark.asyncio
+async def test_receive_search_response() -> None:
+    """Test handling a ssdp search response."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpSearchListener(async_callback=callback)
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await listener._async_on_data(SEACH_REQUEST_LINE, headers)
+
+    callback.assert_called_with(headers)
 
 
 def test_create_ssdp_listener_with_alternate_target() -> None:
-    """Create a SSDPListener on an alternate target."""
-
-    async def _dummy_callback(*_: Any) -> None:
-        # Nop.
-        pass
+    """Create a SsdpSearchListener on an alternate target."""
+    callback = AsyncMock()
+    connect_callback = AsyncMock()
 
     yeelight_target = (SSDP_IP_V4, 1982)
     yeelight_service_type = "wifi_bulb"
-    listener = SSDPListener(
-        async_callback=_dummy_callback,
-        async_connect_callback=_dummy_callback,
+    listener = SsdpSearchListener(
+        async_callback=callback,
+        async_connect_callback=connect_callback,
         service_type=yeelight_service_type,
         target=yeelight_target,
     )
 
     assert listener._target == yeelight_target
     assert listener.service_type == yeelight_service_type
-    # pylint: disable=comparison-with-callable
-    assert listener.async_callback == _dummy_callback
-    assert listener.async_connect_callback == _dummy_callback
+    assert listener.async_callback == callback
+    assert listener.async_connect_callback == connect_callback
+
+
+@pytest.mark.asyncio
+async def test_receive_ssdp_alive_advertisement() -> None:
+    """Test handling a ssdp alive advertisement, which is ignored."""
+    callback = AsyncMock()
+    listener = SsdpSearchListener(async_callback=callback)
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+
+    callback.assert_not_called()

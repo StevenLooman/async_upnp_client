@@ -1,4 +1,4 @@
-"""Unit tests for discovery."""
+"""Unit tests for ssdp."""
 from ipaddress import IPv4Address
 from unittest.mock import ANY
 

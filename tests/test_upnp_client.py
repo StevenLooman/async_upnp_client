@@ -5,7 +5,7 @@ import socket
 from datetime import datetime, timedelta, timezone
 from typing import MutableMapping, Sequence
 
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as DET
 import pytest
 
 from async_upnp_client import (
@@ -303,7 +303,7 @@ class TestUpnpAction:
             InstanceID=0, Channel="Master", DesiredVolume=10
         )
 
-        root = ET.fromstring(body)
+        root = DET.fromstring(body)
         namespace = {"rc_service": service_type}
         assert root.find(".//rc_service:SetVolume", namespace) is not None
         assert root.find(".//DesiredVolume", namespace) is not None
@@ -325,7 +325,7 @@ class TestUpnpAction:
             CurrentURIMetaData=metadata,
         )
 
-        root = ET.fromstring(body)
+        root = DET.fromstring(body)
         namespace = {"avt_service": service_type}
         assert root.find(".//avt_service:SetAVTransportURI", namespace) is not None
         assert root.find(".//CurrentURIMetaData", namespace) is not None

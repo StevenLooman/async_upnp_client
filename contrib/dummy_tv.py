@@ -3,7 +3,7 @@ import logging
 import uuid
 
 import async_timeout
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as DET
 from aiohttp import ClientSession, web
 
 logging.basicConfig(level=logging.DEBUG)
@@ -11,9 +11,9 @@ LOGGER = logging.getLogger(__name__)
 PORT = 8000
 
 
-ET.register_namespace("envelope", "http://schemas.xmlsoap.org/soap/envelope/")
-ET.register_namespace("rc_service", "urn:schemas-upnp-org:service:RenderingControl:1")
-ET.register_namespace("rcs", "urn:schemas-upnp-org:metadata-1-0/RCS/")
+DET.ElementTree.register_namespace("envelope", "http://schemas.xmlsoap.org/soap/envelope/")
+DET.ElementTree.register_namespace("rc_service", "urn:schemas-upnp-org:service:RenderingControl:1")
+DET.ElementTree.register_namespace("rcs", "urn:schemas-upnp-org:metadata-1-0/RCS/")
 
 NS = {
     "envelope": "http://schemas.xmlsoap.org/soap/envelope/",
@@ -68,11 +68,11 @@ class StateVariable(object):
             '<InstanceID val="0" />'
             "</Event>"
         )
-        el_event = ET.fromstring(event_base)
+        el_event = DET.ElementTree.fromstring(event_base)
         el_instance_id = el_event.find(".//rcs:InstanceID", NS)
         args = kwargs.copy()
         args.update({"val": value})
-        ET.SubElement(el_instance_id, "rcs:" + property, **args)
+        DET.ElementTree.SubElement(el_instance_id, "rcs:" + property, **args)
 
         notify_base = (
             '<?xml version="1.0" encoding="utf-8"?>'
@@ -82,9 +82,9 @@ class StateVariable(object):
             "</e:property>"
             "</e:propertyset>"
         )
-        el_notify = ET.fromstring(notify_base)
+        el_notify = DET.ElementTree.fromstring(notify_base)
         el_last_change = el_notify.find(".//LastChange", NS)
-        el_last_change.text = ET.tostring(el_event).decode("utf-8")
+        el_last_change.text = DET.ElementTree.tostring(el_event).decode("utf-8")
 
         global SUBSCRIBED_CLIENTS
         service_name = self.SERVICE_NAME
@@ -92,7 +92,7 @@ class StateVariable(object):
             headers = {"SID": sid}
             with ClientSession(loop=asyncio.get_event_loop()) as session:
                 with async_timeout.timeout(10):
-                    data = ET.tostring(el_notify)
+                    data = DET.ElementTree.tostring(el_notify)
                     LOGGER.debug("Calling: %s", url)
                     yield from session.request(
                         "NOTIFY", url, headers=headers, data=data
@@ -207,7 +207,7 @@ def async_handle_control(request, state_variables, xml_ns):
     body = yield from request.content.read()
 
     # read command and args
-    el_request = ET.fromstring(body)
+    el_request = DET.ElementTree.fromstring(body)
     el_body = el_request.find("envelope:Body", NS)
     el_command = el_body.find("./")
     command = el_command.tag.split("}")[1]
@@ -232,14 +232,14 @@ def async_handle_control(request, state_variables, xml_ns):
         "<s:Body />"
         "</s:Envelope>"
     )
-    el_envelope = ET.fromstring(response_base)
+    el_envelope = DET.ElementTree.fromstring(response_base)
     el_body = el_envelope.find("./envelope:Body", NS)
-    el_response = ET.SubElement(el_body, "{" + xml_ns + "}" + command + "Response")
+    el_response = DET.ElementTree.SubElement(el_body, "{" + xml_ns + "}" + command + "Response")
     for key, value in result.items():
-        el_arg = ET.SubElement(el_response, key)
+        el_arg = DET.ElementTree.SubElement(el_response, key)
         el_arg.text = str(value)
 
-    text = ET.tostring(el_envelope)
+    text = DET.ElementTree.tostring(el_envelope)
     return web.Response(status=200, body=text)
 
 

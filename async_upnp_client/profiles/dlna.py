@@ -264,7 +264,7 @@ class DmrDevice(UpnpProfileDevice):
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
     ) -> None:
-        """State variable(s) changed, let home-assistant know."""
+        """State variable(s) changed, perform callback(s)."""
         # handle DLNA specific event
         for state_variable in state_variables:
             if state_variable.name == "LastChange":
@@ -865,7 +865,7 @@ class DmrDevice(UpnpProfileDevice):
                 return absolute_url(device_url, item.album_art_uri)
 
             for res in item.resources:
-                protocol_info = res.protocol_info or ''
+                protocol_info = res.protocol_info or ""
                 if protocol_info.startswith("http-get:*:image/"):
                     return absolute_url(device_url, res.url)
 

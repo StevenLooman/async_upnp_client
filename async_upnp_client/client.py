@@ -3,6 +3,7 @@
 
 import logging
 import urllib.parse
+from abc import ABC
 from datetime import datetime, timezone
 from typing import (
     Any,
@@ -28,23 +29,26 @@ from async_upnp_client.const import (
     DeviceIcon,
     DeviceInfo,
     ServiceInfo,
+    SsdpHeaders,
     StateVariableInfo,
 )
 from async_upnp_client.exceptions import UpnpError, UpnpValueError, UpnpXmlParseError
+from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
-_LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
 
 
-class UpnpRequester:
+class UpnpRequester(ABC):
     """
     Abstract base class used for performing async HTTP requests.
 
     Implement method async_do_http_request() in your concrete class.
     """
+
+    # pylint: disable=too-few-public-methods
 
     async def async_http_request(
         self,
@@ -63,37 +67,6 @@ class UpnpRequester:
 
         :return status code, headers, body
         """
-        # pylint: disable=too-many-arguments
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Sending request:\n%s %s\n%s\n%s\n",
-            method,
-            url,
-            "\n".join([key + ": " + value for key, value in (headers or {}).items()]),
-            body or "",
-        )
-        (
-            response_status,
-            response_headers,
-            response_body,
-        ) = await self.async_do_http_request(method, url, headers=headers, body=body)
-
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Got response:\n%s\n%s\n\n%s",
-            response_status,
-            "\n".join([key + ": " + value for key, value in response_headers.items()]),
-            response_body,
-        )
-
-        return response_status, response_headers, response_body
-
-    async def async_do_http_request(
-        self,
-        method: str,
-        url: str,
-        headers: Optional[Mapping[str, str]] = None,
-        body: Optional[str] = None,
-    ) -> Tuple[int, Mapping[str, str], str]:
-        """Actually do a HTTP request."""
         raise NotImplementedError()
 
 
@@ -105,84 +78,86 @@ class UpnpDevice:
         requester: UpnpRequester,
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
-        boot_id: Optional[str] = None,
-        config_id: Optional[str] = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
         self.requester = requester
-        self._device_info = device_info
+        self.device_info = device_info
         self.services = {service.service_type: service for service in services}
 
         # bind services to ourselves
         for service in services:
             service.device = self
 
-        self.boot_id: Optional[str] = boot_id
-        self.config_id: Optional[str] = config_id
+        # SSDP headers.
+        self.ssdp_headers: SsdpHeaders = CaseInsensitiveDict()
 
         # Just initialized, mark available.
         self.available = True
 
+    def reinit(self, device: "UpnpDevice") -> None:
+        """Reinitialize self from another device."""
+        self.device_info = device.device_info
+
     @property
     def name(self) -> str:
         """Get the name of this device."""
-        return self._device_info.friendly_name
+        return self.device_info.friendly_name
 
     @property
     def friendly_name(self) -> str:
         """Get the friendly name of this device, alias for name."""
-        return self._device_info.friendly_name
+        return self.device_info.friendly_name
 
     @property
     def manufacturer(self) -> str:
         """Get the manufacturer of this device."""
-        return self._device_info.manufacturer
+        return self.device_info.manufacturer
 
     @property
     def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
-        return self._device_info.model_description
+        return self.device_info.model_description
 
     @property
     def model_name(self) -> str:
         """Get the model name of this device."""
-        return self._device_info.model_name
+        return self.device_info.model_name
 
     @property
     def model_number(self) -> Optional[str]:
         """Get the model number of this device."""
-        return self._device_info.model_number
+        return self.device_info.model_number
 
     @property
     def serial_number(self) -> Optional[str]:
         """Get the serial number of this device."""
-        return self._device_info.serial_number
+        return self.device_info.serial_number
 
     @property
     def udn(self) -> str:
         """Get UDN of this device."""
-        return self._device_info.udn
+        return self.device_info.udn
 
     @property
     def device_url(self) -> str:
         """Get the URL of this device."""
-        return self._device_info.url
+        return self.device_info.url
 
     @property
     def device_type(self) -> str:
         """Get the device type of this device."""
-        return self._device_info.device_type
+        return self.device_info.device_type
 
     @property
     def icons(self) -> Sequence[DeviceIcon]:
         """Get the icons for this device."""
-        return self._device_info.icons
+        return self.device_info.icons
 
     @property
     def xml(self) -> ET.Element:
         """Get the XML description for this device."""
-        return self._device_info.xml
+        return self.device_info.xml
 
     def has_service(self, service_type: str) -> bool:
         """Check if service by service_type is available."""

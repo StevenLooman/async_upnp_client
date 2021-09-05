@@ -20,6 +20,8 @@ def read_file(filename: str) -> str:
 class UpnpTestRequester(UpnpRequester):
     """Test requester."""
 
+    # pylint: disable=too-few-public-methods
+
     def __init__(
         self,
         response_map: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]],
@@ -31,7 +33,7 @@ class UpnpTestRequester(UpnpRequester):
         ] = deepcopy(cast(MutableMapping, response_map))
         self.exceptions: Deque[Optional[Exception]] = deque()
 
-    async def async_do_http_request(
+    async def async_http_request(
         self,
         method: str,
         url: str,

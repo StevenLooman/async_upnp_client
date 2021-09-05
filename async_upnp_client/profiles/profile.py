@@ -6,7 +6,7 @@ import logging
 import time
 from datetime import timedelta
 from ipaddress import IPv4Address
-from typing import Dict, List, Mapping, Optional, Sequence, Set
+from typing import Dict, List, Optional, Sequence, Set
 
 from async_upnp_client.client import (
     EventCallbackType,
@@ -15,6 +15,7 @@ from async_upnp_client.client import (
     UpnpService,
     UpnpStateVariable,
 )
+from async_upnp_client.const import SsdpHeaders
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.exceptions import UpnpConnectionError, UpnpError
 from async_upnp_client.search import async_search
@@ -42,7 +43,7 @@ class UpnpProfileDevice:
     @classmethod
     async def async_search(
         cls, source_ip: Optional[IPv4Address] = None, timeout: int = SSDP_MX
-    ) -> Set[Mapping[str, str]]:
+    ) -> Set[SsdpHeaders]:
         """
         Search for this device type.
 
@@ -54,7 +55,7 @@ class UpnpProfileDevice:
         """
         responses = set()
 
-        async def on_response(data: Mapping[str, str]) -> None:
+        async def on_response(data: SsdpHeaders) -> None:
             if "st" in data and data["st"] in cls.DEVICE_TYPES:
                 responses.add(data)
 
@@ -65,7 +66,7 @@ class UpnpProfileDevice:
         return responses
 
     @classmethod
-    async def async_discover(cls) -> Set[Mapping[str, str]]:
+    async def async_discover(cls) -> Set[SsdpHeaders]:
         """Alias for async_search."""
         return await cls.async_search()
 

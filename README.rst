@@ -24,16 +24,39 @@ Status
    :target: https://pypi.python.org/pypi/async_upnp_client
 
 
+General set up
+--------------
+
+The `UPnP Device Architecture <https://openconnectivity.org/upnp-specs/UPnP-arch-DeviceArchitecture-v2.0-20200417.pdf>`_ document contains several sections describing different parts of the UPnP standard. These chapters/sections can mostly be mapped to the following modules:
+
+* Chapter 1 Discovery
+  * Section 1.1 SSDP: `async_upnp_client.ssdp`
+  * Section 1.2 Advertisement: `async_upnp_client.advertisement` provides basic functionality to receive advertisements.
+  * Section 1.3 Search: `async_upnp_client.search` provides basic functionality to do search requests and gather the responses.
+  * `async_upnp_client.ssdp_client` contains the `SsdpListener` which combines advertisements and search to get the known devices and provides callbacks on changes. It is meant as something which runs continuously to provide useful information about the SSDP-active devices.
+* Chapter 2 Description / Chapter 3 Control
+  * `async_upnp_client.client_factory`/`async_upnp_client.client` provide a series of classes to get information about the device/services using the 'description', and interact with these devices.
+* Chapter 4 Eventing
+  * `async_upnp_client.event_handler` provides functionality to handle events received from the device.
+
+There are several 'profiles' which a device can implement to provide a standard interface to talk to. Some of these profiles are added to this library. The following profiles are currently available:
+
+* Internet Gateway Device (IGD)
+  * `async_upnp_client.profiles.igd`
+* Digital Living Network Alliance (DLNA)
+  * `async_upnp_client.profiles.dlna`
+* Printers
+  * `async_upnp_client.profiles.printer`
+
+For examples on how to use `async_upnp_client`, see `examples`/ .
+
+Note that this library is most likely does not fully implement all functionality from the UPnP Device Architecture document and/or contains errors/bugs/mis-interpretations.
+
+
 Contributing
 ------------
 
 See `CONTRIBUTING.rst`.
-
-
-Usage
------
-
-See `examples/` for examples on how to use async_upnp_client.
 
 
 Development
@@ -163,13 +186,3 @@ An example of listening for advertisements, note that the program stays running 
         "_udn": "uuid:99cb221c-1f15-c620-dc29-395f415623c6",
         "_source": "advertisement"
     }
-
-
-
-Abstractions
-------------
-
-- `DLNA Digital Media Renderer` (DLNA DMR) devices
-  - Primarily built for use with `Home Assistant <https://github.com/home-assistant/home-assistant>`_, but might be useful in other projects too.
-- `Internet Gateway Devices` (IGD)
-- Printers

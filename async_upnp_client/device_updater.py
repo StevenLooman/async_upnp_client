@@ -2,9 +2,10 @@
 
 import logging
 from ipaddress import IPv4Address
-from typing import Any, Mapping, Optional
+from typing import Optional
 
-from async_upnp_client import UpnpAdvertisementListener, UpnpDevice, UpnpFactory
+from async_upnp_client import SsdpAdvertisementListener, UpnpDevice, UpnpFactory
+from async_upnp_client.const import SsdpHeaders
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +29,7 @@ class DeviceUpdater:
         """Initialize."""
         self._device = device
         self._factory = factory
-        self._listener = UpnpAdvertisementListener(
+        self._listener = SsdpAdvertisementListener(
             on_alive=self._on_alive,
             on_byebye=self._on_byebye,
             on_update=self._on_update,
@@ -45,61 +46,61 @@ class DeviceUpdater:
         _LOGGER.debug("Stop listening for notifications.")
         await self._listener.async_stop()
 
-    async def _on_alive(self, data: Mapping[str, str]) -> None:
+    async def _on_alive(self, headers: SsdpHeaders) -> None:
         """Handle on alive."""
         # Ensure for root devices only.
-        if data.get("nt") != "upnp:rootdevice":
+        if headers.get("nt") != "upnp:rootdevice":
             return
 
         # Ensure for our device.
-        if data.get("_udn") != self._device.udn:
+        if headers.get("_udn") != self._device.udn:
             return
 
-        _LOGGER.debug("Handling alive: %s", data)
-        await self._async_handle_alive_update(data)
+        _LOGGER.debug("Handling alive: %s", headers)
+        await self._async_handle_alive_update(headers)
 
-    async def _on_byebye(self, data: Mapping[str, Any]) -> None:
+    async def _on_byebye(self, headers: SsdpHeaders) -> None:
         """Handle on byebye."""
-        _LOGGER.debug("Handling on_byebye: %s", data)
+        _LOGGER.debug("Handling on_byebye: %s", headers)
         self._device.available = False
 
-    async def _on_update(self, data: Mapping[str, Any]) -> None:
+    async def _on_update(self, headers: SsdpHeaders) -> None:
         """Handle on update."""
         # Ensure for root devices only.
-        if data.get("nt") != "upnp:rootdevice":
+        if headers.get("nt") != "upnp:rootdevice":
             return
 
         # Ensure for our device.
-        if data.get("_udn") != self._device.udn:
+        if headers.get("_udn") != self._device.udn:
             return
 
-        _LOGGER.debug("Handling update: %s", data)
-        await self._async_handle_alive_update(data)
+        _LOGGER.debug("Handling update: %s", headers)
+        await self._async_handle_alive_update(headers)
 
-    async def _async_handle_alive_update(self, data: Mapping[str, str]) -> None:
+    async def _async_handle_alive_update(self, headers: SsdpHeaders) -> None:
         """Handle on_alive or on_update."""
         do_reinit = False
 
         # Handle BOOTID.UPNP.ORG.
-        boot_id = data.get("BOOTID.UPNP.ORG")
-        if boot_id and boot_id != self._device.boot_id:
-            _LOGGER.debug(
-                "New boot_id: %s, old boot_id: %s", boot_id, self._device.boot_id
-            )
+        boot_id = headers.get("BOOTID.UPNP.ORG")
+        device_boot_id = self._device.ssdp_headers.get("BOOTID.UPNP.ORG")
+        if boot_id and boot_id != device_boot_id:
+            _LOGGER.debug("New boot_id: %s, old boot_id: %s", boot_id, device_boot_id)
             do_reinit = True
 
         # Handle CONFIGID.UPNP.ORG.
-        config_id = data.get("CONFIGID.UPNP.ORG")
-        if config_id and config_id != self._device.config_id:
+        config_id = headers.get("CONFIGID.UPNP.ORG")
+        device_config_id = self._device.ssdp_headers.get("CONFIGID.UPNP.ORG")
+        if config_id and config_id != device_config_id:
             _LOGGER.debug(
                 "New config_id: %s, old config_id: %s",
                 config_id,
-                self._device.config_id,
+                device_config_id,
             )
             do_reinit = True
 
         # Handle LOCATION.
-        location = data.get("LOCATION")
+        location = headers.get("LOCATION")
         if location and self._device.device_url != location:
             _LOGGER.debug(
                 "New location: %s, old location: %s", location, self._device.device_url
@@ -107,26 +108,16 @@ class DeviceUpdater:
             do_reinit = True
 
         if location and do_reinit:
-            await self._reinit_device(location, boot_id, config_id)
+            await self._reinit_device(location, headers)
 
         # We heard from it, so mark it available.
         self._device.available = True
 
-    async def _reinit_device(
-        self, location: str, boot_id: Optional[str], config_id: Optional[str]
-    ) -> None:
+    async def _reinit_device(self, location: str, ssdp_headers: SsdpHeaders) -> None:
         """Reinitialize device."""
         # pylint: disable=protected-access
-        _LOGGER.debug("Reinitializing device")
+        _LOGGER.debug("Reinitializing device, location: %s", location)
 
         new_device = await self._factory.async_create_device(location)
-
-        self._device._device_info = new_device._device_info
-
-        # Copy new services and update the binding between the original device and new services.
-        self._device.services = new_device.services
-        for service in self._device.services.values():
-            service.device = self._device
-
-        self._device.boot_id = boot_id
-        self._device.config_id = config_id
+        self._device.reinit(new_device)
+        self._device.ssdp_headers = ssdp_headers

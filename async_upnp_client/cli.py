@@ -11,11 +11,12 @@ import sys
 import time
 from datetime import datetime
 from ipaddress import ip_address
-from typing import Any, Mapping, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
-from async_upnp_client.advertisement import UpnpAdvertisementListener
+from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
+from async_upnp_client.const import SsdpHeaders
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL, AddressTupleVXType
@@ -307,9 +308,9 @@ async def search(search_args: Any) -> None:
     else:
         target = None
 
-    async def on_response(data: Mapping[str, Any]) -> None:
-        data = {key: str(value) for key, value in data.items()}
-        print(json.dumps(data, indent=pprint_indent))
+    async def on_response(headers: SsdpHeaders) -> None:
+        headers = {key: str(value) for key, value in headers.items()}
+        print(json.dumps(headers, indent=pprint_indent))
 
     await async_ssdp_search(
         service_type=service_type,
@@ -332,11 +333,11 @@ async def advertisements(advertisement_args: Any) -> None:
     if target_ip:
         target_ip = ip_address(target_ip)
 
-    async def on_notify(data: Mapping[str, Any]) -> None:
-        data = {key: str(value) for key, value in data.items()}
-        print(json.dumps(data, indent=pprint_indent))
+    async def on_notify(headers: SsdpHeaders) -> None:
+        headers = {key: str(value) for key, value in headers.items()}
+        print(json.dumps(headers, indent=pprint_indent))
 
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_notify,
         on_byebye=on_notify,
         on_update=on_notify,

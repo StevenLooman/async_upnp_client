@@ -1,7 +1,5 @@
 """Unit tests for advertisement."""
 
-from datetime import datetime
-
 try:
     from unittest.mock import AsyncMock
 except ImportError:
@@ -10,23 +8,15 @@ except ImportError:
 
 import pytest
 
-from async_upnp_client.advertisement import UpnpAdvertisementListener
+from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.utils import CaseInsensitiveDict
 
-TEST_REQUEST_LINE = "NOTIFY * HTTP/1.1"
-TEST_HEADERS_DEFAULT = {
-    "CACHE-CONTROL": "max-age=1800",
-    "NTS": "ssdp:alive",
-    "NT": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-    "USN": "uuid:...::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-    "LOCATION": "http://192.168.1.1:80/RootDevice.xml",
-    "BOOTID.UPNP.ORG": "1",
-    "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
-    # "_timestamp": datetime.fromisoformat("2021-01-01 12:00"),  # Python 3.7+
-    "_timestamp": datetime.strptime("2021-01-01 12:00", "%Y-%m-%d %H:%M"),
-    "_host": "192.168.1.1",
-    "_port": "1900",
-}
+from .common import (
+    ADVERTISEMENT_HEADERS_DEFAULT,
+    ADVERTISEMENT_REQUEST_LINE,
+    SEACH_REQUEST_LINE,
+    SEARCH_HEADERS_DEFAULT,
+)
 
 
 @pytest.mark.asyncio
@@ -36,12 +26,12 @@ async def test_receive_ssdp_alive() -> None:
     on_alive = AsyncMock()
     on_byebye = AsyncMock()
     on_update = AsyncMock()
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
     )
-    headers = CaseInsensitiveDict(**TEST_HEADERS_DEFAULT)
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:alive"
-    await listener._on_data(TEST_REQUEST_LINE, headers)
+    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
 
     on_alive.assert_called_with(headers)
     on_byebye.assert_not_called()
@@ -55,12 +45,12 @@ async def test_receive_ssdp_byebye() -> None:
     on_alive = AsyncMock()
     on_byebye = AsyncMock()
     on_update = AsyncMock()
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
     )
-    headers = CaseInsensitiveDict(**TEST_HEADERS_DEFAULT)
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:byebye"
-    await listener._on_data(TEST_REQUEST_LINE, headers)
+    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
 
     on_alive.assert_not_called()
     on_byebye.assert_called_with(headers)
@@ -74,13 +64,31 @@ async def test_receive_ssdp_update() -> None:
     on_alive = AsyncMock()
     on_byebye = AsyncMock()
     on_update = AsyncMock()
-    listener = UpnpAdvertisementListener(
+    listener = SsdpAdvertisementListener(
         on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
     )
-    headers = CaseInsensitiveDict(**TEST_HEADERS_DEFAULT)
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:update"
-    await listener._on_data(TEST_REQUEST_LINE, headers)
+    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
 
     on_alive.assert_not_called()
     on_byebye.assert_not_called()
     on_update.assert_called_with(headers)
+
+
+@pytest.mark.asyncio
+async def test_receive_ssdp_search_response() -> None:
+    """Test handling a ssdp search response, which is ignored."""
+    # pylint: disable=protected-access
+    on_alive = AsyncMock()
+    on_byebye = AsyncMock()
+    on_update = AsyncMock()
+    listener = SsdpAdvertisementListener(
+        on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
+    )
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await listener._async_on_data(SEACH_REQUEST_LINE, headers)
+
+    on_alive.assert_not_called()
+    on_byebye.assert_not_called()
+    on_update.assert_not_called()
