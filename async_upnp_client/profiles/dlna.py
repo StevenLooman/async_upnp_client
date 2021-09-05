@@ -865,7 +865,7 @@ class DmrDevice(UpnpProfileDevice):
                 return absolute_url(device_url, item.album_art_uri)
 
             for res in item.resources:
-                protocol_info = res.protocol_info
+                protocol_info = res.protocol_info or ""
                 if protocol_info.startswith("http-get:*:image/"):
                     return absolute_url(device_url, res.url)
 

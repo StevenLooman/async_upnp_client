@@ -3,6 +3,8 @@ Changes
 
 0.21.0 (unreleased)
 
+- More pylint/mypy
+- Fixed NoneType exception in DmrDevice.media_image_url (@mkliche)
 - Breaking change: Rename `advertisement.UpnpAdvertisementListener` to `advertisement.SsdpAdvertisementListener`
 - Breaking change: Rename `search.SSDPListener` to `search.SsdpSearchListener`
 - Add `ssdp_listener.SsdpListener`, class to keep track of devices seen via SSDP advertisements and searches
