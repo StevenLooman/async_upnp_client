@@ -2,16 +2,18 @@
 # pylint: disable=protected-access
 
 from socket import AddressFamily  # pylint: disable=no-name-in-module
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from async_upnp_client.aiohttp import AiohttpNotifyServer
+from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
+from async_upnp_client.exceptions import UpnpCommunicationError
 from async_upnp_client.utils import async_get_local_ip
 
 from .upnp_test_requester import RESPONSE_MAP, UpnpTestRequester
 
 
-def test_init() -> None:
+def test_server_init() -> None:
     """Test initialization of an AiohttpNotifyServer."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     server = AiohttpNotifyServer(requester)
@@ -35,7 +37,7 @@ def test_init() -> None:
 
 
 @pytest.mark.asyncio
-async def test_start_server() -> None:
+async def test_server_start() -> None:
     """Test start_server creates internal servers on appropriate addresses."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     server = AiohttpNotifyServer(requester)
@@ -55,7 +57,7 @@ async def test_start_server() -> None:
 
 
 @pytest.mark.asyncio
-async def test_stop_server() -> None:
+async def test_server_stop() -> None:
     """Test stop_server deletes internal servers."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     server = AiohttpNotifyServer(requester)
@@ -65,3 +67,15 @@ async def test_stop_server() -> None:
     assert server.event_handler.listen_ports == {}
     assert server._aiohttp_server is None
     assert server._server is None
+
+
+@pytest.mark.asyncio
+@patch(
+    "async_upnp_client.aiohttp.aiohttp.ClientSession.request",
+    side_effect=UnicodeDecodeError("", b"", 0, 1, ""),
+)
+async def test_client_decode_error(mock_request: MagicMock) -> None:
+    """Test handling unicode decode error."""
+    requester = AiohttpRequester()
+    with pytest.raises(UpnpCommunicationError):
+        await requester.async_http_request("GET", "http://192.168.1.1/desc.xml")

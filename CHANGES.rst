@@ -3,6 +3,8 @@ Changes
 
 0.21.1 (unreleased)
 
+- Log traffic before decoding response text from device
+
 
 0.21.0 (2021-09-05)
 

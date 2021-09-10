@@ -64,7 +64,21 @@ class AiohttpRequester(UpnpRequester):
                     ) as response:
                         status = response.status
                         resp_headers: Mapping = response.headers or {}
-                        resp_body = await response.text()
+                        resp_body = await response.read()
+
+                        _LOGGER_TRAFFIC_UPNP.debug(
+                            "Got response:\n%s\n%s\n\n%s",
+                            status,
+                            "\n".join(
+                                [
+                                    key + ": " + value
+                                    for key, value in resp_headers.items()
+                                ]
+                            ),
+                            resp_body,
+                        )
+
+                        resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError from err
         except aiohttp.ClientConnectionError as err:
@@ -79,15 +93,10 @@ class AiohttpRequester(UpnpRequester):
             ) from err
         except aiohttp.ClientError as err:
             raise UpnpCommunicationError from err
+        except UnicodeDecodeError as err:
+            raise UpnpCommunicationError from err
 
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Got response:\n%s\n%s\n\n%s",
-            status,
-            "\n".join([key + ": " + value for key, value in resp_headers.items()]),
-            resp_body,
-        )
-
-        return status, resp_headers, resp_body
+        return status, resp_headers, resp_body_text
 
 
 class AiohttpSessionRequester(UpnpRequester):
@@ -143,7 +152,18 @@ class AiohttpSessionRequester(UpnpRequester):
                 ) as response:
                     status = response.status
                     resp_headers: Mapping = response.headers or {}
-                    resp_body = await response.text()
+                    resp_body = await response.read()
+
+                    _LOGGER_TRAFFIC_UPNP.debug(
+                        "Got response:\n%s\n%s\n\n%s",
+                        status,
+                        "\n".join(
+                            [key + ": " + value for key, value in resp_headers.items()]
+                        ),
+                        resp_body,
+                    )
+
+                    resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError from err
         except aiohttp.ClientConnectionError as err:
@@ -158,15 +178,10 @@ class AiohttpSessionRequester(UpnpRequester):
             ) from err
         except aiohttp.ClientError as err:
             raise UpnpCommunicationError from err
+        except UnicodeDecodeError as err:
+            raise UpnpCommunicationError from err
 
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Got response:\n%s\n%s\n\n%s",
-            status,
-            "\n".join([key + ": " + value for key, value in resp_headers.items()]),
-            resp_body,
-        )
-
-        return status, resp_headers, resp_body
+        return status, resp_headers, resp_body_text
 
 
 class AiohttpNotifyServer:
