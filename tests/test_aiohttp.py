@@ -74,7 +74,7 @@ async def test_server_stop() -> None:
     "async_upnp_client.aiohttp.aiohttp.ClientSession.request",
     side_effect=UnicodeDecodeError("", b"", 0, 1, ""),
 )
-async def test_client_decode_error(mock_request: MagicMock) -> None:
+async def test_client_decode_error(_mock_request: MagicMock) -> None:
     """Test handling unicode decode error."""
     requester = AiohttpRequester()
     with pytest.raises(UpnpCommunicationError):
