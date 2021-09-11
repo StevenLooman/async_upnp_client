@@ -9,7 +9,7 @@ from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Callable, Dict, Generator, Optional, Tuple
+from typing import cast, Any, Callable, Dict, Generator, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import defusedxml.ElementTree as DET
@@ -35,9 +35,9 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Return the underlying dict in lowercase."""
         return {k.lower(): v for k, v in self._data.items()}
 
-    def replace(self, new_data: abcMapping) -> None:
+    def replace(self, new_data: abcMapping[str, Any]) -> None:
         """Replace the underlying dict."""
-        self._data = new_data
+        self._data = {**new_data}
         self._case_map = {k.lower(): k for k in new_data}
 
     def __setitem__(self, key: str, value: Any) -> None:
