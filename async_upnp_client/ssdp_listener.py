@@ -27,8 +27,8 @@ _LOGGER = logging.getLogger(__name__)
 CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)")
 DEFAULT_MAX_AGE = timedelta(seconds=900)
 IGNORED_HEADERS = {
-    "DATE",
-    "SERVER",
+    "date",
+    "server",
 }
 
 
@@ -103,7 +103,7 @@ class SsdpDevice:
 def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
     for header, new_value in new_headers.items():
-        if header.startswith("_") or header.upper() in IGNORED_HEADERS:
+        if header.startswith("_") or header in IGNORED_HEADERS:
             continue
         current_value = current_headers.get(header)
         if current_value is None:

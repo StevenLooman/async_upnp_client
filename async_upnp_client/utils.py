@@ -22,11 +22,13 @@ EXTERNAL_PORT = 80
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
-    def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
+    def __init__(
+        self, data: Optional[abcMapping[str, Any]] = None, **kwargs: Any
+    ) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {
-            **{key.lower(): (key, value) for key, value in (data or {}).items()},
-            **{key.lower(): (key, value) for key, value in kwargs.items()},
+            **{key.lower(): value for key, value in (data or {}).items()},
+            **{key.lower(): value for key, value in kwargs.items()},
         }
 
     def clear(self) -> None:
@@ -35,11 +37,11 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
-        self._data[key.lower()] = (key, value)
+        self._data[key.lower()] = value
 
     def __getitem__(self, key: str) -> Any:
         """Get item."""
-        return self._data[key.lower()][1]
+        return self._data[key.lower()]
 
     def __delitem__(self, key: str) -> None:
         """Del item."""
@@ -51,25 +53,29 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __iter__(self) -> Generator[str, None, None]:
         """Get iterator."""
-        return (key for key, _ in self._data.values())
+        return (key for key in self._data.keys())
 
     def __repr__(self) -> str:
         """Repr."""
-        return str(dict(self.items()))
+        return repr(self._data)
+
+    def __str__(self) -> str:
+        """Str."""
+        return str(self._data)
 
     def __eq__(self, other: Any) -> bool:
         """Compare for equality."""
-        if not isinstance(other, abcMapping) and not isinstance(other, dict):
-            return NotImplemented
+        if isinstance(other, CaseInsensitiveDict):
+            return self._data == other._data
 
-        return {key.lower(): value for key, value in self.items()} == {
-            key.lower(): value for key, value in other.items()
-        }
+        if isinstance(other, abcMapping):
+            return self._data == {key.lower(): value for key, value in other.items()}
+
+        raise NotImplementedError()
 
     def __hash__(self) -> int:
         """Get hash."""
-        ci_dict = {key.lower(): value for key, value in self.items()}
-        return hash(tuple(sorted(ci_dict.items())))
+        return hash(tuple(sorted(self._data.items())))
 
 
 def time_to_str(time: timedelta) -> str:

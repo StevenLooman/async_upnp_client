@@ -6,6 +6,7 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
+from async_upnp_client.const import SsdpSource
 from async_upnp_client.utils import (
     CaseInsensitiveDict,
     async_get_local_ip,
@@ -23,6 +24,11 @@ def test_case_insensitive_dict() -> None:
     assert ci_dict["key"] == "value"
     assert ci_dict["KEY"] == "value"
 
+    assert CaseInsensitiveDict(key="value") == {"key": "value"}
+    assert CaseInsensitiveDict({"key": "value"}, key="override_value") == {
+        "key": "override_value"
+    }
+
 
 def test_case_insensitive_dict_dict_equality() -> None:
     """Test CaseInsensitiveDict against dict equality."""
@@ -32,6 +38,26 @@ def test_case_insensitive_dict_dict_equality() -> None:
     assert ci_dict == {"Key": "value"}
     assert ci_dict == {"key": "value"}
     assert ci_dict == {"KEY": "value"}
+
+
+def test_case_insensitive_dict_profile() -> None:
+    """Test CaseInsensitiveDict under load, for profiling."""
+    headers = {
+        "Cache-Control": "max-age=1900",
+        "location": "http://192.168.1.1:80/RootDevice.xml",
+        "Server": "UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0",
+        "ST": "urn:schemas-upnp-org:device:WANDevice:1",
+        "USN": "uuid:upnp-WANDevice-1_0-123456789abc::urn:schemas-upnp-org:device:WANDevice:1",
+        "EXT": "",
+        "_location_original": "http://192.168.1.1:80/RootDevice.xml",
+        "_timestamp": datetime.now(),
+        "_host": "192.168.1.1",
+        "_port": "1900",
+        "_udn": "uuid:upnp-WANDevice-1_0-123456789abc",
+        "_source": SsdpSource.SEARCH,
+    }
+    for _ in range(0, 10000):
+        assert CaseInsensitiveDict(headers) == headers
 
 
 def test_case_insensitive_dict_equality() -> None:

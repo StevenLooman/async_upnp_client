@@ -14,9 +14,9 @@ except ImportError:
 import pytest
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
-from async_upnp_client.const import NotificationSubType
+from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp_listener import SsdpListener
+from async_upnp_client.ssdp_listener import SsdpListener, same_headers_differ
 from async_upnp_client.utils import CaseInsensitiveDict
 
 TEST_NOTIFY_REQUEST_LINE = "NOTIFY * HTTP/1.1"
@@ -151,7 +151,7 @@ async def test_see_advertisement_byebye() -> None:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_advertisement_update() -> None:
-    """Test seeing a device through an ssdp:update-advertisement."""
+    """Test seeing a device through a ssdp:update-advertisement."""
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpListener(async_callback=callback)
@@ -202,7 +202,7 @@ async def test_see_search() -> None:
 @pytest.mark.asyncio
 @pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_search_then_alive() -> None:
-    """Test seeing a device through a search."""
+    """Test seeing a device through a search, then a ssdp:update-advertisement."""
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpListener(async_callback=callback)
@@ -247,8 +247,47 @@ async def test_purge_devices() -> None:
     assert TEST_UDN in listener.devices
 
     # "Wait" a bit... and purge devices.
-    override_now = datetime.now() + timedelta(hours=1)
+    override_now = headers["_timestamp"] + timedelta(hours=1)
     listener._device_tracker.purge_devices(override_now)
     assert TEST_UDN not in listener.devices
 
     await listener.async_stop()
+
+
+def test_same_headers_differ_profile() -> None:
+    """Test same_headers_differ."""
+    current_headers = CaseInsensitiveDict(
+        {
+            "Cache-Control": "max-age=1900",
+            "location": "http://192.168.1.1:80/RootDevice.xml",
+            "Server": "UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0",
+            "ST": "urn:schemas-upnp-org:device:WANDevice:1",
+            "USN": "uuid:upnp-WANDevice-1_0-123456789abc::urn:schemas-upnp-org:device:WANDevice:1",
+            "EXT": "",
+            "_location_original": "http://192.168.1.1:80/RootDevice.xml",
+            "_timestamp": datetime.now(),
+            "_host": "192.168.1.1",
+            "_port": "1900",
+            "_udn": "uuid:upnp-WANDevice-1_0-123456789abc",
+            "_source": SsdpSource.SEARCH,
+        }
+    )
+    new_headers = CaseInsensitiveDict(
+        {
+            "Cache-Control": "max-age=1900",
+            "location": "http://192.168.1.1:80/RootDevice.xml",
+            "Server": "UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0 abc",
+            "Date": "Sat, 11 Sep 2021 12:00:00 GMT",
+            "ST": "urn:schemas-upnp-org:device:WANDevice:1",
+            "USN": "uuid:upnp-WANDevice-1_0-123456789abc::urn:schemas-upnp-org:device:WANDevice:1",
+            "EXT": "",
+            "_location_original": "http://192.168.1.1:80/RootDevice.xml",
+            "_timestamp": datetime.now(),
+            "_host": "192.168.1.1",
+            "_port": "1900",
+            "_udn": "uuid:upnp-WANDevice-1_0-123456789abc",
+            "_source": SsdpSource.SEARCH,
+        }
+    )
+    for _ in range(0, 10000):
+        assert not same_headers_differ(current_headers, new_headers)

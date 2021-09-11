@@ -88,6 +88,29 @@ Steps for releasing:
 - Push to github: `git push --all && git push --tags`
 
 
+Profiling
+---------
+
+To do profiling it is recommended to install `pytest-profiling <https://pypi.org/project/pytest-profiling>`_. Then run a test with profiling enabled, and write the results to a graph::
+
+    # Run tests with profiling and svg-output enabled. This will generate `prof/*.prof` files, and a svg file.
+    $ pytest --profile-svg -k test_case_insensitive_dict_profile
+    ...
+
+    # Open generated SVG file.
+    $ xdg-open prof/combined.svg
+
+
+Alternatively, you can generate a profiling data file, use `pyprof2calltree <https://github.com/pwaller/pyprof2calltree/>_` to convert the data and open `kcachegrind <http://kcachegrind.sourceforge.net/html/Home.html>`_. For example:
+
+    # Run tests with profiling enabled, this will generate `prof/*.prof` files.
+    $ pytest --profile -k test_case_insensitive_dict_profile
+    ...
+
+    $ pyprof2calltree -i prof/combined.prof -k
+    launching kcachegrind
+
+
 upnp-client
 -----------
 

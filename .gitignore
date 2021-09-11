@@ -55,3 +55,6 @@ share/*
 
 # GITHUB Proposed Python stuff:
 *.py[cod]
+
+# Other
+prof/
