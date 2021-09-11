@@ -100,17 +100,22 @@ class SsdpDevice:
         return f"<{type(self).__name__}({self.udn})>"
 
 
-def headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
-    """Compare headers to see if anything interesting has changed."""
+def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
+    """Compare headers present in both to see if anything interesting has changed."""
+    shared_keys = set(current_headers).intersection(new_headers)
     current_filtered = {
         key: value
         for key, value in current_headers.items()
-        if not key.startswith("_") and key.upper() not in IGNORED_HEADERS
+        if key in shared_keys
+        and not key.startswith("_")
+        and key.upper() not in IGNORED_HEADERS
     }
     new_filtered = {
         key: value
         for key, value in new_headers.items()
-        if not key.startswith("_") and key.upper() not in IGNORED_HEADERS
+        if key in shared_keys
+        and not key.startswith("_")
+        and key.upper() not in IGNORED_HEADERS
     }
     if _LOGGER.level <= logging.DEBUG:
         diff_values = {
@@ -132,16 +137,7 @@ def headers_differ_from_existing_advertisement(
     """Compare against existing advertisement headers to see if anything interesting has changed."""
     if dst not in ssdp_device.advertisement_headers:
         return False
-
-    current_headers = ssdp_device.advertisement_headers[dst]
-    shared_keys = set(current_headers).intersection(headers)
-    current_filtered = CaseInsensitiveDict(
-        {key: value for key, value in current_headers.items() if key in shared_keys}
-    )
-    new_filtered = CaseInsensitiveDict(
-        {key: value for key, value in headers.items() if key in shared_keys}
-    )
-    return headers_differ(current_filtered, new_filtered)
+    return same_headers_differ(ssdp_device.advertisement_headers[dst], headers)
 
 
 def headers_differ_from_existing_search(
@@ -150,16 +146,7 @@ def headers_differ_from_existing_search(
     """Compare against existing search headers to see if anything interesting has changed."""
     if dst not in ssdp_device.search_headers:
         return False
-
-    current_headers = ssdp_device.search_headers[dst]
-    shared_keys = set(current_headers).intersection(headers)
-    current_filtered = CaseInsensitiveDict(
-        {key: value for key, value in current_headers.items() if key in shared_keys}
-    )
-    new_filtered = CaseInsensitiveDict(
-        {key: value for key, value in headers.items() if key in shared_keys}
-    )
-    return headers_differ(current_filtered, new_filtered)
+    return same_headers_differ(ssdp_device.search_headers[dst], headers)
 
 
 class SsdpDeviceTracker:
