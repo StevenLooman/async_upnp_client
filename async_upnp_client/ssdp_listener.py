@@ -102,13 +102,18 @@ class SsdpDevice:
 
 def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
-    return any(
-        not header.startswith("_")
-        and header in current_headers
-        and current_headers[header] != value
-        and header.upper() not in IGNORED_HEADERS
-        for header, value in new_headers.items()
-    )
+    for header, new_value in new_headers.items():
+        if header.startswith("_") or header.upper() not in IGNORED_HEADERS:
+            continue
+        current_value = current_headers.get(header)
+        if current_value is None:
+            continue
+        if current_value != new_value:
+            _LOGGER.debug(
+                "Header %s changed from %s to %s", header, current_value, new_value
+            )
+            return True
+    return False
 
 
 def headers_differ_from_existing_advertisement(
