@@ -35,6 +35,10 @@ class CaseInsensitiveDict(abcMutableMapping):
         for key, value in kwargs.items():
             self[key] = value
 
+    def clear(self) -> None:
+        """Clear the underlying dict."""
+        self._data.clear()
+
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
         key_ci = _ci_key(key)
