@@ -1,7 +1,9 @@
 Changes
 =======
 
-0.21.2 (unreleased)
+0.21.2 (2021-09-12)
+
+- Tweak CaseInsensitiveDict to continue to preserve case (@bdraco)
 
 
 0.21.1 (2021-09-11)
