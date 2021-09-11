@@ -71,7 +71,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         if isinstance(other, abcMapping):
             return self._data == {key.lower(): value for key, value in other.items()}
 
-        raise NotImplementedError()
+        return NotImplemented
 
     def __hash__(self) -> int:
         """Get hash."""
