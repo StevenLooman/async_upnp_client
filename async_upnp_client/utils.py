@@ -9,7 +9,7 @@ from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import cast, Any, Callable, Dict, Generator, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import defusedxml.ElementTree as DET
