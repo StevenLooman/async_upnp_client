@@ -19,19 +19,14 @@ EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
 
 
-def _ci_key(key: str) -> str:
-    """Get storable key from key."""
-    return key.lower()
-
-
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {
-            **{_ci_key(key): (key, value) for key, value in (data or {}).items()},
-            **{_ci_key(key): (key, value) for key, value in kwargs.items()},
+            **{key.lower(): (key, value) for key, value in (data or {}).items()},
+            **{key.lower(): (key, value) for key, value in kwargs.items()},
         }
 
     def clear(self) -> None:
@@ -40,15 +35,15 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
-        self._data[_ci_key(key)] = (key, value)
+        self._data[key.lower()] = (key, value)
 
     def __getitem__(self, key: str) -> Any:
         """Get item."""
-        return self._data[_ci_key(key)][1]
+        return self._data[key.lower()][1]
 
     def __delitem__(self, key: str) -> None:
         """Del item."""
-        del self._data[_ci_key(key)]
+        del self._data[key.lower()]
 
     def __len__(self) -> int:
         """Get length."""
@@ -67,13 +62,13 @@ class CaseInsensitiveDict(abcMutableMapping):
         if not isinstance(other, abcMapping) and not isinstance(other, dict):
             return NotImplemented
 
-        dict_a = {_ci_key(key): value for key, value in self.items()}
-        dict_b = {_ci_key(key): value for key, value in other.items()}
-        return dict_a == dict_b
+        return {key.lower(): value for key, value in self.items()} == {
+            key.lower(): value for key, value in other.items()
+        }
 
     def __hash__(self) -> int:
         """Get hash."""
-        ci_dict = {_ci_key(key): value for key, value in self.items()}
+        ci_dict = {key.lower(): value for key, value in self.items()}
         return hash(tuple(sorted(ci_dict.items())))
 
 
