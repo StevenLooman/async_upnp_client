@@ -82,9 +82,12 @@ class SsdpDevice:
         device_or_service_type: DeviceOrServiceType,
     ) -> SsdpHeaders:
         """Get headers from search and advertisement for a given device- or service type."""
-        headers = CaseInsensitiveDict()
-        headers.update(self.search_headers.get(device_or_service_type, {}))
-        headers.update(self.advertisement_headers.get(device_or_service_type, {}))
+        headers = CaseInsensitiveDict(
+            {
+                **self.search_headers.get(device_or_service_type, {}),
+                **self.advertisement_headers.get(device_or_service_type, {}),
+            }
+        )
         if "_source" in headers:
             del headers["_source"]
         return headers
@@ -100,13 +103,15 @@ class SsdpDevice:
         return f"<{type(self).__name__}({self.udn})>"
 
 
-def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
+def same_headers_differ(
+    current_headers: CaseInsensitiveDict, new_headers: SsdpHeaders
+) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
-    for header, new_value in new_headers.items():
-        if header.startswith("_") or header in IGNORED_HEADERS:
+    for header, current_value in current_headers.as_dict().items():
+        if header.startswith("_") or header.lower() in IGNORED_HEADERS:
             continue
-        current_value = current_headers.get(header)
-        if current_value is None:
+        new_value = new_headers.get(header)
+        if new_value is None:
             continue
         if current_value != new_value:
             _LOGGER.debug(
@@ -176,8 +181,7 @@ class SsdpDeviceTracker:
         current_headers = ssdp_device.search_headers.setdefault(
             search_target, CaseInsensitiveDict()
         )
-        current_headers.clear()
-        current_headers.update(headers)
+        current_headers.replace(headers)
 
         return propagate, ssdp_device, search_target
 
@@ -222,8 +226,7 @@ class SsdpDeviceTracker:
         current_headers = ssdp_device.advertisement_headers.setdefault(
             notification_type, CaseInsensitiveDict()
         )
-        current_headers.clear()
-        current_headers.update(headers)
+        current_headers.replace(headers)
 
         return propagate, ssdp_device, notification_type
 
