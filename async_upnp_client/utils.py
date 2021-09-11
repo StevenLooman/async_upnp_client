@@ -24,10 +24,16 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
-        self._data: Dict[str, Any] = {
-            **{key.lower(): value for key, value in (data or {}).items()},
-            **{key.lower(): value for key, value in kwargs.items()},
-        }
+        self._data: Dict[str, Any] = {**(data or {}), **kwargs}
+        self._case_map: Dict[str, Any] = {k.lower(): k for k in self._data}
+
+    def as_dict(self):
+        """Return the underlying dict without iterating."""
+        return self._data
+
+    def as_lower_dict(self):
+        """Return the underlying dict in lowercase."""
+        return {k.lower(): v for k, v in self._data.items()}
 
     def clear(self) -> None:
         """Clear the underlying dict."""
@@ -35,15 +41,22 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
-        self._data[key.lower()] = value
+        lower_key = key.lower()
+        if lower_key in self._case_map and self._case_map[lower_key] != key:
+            # Case changed
+            del self._data[self._case_map[lower_key]]
+        self._data[key] = value
+        self._case_map[lower_key] = key
 
     def __getitem__(self, key: str) -> Any:
         """Get item."""
-        return self._data[key.lower()]
+        return self._data[self._case_map[key.lower()]]
 
     def __delitem__(self, key: str) -> None:
         """Del item."""
-        del self._data[key.lower()]
+        lower_key = key.lower()
+        del self._data[self._case_map[lower_key]]
+        del self._case_map[lower_key]
 
     def __len__(self) -> int:
         """Get length."""
@@ -64,10 +77,12 @@ class CaseInsensitiveDict(abcMutableMapping):
     def __eq__(self, other: Any) -> bool:
         """Compare for equality."""
         if isinstance(other, CaseInsensitiveDict):
-            return self._data == other._data
+            return self.as_lower_dict() == other.as_lower_dict()
 
         if isinstance(other, abcMapping):
-            return self._data == {key.lower(): value for key, value in other.items()}
+            return self.as_lower_dict() == {
+                key.lower(): value for key, value in other.items()
+            }
 
         return NotImplemented
 
