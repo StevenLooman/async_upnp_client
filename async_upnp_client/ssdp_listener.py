@@ -102,33 +102,13 @@ class SsdpDevice:
 
 def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
-    shared_keys = set(current_headers).intersection(new_headers)
-    current_filtered = {
-        key: value
-        for key, value in current_headers.items()
-        if key in shared_keys
-        and not key.startswith("_")
-        and key.upper() not in IGNORED_HEADERS
-    }
-    new_filtered = {
-        key: value
-        for key, value in new_headers.items()
-        if key in shared_keys
-        and not key.startswith("_")
-        and key.upper() not in IGNORED_HEADERS
-    }
-    if _LOGGER.level <= logging.DEBUG:
-        diff_values = {
-            k: (
-                current_filtered.get(k),
-                new_filtered.get(k),
-            )
-            for k in set(current_filtered).union(set(new_filtered))
-            if current_filtered.get(k) != new_filtered.get(k)
-        }
-        if current_filtered and diff_values:
-            _LOGGER.debug("Changed values: %s", diff_values)
-    return current_filtered != new_filtered
+    return any(
+        not header.startswith("_")
+        and header in current_headers
+        and current_headers[header] != value
+        and header.upper() not in IGNORED_HEADERS
+        for header, value in new_headers.items()
+    )
 
 
 def headers_differ_from_existing_advertisement(
