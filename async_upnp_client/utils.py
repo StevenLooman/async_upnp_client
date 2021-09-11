@@ -29,11 +29,10 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
-        self._data: Dict[str, Any] = {}
-        for key, value in (data or {}).items():
-            self[key] = value
-        for key, value in kwargs.items():
-            self[key] = value
+        self._data: Dict[str, Any] = {
+            **{_ci_key(key): (key, value) for key, value in (data or {}).items()},
+            **{_ci_key(key): (key, value) for key, value in kwargs.items()},
+        }
 
     def clear(self) -> None:
         """Clear the underlying dict."""
@@ -41,18 +40,15 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
-        key_ci = _ci_key(key)
-        self._data[key_ci] = (key, value)
+        self._data[_ci_key(key)] = (key, value)
 
     def __getitem__(self, key: str) -> Any:
         """Get item."""
-        ci_key = _ci_key(key)
-        return self._data[ci_key][1]
+        return self._data[_ci_key(key)][1]
 
     def __delitem__(self, key: str) -> None:
         """Del item."""
-        ci_key = _ci_key(key)
-        del self._data[ci_key]
+        del self._data[_ci_key(key)]
 
     def __len__(self) -> int:
         """Get length."""
