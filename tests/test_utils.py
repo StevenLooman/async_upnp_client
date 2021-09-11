@@ -14,6 +14,8 @@ from async_upnp_client.utils import (
     str_to_time,
 )
 
+from .common import ADVERTISEMENT_HEADERS_DEFAULT
+
 
 def test_case_insensitive_dict() -> None:
     """Test CaseInsensitiveDict."""
@@ -22,6 +24,11 @@ def test_case_insensitive_dict() -> None:
     assert ci_dict["Key"] == "value"
     assert ci_dict["key"] == "value"
     assert ci_dict["KEY"] == "value"
+
+    assert CaseInsensitiveDict(key="value") == {"key": "value"}
+    assert CaseInsensitiveDict({"key": "value"}, key="override_value") == {
+        "key": "override_value"
+    }
 
 
 def test_case_insensitive_dict_dict_equality() -> None:
@@ -32,6 +39,15 @@ def test_case_insensitive_dict_dict_equality() -> None:
     assert ci_dict == {"Key": "value"}
     assert ci_dict == {"key": "value"}
     assert ci_dict == {"KEY": "value"}
+
+
+def test_case_insensitive_dict_profile() -> None:
+    """Test CaseInsensitiveDict under load, for profiling."""
+    for _ in range(0, 10000):
+        assert (
+            CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+            == ADVERTISEMENT_HEADERS_DEFAULT
+        )
 
 
 def test_case_insensitive_dict_equality() -> None:

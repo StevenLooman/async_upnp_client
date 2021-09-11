@@ -14,10 +14,10 @@ ADVERTISEMENT_HEADERS_DEFAULT = CaseInsensitiveDict(
         "LOCATION": "http://192.168.1.1:80/RootDevice.xml",
         "BOOTID.UPNP.ORG": "1",
         "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
-        "_timestamp": datetime(2021, 1, 1, 12, 00),
+        "_timestamp": datetime.now(),
         "_host": "192.168.1.1",
         "_port": "1900",
-        "_udn": "uuid:...:",
+        "_udn": "uuid:...",
     }
 )
 SEACH_REQUEST_LINE = "HTTP/1.1 200 OK"
@@ -30,9 +30,9 @@ SEARCH_HEADERS_DEFAULT = CaseInsensitiveDict(
         "BOOTID.UPNP.ORG": "1",
         "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
         "DATE": "Fri, 1 Jan 2021 12:00:00 GMT",
-        "_timestamp": datetime(2021, 1, 1, 12, 00),
+        "_timestamp": datetime.now(),
         "_host": "192.168.1.1",
         "_port": "1900",
-        "_udn": "uuid:...:",
+        "_udn": "uuid:...",
     }
 )

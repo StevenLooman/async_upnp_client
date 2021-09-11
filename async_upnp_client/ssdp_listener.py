@@ -27,8 +27,8 @@ _LOGGER = logging.getLogger(__name__)
 CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)")
 DEFAULT_MAX_AGE = timedelta(seconds=900)
 IGNORED_HEADERS = {
-    "DATE",
-    "SERVER",
+    "date",
+    "server",
 }
 
 
@@ -100,30 +100,20 @@ class SsdpDevice:
         return f"<{type(self).__name__}({self.udn})>"
 
 
-def headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
-    """Compare headers to see if anything interesting has changed."""
-    current_filtered = {
-        key: value
-        for key, value in current_headers.items()
-        if not key.startswith("_") and key.upper() not in IGNORED_HEADERS
-    }
-    new_filtered = {
-        key: value
-        for key, value in new_headers.items()
-        if not key.startswith("_") and key.upper() not in IGNORED_HEADERS
-    }
-    if _LOGGER.level <= logging.DEBUG:
-        diff_values = {
-            k: (
-                current_filtered.get(k),
-                new_filtered.get(k),
+def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
+    """Compare headers present in both to see if anything interesting has changed."""
+    for header, new_value in new_headers.items():
+        if header.startswith("_") or header in IGNORED_HEADERS:
+            continue
+        current_value = current_headers.get(header)
+        if current_value is None:
+            continue
+        if current_value != new_value:
+            _LOGGER.debug(
+                "Header %s changed from %s to %s", header, current_value, new_value
             )
-            for k in set(current_filtered).union(set(new_filtered))
-            if current_filtered.get(k) != new_filtered.get(k)
-        }
-        if current_filtered and diff_values:
-            _LOGGER.debug("Changed values: %s", diff_values)
-    return current_filtered != new_filtered
+            return True
+    return False
 
 
 def headers_differ_from_existing_advertisement(
@@ -132,16 +122,7 @@ def headers_differ_from_existing_advertisement(
     """Compare against existing advertisement headers to see if anything interesting has changed."""
     if dst not in ssdp_device.advertisement_headers:
         return False
-
-    current_headers = ssdp_device.advertisement_headers[dst]
-    shared_keys = set(current_headers).intersection(headers)
-    current_filtered = CaseInsensitiveDict(
-        {key: value for key, value in current_headers.items() if key in shared_keys}
-    )
-    new_filtered = CaseInsensitiveDict(
-        {key: value for key, value in headers.items() if key in shared_keys}
-    )
-    return headers_differ(current_filtered, new_filtered)
+    return same_headers_differ(ssdp_device.advertisement_headers[dst], headers)
 
 
 def headers_differ_from_existing_search(
@@ -150,16 +131,7 @@ def headers_differ_from_existing_search(
     """Compare against existing search headers to see if anything interesting has changed."""
     if dst not in ssdp_device.search_headers:
         return False
-
-    current_headers = ssdp_device.search_headers[dst]
-    shared_keys = set(current_headers).intersection(headers)
-    current_filtered = CaseInsensitiveDict(
-        {key: value for key, value in current_headers.items() if key in shared_keys}
-    )
-    new_filtered = CaseInsensitiveDict(
-        {key: value for key, value in headers.items() if key in shared_keys}
-    )
-    return headers_differ(current_filtered, new_filtered)
+    return same_headers_differ(ssdp_device.search_headers[dst], headers)
 
 
 class SsdpDeviceTracker:
