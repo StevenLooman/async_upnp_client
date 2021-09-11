@@ -100,13 +100,13 @@ class SsdpDevice:
         return f"<{type(self).__name__}({self.udn})>"
 
 
-def same_headers_differ(current_headers: SsdpHeaders, new_headers: SsdpHeaders) -> bool:
+def same_headers_differ(current_headers: CaseInsensitiveDict, new_headers: SsdpHeaders) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
-    for header, new_value in new_headers.as_dict().items():
+    for header, current_value in current_headers.as_dict().items():
         if header.startswith("_") or header.lower() in IGNORED_HEADERS:
             continue
-        current_value = current_headers.get(header)
-        if current_value is None:
+        new_value = new_headers.get(header)
+        if new_value is None:
             continue
         if current_value != new_value:
             _LOGGER.debug(

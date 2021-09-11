@@ -27,11 +27,11 @@ class CaseInsensitiveDict(abcMutableMapping):
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
         self._case_map: Dict[str, Any] = {k.lower(): k for k in self._data}
 
-    def as_dict(self):
+    def as_dict(self) -> Dict[str, Any]:
         """Return the underlying dict without iterating."""
         return self._data
 
-    def as_lower_dict(self):
+    def as_lower_dict(self) -> Dict[str, Any]:
         """Return the underlying dict in lowercase."""
         return {k.lower(): v for k, v in self._data.items()}
 
