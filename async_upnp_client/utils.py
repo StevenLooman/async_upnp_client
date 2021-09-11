@@ -35,19 +35,10 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Return the underlying dict in lowercase."""
         return {k.lower(): v for k, v in self._data.items()}
 
-    def clear(self) -> None:
-        """Clear the underlying dict."""
-        self._data.clear()
-
-    def update(self, other=(), /, **kwds) -> None:
-        """Update the underlying dict."""
-        for key in kwds:
-            lower_key = key.lower()
-            if self._case_map.get(lower_key, key) != key:
-                # Case of the key changed
-                del self._data[self._case_map[lower_key]]
-            self._case_map[lower_key] = key
-        self._data.update(kwds)
+    def replace(self, new_data: abcMapping) -> None:
+        """Replace the underlying dict."""
+        self._data: Dict[str, Any] = new_data
+        self._case_map: Dict[str, Any] = {k.lower(): k for k in new_data}
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""

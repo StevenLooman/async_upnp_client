@@ -178,8 +178,7 @@ class SsdpDeviceTracker:
         current_headers = ssdp_device.search_headers.setdefault(
             search_target, CaseInsensitiveDict()
         )
-        current_headers.clear()
-        current_headers.update(headers)
+        current_headers.replace(headers)
 
         return propagate, ssdp_device, search_target
 
@@ -224,8 +223,7 @@ class SsdpDeviceTracker:
         current_headers = ssdp_device.advertisement_headers.setdefault(
             notification_type, CaseInsensitiveDict()
         )
-        current_headers.clear()
-        current_headers.update(headers)
+        current_headers.replace(headers)
 
         return propagate, ssdp_device, notification_type
 
