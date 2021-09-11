@@ -35,7 +35,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Return the underlying dict in lowercase."""
         return {k.lower(): v for k, v in self._data.items()}
 
-    def replace(self, new_data: abcMapping[str, Any]) -> None:
+    def replace(self, new_data: abcMapping) -> None:
         """Replace the underlying dict."""
         self._data = {**new_data}
         self._case_map = {k.lower(): k for k in new_data}
