@@ -6,7 +6,6 @@ from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 
-from async_upnp_client.const import SsdpSource
 from async_upnp_client.utils import (
     CaseInsensitiveDict,
     async_get_local_ip,
@@ -14,6 +13,8 @@ from async_upnp_client.utils import (
     parse_date_time,
     str_to_time,
 )
+
+from .common import ADVERTISEMENT_HEADERS_DEFAULT
 
 
 def test_case_insensitive_dict() -> None:
@@ -42,22 +43,11 @@ def test_case_insensitive_dict_dict_equality() -> None:
 
 def test_case_insensitive_dict_profile() -> None:
     """Test CaseInsensitiveDict under load, for profiling."""
-    headers = {
-        "Cache-Control": "max-age=1900",
-        "location": "http://192.168.1.1:80/RootDevice.xml",
-        "Server": "UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0",
-        "ST": "urn:schemas-upnp-org:device:WANDevice:1",
-        "USN": "uuid:upnp-WANDevice-1_0-123456789abc::urn:schemas-upnp-org:device:WANDevice:1",
-        "EXT": "",
-        "_location_original": "http://192.168.1.1:80/RootDevice.xml",
-        "_timestamp": datetime.now(),
-        "_host": "192.168.1.1",
-        "_port": "1900",
-        "_udn": "uuid:upnp-WANDevice-1_0-123456789abc",
-        "_source": SsdpSource.SEARCH,
-    }
     for _ in range(0, 10000):
-        assert CaseInsensitiveDict(headers) == headers
+        assert (
+            CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+            == ADVERTISEMENT_HEADERS_DEFAULT
+        )
 
 
 def test_case_insensitive_dict_equality() -> None:

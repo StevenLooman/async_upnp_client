@@ -22,9 +22,7 @@ EXTERNAL_PORT = 80
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
-    def __init__(
-        self, data: Optional[abcMapping[str, Any]] = None, **kwargs: Any
-    ) -> None:
+    def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {
             **{key.lower(): value for key, value in (data or {}).items()},
