@@ -1,9 +1,10 @@
 Changes
 =======
 
-0.21.1 (unreleased)
+0.21.1 (2021-09-11)
 
 - Log traffic before decoding response text from device
+- Optimize header comparison (@bdraco)
 
 
 0.21.0 (2021-09-05)
