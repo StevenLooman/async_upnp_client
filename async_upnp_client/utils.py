@@ -40,7 +40,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         if isinstance(new_data, CaseInsensitiveDict):
             self._data = new_data.as_dict().copy()
         else:
-            self._data = new_data.copy()
+            self._data = {**new_data}
         self._case_map = {k.lower(): k for k in self._data}
 
     def __setitem__(self, key: str, value: Any) -> None:
