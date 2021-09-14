@@ -220,7 +220,24 @@ async def test_purge_devices() -> None:
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
+    # See device for the second time through alive-advertisement.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
     # "Wait" a bit... and purge devices.
+    override_now = headers["_timestamp"] + timedelta(hours=1)
+    listener._device_tracker.purge_devices(override_now)
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
+
+    # See device for the first time through alive-advertisement.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    # "Wait" a bit... and purge devices again.
     override_now = headers["_timestamp"] + timedelta(hours=1)
     listener._device_tracker.purge_devices(override_now)
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
