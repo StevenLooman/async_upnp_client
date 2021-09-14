@@ -37,8 +37,11 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def replace(self, new_data: abcMapping) -> None:
         """Replace the underlying dict."""
-        self._data = {**new_data}
-        self._case_map = {k.lower(): k for k in new_data}
+        if isinstance(new_data, CaseInsensitiveDict):
+            self._data = new_data.as_dict().copy()
+        else:
+            self._data = {**new_data}
+        self._case_map = {k.lower(): k for k in self._data}
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
