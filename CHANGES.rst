@@ -3,7 +3,9 @@ Changes
 
 0.21.3 (unreleased)
 
- - Fix `ssdp_listener.SsdpDeviceTracker` to update device's headers upon ssdp:byebye advertisement (@chishm)
+- Fix `ssdp_listener.SsdpDeviceTracker` to update device's headers upon ssdp:byebye advertisement (@chishm)
+- Several optimizations related to `ssdp_listener.SsdpListener` (@bdraco)
+
 
 0.21.2 (2021-09-12)
 
