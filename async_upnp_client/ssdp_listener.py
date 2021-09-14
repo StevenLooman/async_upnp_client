@@ -64,15 +64,12 @@ class SsdpDevice:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(
-        self,
-        udn: str,
-    ):
+    def __init__(self, udn: str, valid_to: datetime):
         """Initialize."""
         self.udn = udn
+        self.valid_to: datetime = valid_to
         self.location: Optional[str] = None
         self.last_seen: Optional[datetime] = None
-        self.valid_to: Optional[datetime] = None
         self.search_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.advertisement_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.userdata: Any = None
@@ -145,6 +142,7 @@ class SsdpDeviceTracker:
     def __init__(self) -> None:
         """Initialize."""
         self.devices: dict[UniqueDeviceName, SsdpDevice] = {}
+        self.next_valid_to: Optional[datetime] = None
 
     def see_search(
         self, headers: SsdpHeaders
@@ -240,17 +238,22 @@ class SsdpDeviceTracker:
             # Ignore broken devices.
             return None
 
+        valid_to = extract_valid_to(headers)
+
         if udn not in self.devices:
             # Create new device.
-            ssdp_device = SsdpDevice(udn)
+            ssdp_device = SsdpDevice(udn, valid_to)
             _LOGGER.debug("See new device: %s", ssdp_device)
             self.devices[udn] = ssdp_device
-        ssdp_device = self.devices[udn]
+        else:
+            ssdp_device = self.devices[udn]
+            ssdp_device.valid_to = valid_to
 
         # Update device.
         ssdp_device.location = headers["location"]
         ssdp_device.last_seen = headers["_timestamp"]
-        ssdp_device.valid_to = extract_valid_to(headers)
+        if not self.next_valid_to or self.next_valid_to > ssdp_device.valid_to:
+            self.next_valid_to = ssdp_device.valid_to
 
         return ssdp_device
 
@@ -296,11 +299,15 @@ class SsdpDeviceTracker:
     def purge_devices(self, override_now: Optional[datetime] = None) -> None:
         """Purge any devices for which the CACHE-CONTROL header is timed out."""
         now = override_now or datetime.now()
-        to_remove = [
-            usn
-            for usn, device in self.devices.items()
-            if device.valid_to and now > device.valid_to
-        ]
+        if self.next_valid_to and self.next_valid_to > now:
+            return
+        self.next_valid_to = None
+        to_remove = []
+        for usn, device in self.devices.items():
+            if now > device.valid_to:
+                to_remove.append(usn)
+            elif not self.next_valid_to or device.valid_to < self.next_valid_to:
+                self.next_valid_to = device.valid_to
         for usn in to_remove:
             _LOGGER.debug("Purging device, USN: %s", usn)
             del self.devices[usn]
