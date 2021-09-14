@@ -145,6 +145,7 @@ class SsdpDeviceTracker:
     def __init__(self) -> None:
         """Initialize."""
         self.devices: dict[UniqueDeviceName, SsdpDevice] = {}
+        self.next_valid_to: Optional[datetime] = None
 
     def see_search(
         self, headers: SsdpHeaders
@@ -245,12 +246,15 @@ class SsdpDeviceTracker:
             ssdp_device = SsdpDevice(udn)
             _LOGGER.debug("See new device: %s", ssdp_device)
             self.devices[udn] = ssdp_device
+
         ssdp_device = self.devices[udn]
 
         # Update device.
         ssdp_device.location = headers["location"]
         ssdp_device.last_seen = headers["_timestamp"]
         ssdp_device.valid_to = extract_valid_to(headers)
+        if not self.next_valid_to or self.next_valid_to > ssdp_device.valid_to:
+            self.next_valid_to = ssdp_device.valid_to
 
         return ssdp_device
 
@@ -290,6 +294,8 @@ class SsdpDeviceTracker:
     def purge_devices(self, override_now: Optional[datetime] = None) -> None:
         """Purge any devices for which the CACHE-CONTROL header is timed out."""
         now = override_now or datetime.now()
+        if self.next_valid_to and self.next_valid_to > now:
+            return
         to_remove = [
             usn
             for usn, device in self.devices.items()
