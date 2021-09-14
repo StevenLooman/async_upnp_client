@@ -272,8 +272,14 @@ class SsdpDeviceTracker:
         ssdp_device = self.devices[udn]
         del self.devices[udn]
 
-        propagate = True  # Always true, if this is the 2nd unsee then device is already deleted.
+        # Update device before propagating it
         notification_type: NotificationType = headers["NT"]
+        current_headers = ssdp_device.advertisement_headers.setdefault(
+            notification_type, CaseInsensitiveDict()
+        )
+        current_headers.replace(headers)
+
+        propagate = True  # Always true, if this is the 2nd unsee then device is already deleted.
         return propagate, ssdp_device, notification_type
 
     def get_device(self, headers: SsdpHeaders) -> Optional[SsdpDevice]:
