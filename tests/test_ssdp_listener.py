@@ -108,7 +108,10 @@ async def test_see_advertisement_byebye() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once()
+    assert callback.await_args is not None
+    device, dst, _ = callback.await_args.args
+    assert device.combined_headers(dst)["NTS"] == "ssdp:alive"
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through byebye-advertisement, triggering callback.
@@ -116,7 +119,10 @@ async def test_see_advertisement_byebye() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once()
+    assert callback.await_args is not None
+    device, dst, _ = callback.await_args.args
+    assert device.combined_headers(dst)["NTS"] == "ssdp:byebye"
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
 
     await listener.async_stop()
