@@ -64,15 +64,12 @@ class SsdpDevice:
 
     # pylint: disable=too-many-instance-attributes
 
-    def __init__(
-        self,
-        udn: str,
-    ):
+    def __init__(self, udn: str, valid_to: datetime):
         """Initialize."""
         self.udn = udn
+        self.valid_to: datetime = valid_to
         self.location: Optional[str] = None
         self.last_seen: Optional[datetime] = None
-        self.valid_to: Optional[datetime] = None
         self.search_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.advertisement_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.userdata: Any = None
@@ -241,18 +238,20 @@ class SsdpDeviceTracker:
             # Ignore broken devices.
             return None
 
+        valid_to = extract_valid_to(headers)
+
         if udn not in self.devices:
             # Create new device.
-            ssdp_device = SsdpDevice(udn)
+            ssdp_device = SsdpDevice(udn, valid_to)
             _LOGGER.debug("See new device: %s", ssdp_device)
             self.devices[udn] = ssdp_device
-
-        ssdp_device = self.devices[udn]
+        else:
+            ssdp_device = self.devices[udn]
+            ssdp_device.valid_to = valid_to
 
         # Update device.
         ssdp_device.location = headers["location"]
         ssdp_device.last_seen = headers["_timestamp"]
-        ssdp_device.valid_to = extract_valid_to(headers)
         if not self.next_valid_to or self.next_valid_to > ssdp_device.valid_to:
             self.next_valid_to = ssdp_device.valid_to
 
