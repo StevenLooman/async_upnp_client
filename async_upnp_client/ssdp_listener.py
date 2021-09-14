@@ -296,11 +296,13 @@ class SsdpDeviceTracker:
         now = override_now or datetime.now()
         if self.next_valid_to and self.next_valid_to > now:
             return
-        to_remove = [
-            usn
-            for usn, device in self.devices.items()
-            if device.valid_to and now > device.valid_to
-        ]
+        self.next_valid_to = None
+        to_remove = []
+        for usn, device in self.devices.items():
+            if now > device.valid_to:
+                to_remove.append(usn)
+            elif not self.next_valid_to or device.valid_to < self.next_valid_to:
+                self.next_valid_to = device.valid_to
         for usn in to_remove:
             _LOGGER.debug("Purging device, USN: %s", usn)
             del self.devices[usn]
