@@ -184,7 +184,7 @@ class UpnpFactory:
         # data type
         data_type = state_variable_xml.findtext("service:dataType", None, NS)
         if data_type is None or data_type not in STATE_VARIABLE_TYPE_MAPPING:
-            raise UpnpError("Unsupported data type: %s" % (data_type,))
+            raise UpnpError(f"Unsupported data type: {data_type}")
         data_type_mapping = STATE_VARIABLE_TYPE_MAPPING[data_type]
 
         # default value
@@ -345,7 +345,7 @@ class UpnpFactory:
         )
 
         if status_code != 200:
-            raise UpnpError("Received status code: {}".format(status_code))
+            raise UpnpError(f"Received status code: {status_code}")
 
         description: str = (response_body or "").rstrip(" \t\r\n\0")
         try:

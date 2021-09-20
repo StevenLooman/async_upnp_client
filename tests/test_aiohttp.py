@@ -52,7 +52,7 @@ async def test_server_start() -> None:
         assert 1 <= port <= 65535
     addr_family, host = await async_get_local_ip()
     port = server.event_handler.listen_ports[addr_family]
-    expect_callback_url = "http://{host}:{port}/notify".format(host=host, port=port)
+    expect_callback_url = f"http://{host}:{port}/notify"
     assert server.callback_url == expect_callback_url
 
 

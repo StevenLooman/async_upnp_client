@@ -180,7 +180,7 @@ class UpnpDevice:
 
     def __str__(self) -> str:
         """To string."""
-        return "<UpnpDevice({0})>".format(self.udn)
+        return f"<UpnpDevice({self.udn})>"
 
 
 class UpnpService:
@@ -333,14 +333,14 @@ class UpnpService:
         udn = "unbound"
         if self._device:
             udn = self._device.udn
-        return "<UpnpService({}, {})>".format(self.service_id, udn)
+        return f"<UpnpService({self.service_id}, {udn})>"
 
     def __repr__(self) -> str:
         """To repr."""
         udn = "unbound"
         if self._device:
             udn = self._device.udn
-        return "<UpnpService({}, {})>".format(self.service_id, udn)
+        return f"<UpnpService({self.service_id}, {udn})>"
 
 
 class UpnpAction:
@@ -413,7 +413,7 @@ class UpnpAction:
 
         def __repr__(self) -> str:
             """To repr."""
-            return "<UpnpAction.Argument({}, {})>".format(self.name, self.direction)
+            return f"<UpnpAction.Argument({self.name}, {self.direction})>"
 
     def __init__(
         self,
@@ -457,13 +457,11 @@ class UpnpAction:
 
     def __str__(self) -> str:
         """To string."""
-        return "<UpnpAction({0})>".format(self.name)
+        return f"<UpnpAction({self.name})>"
 
     def __repr__(self) -> str:
         """To repr."""
-        return "<UpnpAction({0})({1}) -> {2}>".format(
-            self.name, self.in_arguments(), self.out_arguments()
-        )
+        return f"<UpnpAction({self.name})({self.in_arguments()}) -> {self.out_arguments()}>"
 
     def validate_arguments(self, **kwargs: Any) -> None:
         """
@@ -513,8 +511,7 @@ class UpnpAction:
 
         if status_code != 200:
             raise UpnpError(
-                "Error during async_call(), status: %s, body: %s"
-                % (status_code, response_body)
+                "Error during async_call(), status: {status_code}, body: {response_body}"
             )
 
         # parse body
@@ -532,21 +529,21 @@ class UpnpAction:
         service_type = self.service.service_type
         soap_args = self._format_request_args(**kwargs)
         body = (
-            '<?xml version="1.0"?>'
-            '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"'
-            ' xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">'
-            "<s:Body>"
-            '<u:{1} xmlns:u="{0}">'
-            "{2}"
-            "</u:{1}>"
-            "</s:Body>"
-            "</s:Envelope>".format(service_type, self.name, soap_args)
+            f'<?xml version="1.0"?>'
+            f'<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"'
+            f' xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">'
+            f"<s:Body>"
+            f'<u:{self.name} xmlns:u="{service_type}">'
+            f"{soap_args}"
+            f"</u:{self.name}>"
+            f"</s:Body>"
+            f"</s:Envelope>"
         )
 
         # construct SOAP header
-        soap_action = "{0}#{1}".format(service_type, self.name)
+        soap_action = f"{service_type}#{self.name}"
         headers = {
-            "SOAPAction": '"{0}"'.format(soap_action),
+            "SOAPAction": f'"{soap_action}"',
             "Host": urllib.parse.urlparse(control_url).netloc,
             "Content-Type": 'text/xml; charset="utf-8"',
             "Content-Length": str(len(body)),
@@ -557,7 +554,7 @@ class UpnpAction:
     def _format_request_args(self, **kwargs: Any) -> str:
         self.validate_arguments(**kwargs)
         arg_strs = [
-            "<{0}>{1}</{0}>".format(arg.name, escape(arg.coerce_upnp(kwargs[arg.name])))
+            f"<{arg.name}>{escape(arg.coerce_upnp(kwargs[arg.name]))}</{arg.name}>"
             for arg in self.in_arguments()
         ]
         return "\n".join(arg_strs)
@@ -578,8 +575,9 @@ class UpnpAction:
             error_code = xml.findtext(".//control:errorCode", None, NS)
             error_description = xml.findtext(".//control:errorDescription", None, NS)
             raise UpnpError(
-                "Error during call_action, error_code: %s, error_description: %s"
-                % (error_code, error_description)
+                f"Error during call_action, "
+                f"error_code: {error_code}, "
+                f"error_description: {error_description}"
             )
 
         try:
@@ -593,18 +591,17 @@ class UpnpAction:
     ) -> Mapping[str, Any]:
         """Parse response arguments."""
         args = {}
-        query = ".//{{{0}}}{1}Response".format(service_type, self.name)
+        query = f".//{{{service_type}}}{self.name}Response"
         response = xml.find(query, NS)
 
         # If no response was found, do a search ignoring namespaces when in non-strict mode.
         if response is None and self._non_strict:
-            query = ".//{{*}}{0}Response".format(self.name)
+            query = f".//{{*}}{self.name}Response"
             response = xml.find(query, NS)
 
         if response is None:
-            raise UpnpError(
-                "Invalid response: %s" % (ET.tostring(xml, encoding="unicode"),)
-            )
+            xml_str = ET.tostring(xml, encoding="unicode")
+            raise UpnpError(f"Invalid response: {xml_str}")
 
         for arg_xml in response.findall("./"):
             name = arg_xml.tag
@@ -613,9 +610,9 @@ class UpnpAction:
                 if self._non_strict:
                     continue
 
+                xml_str = ET.tostring(xml, encoding="unicode")
                 raise UpnpError(
-                    "Invalid response, unknown argument: %s, %s"
-                    % (name, ET.tostring(xml, encoding="unicode"))
+                    f"Invalid response, unknown argument: {name}, {xml_str}"
                 )
 
             arg.raw_upnp_value = arg_xml.text
@@ -803,4 +800,4 @@ class UpnpStateVariable(Generic[T]):
 
     def __str__(self) -> str:
         """To string."""
-        return "<UpnpStateVariable({0}, {1})>".format(self.name, self.data_type)
+        return f"<UpnpStateVariable({self.name}, {self.data_type})>"

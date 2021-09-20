@@ -121,12 +121,12 @@ class UpnpEventHandler:
             service = service_or_sid
             sid = self.sid_for_service(service)
             if not sid:
-                raise KeyError("Unknown UpnpService {}".format(service))
+                raise KeyError(f"Unknown UpnpService {service}")
         else:
             sid = service_or_sid
             service = self.service_for_sid(sid)
             if not service:
-                raise KeyError("Unknown SID {}".format(sid))
+                raise KeyError(f"Unknown SID {sid}")
 
         return sid, service
 
@@ -201,7 +201,7 @@ class UpnpEventHandler:
             "NT": "upnp:event",
             "TIMEOUT": "Second-" + str(timeout.seconds),
             "HOST": urlparse(service.event_sub_url).netloc,
-            "CALLBACK": "<{}>".format(callback_url),
+            "CALLBACK": f"<{callback_url}>",
         }
         response_status, response_headers, _ = await self._requester.async_http_request(
             "SUBSCRIBE", service.event_sub_url, headers

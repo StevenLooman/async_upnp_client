@@ -33,7 +33,7 @@ class UpnpValueError(UpnpContentError):
 
     def __init__(self, name: str, value: Any) -> None:
         """Initialize."""
-        super().__init__("Invalid value for %s: '%s'" % (name, value))
+        super().__init__(f"Invalid value for {name}: '{value}'")
         self.name = name
         self.value = value
 
@@ -53,7 +53,7 @@ class UpnpResponseError(UpnpCommunicationError):
         self, status: int, headers: Optional[aiohttp.typedefs.LooseHeaders] = None
     ) -> None:
         """Initialize."""
-        super().__init__("Did not receive HTTP 200 but {}".format(status))
+        super().__init__(f"Did not receive HTTP 200 but {status}")
         self.status = status
         self.headers = headers
 

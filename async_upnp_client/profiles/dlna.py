@@ -214,7 +214,7 @@ class DmrDevice(UpnpProfileDevice):
                 # CurrentTransportState is evented, so don't need to poll when subscribed
                 await self._async_poll_transport_info()
 
-            if self.state == DeviceState.PLAYING or self.state == DeviceState.PAUSED:
+            if self.state in (DeviceState.PLAYING, DeviceState.PAUSED):
                 # playing something, get position info
                 # RelativeTimePosition is *never* evented, must always poll
                 await self._async_poll_position_info()
@@ -333,13 +333,13 @@ class DmrDevice(UpnpProfileDevice):
     def _supports(self, var_name: str) -> bool:
         return (
             self._state_variable("RC", var_name) is not None
-            and self._action("RC", "Set%s" % (var_name,)) is not None
+            and self._action("RC", "Setvar_name") is not None
         )
 
     def _level(self, var_name: str) -> Optional[float]:
         state_var = self._state_variable("RC", var_name)
         if state_var is None:
-            raise UpnpError("Missing StateVariable RC/%s" % (var_name,))
+            raise UpnpError(f"Missing StateVariable RC/{var_name}")
 
         value: Optional[float] = state_var.value
         if value is None:
@@ -352,20 +352,14 @@ class DmrDevice(UpnpProfileDevice):
     async def _async_set_level(
         self, var_name: str, level: float, **kwargs: Any
     ) -> None:
-        action = self._action("RC", "Set%s" % var_name)
+        action = self._action("RC", f"Set{var_name}")
         if not action:
-            raise UpnpError("Missing Action RC/Set%s" % (var_name,))
+            raise UpnpError(f"Missing Action RC/Set{var_name}")
 
-        arg_name = "Desired%s" % var_name
+        arg_name = f"Desired{var_name}"
         argument = action.argument(arg_name)
         if not argument:
-            raise UpnpError(
-                "Missing Argument %s for Action RC/Set%s"
-                % (
-                    arg_name,
-                    var_name,
-                )
-            )
+            raise UpnpError(f"Missing Argument {arg_name} for Action RC/Set{var_name}")
         state_variable = argument.related_state_variable
 
         min_ = state_variable.min_value or 0
