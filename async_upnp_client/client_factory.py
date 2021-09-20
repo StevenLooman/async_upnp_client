@@ -70,7 +70,7 @@ class UpnpFactory:
 
         # get services
         services = []
-        for service_desc_el in root.findall(".//device:serviceList/device:service", NS):
+        for service_desc_el in root.findall("./device:serviceList/device:service", NS):
             service = await self.async_create_service(service_desc_el, description_url)
             services.append(service)
 
@@ -82,7 +82,7 @@ class UpnpFactory:
         """Parse device description XML."""
         # pylint: disable=no-self-use
         icons = []
-        for icon_el in device_desc_el.iterfind(".//device:iconList/device:icon", NS):
+        for icon_el in device_desc_el.iterfind("./device:iconList/device:icon", NS):
             icon_url = icon_el.findtext("./device:url", "", NS)
             icon_url = absolute_url(description_url, icon_url)
             icon = DeviceIcon(
@@ -95,16 +95,16 @@ class UpnpFactory:
             icons.append(icon)
 
         return DeviceInfo(
-            device_type=device_desc_el.findtext(".//device:deviceType", "", NS),
-            friendly_name=device_desc_el.findtext(".//device:friendlyName", "", NS),
-            manufacturer=device_desc_el.findtext(".//device:manufacturer", "", NS),
-            model_name=device_desc_el.findtext(".//device:modelName", "", NS),
-            udn=device_desc_el.findtext(".//device:UDN", "", NS),
+            device_type=device_desc_el.findtext("./device:deviceType", "", NS),
+            friendly_name=device_desc_el.findtext("./device:friendlyName", "", NS),
+            manufacturer=device_desc_el.findtext("./device:manufacturer", "", NS),
+            model_name=device_desc_el.findtext("./device:modelName", "", NS),
+            udn=device_desc_el.findtext("./device:UDN", "", NS),
             model_description=device_desc_el.findtext(
-                ".//device:modelDescription", None, NS
+                "./device:modelDescription", None, NS
             ),
-            model_number=device_desc_el.findtext(".//device:modelNumber", None, NS),
-            serial_number=device_desc_el.findtext(".//device:serialNumber", None, NS),
+            model_number=device_desc_el.findtext("./device:modelNumber", None, NS),
+            serial_number=device_desc_el.findtext("./device:serialNumber", None, NS),
             url=description_url,
             icons=icons,
             xml=device_desc_el,
@@ -143,7 +143,7 @@ class UpnpFactory:
     def create_state_variables(self, scpd_el: ET.Element) -> List[UpnpStateVariable]:
         """Create UpnpStateVariables from scpd_el."""
         state_vars = []
-        for state_var_el in scpd_el.findall(".//service:stateVariable", NS):
+        for state_var_el in scpd_el.findall("./service:stateVariable", NS):
             state_var = self.create_state_variable(state_var_el)
             state_vars.append(state_var)
         return state_vars
@@ -273,7 +273,7 @@ class UpnpFactory:
     ) -> List[UpnpAction]:
         """Create UpnpActions from scpd_el."""
         actions = []
-        for action_el in scpd_el.findall(".//service:action", NS):
+        for action_el in scpd_el.findall("./service:action", NS):
             action = self.create_action(action_el, state_variables)
             actions.append(action)
         return actions
@@ -296,7 +296,7 @@ class UpnpFactory:
 
         # build arguments
         args: List[ActionArgumentInfo] = []
-        for argument_el in action_el.findall(".//service:argument", NS):
+        for argument_el in action_el.findall("./service:argument", NS):
             argument_name = argument_el.findtext("service:name", None, NS)
             if argument_name is None:
                 _LOGGER.debug("Caught Action Argument without a name, ignoring")
