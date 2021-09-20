@@ -42,7 +42,7 @@ def get_host_string(addr: AddressTupleVXType) -> str:
     if len(addr) >= 3:
         addr = cast(AddressTupleV6Type, addr)
         if addr[3]:
-            return "{}%{}".format(addr[0], addr[3])
+            return f"{addr[0]}%{addr[3]}"
     return addr[0]
 
 
@@ -50,8 +50,8 @@ def get_host_port_string(addr: AddressTupleVXType) -> str:
     """Return a properly escaped host port pair."""
     host = get_host_string(addr)
     if ":" in host:
-        return "[{}]:{}".format(host, addr[1])
-    return "{}:{}".format(host, addr[1])
+        return f"[{host}]:{addr[1]}"
+    return f"{host}:{addr[1]}"
 
 
 def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
@@ -73,9 +73,9 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     if not address.is_link_local:
         return url
 
-    netloc = "[{}%{}]".format(data.hostname, addr[3])
+    netloc = f"[{data.hostname}%{addr[3]}]"
     if data.port:
-        netloc += ":{}".format(data.port)
+        netloc += f":{data.port}"
     return urlunsplit(data._replace(netloc=netloc))
 
 
@@ -84,15 +84,13 @@ def build_ssdp_search_packet(
 ) -> bytes:
     """Construct a SSDP packet."""
     return (
-        "M-SEARCH * HTTP/1.1\r\n"
-        "HOST:{target}\r\n"
-        'MAN:"ssdp:discover"\r\n'
-        "MX:{mx}\r\n"
-        "ST:{st}\r\n"
-        "\r\n".format(
-            target=get_host_port_string(ssdp_target), mx=ssdp_mx, st=ssdp_st
-        ).encode()
-    )
+        f"M-SEARCH * HTTP/1.1\r\n"
+        f"HOST:{get_host_port_string(ssdp_target)}\r\n"
+        f'MAN:"ssdp:discover"\r\n'
+        f"MX:{ssdp_mx}\r\n"
+        f"ST:{ssdp_st}\r\n"
+        f"\r\n"
+    ).encode()
 
 
 def is_valid_ssdp_packet(data: bytes) -> bool:

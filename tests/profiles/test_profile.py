@@ -18,6 +18,8 @@ from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester
 class TestUpnpProfileDevice:
     """Test UPnpProfileDevice."""
 
+    # pylint: disable=no-self-use
+
     @pytest.mark.asyncio
     async def test_action_exists(self) -> None:
         """Test getting existing action."""

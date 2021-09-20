@@ -153,6 +153,7 @@ def on_event(
 
 async def call_action(description_url: str, call_action_args: Sequence) -> None:
     """Call an action and show results."""
+    # pylint: disable=too-many-locals
     device = await create_device(description_url)
 
     if "/" in call_action_args[0]:
@@ -163,7 +164,7 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
 
     for action_arg in call_action_args[1:]:
         if "=" not in action_arg:
-            print("Invalid argument value: %s" % (action_arg,))
+            print(f"Invalid argument value: {action_arg}")
             print("Use: Argument=value")
             sys.exit(1)
 
@@ -172,27 +173,21 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
     # get service
     service = service_from_device(device, service_name)
     if not service:
-        print("Unknown service: %s" % (service_name,))
-        print(
-            "Available services:\n%s"
-            % (
-                "\n".join(
-                    [
-                        "  " + device_service.service_id.split(":")[-1]
-                        for device_service in device.services.values()
-                    ]
-                )
-            )
+        services_str = "\n".join(
+            [
+                "  " + device_service.service_id.split(":")[-1]
+                for device_service in device.services.values()
+            ]
         )
+        print(f"Unknown service: {service_name}")
+        print(f"Available services:\n{services_str}")
         sys.exit(1)
 
     # get action
     if not service.has_action(action_name):
-        print("Unknown action: %s" % (action_name,))
-        print(
-            "Available actions:\n%s"
-            % ("\n".join(["  " + name for name in sorted(service.actions)]))
-        )
+        actions_str = "\n".join([f"  {name}" for name in sorted(service.actions)])
+        print(f"Unknown action: {action_name}")
+        print(f"Available actions:\n{actions_str}")
         sys.exit(1)
     action = service.action(action_name)
 
@@ -201,44 +196,38 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
     for key, value in action_args.items():
         in_arg = action.argument(key)
         if not in_arg:
-            print("Unknown argument: %s" % (key,))
-            print(
-                "Available arguments: %s"
-                % (",".join([a.name for a in action.in_arguments()]))
-            )
+            arguments_str = ",".join([a.name for a in action.in_arguments()])
+            print(f"Unknown argument: {key}")
+            print(f"Available arguments: {arguments_str}")
             sys.exit(1)
         coerced_args[key] = in_arg.coerce_python(value)
 
     # ensure all in variables given
     for in_arg in action.in_arguments():
         if in_arg.name not in action_args:
-            print("Missing in-arguments")
-            print(
-                "Known in-arguments:\n%s"
-                % (
-                    "\n".join(
-                        [
-                            "  " + in_arg.name
-                            for in_arg in sorted(
-                                action.in_arguments(), key=operator.attrgetter("name")
-                            )
-                        ]
+            in_args = "\n".join(
+                [
+                    f"  {in_arg.name}"
+                    for in_arg in sorted(
+                        action.in_arguments(), key=operator.attrgetter("name")
                     )
-                )
+                ]
             )
+            print("Missing in-arguments")
+            print(f"Known in-arguments:\n{in_args}")
             sys.exit(1)
 
     _LOGGER.debug(
         "Calling %s.%s, parameters:\n%s",
         service.service_id,
         action.name,
-        "\n".join(["%s:%s" % (key, value) for key, value in coerced_args.items()]),
+        "\n".join([f"{key}:{value}" for key, value in coerced_args.items()]),
     )
     result = await action.async_call(**coerced_args)
 
     _LOGGER.debug(
         "Results:\n%s",
-        "\n".join(["%s:%s" % (key, value) for key, value in coerced_args.items()]),
+        "\n".join([f"{key}:{value}" for key, value in coerced_args.items()]),
     )
 
     obj = {
@@ -272,7 +261,7 @@ async def subscribe(description_url: str, service_names: Any) -> None:
     for service_name in service_names:
         service = service_from_device(device, service_name)
         if not service:
-            print("Unknown service: %s" % (service_name,))
+            print(f"Unknown service: {service_name}")
             sys.exit(1)
         service.on_event = on_event
         services.append(service)
