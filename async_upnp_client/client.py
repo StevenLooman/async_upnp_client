@@ -511,7 +511,7 @@ class UpnpAction:
 
         if status_code != 200:
             raise UpnpError(
-                "Error during async_call(), status: {status_code}, body: {response_body}"
+                f"Error during async_call(), status: {status_code}, body: {response_body}"
             )
 
         # parse body

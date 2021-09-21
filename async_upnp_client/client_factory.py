@@ -123,12 +123,7 @@ class UpnpFactory:
         scpd_url = service_description_el.findtext("device:SCPDURL", None, NS)
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
         scpd_el = await self._async_get(scpd_url)
-        return self.create_service(service_description_el, scpd_el)
 
-    def create_service(
-        self, service_description_el: ET.Element, scpd_el: ET.Element
-    ) -> UpnpService:
-        """Create a UnpnpService, with UpnpActions and UpnpStateVariables from scpd_el."""
         service_info = self._parse_service_el(service_description_el)
         state_vars = self.create_state_variables(scpd_el)
         actions = self.create_actions(scpd_el, state_vars)
@@ -310,7 +305,10 @@ class UpnpFactory:
 
         # build arguments
         args: List[ActionArgumentInfo] = []
-        for argument_el in action_el.findall("./service:argument", NS):
+        argument_list_el = action_el.find("./service:argumentList", NS)
+        if argument_list_el is None:
+            raise UpnpError("Could not find argument list element")
+        for argument_el in argument_list_el.findall("./service:argument", NS):
             argument_name = argument_el.findtext("service:name", None, NS)
             if argument_name is None:
                 _LOGGER.debug("Caught Action Argument without a name, ignoring")
