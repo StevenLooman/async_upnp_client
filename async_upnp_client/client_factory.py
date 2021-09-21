@@ -63,14 +63,20 @@ class UpnpFactory:
     ) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         _LOGGER.debug("Creating device, description_url: %s", description_url)
-        root = await self._async_get(description_url)
+        root_el = await self._async_get(description_url)
 
         # get device info
-        device_info = self._parse_device_el(root, description_url)
+        device_el = root_el.find("./device:device", NS)
+        if device_el is None:
+            raise UpnpError("Could not find device element")
+        device_info = self._parse_device_el(device_el, description_url)
 
         # get services
         services = []
-        for service_desc_el in root.findall("./device:serviceList/device:service", NS):
+        service_list_el = device_el.find("./device:serviceList", NS)
+        if service_list_el is None:
+            raise UpnpError("Could not find service list element")
+        for service_desc_el in service_list_el.findall("./device:service", NS):
             service = await self.async_create_service(service_desc_el, description_url)
             services.append(service)
 
@@ -143,7 +149,12 @@ class UpnpFactory:
     def create_state_variables(self, scpd_el: ET.Element) -> List[UpnpStateVariable]:
         """Create UpnpStateVariables from scpd_el."""
         state_vars = []
-        for state_var_el in scpd_el.findall("./service:stateVariable", NS):
+        service_state_table_el = scpd_el.find("./service:serviceStateTable", NS)
+        if service_state_table_el is None:
+            raise UpnpError("Could not find service state table element")
+        for state_var_el in service_state_table_el.findall(
+            "./service:stateVariable", NS
+        ):
             state_var = self.create_state_variable(state_var_el)
             state_vars.append(state_var)
         return state_vars
@@ -273,7 +284,10 @@ class UpnpFactory:
     ) -> List[UpnpAction]:
         """Create UpnpActions from scpd_el."""
         actions = []
-        for action_el in scpd_el.findall("./service:action", NS):
+        action_list_el = scpd_el.find("./service:actionList", NS)
+        if action_list_el is None:
+            raise UpnpError("Could not find action list element")
+        for action_el in action_list_el.findall("./service:action", NS):
             action = self.create_action(action_el, state_variables)
             actions.append(action)
         return actions
