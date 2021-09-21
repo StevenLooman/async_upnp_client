@@ -65,22 +65,37 @@ class UpnpFactory:
         _LOGGER.debug("Creating device, description_url: %s", description_url)
         root_el = await self._async_get(description_url)
 
-        # get device info
+        # get root device
         device_el = root_el.find("./device:device", NS)
         if device_el is None:
             raise UpnpError("Could not find device element")
+
+        return await self._async_create_device(device_el, description_url)
+
+    async def _async_create_device(
+        self, device_el: ET.Element, description_url: str
+    ) -> UpnpDevice:
+        """Create a device."""
         device_info = self._parse_device_el(device_el, description_url)
 
         # get services
         services = []
-        service_list_el = device_el.find("./device:serviceList", NS)
-        if service_list_el is None:
-            raise UpnpError("Could not find service list element")
-        for service_desc_el in service_list_el.findall("./device:service", NS):
-            service = await self.async_create_service(service_desc_el, description_url)
+        for service_desc_el in device_el.findall(
+            "./device:serviceList/device:service", NS
+        ):
+            service = await self._async_create_service(service_desc_el, description_url)
             services.append(service)
 
-        return UpnpDevice(self.requester, device_info, services)
+        embedded_devices = []
+        for embedded_device_el in device_el.findall(
+            "./device:deviceList/device:device", NS
+        ):
+            embedded_device = await self._async_create_device(
+                embedded_device_el, description_url
+            )
+            embedded_devices.append(embedded_device)
+
+        return UpnpDevice(self.requester, device_info, services, embedded_devices)
 
     def _parse_device_el(
         self, device_desc_el: ET.Element, description_url: str
@@ -116,7 +131,7 @@ class UpnpFactory:
             xml=device_desc_el,
         )
 
-    async def async_create_service(
+    async def _async_create_service(
         self, service_description_el: ET.Element, base_url: str
     ) -> UpnpService:
         """Retrieve the SCPD for a service and create a UpnpService from it."""
@@ -125,8 +140,8 @@ class UpnpFactory:
         scpd_el = await self._async_get(scpd_url)
 
         service_info = self._parse_service_el(service_description_el)
-        state_vars = self.create_state_variables(scpd_el)
-        actions = self.create_actions(scpd_el, state_vars)
+        state_vars = self._create_state_variables(scpd_el)
+        actions = self._create_actions(scpd_el, state_vars)
         return UpnpService(self.requester, service_info, state_vars, actions)
 
     def _parse_service_el(self, service_description_el: ET.Element) -> ServiceInfo:
@@ -141,20 +156,23 @@ class UpnpFactory:
             xml=service_description_el,
         )
 
-    def create_state_variables(self, scpd_el: ET.Element) -> List[UpnpStateVariable]:
+    def _create_state_variables(self, scpd_el: ET.Element) -> List[UpnpStateVariable]:
         """Create UpnpStateVariables from scpd_el."""
-        state_vars = []
         service_state_table_el = scpd_el.find("./service:serviceStateTable", NS)
         if service_state_table_el is None:
             raise UpnpError("Could not find service state table element")
+
+        state_vars = []
         for state_var_el in service_state_table_el.findall(
             "./service:stateVariable", NS
         ):
-            state_var = self.create_state_variable(state_var_el)
+            state_var = self._create_state_variable(state_var_el)
             state_vars.append(state_var)
         return state_vars
 
-    def create_state_variable(self, state_variable_el: ET.Element) -> UpnpStateVariable:
+    def _create_state_variable(
+        self, state_variable_el: ET.Element
+    ) -> UpnpStateVariable:
         """Create UpnpStateVariable from state_variable_el."""
         state_variable_info = self._parse_state_variable_el(state_variable_el)
         type_info = state_variable_info.type_info
@@ -186,6 +204,7 @@ class UpnpFactory:
         data_type = state_variable_el.findtext("service:dataType", None, NS)
         if data_type is None or data_type not in STATE_VARIABLE_TYPE_MAPPING:
             raise UpnpError(f"Unsupported data type: {data_type}")
+
         data_type_mapping = STATE_VARIABLE_TYPE_MAPPING[data_type]
 
         # default value
@@ -274,20 +293,21 @@ class UpnpFactory:
 
         return vol.Schema(vol.All(*validators))
 
-    def create_actions(
+    def _create_actions(
         self, scpd_el: ET.Element, state_variables: Sequence[UpnpStateVariable]
     ) -> List[UpnpAction]:
         """Create UpnpActions from scpd_el."""
-        actions = []
         action_list_el = scpd_el.find("./service:actionList", NS)
         if action_list_el is None:
             raise UpnpError("Could not find action list element")
+
+        actions = []
         for action_el in action_list_el.findall("./service:action", NS):
-            action = self.create_action(action_el, state_variables)
+            action = self._create_action(action_el, state_variables)
             actions.append(action)
         return actions
 
-    def create_action(
+    def _create_action(
         self, action_el: ET.Element, state_variables: Sequence[UpnpStateVariable]
     ) -> UpnpAction:
         """Create a UpnpAction from action_el."""
@@ -305,10 +325,9 @@ class UpnpFactory:
 
         # build arguments
         args: List[ActionArgumentInfo] = []
-        argument_list_el = action_el.find("./service:argumentList", NS)
-        if argument_list_el is None:
-            raise UpnpError("Could not find argument list element")
-        for argument_el in argument_list_el.findall("./service:argument", NS):
+        for argument_el in action_el.findall(
+            "./service:argumentList/service:argument", NS
+        ):
             argument_name = argument_el.findtext("service:name", None, NS)
             if argument_name is None:
                 _LOGGER.debug("Caught Action Argument without a name, ignoring")

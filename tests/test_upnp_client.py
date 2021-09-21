@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Unit tests for upnp_client."""
+"""Unit tests for client_factory and client modules."""
 
 import socket
 from datetime import datetime, timedelta, timezone
@@ -32,6 +32,7 @@ class TestUpnpStateVariable:
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://localhost:1234/dmr")
         assert device
+        assert device.device_type == "urn:schemas-upnp-org:device:MediaRenderer:1"
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         assert service
@@ -47,6 +48,24 @@ class TestUpnpStateVariable:
 
         argument = action.argument("InstanceID")
         assert argument
+
+    @pytest.mark.asyncio
+    async def test_init_embedded_device(self) -> None:
+        """Test initialization of a embedded UpnpDevice."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://localhost:1234/dmr")
+        assert device
+        assert device.device_type == "urn:schemas-upnp-org:device:MediaRenderer:1"
+
+        embedded_device = device.embedded_devices[
+            "urn:schemas-upnp-org:device:MediaServer:1"
+        ]
+        assert embedded_device
+        assert (
+            embedded_device.device_type == "urn:schemas-upnp-org:device:MediaServer:1"
+        )
+        assert embedded_device.parent_device == device
 
     @pytest.mark.asyncio
     async def test_init_xml(self) -> None:
