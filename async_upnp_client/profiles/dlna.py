@@ -219,7 +219,7 @@ class DmrDevice(UpnpProfileDevice):
                 # RelativeTimePosition is *never* evented, must always poll
                 await self._async_poll_position_info()
         elif do_ping:
-            await self.device.async_ping()
+            await self.profile_device.async_ping()
 
     async def _async_poll_transport_info(self) -> None:
         """Update transport info from device."""
@@ -684,7 +684,7 @@ class DmrDevice(UpnpProfileDevice):
         self, url: str, headers: Mapping[str, str]
     ) -> Optional[Mapping[str, str]]:
         """Do a HEAD/GET to get resources headers."""
-        requester = self.device.requester
+        requester = self.profile_device.requester
 
         # try a HEAD first
         status, headers, _ = await requester.async_http_request("HEAD", url, headers)
@@ -851,7 +851,7 @@ class DmrDevice(UpnpProfileDevice):
         if not items:
             return None
 
-        device_url = self.device.device_url
+        device_url = self.profile_device.device_url
         for item in items:
             # Some players use Item.albumArtURI,
             # though not found in the UPnP-av-ConnectionManager-v1-Service spec.

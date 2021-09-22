@@ -29,6 +29,15 @@ RESUBSCRIBE_TOLERANCE = timedelta(minutes=1)
 RESUBSCRIBE_TOLERANCE_SECS = RESUBSCRIBE_TOLERANCE.total_seconds()
 
 
+def _find_device_of_type(device: UpnpDevice, device_types: List[str]) -> UpnpDevice:
+    """Find the (embedded) UpnpDevice of any of the device types."""
+    for device_ in device.all_devices:
+        if device_.device_type in device_types:
+            return device_
+
+    raise UpnpError(f"Could not find device of type: {device_types}")
+
+
 class UpnpProfileDevice:
     """
     Base class for UpnpProfileDevices.
@@ -73,6 +82,7 @@ class UpnpProfileDevice:
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initialize."""
         self.device = device
+        self.profile_device = _find_device_of_type(device, self.DEVICE_TYPES)
         self._event_handler = event_handler
         self.on_event: Optional[EventCallbackType] = None
         self._icon: Optional[str] = None
@@ -83,51 +93,52 @@ class UpnpProfileDevice:
     @property
     def name(self) -> str:
         """Get the name of the device."""
-        return self.device.name
+        return self.profile_device.name
 
     @property
     def manufacturer(self) -> str:
         """Get the manufacturer of this device."""
-        return self.device.manufacturer
+        return self.profile_device.manufacturer
 
     @property
     def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
-        return self.device.model_description
+        return self.profile_device.model_description
 
     @property
     def model_name(self) -> str:
         """Get the model name of this device."""
-        return self.device.model_name
+        return self.profile_device.model_name
 
     @property
     def model_number(self) -> Optional[str]:
         """Get the model number of this device."""
-        return self.device.model_number
+        return self.profile_device.model_number
 
     @property
     def serial_number(self) -> Optional[str]:
         """Get the serial number of this device."""
-        return self.device.serial_number
+        return self.profile_device.serial_number
 
     @property
     def udn(self) -> str:
         """Get the UDN of the device."""
-        return self.device.udn
+        return self.profile_device.udn
 
     @property
     def device_type(self) -> str:
         """Get the device type of this device."""
-        return self.device.device_type
+        return self.profile_device.device_type
 
     @property
     def icon(self) -> Optional[str]:
         """Get a URL for the biggest icon for this device."""
-        if not self.device.icons:
+        if not self.profile_device.icons:
             return None
+
         if not self._icon:
             icon_mime_preference = {"image/png": 3, "image/jpeg": 2, "image/gif": 1}
-            icons = [icon for icon in self.device.icons if icon.url]
+            icons = [icon for icon in self.profile_device.icons if icon.url]
             icons = sorted(
                 icons,
                 # Sort by area, then colour depth, then preferred mimetype
@@ -139,19 +150,20 @@ class UpnpProfileDevice:
                 reverse=True,
             )
             self._icon = icons[0].url
+
         return self._icon
 
     def _service(self, service_type_abbreviation: str) -> Optional[UpnpService]:
         """Get UpnpService by service_type or alias."""
-        if not self.device:
+        if not self.profile_device:
             return None
 
         if service_type_abbreviation not in self._SERVICE_TYPES:
             return None
 
         for service_type in self._SERVICE_TYPES[service_type_abbreviation]:
-            if self.device.has_service(service_type):
-                return self.device.service(service_type)
+            if self.profile_device.has_service(service_type):
+                return self.profile_device.service(service_type)
 
         return None
 
@@ -206,6 +218,7 @@ class UpnpProfileDevice:
             if renewal_time < renewal_threshold:
                 _LOGGER.debug("Skipping %s with renewal_time %f", sid, renewal_time)
                 continue
+
             _LOGGER.debug("Resubscribing to %s with renewal_time %f", sid, renewal_time)
             # Subscription is going to be changed, no matter what
             del self._subscriptions[sid]
@@ -222,7 +235,7 @@ class UpnpProfileDevice:
             except UpnpError as err:
                 if isinstance(err, UpnpConnectionError):
                     # Device has gone offline
-                    self.device.available = False
+                    self.profile_device.available = False
                 _LOGGER.error("Failed (re-)subscribing to: %s, reason: %s", sid, err)
                 if notify_errors:
                     # Notify event listeners that something has changed
@@ -294,9 +307,10 @@ class UpnpProfileDevice:
                 await self._async_resubscribe_services(now)
             else:
                 # Subscribe to services we are interested in
-                for service in self.device.services.values():
+                for service in self.profile_device.services.values():
                     if not self._interesting_service(service):
                         continue
+
                     _LOGGER.debug("Subscribing to service: %s", service)
                     service.on_event = self._on_event
                     new_sid, timeout = await self._event_handler.async_subscribe(
