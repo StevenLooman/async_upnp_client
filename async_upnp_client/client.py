@@ -73,6 +73,8 @@ class UpnpRequester(ABC):
 class UpnpDevice:
     """UPnP Device representation."""
 
+    # pylint: disable=too-many-public-methods
+
     def __init__(
         self,
         requester: UpnpRequester,

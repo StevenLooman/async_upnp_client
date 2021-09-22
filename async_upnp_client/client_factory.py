@@ -42,6 +42,8 @@ class UpnpFactory:
     You have probably received this URL from netdisco, for example.
     """
 
+    # pylint: disable=too-few-public-methods
+
     def __init__(
         self,
         requester: UpnpRequester,
