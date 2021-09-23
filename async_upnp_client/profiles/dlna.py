@@ -6,7 +6,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import Enum, IntFlag
 from mimetypes import guess_type
 from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set
 from urllib.parse import quote_plus, urlparse, urlunparse
@@ -26,24 +26,30 @@ _LOGGER = logging.getLogger(__name__)
 DeviceState = Enum("DeviceState", "ON PLAYING PAUSED IDLE")
 
 
-TransportState = Enum(
-    "TransportState",
-    "STOPPED PLAYING TRANSITIONING PAUSED_PLAYBACK PAUSED_RECORDING RECORDING NO_MEDIA_PRESENT "
-    "VENDOR_DEFINED",
-)
+class TransportState(str, Enum):
+    """Allowed values for DLNA AV Transport TransportState variable."""
+
+    STOPPED = "STOPPED"
+    PLAYING = "PLAYING"
+    TRANSITIONING = "TRANSITIONING"
+    PAUSED_PLAYBACK = "PAUSED_PLAYBACK"
+    PAUSED_RECORDING = "PAUSED_RECORDING"
+    RECORDING = "RECORDING"
+    NO_MEDIA_PRESENT = "NO_MEDIA_PRESENT"
+    VENDOR_DEFINED = "VENDOR_DEFINED"
 
 
-class PlayMode(Enum):
+class PlayMode(str, Enum):
     """Allowed values for DLNA AV Transport CurrentPlayMode variable."""
 
-    NORMAL = object()
-    SHUFFLE = object()
-    REPEAT_ONE = object()
-    REPEAT_ALL = object()
-    RANDOM = object()
-    DIRECT_1 = object()
-    INTRO = object()
-    VENDOR_DEFINED = object()
+    NORMAL = "NORMAL"
+    SHUFFLE = "SHUFFLE"
+    REPEAT_ONE = "REPEAT_ONE"
+    REPEAT_ALL = "REPEAT_ALL"
+    RANDOM = "RANDOM"
+    DIRECT_1 = "DIRECT_1"
+    INTRO = "INTRO"
+    VENDOR_DEFINED = "VENDOR_DEFINED"
 
 
 class DlnaOrgOp(Enum):
@@ -68,7 +74,7 @@ class DlnaOrgPs(Enum):
     NORMAL = 1
 
 
-class DlnaOrgFlags(Enum):
+class DlnaOrgFlags(IntFlag):
     """
     DLNA.ORG_FLAGS flags.
 
@@ -231,7 +237,10 @@ class DmrDevice(UpnpProfileDevice):
                 # CurrentTransportState is evented, so don't need to poll when subscribed
                 await self._async_poll_transport_info()
 
-            if self.state in (DeviceState.PLAYING, DeviceState.PAUSED):
+            if self.transport_state in (
+                TransportState.PLAYING,
+                TransportState.PAUSED_PLAYBACK,
+            ):
                 # playing something, get position info
                 # RelativeTimePosition is *never* evented, must always poll
                 await self._async_poll_position_info()
@@ -324,12 +333,11 @@ class DmrDevice(UpnpProfileDevice):
             return None
 
         state_value = (state_var.value or "").strip().upper()
-        for member in TransportState:
-            if member.name == state_value:
-                return member
-
-        # Unknown state; return VENDOR_DEFINED.
-        return TransportState.VENDOR_DEFINED
+        try:
+            return TransportState[state_value]
+        except KeyError:
+            # Unknown state; return VENDOR_DEFINED.
+            return TransportState.VENDOR_DEFINED
 
     @property
     def _has_current_transport_actions(self) -> bool:
