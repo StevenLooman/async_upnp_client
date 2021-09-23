@@ -497,6 +497,38 @@ class DmrDevice(UpnpProfileDevice):
 
     # endregion
 
+    # region RC/Preset
+    @property
+    def has_presets(self) -> bool:
+        """Check if device has control for rendering presets."""
+        return (
+            self._state_variable("RC", "PresetNameList") is not None
+            and self._action("RC", "SelectPreset") is not None
+        )
+
+    @property
+    def preset_names(self) -> List[str]:
+        """List of valid preset names."""
+        state_var = self._state_variable("RC", "PresetNameList")
+        if state_var is None:
+            raise UpnpError("Missing StateVariable RC/PresetNameList")
+
+        value: Optional[str] = state_var.value
+        if value is None:
+            _LOGGER.debug("Got no value for PresetNameList")
+            return []
+
+        return value.split(",")
+
+    async def async_select_preset(self, preset_name: str) -> None:
+        """Send SelectPreset command."""
+        action = self._action("RC", "SelectPreset")
+        if not action:
+            raise UpnpError("Missing action RC/SelectPreset")
+        await action.async_call(InstanceID=0, PresetName=preset_name)
+
+    # endregion
+
     # region AVT/Transport actions
     @property
     def has_pause(self) -> bool:
@@ -845,6 +877,9 @@ class DmrDevice(UpnpProfileDevice):
             if ":" in entry and entry.split(":")[2] == mime_type
         ]
 
+    # endregion
+
+    # region: AVT/PlayMode
     @property
     def has_play_mode(self) -> bool:
         """Check if device supports setting the play mode."""
