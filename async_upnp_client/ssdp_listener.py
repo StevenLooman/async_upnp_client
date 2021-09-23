@@ -392,6 +392,7 @@ class SsdpListener:
         ) = self._device_tracker.see_search(headers)
 
         if propagate and ssdp_device and device_or_service_type:
+            assert ssdp_source is not None
             await self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
 
     async def _on_alive(self, headers: SsdpHeaders) -> None:
