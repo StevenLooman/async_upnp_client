@@ -166,22 +166,13 @@ class SsdpDeviceTracker:
         if is_new_service:
             _LOGGER.debug("See new service: %s, type: %s", ssdp_device, search_target)
 
-        propagate = (
-            is_new_device
-            or is_new_service
-            or headers_differ_from_existing_search(ssdp_device, search_target, headers)
-            or headers_differ_from_existing_advertisement(
-                ssdp_device, search_target, headers
-            )
-        )
-
         # Update stored headers.
         current_headers = ssdp_device.search_headers.setdefault(
             search_target, CaseInsensitiveDict()
         )
         current_headers.replace(headers)
 
-        return propagate, ssdp_device, search_target
+        return ssdp_device, search_target
 
     def see_advertisement(
         self, headers: SsdpHeaders
@@ -382,12 +373,11 @@ class SsdpListener:
     async def _on_search(self, headers: SsdpHeaders) -> None:
         """Search callback."""
         (
-            propagate,
             ssdp_device,
             device_or_service_type,
         ) = self._device_tracker.see_search(headers)
 
-        if propagate and ssdp_device and device_or_service_type:
+        if ssdp_device and device_or_service_type:
             await self.async_callback(
                 ssdp_device, device_or_service_type, SsdpSource.SEARCH
             )
