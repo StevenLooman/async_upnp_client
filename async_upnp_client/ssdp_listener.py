@@ -146,7 +146,7 @@ class SsdpDeviceTracker:
 
     def see_search(
         self, headers: SsdpHeaders
-    ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
+    ) -> Tuple[SsdpSource, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through a search."""
         if not valid_search_headers(headers):
             return False, None, None
