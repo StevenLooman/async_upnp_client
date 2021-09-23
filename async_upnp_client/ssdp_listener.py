@@ -146,17 +146,19 @@ class SsdpDeviceTracker:
 
     def see_search(
         self, headers: SsdpHeaders
-    ) -> Tuple[SsdpSource, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
+    ) -> Tuple[
+        bool, Optional[SsdpDevice], Optional[DeviceOrServiceType], Optional[SsdpSource]
+    ]:
         """See a device through a search."""
         if not valid_search_headers(headers):
-            return False, None, None
+            return False, None, None, None
 
         udn = headers["_udn"]
         is_new_device = udn not in self.devices
 
         ssdp_device = self._see_device(headers)
         if not ssdp_device:
-            return False, None, None
+            return False, None, None, None
 
         search_target: SearchTarget = headers["ST"]
         is_new_service = (
@@ -182,7 +184,7 @@ class SsdpDeviceTracker:
         )
         current_headers.replace(headers)
 
-        return ssdp_source, ssdp_device, search_target
+        return True, ssdp_device, search_target, ssdp_source
 
     def see_advertisement(
         self, headers: SsdpHeaders
@@ -383,12 +385,13 @@ class SsdpListener:
     async def _on_search(self, headers: SsdpHeaders) -> None:
         """Search callback."""
         (
-            ssdp_source,
+            propagate,
             ssdp_device,
             device_or_service_type,
+            ssdp_source,
         ) = self._device_tracker.see_search(headers)
 
-        if ssdp_device and device_or_service_type:
+        if propagate and ssdp_device and device_or_service_type:
             await self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
 
     async def _on_alive(self, headers: SsdpHeaders) -> None:
