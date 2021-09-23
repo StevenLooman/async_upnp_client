@@ -151,9 +151,6 @@ class SsdpDeviceTracker:
         if not valid_search_headers(headers):
             return False, None, None
 
-        udn = headers["_udn"]
-        is_new_device = udn not in self.devices
-
         ssdp_device = self._see_device(headers)
         if not ssdp_device:
             return False, None, None
