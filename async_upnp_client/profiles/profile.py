@@ -79,6 +79,16 @@ class UpnpProfileDevice:
         """Alias for async_search."""
         return await cls.async_search()
 
+    @classmethod
+    def is_profile_device(cls, device: UpnpDevice) -> bool:
+        """Test if device is a profile device."""
+        try:
+            _find_device_of_type(device, cls.DEVICE_TYPES)
+        except UpnpError:
+            return False
+
+        return True
+
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initialize."""
         self.device = device
