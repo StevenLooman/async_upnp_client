@@ -264,7 +264,8 @@ class DmrDevice(UpnpProfileDevice):
             changed.append(state_var)
 
         service = action.service
-        self._on_event(service, changed)
+        if changed:
+            self._on_event(service, changed)
 
     async def _async_poll_position_info(self) -> None:
         """Update position info."""
@@ -285,7 +286,8 @@ class DmrDevice(UpnpProfileDevice):
             changed.append(time_position)
 
         service = action.service
-        self._on_event(service, changed)
+        if changed:
+            self._on_event(service, changed)
 
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
