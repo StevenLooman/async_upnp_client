@@ -197,6 +197,10 @@ class SsdpSource(str, Enum):
     ADVERTISEMENT = "advertisement"
     SEARCH = "search"
 
+    # More detailed
+    SEARCH_ALIVE = "search_alive"
+    SEARCH_CHANGED = "search_changed"
+
     # More detailed.
     ADVERTISEMENT_ALIVE = "advertisement_alive"
     ADVERTISEMENT_BYEBYE = "advertisement_byebye"

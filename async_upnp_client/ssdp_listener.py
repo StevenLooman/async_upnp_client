@@ -151,6 +151,9 @@ class SsdpDeviceTracker:
         if not valid_search_headers(headers):
             return False, None, None
 
+        udn = headers["_udn"]
+        is_new_device = udn not in self.devices
+
         ssdp_device = self._see_device(headers)
         if not ssdp_device:
             return False, None, None
@@ -163,13 +166,23 @@ class SsdpDeviceTracker:
         if is_new_service:
             _LOGGER.debug("See new service: %s, type: %s", ssdp_device, search_target)
 
+        changed = (
+            is_new_device
+            or is_new_service
+            or headers_differ_from_existing_search(ssdp_device, search_target, headers)
+            or headers_differ_from_existing_advertisement(
+                ssdp_device, search_target, headers
+            )
+        )
+        ssdp_source = SsdpSource.SEARCH_CHANGED if changed else SsdpSource.SEARCH_ALIVE
+
         # Update stored headers.
         current_headers = ssdp_device.search_headers.setdefault(
             search_target, CaseInsensitiveDict()
         )
         current_headers.replace(headers)
 
-        return ssdp_device, search_target
+        return ssdp_source, ssdp_device, search_target
 
     def see_advertisement(
         self, headers: SsdpHeaders
@@ -370,14 +383,13 @@ class SsdpListener:
     async def _on_search(self, headers: SsdpHeaders) -> None:
         """Search callback."""
         (
+            ssdp_source,
             ssdp_device,
             device_or_service_type,
         ) = self._device_tracker.see_search(headers)
 
         if ssdp_device and device_or_service_type:
-            await self.async_callback(
-                ssdp_device, device_or_service_type, SsdpSource.SEARCH
-            )
+            await self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
 
     async def _on_alive(self, headers: SsdpHeaders) -> None:
         """On alive."""
