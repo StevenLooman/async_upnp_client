@@ -741,6 +741,42 @@ class DmrDevice(UpnpProfileDevice):
             InstanceID=0, CurrentURI=media_url, CurrentURIMetaData=meta_data
         )
 
+    @property
+    def has_next_transport_uri(self) -> bool:
+        """Check if device has controls to set the next item for playback."""
+        return (
+            self._state_variable("AVT", "NextAVTransportURI") is not None
+            and self._action("AVT", "SetNextAVTransportURI") is not None
+        )
+
+    async def async_set_next_transport_uri(
+        self, media_url: str, media_title: str, meta_data: Optional[str] = None
+    ) -> None:
+        """Enqueue a piece of media for playing immediately after the current media."""
+        # escape media_url
+        _LOGGER.debug("Set transport uri: %s", media_url)
+        media_url_parts = urlparse(media_url)
+        media_url = urlunparse(
+            [
+                media_url_parts.scheme,
+                media_url_parts.netloc,
+                media_url_parts.path,
+                "",
+                quote_plus(media_url_parts.query),
+                "",
+            ]
+        )
+
+        # queue media
+        if not meta_data:
+            meta_data = await self.construct_play_media_metadata(media_url, media_title)
+        action = self._action("AVT", "SetNextAVTransportURI")
+        if not action:
+            raise UpnpError("Missing action AVT/SetNextAVTransportURI")
+        await action.async_call(
+            InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data
+        )
+
     async def async_wait_for_can_play(self, max_wait_time: int = 5) -> None:
         """Wait for play command to be ready."""
         loop_time = 0.25
