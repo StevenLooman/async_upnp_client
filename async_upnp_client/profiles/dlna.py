@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from mimetypes import guess_type
-from typing import Any, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set
 from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
@@ -31,6 +31,19 @@ TransportState = Enum(
     "STOPPED PLAYING TRANSITIONING PAUSED_PLAYBACK PAUSED_RECORDING RECORDING NO_MEDIA_PRESENT "
     "VENDOR_DEFINED",
 )
+
+
+class PlayMode(Enum):
+    """Allowed values for DLNA AV Transport CurrentPlayMode variable."""
+
+    NORMAL = object()
+    SHUFFLE = object()
+    REPEAT_ONE = object()
+    REPEAT_ALL = object()
+    RANDOM = object()
+    DIRECT_1 = object()
+    INTRO = object()
+    VENDOR_DEFINED = object()
 
 
 class DlnaOrgOp(Enum):
@@ -831,6 +844,53 @@ class DmrDevice(UpnpProfileDevice):
             for entry in source
             if ":" in entry and entry.split(":")[2] == mime_type
         ]
+
+    @property
+    def has_play_mode(self) -> bool:
+        """Check if device supports setting the play mode."""
+        return (
+            self._state_variable("AVT", "CurrentPlayMode") is not None
+            and self._action("AVT", "SetPlayMode") is not None
+        )
+
+    @property
+    def valid_play_modes(self) -> Set[PlayMode]:
+        """Return a set of play modes that can be used."""
+        play_modes: Set[PlayMode] = set()
+        state_var = self._state_variable("AVT", "CurrentPlayMode")
+        if state_var is None:
+            return play_modes
+
+        for allowed_value in state_var.allowed_values:
+            try:
+                mode = PlayMode[allowed_value.strip().upper()]
+            except KeyError:
+                # Unknown mode, don't report it as valid
+                continue
+            play_modes.add(mode)
+
+        return play_modes
+
+    @property
+    def play_mode(self) -> Optional[PlayMode]:
+        """Get play mode."""
+        state_var = self._state_variable("AVT", "CurrentPlayMode")
+        if not state_var:
+            return None
+
+        state_value = (state_var.value or "").strip().upper()
+        try:
+            return PlayMode[state_value]
+        except KeyError:
+            # Unknown mode; return VENDOR_DEFINED.
+            return PlayMode.VENDOR_DEFINED
+
+    async def async_set_play_mode(self, mode: PlayMode) -> None:
+        """Send SetPlayMode command."""
+        action = self._action("AVT", "SetPlayMode")
+        if not action:
+            raise UpnpError("Missing action AVT/SetPlayMode")
+        await action.async_call(InstanceID=0, NewPlayMode=mode.name)
 
     # endregion
 
