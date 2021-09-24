@@ -29,7 +29,7 @@ RESUBSCRIBE_TOLERANCE = timedelta(minutes=1)
 RESUBSCRIBE_TOLERANCE_SECS = RESUBSCRIBE_TOLERANCE.total_seconds()
 
 
-def _find_device_of_type(device: UpnpDevice, device_types: List[str]) -> UpnpDevice:
+def find_device_of_type(device: UpnpDevice, device_types: List[str]) -> UpnpDevice:
     """Find the (embedded) UpnpDevice of any of the device types."""
     for device_ in device.all_devices:
         if device_.device_type in device_types:
@@ -83,7 +83,7 @@ class UpnpProfileDevice:
     def is_profile_device(cls, device: UpnpDevice) -> bool:
         """Test if device is a profile device."""
         try:
-            _find_device_of_type(device, cls.DEVICE_TYPES)
+            find_device_of_type(device, cls.DEVICE_TYPES)
         except UpnpError:
             return False
 
@@ -92,7 +92,7 @@ class UpnpProfileDevice:
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
         """Initialize."""
         self.device = device
-        self.profile_device = _find_device_of_type(device, self.DEVICE_TYPES)
+        self.profile_device = find_device_of_type(device, self.DEVICE_TYPES)
         self._event_handler = event_handler
         self.on_event: Optional[EventCallbackType] = None
         self._icon: Optional[str] = None

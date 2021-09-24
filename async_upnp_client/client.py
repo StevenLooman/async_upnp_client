@@ -120,6 +120,14 @@ class UpnpDevice:
 
         self._parent_device = parent_device
 
+    @property
+    def root_device(self) -> "UpnpDevice":
+        """Get the root device, or self if self is the root device."""
+        if self._parent_device is None:
+            return self
+
+        return self._parent_device.root_device
+
     def find_device(self, device_type: str) -> Optional["UpnpDevice"]:
         """Find a (embedded) device with the given device_type."""
         if self.device_type == device_type:
