@@ -146,17 +146,19 @@ class SsdpDeviceTracker:
 
     def see_search(
         self, headers: SsdpHeaders
-    ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
+    ) -> Tuple[
+        bool, Optional[SsdpDevice], Optional[DeviceOrServiceType], Optional[SsdpSource]
+    ]:
         """See a device through a search."""
         if not valid_search_headers(headers):
-            return False, None, None
+            return False, None, None, None
 
         udn = headers["_udn"]
         is_new_device = udn not in self.devices
 
         ssdp_device = self._see_device(headers)
         if not ssdp_device:
-            return False, None, None
+            return False, None, None, None
 
         search_target: SearchTarget = headers["ST"]
         is_new_service = (
@@ -166,7 +168,7 @@ class SsdpDeviceTracker:
         if is_new_service:
             _LOGGER.debug("See new service: %s, type: %s", ssdp_device, search_target)
 
-        propagate = (
+        changed = (
             is_new_device
             or is_new_service
             or headers_differ_from_existing_search(ssdp_device, search_target, headers)
@@ -174,6 +176,7 @@ class SsdpDeviceTracker:
                 ssdp_device, search_target, headers
             )
         )
+        ssdp_source = SsdpSource.SEARCH_CHANGED if changed else SsdpSource.SEARCH_ALIVE
 
         # Update stored headers.
         current_headers = ssdp_device.search_headers.setdefault(
@@ -181,7 +184,7 @@ class SsdpDeviceTracker:
         )
         current_headers.replace(headers)
 
-        return propagate, ssdp_device, search_target
+        return True, ssdp_device, search_target, ssdp_source
 
     def see_advertisement(
         self, headers: SsdpHeaders
@@ -385,12 +388,12 @@ class SsdpListener:
             propagate,
             ssdp_device,
             device_or_service_type,
+            ssdp_source,
         ) = self._device_tracker.see_search(headers)
 
         if propagate and ssdp_device and device_or_service_type:
-            await self.async_callback(
-                ssdp_device, device_or_service_type, SsdpSource.SEARCH
-            )
+            assert ssdp_source is not None
+            await self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
 
     async def _on_alive(self, headers: SsdpHeaders) -> None:
         """On alive."""
