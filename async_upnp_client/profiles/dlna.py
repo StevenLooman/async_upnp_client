@@ -894,7 +894,7 @@ class DmrDevice(UpnpProfileDevice):
 
     @property
     def has_get_protocol_info(self) -> bool:
-        """Check if device has Play controls."""
+        """Check if device can report its protocol info."""
         return self._action("CM", "GetProtocolInfo") is not None
 
     async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
