@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """UPnP DLNA module."""
 
+# pylint: disable=too-many-lines
+
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -202,6 +204,8 @@ class DmrDevice(UpnpProfileDevice):
         },
     }
 
+    _current_track_meta_data: Optional[didl_lite.DidlObject] = None
+
     async def async_update(self, do_ping: bool = True) -> None:
         """Retrieve the latest data.
 
@@ -269,6 +273,11 @@ class DmrDevice(UpnpProfileDevice):
         for state_variable in state_variables:
             if state_variable.name == "LastChange":
                 dlna_handle_notify_last_change(state_variable)
+
+        if service.service_id == "urn:upnp-org:serviceId:AVTransport":
+            for state_variable in state_variables:
+                if state_variable.name == "CurrentTrackMetaData":
+                    self._update_current_track_meta_data(state_variable)
 
         if self.on_event:
             # pylint: disable=not-callable
@@ -640,6 +649,15 @@ class DmrDevice(UpnpProfileDevice):
         """Check if device has Play controls."""
         return self._action("AVT", "SetAVTransportURI") is not None
 
+    @property
+    def current_track_uri(self) -> Optional[str]:
+        """Return the URI of the currently playing track."""
+        state_var = self._state_variable("AVT", "CurrentTrackURI")
+        if state_var is None:
+            raise UpnpError("Missing StateVariable AVT/CurrentTrackURI")
+
+        return state_var.value
+
     async def async_set_transport_uri(
         self, media_url: str, media_title: str, meta_data: Optional[str] = None
     ) -> None:
@@ -817,24 +835,111 @@ class DmrDevice(UpnpProfileDevice):
     # endregion
 
     # region AVT/Media info
-    @property
-    def media_title(self) -> Optional[str]:
-        """Title of current playing media."""
-        state_var = self._state_variable("AVT", "CurrentTrackMetaData")
-        if state_var is None:
-            return None
-
+    def _update_current_track_meta_data(self, state_var: UpnpStateVariable) -> None:
+        """Update the cached parsed value of AVT/CurrentTrackMetaData."""
         xml = state_var.value
         if not xml or xml == "NOT_IMPLEMENTED":
-            return None
+            self._current_track_meta_data = None
+            return
 
         items = didl_lite.from_xml_string(xml, strict=False)
         if not items:
-            return None
+            self._current_track_meta_data = None
+            return
 
         item = items[0]
-        title: str = item.title
-        return title
+        if not isinstance(item, didl_lite.DidlObject):
+            self._current_track_meta_data = None
+            return
+
+        self._current_track_meta_data = item
+
+    def _get_current_track_meta_data(self, attr: str) -> Optional[str]:
+        """Return a metadata attribute if it exists, None otherwise."""
+        if not self._current_track_meta_data:
+            return None
+
+        if not hasattr(self._current_track_meta_data, attr):
+            return None
+
+        value: str = getattr(self._current_track_meta_data, attr)
+        return value
+
+    @property
+    def media_class(self) -> Optional[str]:
+        """DIDL-Lite class of currently playing media."""
+        if not self._current_track_meta_data:
+            return None
+        return self._current_track_meta_data.upnp_class
+
+    @property
+    def media_title(self) -> Optional[str]:
+        """Title of current playing media."""
+        return self._get_current_track_meta_data("title")
+
+    @property
+    def media_program_title(self) -> Optional[str]:
+        """Title of current playing media."""
+        return self._get_current_track_meta_data("program_title")
+
+    @property
+    def media_artist(self) -> Optional[str]:
+        """Artist of current playing media."""
+        return self._get_current_track_meta_data("artist")
+
+    @property
+    def media_album_name(self) -> Optional[str]:
+        """Album name of current playing media."""
+        return self._get_current_track_meta_data("album")
+
+    @property
+    def media_album_artist(self) -> Optional[str]:
+        """Album artist of current playing media."""
+        return self._get_current_track_meta_data("album_artist")
+
+    @property
+    def media_track_number(self) -> Optional[int]:
+        """Track number of current playing media."""
+        state_var = self._state_variable("AVT", "CurrentTrack")
+        if state_var is None:
+            raise UpnpError("Missing StateVariable AVT/CurrentTrack")
+
+        value: Optional[int] = state_var.value
+        return value
+
+    @property
+    def media_series_title(self) -> Optional[str]:
+        """Title of series of currently playing media."""
+        return self._get_current_track_meta_data("series_title")
+
+    @property
+    def media_season_number(self) -> Optional[str]:
+        """Season of series of currently playing media."""
+        return self._get_current_track_meta_data("episode_season")
+
+    @property
+    def media_episode_number(self) -> Optional[str]:
+        """Episode number, within the series, of current playing media.
+
+        Note: This is usually the absolute number, starting at 1, of the episode
+        within the *series* and not the *season*.
+        """
+        return self._get_current_track_meta_data("episode_number")
+
+    @property
+    def media_episode_count(self) -> Optional[str]:
+        """Total number of episodes in series to which currently playing media belongs."""
+        return self._get_current_track_meta_data("episode_count")
+
+    @property
+    def media_channel_name(self) -> Optional[str]:
+        """Name of currently playing channel."""
+        return self._get_current_track_meta_data("channel_name")
+
+    @property
+    def media_channel_number(self) -> Optional[str]:
+        """Channel number of currently playing channel."""
+        return self._get_current_track_meta_data("channel_number")
 
     @property
     def media_image_url(self) -> Optional[str]:

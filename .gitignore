@@ -58,3 +58,4 @@ share/*
 
 # Other
 prof/
+/.mypy_cache/
