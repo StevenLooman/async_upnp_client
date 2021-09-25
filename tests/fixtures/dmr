@@ -57,5 +57,15 @@
         <SCPDURL>/AVTransport_1.xml</SCPDURL>
       </service>
     </serviceList>
+    <deviceList>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
+        <friendlyName>Dummy NAS</friendlyName>
+        <manufacturer>Steven</manufacturer>
+        <modelDescription>Dummy NAS DMS</modelDescription>
+        <modelName>DummyNAS v1</modelName>
+        <UDN>uuid:00000000-0000-0000-0000-000000000001</UDN>
+      </device>
+    </deviceList>
   </device>
 </root>

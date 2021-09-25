@@ -73,21 +73,33 @@ class UpnpRequester(ABC):
 class UpnpDevice:
     """UPnP Device representation."""
 
+    # pylint: disable=too-many-public-methods
+
     def __init__(
         self,
         requester: UpnpRequester,
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
+        embedded_devices: Sequence["UpnpDevice"],
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
         self.requester = requester
         self.device_info = device_info
         self.services = {service.service_type: service for service in services}
+        self.embedded_devices = {
+            embedded_device.device_type: embedded_device
+            for embedded_device in embedded_devices
+        }
+        self._parent_device: Optional[UpnpDevice] = None
 
         # bind services to ourselves
         for service in services:
             service.device = self
+
+        # bind devices to ourselves
+        for embedded_device in embedded_devices:
+            embedded_device.parent_device = self
 
         # SSDP headers.
         self.ssdp_headers: SsdpHeaders = CaseInsensitiveDict()
@@ -95,9 +107,84 @@ class UpnpDevice:
         # Just initialized, mark available.
         self.available = True
 
-    def reinit(self, device: "UpnpDevice") -> None:
+    @property
+    def parent_device(self) -> Optional["UpnpDevice"]:
+        """Get parent UpnpDevice, if any."""
+        return self._parent_device
+
+    @parent_device.setter
+    def parent_device(self, parent_device: "UpnpDevice") -> None:
+        """Set parent UpnpDevice."""
+        if self._parent_device is not None:
+            raise UpnpError("UpnpDevice already bound to UpnpDevice")
+
+        self._parent_device = parent_device
+
+    @property
+    def root_device(self) -> "UpnpDevice":
+        """Get the root device, or self if self is the root device."""
+        if self._parent_device is None:
+            return self
+
+        return self._parent_device.root_device
+
+    def find_device(self, device_type: str) -> Optional["UpnpDevice"]:
+        """Find a (embedded) device with the given device_type."""
+        if self.device_type == device_type:
+            return self
+
+        for embedded_device in self.embedded_devices.values():
+            device = embedded_device.find_device(device_type)
+            if device:
+                return device
+
+        return None
+
+    def find_service(self, service_type: str) -> Optional["UpnpService"]:
+        """Find a service with the give service_type."""
+        if service_type in self.services:
+            return self.services[service_type]
+
+        for embedded_device in self.embedded_devices.values():
+            service = embedded_device.find_service(service_type)
+            if service:
+                return service
+
+        return None
+
+    @property
+    def all_devices(self) -> List["UpnpDevice"]:
+        """Get all devices, self and embedded."""
+        devices = [self]
+
+        for embedded_device in self.embedded_devices.values():
+            devices += embedded_device.all_devices
+
+        return devices
+
+    @property
+    def all_services(self) -> List["UpnpService"]:
+        """Get all services, from self and embedded devices."""
+        services: List["UpnpService"] = []
+
+        for device in self.all_devices:
+            services += device.services.values()
+
+        return services
+
+    def reinit(self, new_device: "UpnpDevice") -> None:
         """Reinitialize self from another device."""
-        self.device_info = device.device_info
+        if self.device_type != new_device.device_type:
+            raise UpnpError(
+                f"Mismatch in device_type: {self.device_type} vs {new_device.device_type}"
+            )
+
+        self.device_info = new_device.device_info
+
+        # reinit embedded devices
+        for device_type, embedded_device in self.embedded_devices.items():
+            new_embedded_device = new_device.embedded_devices[device_type]
+            embedded_device.reinit(new_embedded_device)
 
     @property
     def name(self) -> str:
@@ -511,7 +598,7 @@ class UpnpAction:
 
         if status_code != 200:
             raise UpnpError(
-                "Error during async_call(), status: {status_code}, body: {response_body}"
+                f"Error during async_call(), status: {status_code}, body: {response_body}"
             )
 
         # parse body

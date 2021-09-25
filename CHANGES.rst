@@ -1,7 +1,9 @@
 Changes
 =======
 
-0.21.4 (unreleased)
+0.22.0 (unreleased)
+
+- Embedded device support, also fixes the problem where services from embedded devices ended up at the root device
 
 - Always propagate search responses from SsdpListener (@bdraco)
 
