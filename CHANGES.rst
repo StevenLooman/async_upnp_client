@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.1 (unreleased)
+
+
 0.22.0 (2021-09-25)
 
 - Always propagate search responses from SsdpListener (@bdraco)
