@@ -3,6 +3,8 @@ Changes
 
 0.22.0 (unreleased)
 
+- Embedded device support, also fixes the problem where services from embedded devices ended up at the root device
+
 
 0.21.3 (2021-09-14)
 
