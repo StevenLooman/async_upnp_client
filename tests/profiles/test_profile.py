@@ -25,7 +25,7 @@ class TestUpnpProfileDevice:
         """Test getting existing action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -37,7 +37,7 @@ class TestUpnpProfileDevice:
         """Test getting non-existing action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -49,7 +49,7 @@ class TestUpnpProfileDevice:
         """Test getting an icon returns the best available."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -61,7 +61,7 @@ class TestUpnpProfileDevice:
         now = time.monotonic()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -108,7 +108,7 @@ class TestUpnpProfileDevice:
         now = time.monotonic()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -169,7 +169,7 @@ class TestUpnpProfileDevice:
         """Test subscribing fails with UpnpError if device is offline."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -189,7 +189,7 @@ class TestUpnpProfileDevice:
         """Test auto-resubscription when the device goes offline."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
         assert device.available is True

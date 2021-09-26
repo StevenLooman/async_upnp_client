@@ -57,7 +57,11 @@ class UpnpTestRequester(UpnpRequester):
 
 RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
     # DLNA/DMR
-    ("GET", "http://dlna_dmr:1234/dmr"): (200, {}, read_file("dlna/dmr/device.xml")),
+    ("GET", "http://dlna_dmr:1234/device.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/device.xml"),
+    ),
     ("GET", "http://dlna_dmr:1234/RenderingControl_1.xml"): (
         200,
         {},
@@ -87,5 +91,27 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         200,
         {"sid": "uuid:dummy-avt1"},
         "",
+    ),
+    # IGD
+    ("GET", "http://igd:1234/device.xml"): (200, {}, read_file("igd/device.xml")),
+    ("GET", "http://igd:1234/Layer3Forwarding.xml"): (
+        200,
+        {},
+        read_file("igd/Layer3Forwarding.xml"),
+    ),
+    ("GET", "http://igd:1234/WANCommonInterfaceConfig.xml"): (
+        200,
+        {},
+        read_file("igd/WANCommonInterfaceConfig.xml"),
+    ),
+    ("GET", "http://igd:1234/WANIPConnection.xml"): (
+        200,
+        {},
+        read_file("igd/WANIPConnection.xml"),
+    ),
+    ("POST", "http://igd:1234/WANCommonInterfaceConfig"): (
+        200,
+        {},
+        read_file("igd/action_WANCIC_GetTotalBytesReceived.xml"),
     ),
 }

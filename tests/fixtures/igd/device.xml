@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:InternetGatewayDevice:1</deviceType>
+    <friendlyName>Dummy Router</friendlyName>
+    <manufacturer>Steven</manufacturer>
+    <modelDescription>Dummy Router IGD</modelDescription>
+    <modelName>DummyRouter v1</modelName>
+    <UDN>uuid:00000000-0000-0000-0000-000000000000</UDN>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:Layer3Forwarding:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:L3Forwarding1</serviceId>
+        <SCPDURL>/Layer3Forwarding.xml</SCPDURL>
+        <controlURL>/Layer3Forwarding</controlURL>
+        <eventSubURL>/Layer3Forwarding</eventSubURL>
+      </service>
+    </serviceList>
+    <deviceList>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:WANDevice:1</deviceType>
+        <friendlyName>WANDevice</friendlyName>
+        <manufacturer>Steven</manufacturer>
+        <modelDescription>WANDevice</modelDescription>
+        <UDN>uuid:00000000-0000-0000-0000-000000000001</UDN>
+        <serviceList>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:WANCommonIFC1</serviceId>
+            <SCPDURL>/WANCommonInterfaceConfig.xml</SCPDURL>
+            <controlURL>/WANCommonInterfaceConfig</controlURL>
+            <eventSubURL>/WANCommonInterfaceConfig</eventSubURL>
+          </service>
+        </serviceList>
+        <deviceList>
+          <device>
+            <deviceType>urn:schemas-upnp-org:device:WANConnectionDevice:1</deviceType>
+            <friendlyName>WANConnectionDevice</friendlyName>
+            <manufacturer>Steven</manufacturer>
+            <modelDescription>WANConnectionDevice</modelDescription>
+            <UDN>uuid:00000000-0000-0000-0000-000000000002</UDN>
+            <serviceList>
+              <service>
+                <serviceType>urn:schemas-upnp-org:service:WANIPConnection:1</serviceType>
+                <serviceId>urn:upnp-org:serviceId:WANIPConn1</serviceId>
+                <SCPDURL>/WANIPConnection.xml</SCPDURL>
+                <controlURL>/WANIPConnection</controlURL>
+                <eventSubURL>/WANIPConnection</eventSubURL>
+              </service>
+            </serviceList>
+          </device>
+        </deviceList>
+      </device>
+    </deviceList>
+  </device>
+</root>
