@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.2 (unreleased)
+
+
 0.22.1 (2021-09-26)
 
 - Fix IGD profile
