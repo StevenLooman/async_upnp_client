@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.22.1 (unreleased)
+0.22.1 (2021-09-26)
 
 - Fix IGD profile
 - Fix getting all services of root and embedded devices in upnp-client
