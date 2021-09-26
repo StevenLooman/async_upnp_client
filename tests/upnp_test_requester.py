@@ -56,35 +56,62 @@ class UpnpTestRequester(UpnpRequester):
 
 
 RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
-    ("GET", "http://localhost:1234/dmr"): (200, {}, read_file("dmr")),
-    ("GET", "http://localhost:1234/RenderingControl_1.xml"): (
+    # DLNA/DMR
+    ("GET", "http://dlna_dmr:1234/device.xml"): (
         200,
         {},
-        read_file("RenderingControl_1.xml"),
+        read_file("dlna/dmr/device.xml"),
     ),
-    ("GET", "http://localhost:1234/AVTransport_1.xml"): (
+    ("GET", "http://dlna_dmr:1234/RenderingControl_1.xml"): (
         200,
         {},
-        read_file("AVTransport_1.xml"),
+        read_file("dlna/dmr/RenderingControl_1.xml"),
     ),
-    ("SUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1"): (
+    ("GET", "http://dlna_dmr:1234/AVTransport_1.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/AVTransport_1.xml"),
+    ),
+    ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1"): (
         200,
         {"sid": "uuid:dummy", "timeout": "Second-300"},
         "",
     ),
-    ("SUBSCRIBE", "http://localhost:1234/upnp/event/AVTransport1"): (
+    ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1"): (
         200,
         {"sid": "uuid:dummy-avt1", "timeout": "Second-150"},
         "",
     ),
-    ("UNSUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1"): (
+    ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1"): (
         200,
         {"sid": "uuid:dummy"},
         "",
     ),
-    ("UNSUBSCRIBE", "http://localhost:1234/upnp/event/AVTransport1"): (
+    ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1"): (
         200,
         {"sid": "uuid:dummy-avt1"},
         "",
+    ),
+    # IGD
+    ("GET", "http://igd:1234/device.xml"): (200, {}, read_file("igd/device.xml")),
+    ("GET", "http://igd:1234/Layer3Forwarding.xml"): (
+        200,
+        {},
+        read_file("igd/Layer3Forwarding.xml"),
+    ),
+    ("GET", "http://igd:1234/WANCommonInterfaceConfig.xml"): (
+        200,
+        {},
+        read_file("igd/WANCommonInterfaceConfig.xml"),
+    ),
+    ("GET", "http://igd:1234/WANIPConnection.xml"): (
+        200,
+        {},
+        read_file("igd/WANIPConnection.xml"),
+    ),
+    ("POST", "http://igd:1234/WANCommonInterfaceConfig"): (
+        200,
+        {},
+        read_file("igd/action_WANCIC_GetTotalBytesReceived.xml"),
     ),
 }
