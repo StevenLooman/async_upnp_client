@@ -25,7 +25,7 @@ class TestUpnpProfileDevice:
         """Test getting existing action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -37,7 +37,7 @@ class TestUpnpProfileDevice:
         """Test getting non-existing action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -49,11 +49,11 @@ class TestUpnpProfileDevice:
         """Test getting an icon returns the best available."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
-        assert profile.icon == "http://localhost:1234/device_icon_120.png"
+        assert profile.icon == "http://dlna_dmr:1234/device_icon_120.png"
 
     @pytest.mark.asyncio
     async def test_subscribe_manual_resubscribe(self) -> None:
@@ -61,7 +61,7 @@ class TestUpnpProfileDevice:
         now = time.monotonic()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -83,7 +83,7 @@ class TestUpnpProfileDevice:
 
         # Tweak timeouts to check resubscription did something
         requester.response_map[
-            ("SUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1")
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
         ][1]["timeout"] = "Second-90"
 
         # Check subscriptions again, now timeouts should have changed
@@ -108,14 +108,14 @@ class TestUpnpProfileDevice:
         now = time.monotonic()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # Tweak timeouts to get a resubscription in a time suitable for testing.
         # Resubscription tolerance (60 seconds) + 1 second to get set up
         requester.response_map[
-            ("SUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1")
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
         ][1]["timeout"] = "Second-61"
 
         # Test subscription
@@ -138,7 +138,7 @@ class TestUpnpProfileDevice:
 
         # Re-tweak timeouts to check resubscription did something
         requester.response_map[
-            ("SUBSCRIBE", "http://localhost:1234/upnp/event/AVTransport1")
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")
         ][1]["timeout"] = "Second-90"
 
         # Wait for an auto-resubscribe
@@ -169,7 +169,7 @@ class TestUpnpProfileDevice:
         """Test subscribing fails with UpnpError if device is offline."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
@@ -189,7 +189,7 @@ class TestUpnpProfileDevice:
         """Test auto-resubscription when the device goes offline."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
         profile = DmrDevice(device, event_handler=event_handler)
         assert device.available is True
@@ -200,7 +200,7 @@ class TestUpnpProfileDevice:
 
         # Setup for auto-resubscription
         requester.response_map[
-            ("SUBSCRIBE", "http://localhost:1234/upnp/event/RenderingControl1")
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
         ][1]["timeout"] = "Second-61"
         await profile.async_subscribe_services(auto_resubscribe=True)
 

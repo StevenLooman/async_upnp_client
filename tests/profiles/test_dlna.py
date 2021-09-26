@@ -1,4 +1,4 @@
-"""Unit tests for dlna."""
+"""Unit tests for the DLNA profile."""
 
 from typing import List, Sequence
 
@@ -80,7 +80,7 @@ async def test_on_notify_dlna_event() -> None:
 
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://localhost:1234/dmr")
+    device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
     service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
     service.on_event = on_event
     event_handler = UpnpEventHandler("http://localhost:11302", requester)

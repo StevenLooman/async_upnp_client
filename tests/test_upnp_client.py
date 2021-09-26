@@ -3,7 +3,9 @@
 
 import socket
 from datetime import datetime, timedelta, timezone
+from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import MutableMapping, Sequence
+from unittest.mock import patch
 
 import defusedxml.ElementTree as DET
 import pytest
@@ -30,7 +32,7 @@ class TestUpnpStateVariable:
         """Test initialization of a UpnpDevice."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         assert device
         assert device.device_type == "urn:schemas-upnp-org:device:MediaRenderer:1"
 
@@ -54,7 +56,7 @@ class TestUpnpStateVariable:
         """Test initialization of a embedded UpnpDevice."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         assert device
         assert device.device_type == "urn:schemas-upnp-org:device:MediaRenderer:1"
 
@@ -72,7 +74,7 @@ class TestUpnpStateVariable:
         """Test XML is stored on every part of the UpnpDevice."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         assert device.xml is not None
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
@@ -93,7 +95,7 @@ class TestUpnpStateVariable:
         """Test calling parsing/reading values from UpnpStateVariable."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Volume")
 
@@ -110,7 +112,7 @@ class TestUpnpStateVariable:
         """Test setting a boolean value."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Mute")
 
@@ -135,7 +137,7 @@ class TestUpnpStateVariable:
         """Test min/max restrictions."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Volume")
 
@@ -162,7 +164,7 @@ class TestUpnpStateVariable:
         """Test if min/max validations can be disabled."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Volume")
 
@@ -182,7 +184,7 @@ class TestUpnpStateVariable:
         """Test handling allowed values."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("A_ARG_TYPE_Channel")
 
@@ -203,7 +205,7 @@ class TestUpnpStateVariable:
         """Test handling invalid values in response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("Volume")
 
@@ -221,7 +223,7 @@ class TestUpnpStateVariable:
         """Test parsing of datetime."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("SV1")
 
@@ -234,7 +236,7 @@ class TestUpnpStateVariable:
         """Test parsing of date_time with a timezone."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("SV2")
         assert state_var is not None
@@ -251,7 +253,7 @@ class TestUpnpStateVariable:
         """Test if send_events is properly handled."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
 
         state_var = service.state_variable("A_ARG_TYPE_InstanceID")  # old style
@@ -277,7 +279,7 @@ class TestUpnpAction:
         """Test Initializing a UpnpAction."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("GetVolume")
 
@@ -289,7 +291,7 @@ class TestUpnpAction:
         """Test validating arguments of an action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("SetVolume")
 
@@ -317,7 +319,7 @@ class TestUpnpAction:
         """Test the request an action sends."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("SetVolume")
 
@@ -336,7 +338,7 @@ class TestUpnpAction:
         """Test escaping the request an action sends."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
         action = service.action("SetAVTransportURI")
 
@@ -367,12 +369,12 @@ class TestUpnpAction:
         """Test calling an action and handling its response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("action_GetVolume.xml")
+        response = read_file("dlna/dmr/action_GetVolume.xml")
         result = action.parse_response(service_type, {}, response)
         assert result == {"CurrentVolume": 3}
 
@@ -381,12 +383,12 @@ class TestUpnpAction:
         """Test calling an action and handling an empty XML response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("SetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("action_SetVolume.xml")
+        response = read_file("dlna/dmr/action_SetVolume.xml")
         result = action.parse_response(service_type, {}, response)
         assert result == {}
 
@@ -395,12 +397,12 @@ class TestUpnpAction:
         """Test calling and action and handling an invalid XML response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("action_GetVolumeError.xml")
+        response = read_file("dlna/dmr/action_GetVolumeError.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -412,12 +414,12 @@ class TestUpnpAction:
         """Test calling an action and properly (not) escaping the response."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
         action = service.action("GetMediaInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response = read_file("action_GetMediaInfo.xml")
+        response = read_file("dlna/dmr/action_GetMediaInfo.xml")
         result = action.parse_response(service_type, {}, response)
         assert result == {
             "CurrentURI": "uri://1.mp3",
@@ -446,12 +448,12 @@ class TestUpnpAction:
         """Test calling and action and handling a response without service type number."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("action_GetVolumeInvalidServiceType.xml")
+        response = read_file("dlna/dmr/action_GetVolumeInvalidServiceType.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -463,12 +465,12 @@ class TestUpnpAction:
         """Test calling and action and handling a response without service type number."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
         action = service.action("GetTransportInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response = read_file("action_GetTransportInfoInvalidServiceType.xml")
+        response = read_file("dlna/dmr/action_GetTransportInfoInvalidServiceType.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -479,7 +481,7 @@ class TestUpnpAction:
     async def test_unknown_out_argument(self) -> None:
         """Test calling an actino and handling an unknown out-argument."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        link_service = "http://localhost:1234/dmr"
+        link_service = "http://dlna_dmr:1234/dmr"
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
         test_action = "GetVolume"
 
@@ -488,7 +490,7 @@ class TestUpnpAction:
         service = device.service(service_type)
         action = service.action(test_action)
 
-        response = read_file("action_GetVolumeExtraOutParameter.xml")
+        response = read_file("dlna/dmr/action_GetVolumeExtraOutParameter.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -516,10 +518,10 @@ class TestUpnpService:
         """Test initializing a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
 
-        base_url = "http://localhost:1234"
+        base_url = "http://dlna_dmr:1234"
         assert service
         assert service.service_type == "urn:schemas-upnp-org:service:RenderingControl:1"
         assert service.control_url == base_url + "/upnp/control/RenderingControl1"
@@ -531,7 +533,7 @@ class TestUpnpService:
         """Test eding a UpnpStateVariable."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
 
         state_var = service.state_variable("Volume")
@@ -544,16 +546,16 @@ class TestUpnpService:
     async def test_call_action(self) -> None:
         """Test calling a UpnpAction."""
         responses: MutableMapping = {
-            ("POST", "http://localhost:1234/upnp/control/RenderingControl1"): (
+            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
                 200,
                 {},
-                read_file("action_GetVolume.xml"),
+                read_file("dlna/dmr/action_GetVolume.xml"),
             )
         }
         responses.update(RESPONSE_MAP)
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("GetVolume")
 
@@ -571,7 +573,7 @@ class TestUpnpEventHandler:
         """Test subscribing to a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
@@ -587,21 +589,25 @@ class TestUpnpEventHandler:
         """Test creating a UpnpEventHandler with unspecified host and port."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler(
             "http://{host}:{port}", requester, {socket.AF_INET: 11302}
         )
 
-        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        callback_url = await event_handler.async_callback_url_for_service(service)
-        assert callback_url == "http://127.0.0.1:11302"
+        with patch(
+            "async_upnp_client.event_handler.async_get_local_ip",
+            return_value={AddressFamily.AF_INET, "127.0.0.1"},
+        ):
+            service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+            callback_url = await event_handler.async_callback_url_for_service(service)
+            assert callback_url == "http://127.0.0.1:11302"
 
     @pytest.mark.asyncio
     async def test_subscribe_renew(self) -> None:
         """Test renewing an existing subscription to a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
@@ -620,7 +626,7 @@ class TestUpnpEventHandler:
         """Test unsubscribing from a UpnpService."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
 
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
@@ -647,7 +653,7 @@ class TestUpnpEventHandler:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         event_handler = UpnpEventHandler("http://localhost:11302", requester)
-        device = await factory.async_create_device("http://localhost:1234/dmr")
+        device = await factory.async_create_device("http://dlna_dmr:1234/dmr")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         service.on_event = on_event
         await event_handler.async_subscribe(service)
