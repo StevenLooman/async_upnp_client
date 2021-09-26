@@ -116,7 +116,7 @@ def bind_host_port() -> Tuple[Optional[str], int]:
 
 def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpService]:
     """Get UpnpService from UpnpDevice by name or part or abbreviation."""
-    for service in device.services.values():
+    for service in device.all_services:
         part = service.service_id.split(":")[-1]
         abbr = "".join([c for c in part if c.isupper()])
         if service_name in (service.service_type, part, abbr):
@@ -176,7 +176,7 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
         services_str = "\n".join(
             [
                 "  " + device_service.service_id.split(":")[-1]
-                for device_service in device.services.values()
+                for device_service in device.all_services
             ]
         )
         print(f"Unknown service: {service_name}")
