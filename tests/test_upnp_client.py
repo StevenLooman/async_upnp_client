@@ -7,6 +7,12 @@ from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import MutableMapping, Sequence
 from unittest.mock import patch
 
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # For python 3.6/3.7
+    from mock import AsyncMock  # type: ignore
+
 import defusedxml.ElementTree as DET
 import pytest
 
@@ -596,7 +602,7 @@ class TestUpnpEventHandler:
 
         with patch(
             "async_upnp_client.event_handler.async_get_local_ip",
-            return_value=(AddressFamily.AF_INET, "127.0.0.1"),
+            AsyncMock(return_value=(AddressFamily.AF_INET, "127.0.0.1")),
         ):
             service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
             callback_url = await event_handler.async_callback_url_for_service(service)
