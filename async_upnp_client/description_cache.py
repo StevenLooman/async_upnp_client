@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-from typing import Mapping, Optional, cast
+from typing import Mapping, Optional, Union, cast
 
 import aiohttp
 import defusedxml.ElementTree as DET
@@ -39,7 +39,9 @@ class DescriptionCache:
     def __init__(self, requester: UpnpRequester):
         """Initialize."""
         self._requester = requester
-        self._cache_dict: dict[str, Optional[Mapping[str, str]]] = {}
+        self._cache_dict: dict[
+            str, Union[asyncio.Event, Optional[Mapping[str, str]]]
+        ] = {}
 
     async def async_get_description_xml(self, location: str) -> Optional[str]:
         """Get a description as XML, either from cache or download it."""
@@ -48,11 +50,14 @@ class DescriptionCache:
         except Exception:  # pylint: disable=broad-except
             # If it fails, cache the failure so we do not keep trying over and over
             _LOGGER.exception("Failed to fetch description from: %s", location)
+        return None
 
     async def async_get_description_dict(
         self, location: Optional[str]
     ) -> Optional[Mapping[str, str]]:
         """Get a description as dict, either from cache or download it."""
+        if location is None:
+            return None
         cache_dict_or_evt = self._cache_dict.get(location, _UNDEF)
         if isinstance(cache_dict_or_evt, asyncio.Event):
             await cache_dict_or_evt.wait()
