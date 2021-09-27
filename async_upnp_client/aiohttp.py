@@ -133,13 +133,12 @@ class AiohttpSessionRequester(UpnpRequester):
         The HTTP/1.1 spec allows the server to disconnect at any time.
         We want to retry the request in this event.
         """
-        max_attempts = 3
-        for attempt in range(max_attempts):
+        for _ in range(2):
             try:
                 return await self._async_http_request(method, url, headers, body)
-            except aiohttp.ServerDisconnectedError as err:
-                if attempt == max_attempts - 1:
-                    raise UpnpConnectionError(str(err)) from err
+            except aiohttp.ServerDisconnectedError:
+                pass
+        return await self._async_http_request(method, url, headers, body)        
 
     async def _async_http_request(
         self,
