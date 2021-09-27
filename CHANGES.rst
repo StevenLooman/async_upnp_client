@@ -1,7 +1,11 @@
 Changes
 =======
 
-0.22.2 (unreleased)
+0.22.2 (2021-09-27)
+
+- Fix DmrDevice._supports method always returning False (@chishm)
+- More informative exception messages (@chishm)
+- UpnpProfileDevice unsubscribes from services in parallel (@chishm)
 
 
 0.22.1 (2021-09-26)
