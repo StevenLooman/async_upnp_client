@@ -135,9 +135,6 @@ class AiohttpSessionRequester(UpnpRequester):
         """
         max_attempts = 3
         for attempt in range(max_attempts):
-            _LOGGER.warning(
-                "HTTP R %s: %s %s %s %s", attempt, method, url, headers, body
-            )
             try:
                 return await self._async_http_request(method, url, headers, body)
             except aiohttp.ServerDisconnectedError as err:
