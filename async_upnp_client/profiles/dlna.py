@@ -333,7 +333,7 @@ class DmrDevice(UpnpProfileDevice):
     def _supports(self, var_name: str) -> bool:
         return (
             self._state_variable("RC", var_name) is not None
-            and self._action("RC", "Setvar_name") is not None
+            and self._action("RC", f"Set{var_name}") is not None
         )
 
     def _level(self, var_name: str) -> Optional[float]:
