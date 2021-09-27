@@ -350,25 +350,28 @@ class UpnpProfileDevice:
         )
         return max(resubcription_timeout, timedelta(seconds=0))
 
+    async def _async_unsubscribe_service(self, sid: str) -> None:
+        """Unsubscribe from one service, handling possible exceptions."""
+        try:
+            await self._event_handler.async_unsubscribe(sid)
+        except UpnpError as err:
+            _LOGGER.debug("Failed unsubscribing from: %s, reason: %r", sid, err)
+        except KeyError:
+            _LOGGER.warning(
+                "%s was already unsubscribed. AiohttpNotifyServer was "
+                "probably stopped before we could unsubscribe.",
+                sid,
+            )
+
     async def async_unsubscribe_services(self) -> None:
         """Unsubscribe from all of our subscribed services."""
         # Delete list of subscriptions and cancel renewal before unsubcribing
         # to avoid unsub-resub race.
-        subscriptions = self._subscriptions
-        self._subscriptions = {}
+        sids = list(self._subscriptions)
+        self._subscriptions.clear()
         await self._update_resubscriber_task()
 
-        for sid in subscriptions:
-            try:
-                await self._event_handler.async_unsubscribe(sid)
-            except UpnpError as err:
-                _LOGGER.debug("Failed unsubscribing to: %s, reason: %s", sid, err)
-            except KeyError:
-                _LOGGER.warning(
-                    "%s was already unsubscribed. AiohttpNotifyServer was "
-                    "probably stopped before we could unsubscribe.",
-                    sid,
-                )
+        await asyncio.gather(*(self._async_unsubscribe_service(sid) for sid in sids))
 
     @property
     def is_subscribed(self) -> bool:
