@@ -128,6 +128,29 @@ class AiohttpSessionRequester(UpnpRequester):
         headers: Optional[Mapping[str, str]] = None,
         body: Optional[str] = None,
     ) -> Tuple[int, Mapping[str, str], str]:
+        """Do a HTTP request with a retry on ServerDisconnectedError.
+
+        The HTTP/1.1 spec allows the server to disconnect at any time.
+        We want to retry the request in this event.
+        """
+        max_attempts = 3
+        for attempt in range(max_attempts):
+            _LOGGER.warning(
+                "HTTP R %s: %s %s %s %s", attempt, method, url, headers, body
+            )
+            try:
+                return await self._async_http_request(method, url, headers, body)
+            except aiohttp.ServerDisconnectedError as err:
+                if attempt == max_attempts - 1:
+                    raise UpnpConnectionError(str(err)) from err
+
+    async def _async_http_request(
+        self,
+        method: str,
+        url: str,
+        headers: Optional[Mapping[str, str]] = None,
+        body: Optional[str] = None,
+    ) -> Tuple[int, Mapping[str, str], str]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
         req_headers = {**self._http_headers, **(headers or {})}
@@ -166,6 +189,8 @@ class AiohttpSessionRequester(UpnpRequester):
                     resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError(str(err)) from err
+        except aiohttp.ServerDisconnectedError as err:
+            raise
         except aiohttp.ClientConnectionError as err:
             raise UpnpConnectionError(str(err)) from err
         except aiohttp.ClientResponseError as err:
