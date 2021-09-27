@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.3 (unreleased)
+
+
 0.22.2 (2021-09-27)
 
 - Fix DmrDevice._supports method always returning False (@chishm)
