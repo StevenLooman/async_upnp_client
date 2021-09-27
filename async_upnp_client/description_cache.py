@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-from typing import Mapping, Optional
+from typing import Mapping, Optional, Union, cast
 
 import aiohttp
 import defusedxml.ElementTree as DET
@@ -13,6 +13,9 @@ from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.utils import etree_to_dict
 
 _LOGGER = logging.getLogger(__name__)
+
+
+_UNDEF = object()
 
 
 def _description_xml_to_dict(description_xml: str) -> Optional[Mapping[str, str]]:
@@ -36,25 +39,18 @@ class DescriptionCache:
     def __init__(self, requester: UpnpRequester):
         """Initialize."""
         self._requester = requester
-        self._cache_xml: dict[str, Optional[str]] = {}
-        self._cache_dict: dict[str, Optional[Mapping[str, str]]] = {}
+        self._cache_dict: dict[
+            str, Union[asyncio.Event, Optional[Mapping[str, str]]]
+        ] = {}
 
     async def async_get_description_xml(self, location: str) -> Optional[str]:
         """Get a description as XML, either from cache or download it."""
-        if location is None:
-            return None
-
-        if location not in self._cache_xml:
-            try:
-                self._cache_xml[location] = await self._async_fetch_description(
-                    location
-                )
-            except Exception:  # pylint: disable=broad-except
-                # If it fails, cache the failure so we do not keep trying over and over
-                self._cache_xml[location] = None
-                _LOGGER.exception("Failed to fetch description from: %s", location)
-
-        return self._cache_xml[location]
+        try:
+            return await self._async_fetch_description(location)
+        except Exception:  # pylint: disable=broad-except
+            # If it fails, cache the failure so we do not keep trying over and over
+            _LOGGER.exception("Failed to fetch description from: %s", location)
+        return None
 
     async def async_get_description_dict(
         self, location: Optional[str]
@@ -62,20 +58,28 @@ class DescriptionCache:
         """Get a description as dict, either from cache or download it."""
         if location is None:
             return None
-
-        if location not in self._cache_dict:
-            description_xml = await self.async_get_description_xml(location)
-            if description_xml:
-                self._cache_dict[location] = _description_xml_to_dict(description_xml)
-            else:
+        cache_dict_or_evt = self._cache_dict.get(location, _UNDEF)
+        if isinstance(cache_dict_or_evt, asyncio.Event):
+            await cache_dict_or_evt.wait()
+        elif cache_dict_or_evt is _UNDEF:
+            evt = self._cache_dict[location] = asyncio.Event()
+            try:
+                description_xml = await self.async_get_description_xml(location)
+            except UpnpResponseError:
                 self._cache_dict[location] = None
+            else:
+                if description_xml:
+                    self._cache_dict[location] = _description_xml_to_dict(
+                        description_xml
+                    )
+                else:
+                    self._cache_dict[location] = None
+            evt.set()
 
-        return self._cache_dict[location]
+        return cast(Optional[Mapping[str, str]], self._cache_dict[location])
 
     def uncache_description(self, location: str) -> None:
         """Uncache a description."""
-        if location in self._cache_xml:
-            del self._cache_xml[location]
         if location in self._cache_dict:
             del self._cache_dict[location]
 
