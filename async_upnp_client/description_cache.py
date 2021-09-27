@@ -75,7 +75,6 @@ class DescriptionCache:
 
     def uncache_description(self, location: str) -> None:
         """Uncache a description."""
-        _LOGGER.warning("uncache location: %s", location)
         if location in self._cache_dict:
             del self._cache_dict[location]
 
