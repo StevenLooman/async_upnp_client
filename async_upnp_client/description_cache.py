@@ -80,14 +80,12 @@ class DescriptionCache:
 
     def uncache_description(self, location: str) -> None:
         """Uncache a description."""
-        _LOGGER.warning("uncache location: %s", location)
         if location in self._cache_dict:
             del self._cache_dict[location]
 
     async def _async_fetch_description(self, location: str) -> Optional[str]:
         """Download a description from location."""
         try:
-            _LOGGER.warning("Fetching description: %s", location)
             for _ in range(2):
                 status, headers, body = await self._requester.async_http_request(
                     "GET", location
