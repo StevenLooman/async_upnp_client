@@ -80,9 +80,9 @@ class AiohttpRequester(UpnpRequester):
 
                         resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
-            raise UpnpConnectionTimeoutError from err
+            raise UpnpConnectionTimeoutError(str(err)) from err
         except aiohttp.ClientConnectionError as err:
-            raise UpnpConnectionError from err
+            raise UpnpConnectionError(str(err)) from err
         except aiohttp.ClientResponseError as err:
             raise UpnpClientResponseError(
                 request_info=err.request_info,
@@ -92,9 +92,9 @@ class AiohttpRequester(UpnpRequester):
                 headers=err.headers,
             ) from err
         except aiohttp.ClientError as err:
-            raise UpnpCommunicationError from err
+            raise UpnpCommunicationError(str(err)) from err
         except UnicodeDecodeError as err:
-            raise UpnpCommunicationError from err
+            raise UpnpCommunicationError(str(err)) from err
 
         return status, resp_headers, resp_body_text
 
@@ -165,9 +165,9 @@ class AiohttpSessionRequester(UpnpRequester):
 
                     resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
-            raise UpnpConnectionTimeoutError from err
+            raise UpnpConnectionTimeoutError(str(err)) from err
         except aiohttp.ClientConnectionError as err:
-            raise UpnpConnectionError from err
+            raise UpnpConnectionError(str(err)) from err
         except aiohttp.ClientResponseError as err:
             raise UpnpClientResponseError(
                 request_info=err.request_info,
@@ -177,9 +177,9 @@ class AiohttpSessionRequester(UpnpRequester):
                 headers=err.headers,
             ) from err
         except aiohttp.ClientError as err:
-            raise UpnpCommunicationError from err
+            raise UpnpCommunicationError(str(err)) from err
         except UnicodeDecodeError as err:
-            raise UpnpCommunicationError from err
+            raise UpnpCommunicationError(str(err)) from err
 
         return status, resp_headers, resp_body_text
 

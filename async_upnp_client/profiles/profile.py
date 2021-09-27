@@ -247,7 +247,7 @@ class UpnpProfileDevice:
                 if isinstance(err, UpnpConnectionError):
                     # Device has gone offline
                     self.profile_device.available = False
-                _LOGGER.error("Failed (re-)subscribing to: %s, reason: %s", sid, err)
+                _LOGGER.error("Failed (re-)subscribing to: %s, reason: %r", sid, err)
                 if notify_errors:
                     # Notify event listeners that something has changed
                     self._on_event(service, [])
@@ -329,7 +329,7 @@ class UpnpProfileDevice:
                     )
                     self._subscriptions[new_sid] = now + timeout.total_seconds()
         except UpnpError as err:
-            _LOGGER.error("Failed subscribing to service: %s", err)
+            _LOGGER.error("Failed subscribing to service: %r", err)
             # Unsubscribe anything that was subscribed, no half-done subscriptions
             try:
                 await self.async_unsubscribe_services()
