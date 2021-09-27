@@ -138,7 +138,7 @@ class AiohttpSessionRequester(UpnpRequester):
                 return await self._async_http_request(method, url, headers, body)
             except aiohttp.ServerDisconnectedError:
                 pass
-        return await self._async_http_request(method, url, headers, body)        
+        return await self._async_http_request(method, url, headers, body)
 
     async def _async_http_request(
         self,
