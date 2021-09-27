@@ -2,6 +2,7 @@
 """aiohttp requester module."""
 
 import asyncio
+import contextlib
 import logging
 from asyncio.events import AbstractEventLoop, AbstractServer
 from socket import AddressFamily  # pylint: disable=no-name-in-module
@@ -134,11 +135,12 @@ class AiohttpSessionRequester(UpnpRequester):
         We want to retry the request in this event.
         """
         for _ in range(2):
-            try:
+            with contextlib.suppress(aiohttp.ServerDisconnectedError):
                 return await self._async_http_request(method, url, headers, body)
-            except aiohttp.ServerDisconnectedError:
-                pass
-        return await self._async_http_request(method, url, headers, body)
+        try:
+            return await self._async_http_request(method, url, headers, body)
+        except aiohttp.ServerDisconnectedError as err:
+            raise UpnpConnectionError(str(err)) from err
 
     async def _async_http_request(
         self,
