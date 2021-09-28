@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.5 (unreleased)
+
+
 0.22.4 (2021-09-28)
 
 - DLNA/DMR Profile: Add media metadata properties (@chishm)
