@@ -8,7 +8,7 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum, IntFlag
 from mimetypes import guess_type
-from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set
+from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set, Union
 from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
@@ -714,7 +714,10 @@ class DmrDevice(UpnpProfileDevice):
         return state_var.value
 
     async def async_set_transport_uri(
-        self, media_url: str, media_title: str, meta_data: Optional[str] = None
+        self,
+        media_url: str,
+        media_title: str,
+        meta_data: Union[None, str, Mapping] = None,
     ) -> None:
         """Play a piece of media."""
         # escape media_url
@@ -732,8 +735,10 @@ class DmrDevice(UpnpProfileDevice):
         )
 
         # queue media
-        if not meta_data:
-            meta_data = await self.construct_play_media_metadata(media_url, media_title)
+        if not isinstance(meta_data, str):
+            meta_data = await self.construct_play_media_metadata(
+                media_url, media_title, meta_data=meta_data
+            )
         action = self._action("AVT", "SetAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetAVTransportURI")
@@ -750,7 +755,10 @@ class DmrDevice(UpnpProfileDevice):
         )
 
     async def async_set_next_transport_uri(
-        self, media_url: str, media_title: str, meta_data: Optional[str] = None
+        self,
+        media_url: str,
+        media_title: str,
+        meta_data: Union[None, str, Mapping] = None,
     ) -> None:
         """Enqueue a piece of media for playing immediately after the current media."""
         # escape media_url
@@ -768,8 +776,10 @@ class DmrDevice(UpnpProfileDevice):
         )
 
         # queue media
-        if not meta_data:
-            meta_data = await self.construct_play_media_metadata(media_url, media_title)
+        if not isinstance(meta_data, str):
+            meta_data = await self.construct_play_media_metadata(
+                media_url, media_title, meta_data=meta_data
+            )
         action = self._action("AVT", "SetNextAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetNextAVTransportURI")
@@ -816,16 +826,21 @@ class DmrDevice(UpnpProfileDevice):
         override_mime_type: Optional[str] = None,
         override_upnp_class: Optional[str] = None,
         override_dlna_features: Optional[str] = None,
+        meta_data: Optional[Mapping[str, Any]] = None,
     ) -> str:
         """
         Construct the metadata for play_media command.
 
         This queries the source and takes mime_type/dlna_features from it.
+
+        The base metadata is updated with key:values from meta_data, e.g.
+        `meta_data = {"artist": "Singer X"}`
         """
         # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
         mime_type = override_mime_type or ""
         upnp_class = override_upnp_class or ""
         dlna_features = override_dlna_features or "*"
+        meta_data = meta_data or {}
 
         if None in (override_mime_type, override_dlna_features):
             # do a HEAD/GET, to retrieve content-type/mime-type
@@ -840,7 +855,7 @@ class DmrDevice(UpnpProfileDevice):
                         not override_dlna_features
                         and "ContentFeatures.dlna.org" in headers
                     ):
-                        dlna_features = headers["contentFeatures.dlna.org"]
+                        dlna_features = headers["ContentFeatures.dlna.org"]
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -884,10 +899,14 @@ class DmrDevice(UpnpProfileDevice):
         item = didl_item_type(
             id="0",
             parent_id="-1",
-            title=media_title,
+            title=media_title or meta_data.get("title"),
             restricted="false",
             resources=[resource],
         )
+
+        # Set any metadata properties that are supported by the DIDL item
+        for key, value in meta_data.items():
+            setattr(item, key, str(value))
 
         xml_string: bytes = didl_lite.to_xml_string(item)
         return xml_string.decode("utf-8")
