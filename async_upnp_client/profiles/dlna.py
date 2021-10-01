@@ -224,6 +224,7 @@ class DmrDevice(UpnpProfileDevice):
     }
 
     _current_track_meta_data: Optional[didl_lite.DidlObject] = None
+    _av_transport_uri_meta_data: Optional[didl_lite.DidlObject] = None
 
     async def async_update(self, do_ping: bool = True) -> None:
         """Retrieve the latest data.
@@ -302,6 +303,8 @@ class DmrDevice(UpnpProfileDevice):
             for state_variable in state_variables:
                 if state_variable.name == "CurrentTrackMetaData":
                     self._update_current_track_meta_data(state_variable)
+                if state_variable.name == "AVTransportURIMetaData":
+                    self._update_av_transport_uri_metadata(state_variable)
 
         if self.on_event:
             # pylint: disable=not-callable
@@ -710,6 +713,15 @@ class DmrDevice(UpnpProfileDevice):
         state_var = self._state_variable("AVT", "CurrentTrackURI")
         if state_var is None:
             raise UpnpError("Missing StateVariable AVT/CurrentTrackURI")
+
+        return state_var.value
+
+    @property
+    def av_transport_uri(self) -> Optional[str]:
+        """Return the URI of the currently playing resource (playlist or track)."""
+        state_var = self._state_variable("AVT", "AVTransportURI")
+        if state_var is None:
+            raise UpnpError("Missing StateVariable AVT/AVTransportURI")
 
         return state_var.value
 
@@ -1173,5 +1185,46 @@ class DmrDevice(UpnpProfileDevice):
 
         return state_var.updated_at
 
+    # endregion
 
-# endregion
+    # region AVT/Playlist info
+    def _update_av_transport_uri_metadata(self, state_var: UpnpStateVariable) -> None:
+        """Update the cached parsed value of AVT/AVTransportURIMetaData."""
+        xml = state_var.value
+        if not xml or xml == "NOT_IMPLEMENTED":
+            self._av_transport_uri_meta_data = None
+            return
+
+        items = didl_lite.from_xml_string(xml, strict=False)
+        if not items:
+            self._av_transport_uri_meta_data = None
+            return
+
+        item = items[0]
+        if not isinstance(item, didl_lite.DidlObject):
+            self._av_transport_uri_meta_data = None
+            return
+
+        self._av_transport_uri_meta_data = item
+
+    def _get_av_transport_meta_data(self, attr: str) -> Optional[str]:
+        """Return an attribute of AVTransportURIMetaData if it exists, None otherwise."""
+        if not self._av_transport_uri_meta_data:
+            return None
+
+        if not hasattr(self._av_transport_uri_meta_data, attr):
+            return None
+
+        value: str = getattr(self._av_transport_uri_meta_data, attr)
+        return value
+
+    @property
+    def media_playlist_title(self) -> Optional[str]:
+        """Title of currently playing playlist, if a playlist is playing."""
+        if self.av_transport_uri == self.current_track_uri:
+            # A single track is playing, no playlist to report
+            return None
+
+        return self._get_av_transport_meta_data("title")
+
+    # endregion
