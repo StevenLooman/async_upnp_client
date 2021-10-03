@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.6 (unreleased)
+
+
 0.22.5 (2021-10-03)
 
 - More robustness in IGD profile by not relying on keys always being there
