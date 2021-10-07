@@ -112,6 +112,11 @@ def udn_from_headers(headers: SsdpHeaders) -> Optional[UniqueDeviceName]:
         parts = str(headers["usn"]).split("::")
         return parts[0]
 
+    # In case an invalid USN was received, i.e., UDN couldn't be extracted, use USN as UDN.
+    if "usn" in headers:
+        usn = headers["usn"]  # type: str
+        return usn
+
     return None
 
 

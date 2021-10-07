@@ -288,3 +288,35 @@ def test_same_headers_differ_profile() -> None:
     )
     for _ in range(0, 10000):
         assert not same_headers_differ(current_headers, new_headers)
+
+
+@pytest.mark.asyncio
+async def test_see_search_invalid_usn() -> None:
+    """Test seeing a packet with an invalid USN."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+
+    # See device for the first time through alive-advertisement.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    headers[
+        "ST"
+    ] = "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal"
+    headers["USN"] = "[fe80::aaaa:bbbb:cccc:dddd]:3540"
+    del headers["_udn"]
+    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["USN"] in listener.devices
+
+    # See device for the second time through alive-advertisement, not triggering callback.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    headers["NTS"] = NotificationSubType.SSDP_ALIVE
+    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    callback.assert_not_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    await listener.async_stop()

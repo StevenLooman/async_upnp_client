@@ -180,3 +180,38 @@ def test_get_ssdp_socket() -> None:
     )
     assert source_info == ("127.0.0.1", 0)
     assert target_info == ("127.0.0.1", 1234)
+
+
+def test_microsoft_butchers_ssdp() -> None:
+    """Test parsing a `urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal` packet."""
+    msg = (
+        b"HTTP/1.1 200 OK\r\n"
+        b"ST:urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal\r\n"
+        b"USN:[fe80::aaaa:bbbb:cccc:dddd]:3540\r\n"
+        b"Location:192.168.1.1\r\n"
+        b"AL:[fe80::aaaa:bbbb:cccc:dddd]:3540\r\n"
+        b'OPT:"http://schemas.upnp.org/upnp/1/0/"; ns=01\r\n'
+        b"01-NLS:abcdef0123456789abcdef012345678\r\n"
+        b"Cache-Control:max-age=14400\r\n"
+        b"Server:Microsoft-Windows-NT/5.1 UPnP/1.0 UPnP-Device-Host/1.0\r\n"
+        b"Ext:\r\n"
+    )
+
+    request_line, headers = decode_ssdp_packet(msg, ("192.168.1.1", 1900))
+
+    assert request_line == "HTTP/1.1 200 OK"
+    assert headers == {
+        "st": "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal",
+        "usn": "[fe80::aaaa:bbbb:cccc:dddd]:3540",
+        "location": "192.168.1.1",
+        "al": "[fe80::aaaa:bbbb:cccc:dddd]:3540",
+        "opt": '"http://schemas.upnp.org/upnp/1/0/"; ns=01',
+        "01-nls": "abcdef0123456789abcdef012345678",
+        "cache-control": "max-age=14400",
+        "server": "Microsoft-Windows-NT/5.1 UPnP/1.0 UPnP-Device-Host/1.0",
+        "ext": "",
+        "_location_original": "192.168.1.1",
+        "_host": "192.168.1.1",
+        "_port": 1900,
+        "_timestamp": ANY,
+    }
