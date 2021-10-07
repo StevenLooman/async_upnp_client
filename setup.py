@@ -19,7 +19,7 @@ INSTALL_REQUIRES = [
     "voluptuous >= 0.12.1",
     "aiohttp >= 3.7.4",
     "async-timeout >=3.0, <4.0",
-    "python-didl-lite ~= 1.2.6",
+    "python-didl-lite ~= 1.3.0",
     "defusedxml >= 0.6.0",
 ]
 
