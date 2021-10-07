@@ -531,7 +531,7 @@ class DmrDevice(UpnpProfileDevice):
             _LOGGER.debug("Got no value for PresetNameList")
             return []
 
-        return value.split(",")
+        return [name.strip() for name in value.split(",")]
 
     async def async_select_preset(self, preset_name: str) -> None:
         """Send SelectPreset command."""
