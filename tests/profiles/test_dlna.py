@@ -120,82 +120,83 @@ async def test_on_notify_dlna_event() -> None:
 @pytest.mark.asyncio
 async def test_construct_play_media_metadata_types() -> None:
     """Test various MIME and UPnP type options for construct_play_media_metadata."""
+    # pylint: disable=too-many-statements
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
     event_handler = UpnpEventHandler("http://localhost:11302", requester)
     profile = DmrDevice(device, event_handler=event_handler)
 
-    MEDIA_URL = "http://dlna_dms:4321/object/file_1222"
-    MEDIA_TITLE = "Test music"
+    media_url = "http://dlna_dms:4321/object/file_1222"
+    media_title = "Test music"
 
     # No server to supply DLNA headers
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(MEDIA_URL, MEDIA_TITLE)
+        await profile.construct_play_media_metadata(media_url, media_title)
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:*"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(MEDIA_URL + ".mp3", MEDIA_TITLE)
+        await profile.construct_play_media_metadata(media_url + ".mp3", media_title)
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.audioItem"
-    assert metadata.res[0].uri == MEDIA_URL + ".mp3"
+    assert metadata.res[0].uri == media_url + ".mp3"
     assert metadata.res[0].protocol_info == "http-get:*:audio/mpeg:*"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, default_mime_type="video/test-mime"
+            media_url, media_title, default_mime_type="video/test-mime"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:video/test-mime:*"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, default_upnp_class="object.item.imageItem"
+            media_url, media_title, default_upnp_class="object.item.imageItem"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:*"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, override_mime_type="video/test-mime"
+            media_url, media_title, override_mime_type="video/test-mime"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:video/test-mime:*"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, override_upnp_class="object.item.imageItem"
+            media_url, media_title, override_upnp_class="object.item.imageItem"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:*"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL,
-            MEDIA_TITLE,
+            media_url,
+            media_title,
             override_dlna_features="DLNA_OVERRIDE_FEATURES",
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:application/octet-stream:DLNA_OVERRIDE_FEATURES"
@@ -203,22 +204,22 @@ async def test_construct_play_media_metadata_types() -> None:
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL,
-            MEDIA_TITLE,
+            media_url,
+            media_title,
             override_mime_type="video/test-mime",
             override_dlna_features="DLNA_OVERRIDE_FEATURES",
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:video/test-mime:DLNA_OVERRIDE_FEATURES"
     )
 
     # Media server supplies media information for HEAD requests
-    requester.response_map[("HEAD", MEDIA_URL)] = (
+    requester.response_map[("HEAD", media_url)] = (
         200,
         {
             "ContentFeatures.dlna.org": "DLNA_SERVER_FEATURES",
@@ -226,7 +227,7 @@ async def test_construct_play_media_metadata_types() -> None:
         },
         "",
     )
-    requester.response_map[("HEAD", MEDIA_URL + ".mp3")] = (
+    requester.response_map[("HEAD", media_url + ".mp3")] = (
         200,
         {
             "ContentFeatures.dlna.org": "DLNA_SERVER_FEATURES",
@@ -236,35 +237,22 @@ async def test_construct_play_media_metadata_types() -> None:
     )
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(MEDIA_URL, MEDIA_TITLE)
+        await profile.construct_play_media_metadata(media_url, media_title)
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
     )
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(MEDIA_URL + ".mp3", MEDIA_TITLE)
+        await profile.construct_play_media_metadata(media_url + ".mp3", media_title)
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL + ".mp3"
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
-    )
-
-    metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, default_mime_type="video/test-mime"
-        )
-    )[0]
-    assert metadata.title == MEDIA_TITLE
-    assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url + ".mp3"
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
@@ -272,12 +260,12 @@ async def test_construct_play_media_metadata_types() -> None:
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, default_upnp_class="object.item.imageItem"
+            media_url, media_title, default_mime_type="video/test-mime"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
@@ -285,12 +273,25 @@ async def test_construct_play_media_metadata_types() -> None:
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, override_mime_type="image/test-mime"
+            media_url, media_title, default_upnp_class="object.item.imageItem"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
+    assert metadata.upnp_class == "object.item.videoItem"
+    assert metadata.res[0].uri == media_url
+    assert (
+        metadata.res[0].protocol_info
+        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
+    )
+
+    metadata = didl_lite.from_xml_string(
+        await profile.construct_play_media_metadata(
+            media_url, media_title, override_mime_type="image/test-mime"
+        )
+    )[0]
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:image/test-mime:DLNA_SERVER_FEATURES"
@@ -298,12 +299,12 @@ async def test_construct_play_media_metadata_types() -> None:
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL, MEDIA_TITLE, override_upnp_class="object.item.imageItem"
+            media_url, media_title, override_upnp_class="object.item.imageItem"
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
@@ -311,14 +312,14 @@ async def test_construct_play_media_metadata_types() -> None:
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL,
-            MEDIA_TITLE,
+            media_url,
+            media_title,
             override_dlna_features="DLNA_OVERRIDE_FEATURES",
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:video/server-mime:DLNA_OVERRIDE_FEATURES"
@@ -326,15 +327,15 @@ async def test_construct_play_media_metadata_types() -> None:
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL,
-            MEDIA_TITLE,
+            media_url,
+            media_title,
             override_mime_type="image/test-mime",
             override_dlna_features="DLNA_OVERRIDE_FEATURES",
         )
     )[0]
-    assert metadata.title == MEDIA_TITLE
+    assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert (
         metadata.res[0].protocol_info
         == "http-get:*:image/test-mime:DLNA_OVERRIDE_FEATURES"
@@ -350,9 +351,9 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     event_handler = UpnpEventHandler("http://localhost:11302", requester)
     profile = DmrDevice(device, event_handler=event_handler)
 
-    MEDIA_URL = "http://dlna_dms:4321/object/file_1222.mp3"
-    MEDIA_TITLE = "Test music"
-    META_DATA = {
+    media_url = "http://dlna_dms:4321/object/file_1222.mp3"
+    media_title = "Test music"
+    meta_data = {
         "title": "Test override title",  # Should override media_title parameter
         "description": "Short test description",  # In base audioItem class
         "artist": "Test singer",
@@ -365,9 +366,9 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     # Without specifying UPnP class, only generic types lacking certain values are used
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL,
-            MEDIA_TITLE,
-            meta_data=META_DATA,
+            media_url,
+            media_title,
+            meta_data=meta_data,
         )
     )[0]
     assert metadata.upnp_class == "object.item.audioItem"
@@ -376,16 +377,16 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     assert not hasattr(metadata, "artist")
     assert not hasattr(metadata, "album")
     assert not hasattr(metadata, "original_track_number")
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:audio/mpeg:*"
 
     # Set the UPnP class correctly
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
-            MEDIA_URL,
-            MEDIA_TITLE,
+            media_url,
+            media_title,
             override_upnp_class="object.item.audioItem.musicTrack",
-            meta_data=META_DATA,
+            meta_data=meta_data,
         )
     )[0]
     assert metadata.upnp_class == "object.item.audioItem.musicTrack"
@@ -394,5 +395,5 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     assert metadata.artist == "Test singer"
     assert metadata.album == "Test album"
     assert metadata.original_track_number == "3"
-    assert metadata.res[0].uri == MEDIA_URL
+    assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:audio/mpeg:*"
