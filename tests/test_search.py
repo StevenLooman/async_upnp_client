@@ -16,8 +16,8 @@ from async_upnp_client.utils import CaseInsensitiveDict
 from .common import (
     ADVERTISEMENT_HEADERS_DEFAULT,
     ADVERTISEMENT_REQUEST_LINE,
-    SEACH_REQUEST_LINE,
     SEARCH_HEADERS_DEFAULT,
+    SEARCH_REQUEST_LINE,
 )
 
 
@@ -28,7 +28,7 @@ async def test_receive_search_response() -> None:
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    await listener._async_on_data(SEARCH_REQUEST_LINE, headers)
 
     callback.assert_called_with(headers)
 

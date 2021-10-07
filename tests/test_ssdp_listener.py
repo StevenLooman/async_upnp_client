@@ -22,8 +22,8 @@ from async_upnp_client.utils import CaseInsensitiveDict
 from .common import (
     ADVERTISEMENT_HEADERS_DEFAULT,
     ADVERTISEMENT_REQUEST_LINE,
-    SEACH_REQUEST_LINE,
     SEARCH_HEADERS_DEFAULT,
+    SEARCH_REQUEST_LINE,
 )
 
 
@@ -172,7 +172,7 @@ async def test_see_search() -> None:
 
     # See device for the first time through search.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -194,7 +194,7 @@ async def test_see_search_then_alive() -> None:
 
     # See device for the first time through search.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -222,13 +222,13 @@ async def test_purge_devices() -> None:
 
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -239,7 +239,7 @@ async def test_purge_devices() -> None:
 
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEACH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
