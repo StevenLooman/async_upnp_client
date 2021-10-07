@@ -3,6 +3,12 @@ Changes
 
 0.22.6 (unreleased)
 
+- DLNA/DMR Profile add support for (@chishm):
+    - play mode (repeat and shuffle)
+    - setting of play_media metadata
+    - SetNextAVTransportURI
+    - setting arbitrary metadata for SetAVTransportURI
+    - playlist title
 
 0.22.5 (2021-10-03)
 
