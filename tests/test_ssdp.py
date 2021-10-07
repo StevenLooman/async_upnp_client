@@ -183,7 +183,7 @@ def test_get_ssdp_socket() -> None:
 
 
 def test_microsoft_butchers_ssdp() -> None:
-    """Test parsing a `urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal` packet."""
+    """Test parsing a `Microsoft Windows Peer Name Resolution Protocol` packet."""
     msg = (
         b"HTTP/1.1 200 OK\r\n"
         b"ST:urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal\r\n"

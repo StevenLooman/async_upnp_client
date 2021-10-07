@@ -27,7 +27,7 @@ from .common import (
 )
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 async def mock_start_listeners() -> AsyncGenerator:
     """Create listeners but don't call async_start()."""
     # pylint: disable=protected-access
@@ -42,6 +42,7 @@ async def mock_start_listeners() -> AsyncGenerator:
             target_ip=target_ip,
             loop=self.loop,
         )
+        # await self._advertisement_listener.async_start()
 
         self._search_listener = SsdpSearchListener(
             self._on_search,
@@ -50,13 +51,13 @@ async def mock_start_listeners() -> AsyncGenerator:
             target=self.target,
             timeout=self.search_timeout,
         )
+        # await self._search_listener.async_start()
 
     with patch.object(SsdpListener, "async_start", new=async_start) as mock:
         yield mock
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_advertisement_alive() -> None:
     """Test seeing a device through an ssdp:alive-advertisement."""
     # pylint: disable=protected-access
@@ -85,7 +86,6 @@ async def test_see_advertisement_alive() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_advertisement_byebye() -> None:
     """Test seeing a device through an ssdp:byebye-advertisement."""
     # pylint: disable=protected-access
@@ -129,7 +129,6 @@ async def test_see_advertisement_byebye() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_advertisement_update() -> None:
     """Test seeing a device through a ssdp:update-advertisement."""
     # pylint: disable=protected-access
@@ -160,7 +159,6 @@ async def test_see_advertisement_update() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_search() -> None:
     """Test seeing a device through an search."""
     # pylint: disable=protected-access
@@ -180,7 +178,6 @@ async def test_see_search() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("mock_start_listeners")
 async def test_see_search_then_alive() -> None:
     """Test seeing a device through a search, then a ssdp:update-advertisement."""
     # pylint: disable=protected-access
@@ -210,7 +207,6 @@ async def test_see_search_then_alive() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("mock_start_listeners")
 async def test_purge_devices() -> None:
     """Test if a device is purged when it times out given the value of the CACHE-CONTROL header."""
     # pylint: disable=protected-access
@@ -308,15 +304,6 @@ async def test_see_search_invalid_usn() -> None:
     headers["USN"] = "[fe80::aaaa:bbbb:cccc:dddd]:3540"
     del headers["_udn"]
     await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
-    assert ADVERTISEMENT_HEADERS_DEFAULT["USN"] in listener.devices
-
-    # See device for the second time through alive-advertisement, not triggering callback.
-    callback.reset_mock()
-    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
-    headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
     callback.assert_not_awaited()
-    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     await listener.async_stop()
