@@ -34,12 +34,23 @@ IGNORED_HEADERS = {
 
 def valid_search_headers(headers: SsdpHeaders) -> bool:
     """Validate if this search is usable."""
-    return "usn" in headers and "st" in headers
+    return (
+        "_udn" in headers
+        and "st" in headers
+        and "location" in headers
+        and headers.get("location", "").startswith("http")
+    )
 
 
 def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
     """Validate if this advertisement is usable."""
-    return "usn" in headers and "nt" in headers and "nts" in headers
+    return (
+        "_udn" in headers
+        and "nt" in headers
+        and "nts" in headers
+        and "location" in headers
+        and headers.get("location", "").startswith("http")
+    )
 
 
 def extract_valid_to(headers: SsdpHeaders) -> datetime:
@@ -151,6 +162,7 @@ class SsdpDeviceTracker:
     ]:
         """See a device through a search."""
         if not valid_search_headers(headers):
+            _LOGGER.debug("Received invalid search headers: %s", headers)
             return False, None, None, None
 
         udn = headers["_udn"]
@@ -191,6 +203,7 @@ class SsdpDeviceTracker:
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through an advertisement."""
         if not valid_advertisement_headers(headers):
+            _LOGGER.debug("Received invalid advertisement headers: %s", headers)
             return False, None, None
 
         udn = headers["_udn"]

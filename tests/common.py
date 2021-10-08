@@ -20,7 +20,7 @@ ADVERTISEMENT_HEADERS_DEFAULT = CaseInsensitiveDict(
         "_udn": "uuid:...",
     }
 )
-SEACH_REQUEST_LINE = "HTTP/1.1 200 OK"
+SEARCH_REQUEST_LINE = "HTTP/1.1 200 OK"
 SEARCH_HEADERS_DEFAULT = CaseInsensitiveDict(
     {
         "CACHE-CONTROL": "max-age=1800",
