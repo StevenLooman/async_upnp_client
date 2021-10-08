@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.22.8 (unreleased)
+0.22.8 (2021-10-08)
 
 - Log when async_http_request retries due to ServerDisconnectedError (@chishm)
 - More robustness when extracting UDN from USN in `ssdp.udn_from_headers`
