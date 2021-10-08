@@ -34,12 +34,23 @@ IGNORED_HEADERS = {
 
 def valid_search_headers(headers: SsdpHeaders) -> bool:
     """Validate if this search is usable."""
-    return "_udn" in headers and "st" in headers
+    return (
+        "_udn" in headers
+        and "st" in headers
+        and "location" in headers
+        and headers.get("location", "").startswith("http")
+    )
 
 
 def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
     """Validate if this advertisement is usable."""
-    return "_udn" in headers and "nt" in headers and "nts" in headers
+    return (
+        "_udn" in headers
+        and "nt" in headers
+        and "nts" in headers
+        and "location" in headers
+        and headers.get("location", "").startswith("http")
+    )
 
 
 def extract_valid_to(headers: SsdpHeaders) -> datetime:
