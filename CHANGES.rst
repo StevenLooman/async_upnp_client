@@ -3,6 +3,8 @@ Changes
 
 0.22.8 (unreleased)
 
+- Log when async_http_request retries due to ServerDisconnectedError (@chishm)
+
 
 0.22.7 (2021-10-08)
 
