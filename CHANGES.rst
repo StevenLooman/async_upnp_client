@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.7 (unreleased)
+
+
 0.22.6 (2021-10-08)
 
 - Bump python-didl-lite to 1.3.0
