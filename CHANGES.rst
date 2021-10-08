@@ -5,6 +5,7 @@ Changes
 
 - Ignore devices with an invalid location in `ssdp_listener.SsdpListener`
 - More robustness in IGD profile when parsing StatusInfo
+- Log warning instead of an error with subscription related problems in profile devices
 
 
 0.22.6 (2021-10-08)
