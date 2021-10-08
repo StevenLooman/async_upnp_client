@@ -4,6 +4,7 @@ Changes
 0.22.7 (unreleased)
 
 - Ignore devices with an invalid location in `ssdp_listener.SsdpListener`
+- More robustness in IGD profile when parsing StatusInfo
 
 
 0.22.6 (2021-10-08)

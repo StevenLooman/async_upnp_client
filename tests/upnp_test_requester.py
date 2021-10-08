@@ -109,9 +109,4 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         {},
         read_file("igd/WANIPConnection.xml"),
     ),
-    ("POST", "http://igd:1234/WANCommonInterfaceConfig"): (
-        200,
-        {},
-        read_file("igd/action_WANCIC_GetTotalBytesReceived.xml"),
-    ),
 }
