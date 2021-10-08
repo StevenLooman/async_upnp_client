@@ -4,6 +4,7 @@ Changes
 0.22.6 (unreleased)
 
 - Bump python-didl-lite to 1.3.0
+- More robustness in `ssdp_listener.SsdpListener` by requiring a parsed UDN (from USN) and location
 
 
 0.22.5 (2021-10-03)
