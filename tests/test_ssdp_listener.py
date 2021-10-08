@@ -288,7 +288,7 @@ def test_same_headers_differ_profile() -> None:
 
 @pytest.mark.asyncio
 async def test_see_search_invalid_usn() -> None:
-    """Test seeing a packet with an invalid USN."""
+    """Test invalid USN is ignored."""
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpListener(async_callback=callback)
@@ -311,7 +311,7 @@ async def test_see_search_invalid_usn() -> None:
 
 @pytest.mark.asyncio
 async def test_see_search_invalid_location() -> None:
-    """Test seeing a packet with an invalid USN."""
+    """Test headers with invalid location is ignored."""
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpListener(async_callback=callback)
@@ -322,6 +322,32 @@ async def test_see_search_invalid_location() -> None:
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     headers["location"] = "192.168.1.1"
+    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_not_awaited()
+
+    await listener.async_stop()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "location",
+    [
+        "http://127.0.0.1:1234/device.xml",
+        "http://[::1]:1234/device.xml",
+    ],
+)
+async def test_see_search_localhost_location(location: str) -> None:
+    """Test localhost location (127.0.0.1/[::1]) is ignored."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+
+    # See device for the first time through alive-advertisement.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    headers["location"] = location
     await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_not_awaited()
 

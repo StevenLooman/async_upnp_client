@@ -34,24 +34,33 @@ IGNORED_HEADERS = {
 
 def valid_search_headers(headers: SsdpHeaders) -> bool:
     """Validate if this search is usable."""
-    return (
-        "_udn" in headers
-        and "st" in headers
-        and "location" in headers
-        and headers["location"]
-        and headers["location"].startswith("http")
+    # pylint: disable=invalid-name
+    udn = headers.get("_udn")  # type: Optional[str]
+    st = headers.get("st")  # type: Optional[str]
+    location = headers.get("location", "")  # type: str
+    return bool(
+        udn
+        and st
+        and location
+        and location.startswith("http")
+        and not ("://127.0.0.1" in location or "://[::1]" in location)
     )
 
 
 def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
     """Validate if this advertisement is usable."""
-    return (
-        "_udn" in headers
-        and "nt" in headers
-        and "nts" in headers
-        and "location" in headers
-        and headers["location"]
-        and headers["location"].startswith("http")
+    # pylint: disable=invalid-name
+    udn = headers.get("_udn")  # type: Optional[str]
+    nt = headers.get("nt")  # type: Optional[str]
+    nts = headers.get("nts")  # type: Optional[str]
+    location = headers.get("location", "")  # type: str
+    return bool(
+        udn
+        and nt
+        and nts
+        and location
+        and location.startswith("http")
+        and not ("://127.0.0.1" in location or "://[::1]" in location)
     )
 
 
