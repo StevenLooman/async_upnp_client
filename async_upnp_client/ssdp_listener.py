@@ -38,7 +38,8 @@ def valid_search_headers(headers: SsdpHeaders) -> bool:
         "_udn" in headers
         and "st" in headers
         and "location" in headers
-        and headers.get("location", "").startswith("http")
+        and headers["location"]
+        and headers["location"].startswith("http")
     )
 
 
@@ -49,7 +50,8 @@ def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
         and "nt" in headers
         and "nts" in headers
         and "location" in headers
-        and headers.get("location", "").startswith("http")
+        and headers["location"]
+        and headers["location"].startswith("http")
     )
 
 

@@ -307,3 +307,22 @@ async def test_see_search_invalid_usn() -> None:
     callback.assert_not_awaited()
 
     await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_see_search_invalid_location() -> None:
+    """Test seeing a packet with an invalid USN."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+
+    # See device for the first time through alive-advertisement.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    headers["location"] = "192.168.1.1"
+    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_not_awaited()
+
+    await listener.async_stop()

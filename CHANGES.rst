@@ -3,6 +3,8 @@ Changes
 
 0.22.7 (unreleased)
 
+- Ignore devices with an invalid location in `ssdp_listener.SsdpListener`
+
 
 0.22.6 (2021-10-08)
 
