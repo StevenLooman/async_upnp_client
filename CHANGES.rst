@@ -3,6 +3,8 @@ Changes
 
 0.22.9 (unreleased)
 
+- CLI: Don't crash on upnperrors on upnp-client subscribe (@rytilahti)
+
 
 0.22.8 (2021-10-08)
 
