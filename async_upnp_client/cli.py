@@ -17,6 +17,7 @@ from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVar
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.const import SsdpHeaders
+from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL, AddressTupleVXType
@@ -269,7 +270,10 @@ async def subscribe(description_url: str, service_names: Any) -> None:
     # subscribe to services
     event_handler = server.event_handler
     for service in services:
-        await event_handler.async_subscribe(service)
+        try:
+            await event_handler.async_subscribe(service)
+        except UpnpResponseError as ex:
+            _LOGGER.error("Unable to subscribe to %s: %s", service, ex)
 
     # keep the webservice running
     while True:
