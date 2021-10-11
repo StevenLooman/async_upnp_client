@@ -108,8 +108,9 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
 
 def udn_from_headers(headers: SsdpHeaders) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
-    if "usn" in headers and "uuid:" in headers["usn"]:
-        parts = str(headers["usn"]).split("::")
+    usn = headers.get("usn", "")
+    if usn and usn.startswith("uuid:"):
+        parts = str(usn).split("::")
         return parts[0]
 
     return None

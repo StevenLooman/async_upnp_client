@@ -1,7 +1,29 @@
 Changes
 =======
 
-0.22.6 (unreleased)
+0.22.9 (unreleased)
+
+- CLI: Don't crash on upnperrors on upnp-client subscribe (@rytilahti)
+
+
+0.22.8 (2021-10-08)
+
+- Log when async_http_request retries due to ServerDisconnectedError (@chishm)
+- More robustness when extracting UDN from USN in `ssdp.udn_from_headers`
+
+
+0.22.7 (2021-10-08)
+
+- Ignore devices with an invalid location in `ssdp_listener.SsdpListener`
+- More robustness in IGD profile when parsing StatusInfo
+- Log warning instead of an error with subscription related problems in profile devices
+- Ignore devices with a location pointing to localhost in `ssdp_listener.SsdpListener`
+
+
+0.22.6 (2021-10-08)
+
+- Bump python-didl-lite to 1.3.0
+- More robustness in `ssdp_listener.SsdpListener` by requiring a parsed UDN (from USN) and location
 
 - DLNA/DMR Profile add support for (@chishm):
     - play mode (repeat and shuffle)

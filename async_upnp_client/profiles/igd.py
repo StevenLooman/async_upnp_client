@@ -405,7 +405,12 @@ class IgdDevice(UpnpProfileDevice):
         if not action:
             return None
 
-        result = await action.async_call()
+        try:
+            result = await action.async_call()
+        except ValueError:
+            _LOGGER.debug("Caught ValueError parsing results")
+            return None
+
         return StatusInfo(
             result["NewConnectionStatus"],
             result["NewLastConnectionError"],

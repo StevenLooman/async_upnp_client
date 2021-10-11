@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+            xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+   <s:Body>
+      <m:GetStatusInfoResponse xmlns:m="urn:schemas-upnp-org:service:WANIPConnection:1">
+         <NewConnectionStatus>Connected</NewConnectionStatus>
+         <NewLastConnectionError>ERROR_NONE</NewLastConnectionError>
+         <NewUptime>0 Days, 01:00:00</NewUptime>
+      </m:GetStatusInfoResponse>
+   </s:Body>
+</s:Envelope>
