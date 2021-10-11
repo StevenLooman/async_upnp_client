@@ -4,6 +4,12 @@ Changes
 0.22.9 (unreleased)
 
 - CLI: Don't crash on upnperrors on upnp-client subscribe (@rytilahti)
+- DLNA/DMR Profile add support for (@chishm):
+    - play mode (repeat and shuffle)
+    - setting of play_media metadata
+    - SetNextAVTransportURI
+    - setting arbitrary metadata for SetAVTransportURI
+    - playlist title
 
 
 0.22.8 (2021-10-08)
@@ -25,12 +31,6 @@ Changes
 - Bump python-didl-lite to 1.3.0
 - More robustness in `ssdp_listener.SsdpListener` by requiring a parsed UDN (from USN) and location
 
-- DLNA/DMR Profile add support for (@chishm):
-    - play mode (repeat and shuffle)
-    - setting of play_media metadata
-    - SetNextAVTransportURI
-    - setting arbitrary metadata for SetAVTransportURI
-    - playlist title
 
 0.22.5 (2021-10-03)
 
