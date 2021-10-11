@@ -888,3 +888,7 @@ class UpnpStateVariable(Generic[T]):
     def __str__(self) -> str:
         """To string."""
         return f"<UpnpStateVariable({self.name}, {self.data_type})>"
+
+    def __repr__(self) -> str:
+        """To repr."""
+        return f"<UpnpStateVariable({self.name}: {self.data_type} = {self.value!r})>"

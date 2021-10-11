@@ -6,9 +6,9 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import Enum, IntFlag
 from mimetypes import guess_type
-from typing import Any, List, Mapping, MutableMapping, Optional, Sequence
+from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set, Union
 from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
@@ -26,11 +26,30 @@ _LOGGER = logging.getLogger(__name__)
 DeviceState = Enum("DeviceState", "ON PLAYING PAUSED IDLE")
 
 
-TransportState = Enum(
-    "TransportState",
-    "STOPPED PLAYING TRANSITIONING PAUSED_PLAYBACK PAUSED_RECORDING RECORDING NO_MEDIA_PRESENT "
-    "VENDOR_DEFINED",
-)
+class TransportState(str, Enum):
+    """Allowed values for DLNA AV Transport TransportState variable."""
+
+    STOPPED = "STOPPED"
+    PLAYING = "PLAYING"
+    TRANSITIONING = "TRANSITIONING"
+    PAUSED_PLAYBACK = "PAUSED_PLAYBACK"
+    PAUSED_RECORDING = "PAUSED_RECORDING"
+    RECORDING = "RECORDING"
+    NO_MEDIA_PRESENT = "NO_MEDIA_PRESENT"
+    VENDOR_DEFINED = "VENDOR_DEFINED"
+
+
+class PlayMode(str, Enum):
+    """Allowed values for DLNA AV Transport CurrentPlayMode variable."""
+
+    NORMAL = "NORMAL"
+    SHUFFLE = "SHUFFLE"
+    REPEAT_ONE = "REPEAT_ONE"
+    REPEAT_ALL = "REPEAT_ALL"
+    RANDOM = "RANDOM"
+    DIRECT_1 = "DIRECT_1"
+    INTRO = "INTRO"
+    VENDOR_DEFINED = "VENDOR_DEFINED"
 
 
 class DlnaOrgOp(Enum):
@@ -55,7 +74,7 @@ class DlnaOrgPs(Enum):
     NORMAL = 1
 
 
-class DlnaOrgFlags(Enum):
+class DlnaOrgFlags(IntFlag):
     """
     DLNA.ORG_FLAGS flags.
 
@@ -205,6 +224,7 @@ class DmrDevice(UpnpProfileDevice):
     }
 
     _current_track_meta_data: Optional[didl_lite.DidlObject] = None
+    _av_transport_uri_meta_data: Optional[didl_lite.DidlObject] = None
 
     async def async_update(self, do_ping: bool = True) -> None:
         """Retrieve the latest data.
@@ -218,7 +238,10 @@ class DmrDevice(UpnpProfileDevice):
                 # CurrentTransportState is evented, so don't need to poll when subscribed
                 await self._async_poll_transport_info()
 
-            if self.state in (DeviceState.PLAYING, DeviceState.PAUSED):
+            if self.transport_state in (
+                TransportState.PLAYING,
+                TransportState.PAUSED_PLAYBACK,
+            ):
                 # playing something, get position info
                 # RelativeTimePosition is *never* evented, must always poll
                 await self._async_poll_position_info()
@@ -242,7 +265,8 @@ class DmrDevice(UpnpProfileDevice):
             changed.append(state_var)
 
         service = action.service
-        self._on_event(service, changed)
+        if changed:
+            self._on_event(service, changed)
 
     async def _async_poll_position_info(self) -> None:
         """Update position info."""
@@ -263,7 +287,8 @@ class DmrDevice(UpnpProfileDevice):
             changed.append(time_position)
 
         service = action.service
-        self._on_event(service, changed)
+        if changed:
+            self._on_event(service, changed)
 
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
@@ -278,6 +303,8 @@ class DmrDevice(UpnpProfileDevice):
             for state_variable in state_variables:
                 if state_variable.name == "CurrentTrackMetaData":
                     self._update_current_track_meta_data(state_variable)
+                if state_variable.name == "AVTransportURIMetaData":
+                    self._update_av_transport_uri_metadata(state_variable)
 
         if self.on_event:
             # pylint: disable=not-callable
@@ -311,12 +338,11 @@ class DmrDevice(UpnpProfileDevice):
             return None
 
         state_value = (state_var.value or "").strip().upper()
-        for member in TransportState:
-            if member.name == state_value:
-                return member
-
-        # Unknown state; return VENDOR_DEFINED.
-        return TransportState.VENDOR_DEFINED
+        try:
+            return TransportState[state_value]
+        except KeyError:
+            # Unknown state; return VENDOR_DEFINED.
+            return TransportState.VENDOR_DEFINED
 
     @property
     def _has_current_transport_actions(self) -> bool:
@@ -481,6 +507,38 @@ class DmrDevice(UpnpProfileDevice):
         await action.async_call(
             InstanceID=0, Channel="Master", DesiredMute=desired_mute
         )
+
+    # endregion
+
+    # region RC/Preset
+    @property
+    def has_presets(self) -> bool:
+        """Check if device has control for rendering presets."""
+        return (
+            self._state_variable("RC", "PresetNameList") is not None
+            and self._action("RC", "SelectPreset") is not None
+        )
+
+    @property
+    def preset_names(self) -> List[str]:
+        """List of valid preset names."""
+        state_var = self._state_variable("RC", "PresetNameList")
+        if state_var is None:
+            raise UpnpError("Missing StateVariable RC/PresetNameList")
+
+        value: Optional[str] = state_var.value
+        if value is None:
+            _LOGGER.debug("Got no value for PresetNameList")
+            return []
+
+        return [name.strip() for name in value.split(",")]
+
+    async def async_select_preset(self, preset_name: str) -> None:
+        """Send SelectPreset command."""
+        action = self._action("RC", "SelectPreset")
+        if not action:
+            raise UpnpError("Missing action RC/SelectPreset")
+        await action.async_call(InstanceID=0, PresetName=preset_name)
 
     # endregion
 
@@ -658,8 +716,20 @@ class DmrDevice(UpnpProfileDevice):
 
         return state_var.value
 
+    @property
+    def av_transport_uri(self) -> Optional[str]:
+        """Return the URI of the currently playing resource (playlist or track)."""
+        state_var = self._state_variable("AVT", "AVTransportURI")
+        if state_var is None:
+            raise UpnpError("Missing StateVariable AVT/AVTransportURI")
+
+        return state_var.value
+
     async def async_set_transport_uri(
-        self, media_url: str, media_title: str, meta_data: Optional[str] = None
+        self,
+        media_url: str,
+        media_title: str,
+        meta_data: Union[None, str, Mapping] = None,
     ) -> None:
         """Play a piece of media."""
         # escape media_url
@@ -677,13 +747,56 @@ class DmrDevice(UpnpProfileDevice):
         )
 
         # queue media
-        if not meta_data:
-            meta_data = await self.construct_play_media_metadata(media_url, media_title)
+        if not isinstance(meta_data, str):
+            meta_data = await self.construct_play_media_metadata(
+                media_url, media_title, meta_data=meta_data
+            )
         action = self._action("AVT", "SetAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetAVTransportURI")
         await action.async_call(
             InstanceID=0, CurrentURI=media_url, CurrentURIMetaData=meta_data
+        )
+
+    @property
+    def has_next_transport_uri(self) -> bool:
+        """Check if device has controls to set the next item for playback."""
+        return (
+            self._state_variable("AVT", "NextAVTransportURI") is not None
+            and self._action("AVT", "SetNextAVTransportURI") is not None
+        )
+
+    async def async_set_next_transport_uri(
+        self,
+        media_url: str,
+        media_title: str,
+        meta_data: Union[None, str, Mapping] = None,
+    ) -> None:
+        """Enqueue a piece of media for playing immediately after the current media."""
+        # escape media_url
+        _LOGGER.debug("Set transport uri: %s", media_url)
+        media_url_parts = urlparse(media_url)
+        media_url = urlunparse(
+            [
+                media_url_parts.scheme,
+                media_url_parts.netloc,
+                media_url_parts.path,
+                "",
+                quote_plus(media_url_parts.query),
+                "",
+            ]
+        )
+
+        # queue media
+        if not isinstance(meta_data, str):
+            meta_data = await self.construct_play_media_metadata(
+                media_url, media_title, meta_data=meta_data
+            )
+        action = self._action("AVT", "SetNextAVTransportURI")
+        if not action:
+            raise UpnpError("Missing action AVT/SetNextAVTransportURI")
+        await action.async_call(
+            InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data
         )
 
     async def async_wait_for_can_play(self, max_wait_time: int = 5) -> None:
@@ -725,16 +838,21 @@ class DmrDevice(UpnpProfileDevice):
         override_mime_type: Optional[str] = None,
         override_upnp_class: Optional[str] = None,
         override_dlna_features: Optional[str] = None,
+        meta_data: Optional[Mapping[str, Any]] = None,
     ) -> str:
         """
         Construct the metadata for play_media command.
 
         This queries the source and takes mime_type/dlna_features from it.
+
+        The base metadata is updated with key:values from meta_data, e.g.
+        `meta_data = {"artist": "Singer X"}`
         """
         # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
         mime_type = override_mime_type or ""
         upnp_class = override_upnp_class or ""
         dlna_features = override_dlna_features or "*"
+        meta_data = meta_data or {}
 
         if None in (override_mime_type, override_dlna_features):
             # do a HEAD/GET, to retrieve content-type/mime-type
@@ -749,7 +867,7 @@ class DmrDevice(UpnpProfileDevice):
                         not override_dlna_features
                         and "ContentFeatures.dlna.org" in headers
                     ):
-                        dlna_features = headers["contentFeatures.dlna.org"]
+                        dlna_features = headers["ContentFeatures.dlna.org"]
             except Exception:  # pylint: disable=broad-except
                 pass
 
@@ -793,17 +911,21 @@ class DmrDevice(UpnpProfileDevice):
         item = didl_item_type(
             id="0",
             parent_id="-1",
-            title=media_title,
+            title=media_title or meta_data.get("title"),
             restricted="false",
             resources=[resource],
         )
+
+        # Set any metadata properties that are supported by the DIDL item
+        for key, value in meta_data.items():
+            setattr(item, key, str(value))
 
         xml_string: bytes = didl_lite.to_xml_string(item)
         return xml_string.decode("utf-8")
 
     @property
     def has_get_protocol_info(self) -> bool:
-        """Check if device has Play controls."""
+        """Check if device can report its protocol info."""
         return self._action("CM", "GetProtocolInfo") is not None
 
     async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
@@ -831,6 +953,56 @@ class DmrDevice(UpnpProfileDevice):
             for entry in source
             if ":" in entry and entry.split(":")[2] == mime_type
         ]
+
+    # endregion
+
+    # region: AVT/PlayMode
+    @property
+    def has_play_mode(self) -> bool:
+        """Check if device supports setting the play mode."""
+        return (
+            self._state_variable("AVT", "CurrentPlayMode") is not None
+            and self._action("AVT", "SetPlayMode") is not None
+        )
+
+    @property
+    def valid_play_modes(self) -> Set[PlayMode]:
+        """Return a set of play modes that can be used."""
+        play_modes: Set[PlayMode] = set()
+        state_var = self._state_variable("AVT", "CurrentPlayMode")
+        if state_var is None:
+            return play_modes
+
+        for allowed_value in state_var.allowed_values:
+            try:
+                mode = PlayMode[allowed_value.strip().upper()]
+            except KeyError:
+                # Unknown mode, don't report it as valid
+                continue
+            play_modes.add(mode)
+
+        return play_modes
+
+    @property
+    def play_mode(self) -> Optional[PlayMode]:
+        """Get play mode."""
+        state_var = self._state_variable("AVT", "CurrentPlayMode")
+        if not state_var:
+            return None
+
+        state_value = (state_var.value or "").strip().upper()
+        try:
+            return PlayMode[state_value]
+        except KeyError:
+            # Unknown mode; return VENDOR_DEFINED.
+            return PlayMode.VENDOR_DEFINED
+
+    async def async_set_play_mode(self, mode: PlayMode) -> None:
+        """Send SetPlayMode command."""
+        action = self._action("AVT", "SetPlayMode")
+        if not action:
+            raise UpnpError("Missing action AVT/SetPlayMode")
+        await action.async_call(InstanceID=0, NewPlayMode=mode.name)
 
     # endregion
 
@@ -1013,5 +1185,46 @@ class DmrDevice(UpnpProfileDevice):
 
         return state_var.updated_at
 
+    # endregion
 
-# endregion
+    # region AVT/Playlist info
+    def _update_av_transport_uri_metadata(self, state_var: UpnpStateVariable) -> None:
+        """Update the cached parsed value of AVT/AVTransportURIMetaData."""
+        xml = state_var.value
+        if not xml or xml == "NOT_IMPLEMENTED":
+            self._av_transport_uri_meta_data = None
+            return
+
+        items = didl_lite.from_xml_string(xml, strict=False)
+        if not items:
+            self._av_transport_uri_meta_data = None
+            return
+
+        item = items[0]
+        if not isinstance(item, didl_lite.DidlObject):
+            self._av_transport_uri_meta_data = None
+            return
+
+        self._av_transport_uri_meta_data = item
+
+    def _get_av_transport_meta_data(self, attr: str) -> Optional[str]:
+        """Return an attribute of AVTransportURIMetaData if it exists, None otherwise."""
+        if not self._av_transport_uri_meta_data:
+            return None
+
+        if not hasattr(self._av_transport_uri_meta_data, attr):
+            return None
+
+        value: str = getattr(self._av_transport_uri_meta_data, attr)
+        return value
+
+    @property
+    def media_playlist_title(self) -> Optional[str]:
+        """Title of currently playing playlist, if a playlist is playing."""
+        if self.av_transport_uri == self.current_track_uri:
+            # A single track is playing, no playlist to report
+            return None
+
+        return self._get_av_transport_meta_data("title")
+
+    # endregion
