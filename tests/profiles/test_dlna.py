@@ -2,6 +2,7 @@
 
 from typing import List, Sequence
 
+import defusedxml.ElementTree
 from didl_lite import didl_lite
 import pytest
 
@@ -14,6 +15,19 @@ from async_upnp_client.profiles.dlna import (
 )
 
 from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester
+
+
+def assert_xml_equal(
+    left: defusedxml.ElementTree, right: defusedxml.ElementTree
+) -> None:
+    """Check two XML trees are equal."""
+    assert left.tag == right.tag
+    assert left.text == right.text
+    assert left.tail == right.tail
+    assert left.attrib == right.attrib
+    assert len(left) == len(right)
+    for left_child, right_child in zip(left, right):
+        assert_xml_equal(left_child, right_child)
 
 
 def test_parse_last_change_event() -> None:
@@ -131,11 +145,31 @@ async def test_construct_play_media_metadata_types() -> None:
     media_title = "Test music"
 
     # No server to supply DLNA headers
-    metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(media_url, media_title)
-    )[0]
+    metadata_xml = await profile.construct_play_media_metadata(media_url, media_title)
+    # Sanity check that didl_lite is giving expected XML
+    expected_xml = defusedxml.ElementTree.fromstring(
+        """<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/"
+ xmlns:dc="http://purl.org/dc/elements/1.1/"
+ xmlns:sec="http://www.sec.co.kr/"
+ xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
+<item id="0" parentID="-1" restricted="false">
+<dc:title>Test music</dc:title>
+<upnp:class>object.item</upnp:class>
+<res protocolInfo="http-get:*:application/octet-stream:*">
+http://dlna_dms:4321/object/file_1222
+</res>
+</item>
+</DIDL-Lite>""".replace(
+            "\n", ""
+        )
+    )
+    assert_xml_equal(defusedxml.ElementTree.fromstring(metadata_xml), expected_xml)
+
+    metadata = didl_lite.from_xml_string(metadata_xml)[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item"
+    assert metadata.res
+    assert metadata.res is metadata.resources
     assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:*"
 
