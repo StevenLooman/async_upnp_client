@@ -11,6 +11,8 @@ Changes
     - setting arbitrary metadata for SetAVTransportURI
     - playlist title
 - Ignore Cache-Control headers when comparing for change (@bdraco)
+- Fix Windows error: `[WinError 10022] An invalid argument was supplied`
+- Fix Windows error: `[WinError 10049] The requested address is not valid in its context`
 
 
 0.22.8 (2021-10-08)
