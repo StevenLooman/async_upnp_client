@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import sys
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport, DatagramTransport
 from ipaddress import IPv4Address
@@ -76,8 +77,10 @@ class SsdpAdvertisementListener:
         _LOGGER.debug("Start listening for advertisements")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, _, target = get_ssdp_socket(self.source_ip, self.target_ip)
-        sock.bind(target)
+        sock, source, target = get_ssdp_socket(self.source_ip, self.target_ip)
+        address = source if sys.platform == "win32" else target
+        _LOGGER.debug("Binding to address: %s", address)
+        sock.bind(address)
 
         # Create protocol and send discovery packet.
         await self._loop.create_datagram_endpoint(

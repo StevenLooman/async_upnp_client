@@ -242,7 +242,7 @@ def get_ssdp_socket(
             else:
                 _LOGGER.debug("Skipping setting multicast interface")
         else:
-            sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_IF, source_ip.packed)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_IF, source_ip.packed)
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
             sock.setsockopt(
                 socket.IPPROTO_IP,
