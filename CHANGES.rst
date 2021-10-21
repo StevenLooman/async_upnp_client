@@ -10,6 +10,7 @@ Changes
     - SetNextAVTransportURI
     - setting arbitrary metadata for SetAVTransportURI
     - playlist title
+- Ignore Cache-Control headers when comparing for change (@bdraco)
 
 
 0.22.8 (2021-10-08)
