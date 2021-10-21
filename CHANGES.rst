@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.22.9 (unreleased)
+0.22.9 (2021-10-21)
 
 - CLI: Don't crash on upnperrors on upnp-client subscribe (@rytilahti)
 - DLNA/DMR Profile add support for (@chishm):
