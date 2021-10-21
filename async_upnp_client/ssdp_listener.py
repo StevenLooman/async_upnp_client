@@ -28,6 +28,7 @@ CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)")
 DEFAULT_MAX_AGE = timedelta(seconds=900)
 IGNORED_HEADERS = {
     "date",
+    "cache-control",
     "server",
 }
 
