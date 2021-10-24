@@ -210,6 +210,14 @@ class DmrDevice(UpnpProfileDevice):
         "urn:schemas-upnp-org:device:MediaRenderer:3",
     ]
 
+    SERVICE_IDS = frozenset(
+        (
+            "urn:upnp-org:serviceId:AVTransport",
+            "urn:upnp-org:serviceId:ConnectionManager",
+            "urn:upnp-org:serviceId:RenderingControl",
+        )
+    )
+
     _SERVICE_TYPES = {
         "RC": {
             "urn:schemas-upnp-org:service:RenderingControl:3",
