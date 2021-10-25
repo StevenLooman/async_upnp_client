@@ -5,6 +5,7 @@ Changes
 
 - Fix byebye advertisements not propagated because missing location (@chishm)
 - Require specific services for profile devices (@chishm)
+- Bump `python-didl-lite` to 1.3.1
 
 
 0.22.9 (2021-10-21)
