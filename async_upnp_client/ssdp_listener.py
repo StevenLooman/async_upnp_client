@@ -49,7 +49,7 @@ def valid_search_headers(headers: SsdpHeaders) -> bool:
 
 
 def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
-    """Validate if this advertisement is usable."""
+    """Validate if this advertisement is usable for connecting to a device."""
     # pylint: disable=invalid-name
     udn = headers.get("_udn")  # type: Optional[str]
     nt = headers.get("nt")  # type: Optional[str]
@@ -63,6 +63,15 @@ def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
         and location.startswith("http")
         and not ("://127.0.0.1" in location or "://[::1]" in location)
     )
+
+
+def valid_byebye_headers(headers: SsdpHeaders) -> bool:
+    """Validate if this advertisement has required headers for byebye."""
+    # pylint: disable=invalid-name
+    udn = headers.get("_udn")  # type: Optional[str]
+    nt = headers.get("nt")  # type: Optional[str]
+    nts = headers.get("nts")  # type: Optional[str]
+    return bool(udn and nt and nts)
 
 
 def extract_valid_to(headers: SsdpHeaders) -> datetime:
@@ -289,7 +298,7 @@ class SsdpDeviceTracker:
         self, headers: SsdpHeaders
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """Remove a device through an advertisement."""
-        if not valid_advertisement_headers(headers):
+        if not valid_byebye_headers(headers):
             return False, None, None
 
         udn = udn_from_headers(headers)
