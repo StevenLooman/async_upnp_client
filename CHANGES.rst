@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.22.11 (unreleased)
+
+
 0.22.10 (2021-10-25)
 
 - Fix byebye advertisements not propagated because missing location (@chishm)
