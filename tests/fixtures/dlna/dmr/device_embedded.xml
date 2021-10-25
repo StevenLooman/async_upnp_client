@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0" xmlns:pnpx="http://schemas.microsoft.com/windows/pnpx/2005/11" xmlns:df="http://schemas.microsoft.com/windows/2008/09/devicefoundation" xmlns:sec="http://www.sec.co.kr/dlna">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>RootDevice:1</deviceType>
+    <friendlyName>Dummy Root Device</friendlyName>
+    <manufacturer>Steven</manufacturer>
+    <modelDescription>Dummy TV Root device</modelDescription>
+    <modelName>DummyRoot v1</modelName>
+    <UDN>uuid:00000000-0000-0000-0000-000000000000</UDN>
+    <iconList>
+        <icon>
+            <mimetype>image/jpeg</mimetype>
+            <width>48</width>
+            <height>48</height>
+            <depth>24</depth>
+            <url>/device_icon_48.jpg</url>
+        </icon>
+        <icon>
+            <mimetype>image/jpeg</mimetype>
+            <width>120</width>
+            <height>120</height>
+            <depth>24</depth>
+            <url>/device_icon_120.jpg</url>
+        </icon>
+        <icon>
+            <mimetype>image/png</mimetype>
+            <width>48</width>
+            <height>48</height>
+            <depth>24</depth>
+            <url>/device_icon_48.png</url>
+        </icon>
+        <icon>
+            <mimetype>image/png</mimetype>
+            <width>120</width>
+            <height>120</height>
+            <depth>24</depth>
+            <url>/device_icon_120.png</url>
+        </icon>
+    </iconList>
+    <serviceList/>
+    <deviceList>
+      <device>
+        <deviceType>urn:schemas-upnp-org:device:MediaRenderer:1</deviceType>
+        <friendlyName>Dummy TV</friendlyName>
+        <manufacturer>Steven</manufacturer>
+        <modelDescription>Dummy TV Root device</modelDescription>
+        <modelName>DummyTV v1</modelName>
+        <UDN>uuid:00000000-0000-0000-0000-000000000001</UDN>
+        <serviceList>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:RenderingControl:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:RenderingControl</serviceId>
+            <controlURL>/upnp/control/RenderingControl1</controlURL>
+            <eventSubURL>/upnp/event/RenderingControl1</eventSubURL>
+            <SCPDURL>/RenderingControl_1.xml</SCPDURL>
+          </service>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
+            <controlURL>/upnp/control/ConnectionManager1</controlURL>
+            <eventSubURL>/upnp/event/ConnectionManager1</eventSubURL>
+            <SCPDURL>/ConnectionManager_1.xml</SCPDURL>
+          </service>
+          <service>
+            <serviceType>urn:schemas-upnp-org:service:AVTransport:1</serviceType>
+            <serviceId>urn:upnp-org:serviceId:AVTransport</serviceId>
+            <controlURL>/upnp/control/AVTransport1</controlURL>
+            <eventSubURL>/upnp/event/AVTransport1</eventSubURL>
+            <SCPDURL>/AVTransport_1.xml</SCPDURL>
+          </service>
+        </serviceList>
+      </device>
+    </deviceList>
+  </device>
+</root>

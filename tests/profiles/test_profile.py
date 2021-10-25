@@ -11,6 +11,7 @@ import pytest
 from async_upnp_client import UpnpEventHandler, UpnpFactory
 from async_upnp_client.exceptions import UpnpCommunicationError, UpnpConnectionError
 from async_upnp_client.profiles.dlna import DmrDevice
+from async_upnp_client.profiles.igd import IgdDevice
 
 from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester
 
@@ -54,6 +55,30 @@ class TestUpnpProfileDevice:
         profile = DmrDevice(device, event_handler=event_handler)
 
         assert profile.icon == "http://dlna_dmr:1234/device_icon_120.png"
+
+    @pytest.mark.asyncio
+    async def test_is_profile_device(self) -> None:
+        """Test is_profile_device works for root and embedded devices."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        embedded = await factory.async_create_device(
+            "http://dlna_dmr:1234/device_embedded.xml"
+        )
+        no_services = await factory.async_create_device(
+            "http://dlna_dmr:1234/device_incomplete.xml"
+        )
+        igd_device = await factory.async_create_device("http://igd:1234/device.xml")
+
+        assert DmrDevice.is_profile_device(device) is True
+        assert DmrDevice.is_profile_device(embedded) is True
+        assert DmrDevice.is_profile_device(no_services) is False
+        assert DmrDevice.is_profile_device(igd_device) is False
+
+        assert IgdDevice.is_profile_device(device) is False
+        assert IgdDevice.is_profile_device(embedded) is False
+        assert IgdDevice.is_profile_device(no_services) is False
+        assert IgdDevice.is_profile_device(igd_device) is True
 
     @pytest.mark.asyncio
     async def test_subscribe_manual_resubscribe(self) -> None:

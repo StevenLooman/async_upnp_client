@@ -6,7 +6,7 @@ import logging
 import time
 from datetime import timedelta
 from ipaddress import IPv4Address
-from typing import Dict, List, Optional, Sequence, Set
+from typing import Dict, FrozenSet, List, Optional, Sequence, Set
 
 from async_upnp_client.client import (
     EventCallbackType,
@@ -42,10 +42,13 @@ class UpnpProfileDevice:
     """
     Base class for UpnpProfileDevices.
 
-    Override _SERVICE_TYPES for aliases.
+    Override _SERVICE_TYPES for aliases. Override SERVICE_IDS for required
+    service_id values.
     """
 
     DEVICE_TYPES: List[str] = []
+
+    SERVICE_IDS: FrozenSet[str] = frozenset()
 
     _SERVICE_TYPES: Dict[str, Set[str]] = {}
 
@@ -81,10 +84,23 @@ class UpnpProfileDevice:
 
     @classmethod
     def is_profile_device(cls, device: UpnpDevice) -> bool:
-        """Test if device is a profile device."""
+        """Check for device's support of the profile defined in this (sub)class.
+
+        The device must be (or have an embedded device) that matches the class
+        device type, and it must provide all services that are defined by this
+        class.
+        """
         try:
-            find_device_of_type(device, cls.DEVICE_TYPES)
+            profile_device = find_device_of_type(device, cls.DEVICE_TYPES)
         except UpnpError:
+            return False
+
+        # Check that every service required by the subclass is declared by the device
+        device_service_ids = {
+            service.service_id for service in profile_device.services.values()
+        }
+
+        if not cls.SERVICE_IDS.issubset(device_service_ids):
             return False
 
         return True

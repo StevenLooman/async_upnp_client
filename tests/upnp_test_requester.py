@@ -62,10 +62,25 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         {},
         read_file("dlna/dmr/device.xml"),
     ),
+    ("GET", "http://dlna_dmr:1234/device_embedded.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/device_embedded.xml"),
+    ),
+    ("GET", "http://dlna_dmr:1234/device_incomplete.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/device_incomplete.xml"),
+    ),
     ("GET", "http://dlna_dmr:1234/RenderingControl_1.xml"): (
         200,
         {},
         read_file("dlna/dmr/RenderingControl_1.xml"),
+    ),
+    ("GET", "http://dlna_dmr:1234/ConnectionManager_1.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/ConnectionManager_1.xml"),
     ),
     ("GET", "http://dlna_dmr:1234/AVTransport_1.xml"): (
         200,
