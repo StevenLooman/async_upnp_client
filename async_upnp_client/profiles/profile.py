@@ -17,7 +17,11 @@ from async_upnp_client.client import (
 )
 from async_upnp_client.const import SsdpHeaders
 from async_upnp_client.event_handler import UpnpEventHandler
-from async_upnp_client.exceptions import UpnpConnectionError, UpnpError
+from async_upnp_client.exceptions import (
+    UpnpConnectionError,
+    UpnpError,
+    UpnpResponseError,
+)
 from async_upnp_client.search import async_search
 from async_upnp_client.ssdp import SSDP_MX
 
@@ -322,6 +326,8 @@ class UpnpProfileDevice:
             empty state_variables list.
         :return: time until this next needs to be called, or None if manual
             resubscription is not needed.
+        :raise UpnpResponseError: Device rejected subscription request.
+            State variables will need to be polled.
         :raise UpnpError or subclass: Failed to subscribe to all interesting
             services.
         """
@@ -345,7 +351,10 @@ class UpnpProfileDevice:
                     )
                     self._subscriptions[new_sid] = now + timeout.total_seconds()
         except UpnpError as err:
-            _LOGGER.warning("Failed subscribing to service: %r", err)
+            if isinstance(err, UpnpResponseError) and not self._subscriptions:
+                _LOGGER.info("Device rejected subscription request: %r", err)
+            else:
+                _LOGGER.warning("Failed subscribing to service: %r", err)
             # Unsubscribe anything that was subscribed, no half-done subscriptions
             try:
                 await self.async_unsubscribe_services()

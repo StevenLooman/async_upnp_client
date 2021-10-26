@@ -9,7 +9,11 @@ from unittest.mock import Mock
 import pytest
 
 from async_upnp_client import UpnpEventHandler, UpnpFactory
-from async_upnp_client.exceptions import UpnpCommunicationError, UpnpConnectionError
+from async_upnp_client.exceptions import (
+    UpnpCommunicationError,
+    UpnpConnectionError,
+    UpnpResponseError,
+)
 from async_upnp_client.profiles.dlna import DmrDevice
 from async_upnp_client.profiles.igd import IgdDevice
 
@@ -146,6 +150,7 @@ class TestUpnpProfileDevice:
         # Test subscription
         timeout = await profile.async_subscribe_services(auto_resubscribe=True)
         assert timeout is None
+        assert profile.is_subscribed is True
 
         # Check subscriptions are correct
         assert set(profile._subscriptions.keys()) == {
@@ -181,6 +186,7 @@ class TestUpnpProfileDevice:
         assert isinstance(profile._resubscriber_task, asyncio.Task)
         assert not profile._resubscriber_task.cancelled()
         assert not profile._resubscriber_task.done()
+        assert profile.is_subscribed is True
 
         # Unsubscribe
         await profile.async_unsubscribe_services()
@@ -188,6 +194,7 @@ class TestUpnpProfileDevice:
         # Task and subscriptions should be gone
         assert profile._resubscriber_task is None
         assert profile._subscriptions == {}
+        assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
     async def test_subscribe_fail(self) -> None:
@@ -208,6 +215,28 @@ class TestUpnpProfileDevice:
         # Subscriptions and resubscribe task should not exist
         assert profile._subscriptions == {}
         assert profile._resubscriber_task is None
+        assert profile.is_subscribed is False
+
+    @pytest.mark.asyncio
+    async def test_subscribe_rejected(self) -> None:
+        """Test subscribing rejected by device."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        profile = DmrDevice(device, event_handler=event_handler)
+
+        # All requests give a response error
+        requester.exceptions.append(UpnpResponseError(501))
+        requester.exceptions.append(UpnpResponseError(501))
+
+        with pytest.raises(UpnpResponseError):
+            await profile.async_subscribe_services(True)
+
+        # Subscriptions and resubscribe task should not exist
+        assert profile._subscriptions == {}
+        assert profile._resubscriber_task is None
+        assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
     async def test_auto_resubscribe_fail(self) -> None:
@@ -241,10 +270,15 @@ class TestUpnpProfileDevice:
         on_event_mock.assert_called_once_with(
             device.services["urn:schemas-upnp-org:service:RenderingControl:1"], []
         )
+        # Device will still be subscribed because a notification was sent via
+        # on_event instead of raising an exception.
+        assert profile.is_subscribed is True
 
         # Unsubscribe should still work
         await profile.async_unsubscribe_services()
+        assert profile.is_subscribed is False
 
         # Task and subscriptions should be gone
         assert profile._resubscriber_task is None
         assert profile._subscriptions == {}
+        assert profile.is_subscribed is False
