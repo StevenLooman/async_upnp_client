@@ -6,7 +6,7 @@ import logging
 import time
 from datetime import timedelta
 from ipaddress import IPv4Address
-from typing import Dict, FrozenSet, List, Optional, Sequence, Set
+from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Union
 
 from async_upnp_client.client import (
     EventCallbackType,
@@ -14,6 +14,7 @@ from async_upnp_client.client import (
     UpnpDevice,
     UpnpService,
     UpnpStateVariable,
+    UpnpValueError,
 )
 from async_upnp_client.const import SsdpHeaders
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -402,6 +403,45 @@ class UpnpProfileDevice:
     def is_subscribed(self) -> bool:
         """Get current service subscription state."""
         return bool(self._subscriptions)
+
+    async def _async_poll_state_variables(
+        self, service_name: str, action_names: Union[str, Sequence[str]], **in_args: Any
+    ) -> None:
+        """Update state variables by polling actions that return their values.
+
+        Assumes that the actions's relatedStateVariable names the correct state
+        variable for updating.
+        """
+        service = self._service(service_name)
+        if not service:
+            _LOGGER.debug("Can't poll missing service %s", service_name)
+            return
+
+        if isinstance(action_names, str):
+            action_names = [action_names]
+
+        changed_state_variables: List[UpnpStateVariable] = []
+
+        for action_name in action_names:
+            action = service.action(action_name)
+            result = await action.async_call(**in_args)
+
+            for arg in action.arguments:
+                if arg.direction != "out":
+                    continue
+                if arg.name not in result:
+                    continue
+                if arg.related_state_variable.value == arg.value:
+                    continue
+
+                try:
+                    arg.related_state_variable.value = arg.value
+                except UpnpValueError:
+                    continue
+                changed_state_variables.append(arg.related_state_variable)
+
+        if changed_state_variables:
+            self._on_event(service, changed_state_variables)
 
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
