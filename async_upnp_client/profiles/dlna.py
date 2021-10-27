@@ -244,7 +244,9 @@ class DmrDevice(UpnpProfileDevice):
         if avt_service:
             if not self.is_subscribed or do_ping:
                 # CurrentTransportState is evented, so don't need to poll when subscribed
-                await self._async_poll_transport_info()
+                await self._async_poll_state_variables(
+                    "AVT", "GetTransportInfo", InstanceID=0
+                )
 
             if self.transport_state in (
                 TransportState.PLAYING,
@@ -252,51 +254,21 @@ class DmrDevice(UpnpProfileDevice):
             ):
                 # playing something, get position info
                 # RelativeTimePosition is *never* evented, must always poll
-                await self._async_poll_position_info()
+                await self._async_poll_state_variables(
+                    "AVT", "GetPositionInfo", InstanceID=0
+                )
+            if not self.is_subscribed:
+                # Events won't be sent, so poll all state variables
+                await self._async_poll_state_variables(
+                    "AVT",
+                    ["GetMediaInfo", "GetDeviceCapabilities", "GetTransportSettings"],
+                    InstanceID=0,
+                )
+                await self._async_poll_state_variables(
+                    "RC", ["GetMute", "GetVolume"], InstanceID=0, Channel="Master"
+                )
         elif do_ping:
             await self.profile_device.async_ping()
-
-    async def _async_poll_transport_info(self) -> None:
-        """Update transport info from device."""
-        action = self._action("AVT", "GetTransportInfo")
-        if not action:
-            return
-        result = await action.async_call(InstanceID=0)
-
-        # set/update state_variable 'TransportState'
-        changed = []
-        state_var = self._state_variable("AVT", "TransportState")
-        if not state_var:
-            return
-        if state_var.value != result["CurrentTransportState"]:
-            state_var.value = result["CurrentTransportState"]
-            changed.append(state_var)
-
-        service = action.service
-        if changed:
-            self._on_event(service, changed)
-
-    async def _async_poll_position_info(self) -> None:
-        """Update position info."""
-        action = self._action("AVT", "GetPositionInfo")
-        if not action:
-            return
-        result = await action.async_call(InstanceID=0)
-
-        changed = []
-        track_duration = self._state_variable("AVT", "CurrentTrackDuration")
-        if track_duration and track_duration.value != result["TrackDuration"]:
-            track_duration.value = result["TrackDuration"]
-            changed.append(track_duration)
-
-        time_position = self._state_variable("AVT", "RelativeTimePosition")
-        if time_position and time_position.value != result["RelTime"]:
-            time_position.value = result["RelTime"]
-            changed.append(time_position)
-
-        service = action.service
-        if changed:
-            self._on_event(service, changed)
 
     def _on_event(
         self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
