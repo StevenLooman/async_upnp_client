@@ -3,6 +3,8 @@ Changes
 
 0.22.11 (unreleased)
 
+- Poll state variables when event subscriptions are rejected (@chishm)
+
 
 0.22.10 (2021-10-25)
 
