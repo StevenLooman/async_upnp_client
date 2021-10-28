@@ -1,4 +1,4 @@
-"""Unit tests for the DLNA profile."""
+"""Unit tests for the DLNA DMR profile."""
 
 from typing import List, Sequence
 
