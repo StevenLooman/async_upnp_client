@@ -1,0 +1,64 @@
+<?xml version="1.0"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+  <specVersion>
+    <major>1</major>
+    <minor>0</minor>
+  </specVersion>
+  <device>
+    <deviceType>urn:schemas-upnp-org:device:MediaServer:1</deviceType>
+    <friendlyName>Dummy server</friendlyName>
+    <manufacturer>Steven</manufacturer>
+    <modelDescription>Dummy media server</modelDescription>
+    <modelName>Dummy Server</modelName>
+    <modelNumber>1.3.0</modelNumber>
+    <UDN>uuid:11111111-0000-0000-0000-000000000000</UDN>
+    <dlna:X_DLNADOC xmlns:dlna="urn:schemas-dlna-org:device-1-0">DMS-1.50</dlna:X_DLNADOC>
+    <presentationURL>/</presentationURL>
+    <iconList>
+      <icon>
+        <mimetype>image/png</mimetype>
+        <width>48</width>
+        <height>48</height>
+        <depth>24</depth>
+        <url>/icons/sm.png</url>
+      </icon>
+      <icon>
+        <mimetype>image/png</mimetype>
+        <width>120</width>
+        <height>120</height>
+        <depth>24</depth>
+        <url>/icons/lrg.png</url>
+      </icon>
+      <icon>
+        <mimetype>image/jpeg</mimetype>
+        <width>48</width>
+        <height>48</height>
+        <depth>24</depth>
+        <url>/icons/sm.jpg</url>
+      </icon>
+      <icon>
+        <mimetype>image/jpeg</mimetype>
+        <width>120</width>
+        <height>120</height>
+        <depth>24</depth>
+        <url>/icons/lrg.jpg</url>
+      </icon>
+    </iconList>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:ContentDirectory:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:ContentDirectory</serviceId>
+        <controlURL>/upnp/control/ContentDir</controlURL>
+        <eventSubURL>/upnp/event/ContentDir</eventSubURL>
+        <SCPDURL>/ContentDirectory_1.xml</SCPDURL>
+      </service>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:ConnectionManager:1</serviceType>
+        <serviceId>urn:upnp-org:serviceId:ConnectionManager</serviceId>
+        <controlURL>/upnp/control/ConnectionMgr</controlURL>
+        <eventSubURL>/upnp/event/ConnectionMgr</eventSubURL>
+        <SCPDURL>/ConnectionManager_1.xml</SCPDURL>
+      </service>
+    </serviceList>
+  </device>
+</root>

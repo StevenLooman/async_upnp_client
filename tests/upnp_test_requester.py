@@ -117,6 +117,42 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         {"sid": "uuid:dummy-avt1"},
         "",
     ),
+    # DLNA/DMS
+    ("GET", "http://dlna_dms:1234/device.xml"): (
+        200,
+        {},
+        read_file("dlna/dms/device.xml"),
+    ),
+    ("GET", "http://dlna_dms:1234/ConnectionManager_1.xml"): (
+        200,
+        {},
+        read_file("dlna/dms/ConnectionManager_1.xml"),
+    ),
+    ("GET", "http://dlna_dms:1234/ContentDirectory_1.xml"): (
+        200,
+        {},
+        read_file("dlna/dms/ContentDirectory_1.xml"),
+    ),
+    ("SUBSCRIBE", "http://dlna_dms:1234/upnp/event/ConnectionManager1"): (
+        200,
+        {"sid": "uuid:dummy-cm1", "timeout": "Second-150"},
+        "",
+    ),
+    ("SUBSCRIBE", "http://dlna_dms:1234/upnp/event/ContentDirectory1"): (
+        200,
+        {"sid": "uuid:dummy-cd1", "timeout": "Second-150"},
+        "",
+    ),
+    ("UNSUBSCRIBE", "http://dlna_dms:1234/upnp/event/ConnectionManager1"): (
+        200,
+        {"sid": "uuid:dummy-cm1"},
+        "",
+    ),
+    ("UNSUBSCRIBE", "http://dlna_dms:1234/upnp/event/ContentDirectory1"): (
+        200,
+        {"sid": "uuid:dummy-cd1"},
+        "",
+    ),
     # IGD
     ("GET", "http://igd:1234/device.xml"): (200, {}, read_file("igd/device.xml")),
     ("GET", "http://igd:1234/Layer3Forwarding.xml"): (
