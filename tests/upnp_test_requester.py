@@ -87,6 +87,11 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         {},
         read_file("dlna/dmr/AVTransport_1.xml"),
     ),
+    ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/ConnectionManager1"): (
+        200,
+        {"sid": "uuid:dummy-cm1", "timeout": "Second-175"},
+        "",
+    ),
     ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1"): (
         200,
         {"sid": "uuid:dummy", "timeout": "Second-300"},
@@ -95,6 +100,11 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
     ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1"): (
         200,
         {"sid": "uuid:dummy-avt1", "timeout": "Second-150"},
+        "",
+    ),
+    ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/ConnectionManager1"): (
+        200,
+        {"sid": "uuid:dummy-cm1"},
         "",
     ),
     ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1"): (

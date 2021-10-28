@@ -8,7 +8,16 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum, IntFlag
 from mimetypes import guess_type
-from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set, Union
+from typing import (
+    Any,
+    List,
+    Mapping,
+    MutableMapping,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+)
 from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
@@ -199,7 +208,65 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     service.notify_changed_state_variables(changes_0)
 
 
-class DmrDevice(UpnpProfileDevice):
+class ConnectionManagerMixin(UpnpProfileDevice):
+    """Mix-in to support ConnectionManager actions and state variables."""
+
+    _SERVICE_TYPES = {
+        "CM": {
+            "urn:schemas-upnp-org:service:ConnectionManager:3",
+            "urn:schemas-upnp-org:service:ConnectionManager:2",
+            "urn:schemas-upnp-org:service:ConnectionManager:1",
+        },
+    }
+
+    __did_first_update: bool = False
+
+    async def async_update(self) -> None:
+        """Retrieve latest data."""
+        if not self.__did_first_update:
+            await self._async_poll_state_variables("CM", "GetProtocolInfo")
+            self.__did_first_update = True
+
+    # region CM
+    @property
+    def has_get_protocol_info(self) -> bool:
+        """Check if device can report its protocol info."""
+        return self._action("CM", "GetProtocolInfo") is not None
+
+    async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
+        """Get protocol info."""
+        action = self._action("CM", "GetProtocolInfo")
+        if not action:
+            return {"source": [], "sink": []}
+
+        protocol_info = await action.async_call()
+        return {
+            "source": protocol_info["Source"].split(","),
+            "sink": protocol_info["Sink"].split(","),
+        }
+
+    @property
+    def source_protocol_info(self) -> List[str]:
+        """Supported source protocols."""
+        state_var = self._state_variable("CM", "SourceProtocolInfo")
+        if state_var is None or not state_var.value:
+            return []
+
+        return [info.strip() for info in state_var.value.split(",")]
+
+    @property
+    def sink_protocol_info(self) -> List[str]:
+        """Supported sink protocols."""
+        state_var = self._state_variable("CM", "SinkProtocolInfo")
+        if state_var is None or not state_var.value:
+            return []
+
+        return [info.strip() for info in state_var.value.split(",")]
+
+    # endregion
+
+
+class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     """Representation of a DLNA DMR device."""
 
     # pylint: disable=too-many-public-methods
@@ -229,6 +296,7 @@ class DmrDevice(UpnpProfileDevice):
             "urn:schemas-upnp-org:service:AVTransport:2",
             "urn:schemas-upnp-org:service:AVTransport:1",
         },
+        **ConnectionManagerMixin._SERVICE_TYPES,
     }
 
     _current_track_meta_data: Optional[didl_lite.DidlObject] = None
@@ -239,6 +307,9 @@ class DmrDevice(UpnpProfileDevice):
 
         :param do_ping: Poll device to check if it is available (online).
         """
+        # pylint: disable=arguments-differ
+        await super().async_update()
+
         # call GetTransportInfo/GetPositionInfo regularly
         avt_service = self._service("AVT")
         if avt_service:
@@ -903,34 +974,15 @@ class DmrDevice(UpnpProfileDevice):
         xml_string: bytes = didl_lite.to_xml_string(item)
         return xml_string.decode("utf-8")
 
-    @property
-    def has_get_protocol_info(self) -> bool:
-        """Check if device can report its protocol info."""
-        return self._action("CM", "GetProtocolInfo") is not None
-
-    async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
-        """Get protocol info."""
-        action = self._action("CM", "GetProtocolInfo")
-        if not action:
-            return {"source": [], "sink": []}
-
-        protocol_info = await action.async_call()
-        return {
-            "source": protocol_info["Source"].split(","),
-            "sink": protocol_info["Sink"].split(","),
-        }
-
     async def _async_get_sink_protocol_info_for_mime_type(
         self, mime_type: str
     ) -> List[List[str]]:
         """Get protocol_info for a specific mime type."""
-        protocol_info = await self.async_get_protocol_info()
-        source = protocol_info["source"]
         # example entry:
         # http-get:*:video/mpeg:DLNA.ORG_PN=MPEG_TS_HD_KO_ISO;DLNA.ORG_FLAGS=ED100000000000000000...
         return [
             entry.split(":")
-            for entry in source
+            for entry in self.source_protocol_info
             if ":" in entry and entry.split(":")[2] == mime_type
         ]
 
