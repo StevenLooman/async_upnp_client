@@ -20,7 +20,13 @@ from async_upnp_client.const import (
     UniqueDeviceName,
 )
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp import SSDP_IP_V4, SSDP_MX, SSDP_PORT, udn_from_headers
+from async_upnp_client.ssdp import (
+    SSDP_IP_V4,
+    SSDP_IP_V6,
+    SSDP_MX,
+    SSDP_PORT,
+    udn_from_headers,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
@@ -370,7 +376,7 @@ class SsdpListener:
         self.async_callback = async_callback
         self.source_ip = source_ip
         self.target: AddressTupleVXType = target or (
-            SSDP_IP_V4,
+            SSDP_IP_V4 if source_ip and source_ip.version == 4 else SSDP_IP_V6,
             SSDP_PORT,
         )
         self.loop = loop
