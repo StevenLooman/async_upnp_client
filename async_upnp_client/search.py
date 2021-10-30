@@ -111,8 +111,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
             self._target_host = ""
 
         sock.bind(source)
-        loop = self.loop or asyncio.get_event_loop()
 
+        loop = self.loop or asyncio.get_event_loop()
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 loop, on_connect=self._async_on_connect, on_data=self._async_on_data

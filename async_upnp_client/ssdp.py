@@ -167,7 +167,7 @@ class SsdpProtocol(BaseProtocol):
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
-        _LOGGER.debug("Connection made, transport: %s", self.transport)
+        _LOGGER.debug("Connection made, transport: %s", transport)
         self.transport = cast(DatagramTransport, transport)
 
         if self.on_connect:
