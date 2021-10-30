@@ -4,6 +4,7 @@ Changes
 0.22.11 (unreleased)
 
 - Poll state variables when event subscriptions are rejected (@chishm)
+- Fix error in cli if target_port is absent in search command
 
 
 0.22.10 (2021-10-25)

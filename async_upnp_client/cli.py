@@ -296,7 +296,7 @@ async def search(search_args: Any) -> None:
     if target_ip:
         target: Optional[AddressTupleVXType] = (
             target_ip,
-            int(target_port) or SSDP_PORT,
+            int(target_port) if target_port else SSDP_PORT,
         )
     else:
         target = None
