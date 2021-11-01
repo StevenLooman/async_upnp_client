@@ -8,12 +8,13 @@ from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Awaitable, Callable, Optional, Tuple, cast
+from typing import Awaitable, Callable, Optional, Tuple, Union, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_parser import HeadersParser
 
 from async_upnp_client.const import (
+    AddressTupleV4Type,
     AddressTupleV6Type,
     AddressTupleVXType,
     IPvXAddress,
@@ -37,9 +38,151 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
+def ip_address_from_address_tuple(address_tuple: AddressTupleVXType) -> IPvXAddress:
+    """Get IPvXAddress from AddressTupleVXType."""
+    if len(address_tuple) == 4:
+        address_tuple = cast(AddressTupleV6Type, address_tuple)
+        min_ver = (
+            3,
+            9,
+        )  # Python >=3.9 supports IPv6Address with scope_id
+        if sys.version_info >= min_ver and address_tuple[3]:
+            return IPv6Address(f"{address_tuple[0]}%{address_tuple[3]}")
+        return IPv6Address(address_tuple[0])
+
+    return IPv4Address(address_tuple[0])
+
+
+def ip_address_str_from_address_tuple(address_tuple: AddressTupleVXType) -> str:
+    """Get IP address as string from AddressTupleVXType."""
+    # This function is mostly used to work around Python <3.9 IPv6Address not supporting scope_ids.
+    if len(address_tuple) == 4:
+        address_tuple = cast(AddressTupleV6Type, address_tuple)
+        if "%" not in address_tuple[0] and address_tuple[3]:
+            return f"{address_tuple[0]}%{address_tuple[3]}"
+
+    return f"{address_tuple[0]}"
+
+
+def get_source_address_tuple(
+    target: AddressTupleVXType,
+    source: Union[AddressTupleVXType, IPvXAddress, None] = None,
+) -> AddressTupleVXType:
+    """Get source address tuple from address tuple/ip address, if given."""
+    if isinstance(source, tuple):
+        return source
+
+    if isinstance(source, IPv4Address):
+        return (
+            str(source),
+            0,
+        )
+
+    if isinstance(source, IPv6Address):
+        source_str = str(source)
+        scope_id = getattr(source, "scope_id", "0") or "0"
+        scope_id_index = source_str.rfind("%")
+        if scope_id_index != -1:
+            source_str = source_str[:scope_id_index]
+        if scope_id.isdigit():
+            scope_id = int(scope_id)
+        return (
+            source_str,
+            0,
+            0,
+            cast(int, scope_id),
+        )
+
+    if isinstance(target, tuple) and len(target) == 2:
+        target = cast(AddressTupleV4Type, target)
+        return (
+            "0.0.0.0",
+            0,
+        )
+
+    if isinstance(target, tuple) and len(target) == 4:
+        target = cast(AddressTupleV6Type, target)
+        return (
+            "::",
+            0,
+            0,
+            target[3],
+        )
+
+    raise NotImplementedError()
+
+
+def get_target_address_tuple(
+    target: Union[AddressTupleVXType, IPvXAddress, None] = None,
+    target_port: Optional[int] = None,
+    source: Union[AddressTupleVXType, IPvXAddress, None] = None,
+) -> AddressTupleVXType:
+    """Get target address tuple."""
+    # pylint: disable=too-many-return-statements
+    if isinstance(target, tuple):
+        return target
+
+    if isinstance(target, IPv4Address):
+        return (
+            str(target),
+            target_port or SSDP_PORT,
+        )
+
+    if isinstance(target, IPv6Address):
+        target_str = str(target)
+        scope_id = getattr(target, "scope_id", "0") or "0"
+        scope_id_index = target_str.rfind("%")
+        if scope_id_index != -1:
+            target_str = target_str[:scope_id_index]
+        if scope_id.isdigit():
+            scope_id = int(scope_id)
+        return (
+            target_str,
+            target_port or SSDP_PORT,
+            0,
+            cast(int, scope_id),
+        )
+
+    if (
+        isinstance(source, IPv4Address)
+        or isinstance(source, tuple)
+        and len(source) == 2
+    ):
+        return (
+            SSDP_IP_V4,
+            target_port or SSDP_PORT,
+        )
+
+    if isinstance(source, IPv6Address):
+        scope_id = getattr(source, "scope_id", "0") or "0"
+        if scope_id.isdigit():
+            scope_id = int(scope_id)
+        return (
+            SSDP_IP_V6,
+            target_port or SSDP_PORT,
+            0,
+            cast(int, scope_id),
+        )
+
+    if isinstance(source, tuple) and len(source) == 4:
+        source = cast(AddressTupleV6Type, source)
+        return (
+            SSDP_IP_V6,
+            target_port or SSDP_PORT,
+            0,
+            source[3],
+        )
+
+    # Default to IPv4.
+    return (
+        SSDP_IP_V4,
+        target_port or SSDP_PORT,
+    )
+
+
 def get_host_string(addr: AddressTupleVXType) -> str:
     """Construct host string from address tuple."""
-    if len(addr) >= 3:
+    if len(addr) == 4:
         addr = cast(AddressTupleV6Type, addr)
         if addr[3]:
             return f"{addr[0]}%{addr[3]}"
@@ -60,7 +203,6 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
         return url
 
     addr = cast(AddressTupleV6Type, addr)
-
     if not addr[3]:
         return url
 
@@ -200,41 +342,35 @@ class SsdpProtocol(BaseProtocol):
         self.transport.sendto(packet, target)
 
 
-def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:
-    """Deduce a bind ip address from a target address potentially including scope."""
-    if isinstance(target_ip, IPv6Address):
-        scope_id = getattr(target_ip, "scope_id", None)
-        if scope_id:
-            return IPv6Address("::%" + scope_id)
-        return IPv6Address("::")
-    return IPv4Address("0.0.0.0")
-
-
 def get_ssdp_socket(
-    source_ip: IPvXAddress, target_ip: IPvXAddress, port: Optional[int] = None
+    source: AddressTupleVXType, target: AddressTupleVXType
 ) -> Tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
     """Create a socket to listen on."""
-    target = socket.getaddrinfo(
-        str(target_ip),
-        port or SSDP_PORT,
+    target_ip_str = ip_address_str_from_address_tuple(target)
+    target_addrinfo = socket.getaddrinfo(
+        target_ip_str,
+        target[1],
         type=socket.SOCK_DGRAM,
         proto=socket.IPPROTO_UDP,
     )[0]
-    source = socket.getaddrinfo(
-        str(source_ip), 0, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
+    source_ip_str = ip_address_str_from_address_tuple(source)
+    source_addrinfo = socket.getaddrinfo(
+        source_ip_str, source[1], type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
     )[0]
-    _LOGGER.debug("Creating socket on %s to %s", source, target)
+    _LOGGER.debug("Creating socket on %s to %s", source, target_addrinfo)
 
     # create socket
-    sock = socket.socket(source[0], source[1], source[2])
+    sock = socket.socket(source_addrinfo[0], source_addrinfo[1], source_addrinfo[2])
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # multicast
+    target_ip = ip_address_from_address_tuple(target_addrinfo[4])
     if target_ip.is_multicast:
-        if source[0] == socket.AF_INET6:
+        source_ip = ip_address_from_address_tuple(source)
+        if source_addrinfo[0] == socket.AF_INET6:
             sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 2)
-            addr = cast(AddressTupleV6Type, source[4])
+            addr = cast(AddressTupleV6Type, source_addrinfo[4])
             if addr[3]:
                 mreq = target_ip.packed + addr[3].to_bytes(4, sys.byteorder)
                 sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
@@ -250,4 +386,4 @@ def get_ssdp_socket(
                 target_ip.packed + source_ip.packed,
             )
 
-    return sock, source[4], target[4]
+    return sock, source_addrinfo[4], target_addrinfo[4]

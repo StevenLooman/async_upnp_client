@@ -4,16 +4,12 @@ import asyncio
 import logging
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
-from ipaddress import ip_address
-from typing import Awaitable, Callable, Optional, cast
+from typing import Awaitable, Callable, Optional, Union, cast
 
 from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
-    SSDP_IP_V4,
-    SSDP_IP_V6,
     SSDP_MX,
-    SSDP_PORT,
     SSDP_ST_ALL,
     AddressTupleVXType,
     IPvXAddress,
@@ -21,8 +17,10 @@ from async_upnp_client.ssdp import (
     SsdpProtocol,
     build_ssdp_search_packet,
     get_host_string,
-    get_source_ip_from_target_ip,
+    get_source_address_tuple,
     get_ssdp_socket,
+    get_target_address_tuple,
+    ip_address_from_address_tuple,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -35,8 +33,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self,
         async_callback: Callable[[SsdpHeaders], Awaitable],
         loop: Optional[AbstractEventLoop] = None,
-        source_ip: Optional[IPvXAddress] = None,
-        target: Optional[AddressTupleVXType] = None,
+        source: Union[AddressTupleVXType, IPvXAddress, None] = None,
+        target: Union[AddressTupleVXType, IPvXAddress, None] = None,
         timeout: int = SSDP_MX,
         service_type: str = SSDP_ST_ALL,
         async_connect_callback: Optional[Callable[[], Awaitable]] = None,
@@ -45,10 +43,10 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self.async_callback = async_callback
         self.async_connect_callback = async_connect_callback
         self.service_type = service_type
-        self.source_ip = source_ip
+        self.target = get_target_address_tuple(target)
+        self.source = get_source_address_tuple(self.target, source)
         self.timeout = timeout
         self.loop = loop
-        self._target: Optional[AddressTupleVXType] = target
         self._target_host: Optional[str] = None
         self._transport: Optional[DatagramTransport] = None
 
@@ -57,12 +55,11 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
     ) -> None:
         """Start an SSDP search."""
         assert self._target_host is not None, "Call async_start() first"
-        assert self._target is not None, "Call async_start() first"
-        packet = build_ssdp_search_packet(self._target, self.timeout, self.service_type)
+        packet = build_ssdp_search_packet(self.target, self.timeout, self.service_type)
 
         assert self._transport is not None
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
-        target = override_target or self._target
+        target = override_target or self.target
         protocol.send_ssdp_packet(packet, target)
 
     async def _async_on_data(self, request_line: str, headers: SsdpHeaders) -> None:
@@ -89,28 +86,17 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
     async def async_start(self) -> None:
         """Start the listener."""
-        if self._target is None:
-            if self.source_ip and self.source_ip.version == 6:
-                self._target = (SSDP_IP_V6, SSDP_PORT)
-            else:
-                self._target = (SSDP_IP_V4, SSDP_PORT)
-
-        target_ip: IPvXAddress = ip_address(self._target[0])
-
-        if self.source_ip is None:
-            self.source_ip = get_source_ip_from_target_ip(target_ip)
         # We use the standard target in the data of the announce since
         # many implementations will ignore the request otherwise
-        sock, source, _ = get_ssdp_socket(
-            self.source_ip, target_ip, port=self._target[1]
-        )
+        sock, sock_source, _ = get_ssdp_socket(self.source, self.target)
 
+        target_ip = ip_address_from_address_tuple(self.target)
         if not target_ip.is_multicast:
-            self._target_host = get_host_string(self._target)
+            self._target_host = get_host_string(self.target)
         else:
             self._target_host = ""
 
-        sock.bind(source)
+        sock.bind(sock_source)
 
         loop = self.loop or asyncio.get_event_loop()
         await loop.create_datagram_endpoint(
@@ -130,9 +116,9 @@ async def async_search(
     async_callback: Callable[[SsdpHeaders], Awaitable],
     timeout: int = SSDP_MX,
     service_type: str = SSDP_ST_ALL,
-    source_ip: Optional[IPvXAddress] = None,
+    source: Union[IPvXAddress, AddressTupleVXType, None] = None,
+    target: Union[IPvXAddress, AddressTupleVXType, None] = None,
     loop: Optional[AbstractEventLoop] = None,
-    target: Optional[AddressTupleVXType] = None,
 ) -> None:
     """Discover devices via SSDP."""
     # pylint: disable=too-many-arguments
@@ -145,12 +131,12 @@ async def async_search(
         listener.async_search()
 
     listener = SsdpSearchListener(
-        async_callback,
-        loop_,
-        source_ip,
-        target,
-        timeout,
-        service_type,
+        async_callback=async_callback,
+        loop=loop_,
+        source=source,
+        target=target,
+        timeout=timeout,
+        service_type=service_type,
         async_connect_callback=_async_connected,
     )
 

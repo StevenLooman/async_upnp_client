@@ -47,7 +47,7 @@ def test_create_ssdp_listener_with_alternate_target() -> None:
         target=yeelight_target,
     )
 
-    assert listener._target == yeelight_target
+    assert listener.target == yeelight_target
     assert listener.service_type == yeelight_service_type
     assert listener.async_callback == callback
     assert listener.async_connect_callback == connect_callback

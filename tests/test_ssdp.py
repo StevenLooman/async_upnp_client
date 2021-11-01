@@ -1,19 +1,216 @@
 """Unit tests for ssdp."""
-from ipaddress import IPv4Address
+import sys
+from ipaddress import IPv4Address, IPv6Address
 from unittest.mock import ANY
 
 from async_upnp_client.ssdp import (
+    SSDP_IP_V4,
+    SSDP_IP_V6,
     SSDP_PORT,
     build_ssdp_search_packet,
     decode_ssdp_packet,
+    get_adjusted_url,
+    get_host_port_string,
+    get_host_string,
+    get_source_address_tuple,
     get_ssdp_socket,
+    get_target_address_tuple,
+    ip_address_from_address_tuple,
+    ip_address_str_from_address_tuple,
     is_valid_ssdp_packet,
+    udn_from_headers,
 )
 
 
-def test_ssdp_search_packet() -> None:
+def test_ip_address_from_address_tuple() -> None:
+    """Test get IPvXAddress from AddressTupleVXType."""
+    assert ip_address_from_address_tuple(("192.168.1.1", SSDP_PORT)) == IPv4Address(
+        "192.168.1.1"
+    )
+    assert ip_address_from_address_tuple(("fe80::1", SSDP_PORT, 0, 0)) == IPv6Address(
+        "fe80::1"
+    )
+    if sys.version_info >= (
+        3,
+        9,
+    ):
+        assert ip_address_from_address_tuple(
+            ("fe80::1", SSDP_PORT, 0, 2)
+        ) == IPv6Address("fe80::1%2")
+    else:
+        assert ip_address_from_address_tuple(
+            ("fe80::1", SSDP_PORT, 0, 2)
+        ) == IPv6Address("fe80::1")
+
+
+def test_ip_address_str_from_address_tuple() -> None:
+    """Test ip_address_str_from_address_tuple()."""
+    assert (
+        ip_address_str_from_address_tuple(("192.168.1.1", SSDP_PORT)) == "192.168.1.1"
+    )
+    assert ip_address_str_from_address_tuple(("fe80::1", SSDP_PORT, 0, 0)) == "fe80::1"
+    assert (
+        ip_address_str_from_address_tuple(("fe80::1", SSDP_PORT, 0, 2)) == "fe80::1%2"
+    )
+
+
+def test_get_source_address_tuple() -> None:
+    """Test get_source_address_tuple()."""
+    target = ("not_important", SSDP_PORT)
+    assert get_source_address_tuple(target, ("192.168.1.1", 0)) == ("192.168.1.1", 0)
+    assert get_source_address_tuple(target, ("fe80::1", 0, 0, 0)) == (
+        "fe80::1",
+        0,
+        0,
+        0,
+    )
+    assert get_source_address_tuple(target, ("fe80::1", 0, 0, 2)) == (
+        "fe80::1",
+        0,
+        0,
+        2,
+    )
+    assert get_source_address_tuple(target, IPv4Address("192.168.1.1")) == (
+        "192.168.1.1",
+        0,
+    )
+    assert get_source_address_tuple(target, IPv6Address("fe80::1")) == (
+        "fe80::1",
+        0,
+        0,
+        0,
+    )
+    assert get_source_address_tuple((SSDP_IP_V4, SSDP_PORT)) == ("0.0.0.0", 0)
+    assert get_source_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 0)) == ("::", 0, 0, 0)
+    assert get_source_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 3)) == ("::", 0, 0, 3)
+
+    if sys.version_info >= (
+        3,
+        9,
+    ):
+        assert get_source_address_tuple(target, IPv6Address("fe80::1%1")) == (
+            "fe80::1",
+            0,
+            0,
+            1,
+        )
+
+
+def test_get_target_address_tuple() -> None:
+    """Test get_target_address_tuple()."""
+    assert get_target_address_tuple((SSDP_IP_V4, SSDP_PORT)) == (SSDP_IP_V4, SSDP_PORT)
+    assert get_target_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 0)) == (
+        SSDP_IP_V6,
+        SSDP_PORT,
+        0,
+        0,
+    )
+    assert get_target_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 2)) == (
+        SSDP_IP_V6,
+        SSDP_PORT,
+        0,
+        2,
+    )
+    assert get_target_address_tuple(IPv4Address(SSDP_IP_V4)) == (SSDP_IP_V4, SSDP_PORT)
+    assert get_target_address_tuple(IPv4Address(SSDP_IP_V4), 1902) == (SSDP_IP_V4, 1902)
+    assert get_target_address_tuple(IPv6Address(SSDP_IP_V6)) == (
+        "ff02::c",
+        SSDP_PORT,
+        0,
+        0,
+    )
+    assert get_target_address_tuple(IPv6Address(SSDP_IP_V6), 1902) == (
+        "ff02::c",
+        1902,
+        0,
+        0,
+    )
+    assert get_target_address_tuple(IPv6Address("ff02::c%2")) == (
+        "ff02::c",
+        SSDP_PORT,
+        0,
+        2,
+    )
+    assert get_target_address_tuple(source=IPv4Address("192.168.1.1")) == (
+        SSDP_IP_V4,
+        SSDP_PORT,
+    )
+    assert get_target_address_tuple(source=("192.168.1.1", SSDP_PORT)) == (
+        SSDP_IP_V4,
+        SSDP_PORT,
+    )
+    assert get_target_address_tuple(source=IPv6Address("fe80::1")) == (
+        SSDP_IP_V6,
+        SSDP_PORT,
+        0,
+        0,
+    )
+    assert get_target_address_tuple(source=IPv6Address("fe80::1%3")) == (
+        SSDP_IP_V6,
+        SSDP_PORT,
+        0,
+        3,
+    )
+    assert get_target_address_tuple(source=("fe80::1", 0, 0, 0)) == (
+        SSDP_IP_V6,
+        SSDP_PORT,
+        0,
+        0,
+    )
+    assert get_target_address_tuple(source=("fe80::1", 0, 0, 3)) == (
+        SSDP_IP_V6,
+        SSDP_PORT,
+        0,
+        3,
+    )
+    assert get_target_address_tuple() == (SSDP_IP_V4, SSDP_PORT)
+
+
+def test_get_host_string() -> None:
+    """Test get_host_string()."""
+    assert get_host_string((SSDP_IP_V4, SSDP_PORT)) == SSDP_IP_V4
+    assert get_host_string((SSDP_IP_V6, SSDP_PORT, 0, 0)) == SSDP_IP_V6
+    assert get_host_string((SSDP_IP_V6, SSDP_PORT, 0, 4)) == "FF02::C%4"
+
+
+def test_get_host_port_string() -> None:
+    """Test get_host_port_string()."""
+    assert get_host_port_string((SSDP_IP_V4, SSDP_PORT)) == "239.255.255.250:1900"
+    assert get_host_port_string((SSDP_IP_V6, SSDP_PORT, 0, 0)) == "[FF02::C]:1900"
+    assert get_host_port_string((SSDP_IP_V6, SSDP_PORT, 0, 4)) == "[FF02::C%4]:1900"
+
+
+def test_get_adjusted_url() -> None:
+    """Test get_adjusted_url()."""
+    assert (
+        get_adjusted_url("http://192.168.1.1/desc.xml", ("192.168.1.1", 1900))
+        == "http://192.168.1.1/desc.xml"
+    )
+    assert (
+        get_adjusted_url("http://[fe80::1]/desc.xml", ("fe80::1", 1900, 0, 0))
+        == "http://[fe80::1]/desc.xml"
+    )
+    assert (
+        get_adjusted_url("http://bork/desc.xml", ("fe80::1", 1900, 0, 0))
+        == "http://bork/desc.xml"
+    )
+    assert (
+        get_adjusted_url("http://[2002::1]/desc.xml", ("fe80::1", 1900, 0, 3))
+        == "http://[2002::1]/desc.xml"
+    )
+    assert (
+        get_adjusted_url("http://[fe80::1]/desc.xml", ("fe80::1", 1900, 0, 3))
+        == "http://[fe80::1%3]/desc.xml"
+    )
+    assert (
+        get_adjusted_url("http://[fe80::1]:1902/desc.xml", ("fe80::1", 1900, 0, 3))
+        == "http://[fe80::1%3]:1902/desc.xml"
+    )
+
+
+def test_build_ssdp_search_packet() -> None:
     """Test SSDP search packet generation."""
-    msg = build_ssdp_search_packet(("239.255.255.250", 1900), 4, "ssdp:all")
+    msg = build_ssdp_search_packet(("239.255.255.250", SSDP_PORT), 4, "ssdp:all")
     assert (
         msg == "M-SEARCH * HTTP/1.1\r\n"
         "HOST:239.255.255.250:1900\r\n"
@@ -24,9 +221,9 @@ def test_ssdp_search_packet() -> None:
     )
 
 
-def test_ssdp_search_packet_v6() -> None:
+def test_build_ssdp_search_packet_v6() -> None:
     """Test SSDP search packet generation."""
-    msg = build_ssdp_search_packet(("FF02::C", 1900, 0, 2), 4, "ssdp:all")
+    msg = build_ssdp_search_packet(("FF02::C", SSDP_PORT, 0, 2), 4, "ssdp:all")
     assert (
         msg == "M-SEARCH * HTTP/1.1\r\n"
         "HOST:[FF02::C%2]:1900\r\n"
@@ -53,6 +250,16 @@ def test_is_valid_ssdp_packet() -> None:
     assert is_valid_ssdp_packet(msg)
 
 
+def test_udn_from_headers() -> None:
+    """Test udn_from_headers()."""
+    assert udn_from_headers({"usn": ""}) is None
+    assert udn_from_headers({"usn": "abc"}) is None
+    assert (
+        udn_from_headers({"usn": "uuid:...::WANCommonInterfaceConfig:1"}) == "uuid:..."
+    )
+    assert udn_from_headers({}) is None
+
+
 def test_decode_ssdp_packet() -> None:
     """Test SSDP response decoding."""
     msg = (
@@ -67,7 +274,6 @@ def test_decode_ssdp_packet() -> None:
     request_line, headers = decode_ssdp_packet(msg, ("addr", 123))
 
     assert request_line == "HTTP/1.1 200 OK"
-
     assert headers == {
         "cache-control": "max-age=1900",
         "location": "http://192.168.1.1:80/RootDevice.xml",
@@ -99,7 +305,6 @@ def test_decode_ssdp_packet_missing_ending() -> None:
     request_line, headers = decode_ssdp_packet(msg, ("addr", 123))
 
     assert request_line == "HTTP/1.1 200 OK"
-
     assert headers == {
         "cache-control": "max-age = 1800",
         "date": "Sun, 25 Apr 2021 16:08:06 GMT",
@@ -146,10 +351,9 @@ def test_decode_ssdp_packet_v6() -> None:
         b"EXT:\r\n\r\n"
     )
 
-    request_line, headers = decode_ssdp_packet(msg, ("fe80::1", 123, 0, 3))
+    request_line, headers = decode_ssdp_packet(msg, ("fe80::2", 123, 0, 3))
 
     assert request_line == "HTTP/1.1 200 OK"
-
     assert headers == {
         "cache-control": "max-age=1900",
         "location": "http://[fe80::2%3]:80/RootDevice.xml",
@@ -158,7 +362,7 @@ def test_decode_ssdp_packet_v6() -> None:
         "usn": "uuid:...::WANCommonInterfaceConfig:1",
         "ext": "",
         "_location_original": "http://[fe80::2]:80/RootDevice.xml",
-        "_host": "fe80::1%3",
+        "_host": "fe80::2%3",
         "_port": 123,
         "_udn": "uuid:...",
         "_timestamp": ANY,
@@ -169,14 +373,25 @@ def test_get_ssdp_socket() -> None:
     """Test get_ssdp_socket accepts a port."""
     # Without a port, should default to SSDP_PORT
     _, source_info, target_info = get_ssdp_socket(
-        IPv4Address("127.0.0.1"), IPv4Address("127.0.0.1")
+        (
+            "127.0.0.1",
+            0,
+        ),
+        (
+            "127.0.0.1",
+            SSDP_PORT,
+        ),
     )
     assert source_info == ("127.0.0.1", 0)
     assert target_info == ("127.0.0.1", SSDP_PORT)
 
     # With a port
     _, source_info, target_info = get_ssdp_socket(
-        IPv4Address("127.0.0.1"), IPv4Address("127.0.0.1"), 1234
+        (
+            "127.0.0.1",
+            0,
+        ),
+        ("127.0.0.1", 1234),
     )
     assert source_info == ("127.0.0.1", 0)
     assert target_info == ("127.0.0.1", 1234)
@@ -197,7 +412,7 @@ def test_microsoft_butchers_ssdp() -> None:
         b"Ext:\r\n"
     )
 
-    request_line, headers = decode_ssdp_packet(msg, ("192.168.1.1", 1900))
+    request_line, headers = decode_ssdp_packet(msg, ("192.168.1.1", SSDP_PORT))
 
     assert request_line == "HTTP/1.1 200 OK"
     assert headers == {

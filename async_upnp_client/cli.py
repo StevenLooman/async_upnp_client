@@ -20,7 +20,12 @@ from async_upnp_client.const import SsdpHeaders
 from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
-from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL, AddressTupleVXType
+from async_upnp_client.ssdp import (
+    SSDP_PORT,
+    SSDP_ST_ALL,
+    get_source_address_tuple,
+    get_target_address_tuple,
+)
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
@@ -288,18 +293,20 @@ async def search(search_args: Any) -> None:
     source_ip = search_args.bind
     target_ip = search_args.target
     target_port = search_args.target_port
+
     if sys.platform == "win32" and not source_ip:
         _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
         source_ip = "0.0.0.0"  # force to IPv4 to prevent asyncio crash/WinError 10022
+
     if source_ip:
         source_ip = ip_address(source_ip)
-    if target_ip:
-        target: Optional[AddressTupleVXType] = (
-            target_ip,
-            int(target_port) if target_port else SSDP_PORT,
-        )
-    else:
-        target = None
+
+    target_port = int(target_port) if target_port else SSDP_PORT
+    target_ip = ip_address(target_ip) if target_ip else None
+    target = get_target_address_tuple(target_ip, target_port, source_ip)
+
+    source_ip = ip_address(source_ip) if source_ip else None
+    source = get_source_address_tuple(target, source_ip)
 
     async def on_response(headers: SsdpHeaders) -> None:
         headers = {key: str(value) for key, value in headers.items()}
@@ -307,7 +314,7 @@ async def search(search_args: Any) -> None:
 
     await async_ssdp_search(
         service_type=service_type,
-        source_ip=source_ip,
+        source=source,
         target=target,
         timeout=timeout,
         async_callback=on_response,
@@ -334,8 +341,8 @@ async def advertisements(advertisement_args: Any) -> None:
         on_alive=on_notify,
         on_byebye=on_notify,
         on_update=on_notify,
-        source_ip=source_ip,
-        target_ip=target_ip,
+        source=source_ip,
+        target=target_ip,
     )
     await listener.async_start()
     try:
