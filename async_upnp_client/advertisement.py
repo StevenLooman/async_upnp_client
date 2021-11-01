@@ -39,7 +39,7 @@ class SsdpAdvertisementListener:
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
-        self.target = get_target_address_tuple(target)
+        self.target = get_target_address_tuple(target, source=source)
         self.source = get_source_address_tuple(self.target, source)
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[BaseTransport] = None

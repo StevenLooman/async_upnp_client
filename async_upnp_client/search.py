@@ -43,7 +43,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self.async_callback = async_callback
         self.async_connect_callback = async_connect_callback
         self.service_type = service_type
-        self.target = get_target_address_tuple(target)
+        self.target = get_target_address_tuple(target, source=source)
         self.source = get_source_address_tuple(self.target, source)
         self.timeout = timeout
         self.loop = loop

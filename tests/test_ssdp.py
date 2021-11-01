@@ -125,12 +125,6 @@ def test_get_target_address_tuple() -> None:
         0,
         0,
     )
-    assert get_target_address_tuple(IPv6Address("ff02::c%2")) == (
-        "ff02::c",
-        SSDP_PORT,
-        0,
-        2,
-    )
     assert get_target_address_tuple(source=IPv4Address("192.168.1.1")) == (
         SSDP_IP_V4,
         SSDP_PORT,
@@ -145,12 +139,6 @@ def test_get_target_address_tuple() -> None:
         0,
         0,
     )
-    assert get_target_address_tuple(source=IPv6Address("fe80::1%3")) == (
-        SSDP_IP_V6,
-        SSDP_PORT,
-        0,
-        3,
-    )
     assert get_target_address_tuple(source=("fe80::1", 0, 0, 0)) == (
         SSDP_IP_V6,
         SSDP_PORT,
@@ -164,6 +152,23 @@ def test_get_target_address_tuple() -> None:
         3,
     )
     assert get_target_address_tuple() == (SSDP_IP_V4, SSDP_PORT)
+
+    if sys.version_info >= (
+        3,
+        9,
+    ):
+        assert get_target_address_tuple(IPv6Address("ff02::c%2")) == (
+            "ff02::c",
+            SSDP_PORT,
+            0,
+            2,
+        )
+        assert get_target_address_tuple(source=IPv6Address("fe80::1%3")) == (
+            SSDP_IP_V6,
+            SSDP_PORT,
+            0,
+            3,
+        )
 
 
 def test_get_host_string() -> None:
