@@ -182,7 +182,7 @@ def test_get_host_port_string() -> None:
     """Test get_host_port_string()."""
     assert get_host_port_string((SSDP_IP_V4, SSDP_PORT)) == "239.255.255.250:1900"
     assert get_host_port_string((SSDP_IP_V6, SSDP_PORT, 0, 0)) == "[FF02::C]:1900"
-    assert get_host_port_string((SSDP_IP_V6, SSDP_PORT, 0, 4)) == "[FF02::C%4]:1900"
+    assert get_host_port_string((SSDP_IP_V6, SSDP_PORT, 0, 4)) == "[FF02::C]:1900"
 
 
 def test_get_adjusted_url() -> None:
@@ -231,7 +231,7 @@ def test_build_ssdp_search_packet_v6() -> None:
     msg = build_ssdp_search_packet(("FF02::C", SSDP_PORT, 0, 2), 4, "ssdp:all")
     assert (
         msg == "M-SEARCH * HTTP/1.1\r\n"
-        "HOST:[FF02::C%2]:1900\r\n"
+        "HOST:[FF02::C]:1900\r\n"
         'MAN:"ssdp:discover"\r\n'
         "MX:4\r\n"
         "ST:ssdp:all\r\n"

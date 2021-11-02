@@ -191,7 +191,7 @@ def get_host_string(addr: AddressTupleVXType) -> str:
 
 def get_host_port_string(addr: AddressTupleVXType) -> str:
     """Return a properly escaped host port pair."""
-    host = get_host_string(addr)
+    host = addr[0]
     if ":" in host:
         return f"[{host}]:{addr[1]}"
     return f"{host}:{addr[1]}"
