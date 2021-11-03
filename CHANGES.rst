@@ -6,7 +6,7 @@ Changes
 - Fix error in cli if target_port is absent in search command
 - Fix IPv6 support for SSDP
     - Change `ssdp_listener`, `advertisement`, `search` to use `AddressTupleVXType` or `IPvXAddress`
-    - Support for Python <3.9, use AddressTupleV6Type when scope_ids are needed
+    - With Python <3.9, use AddressTupleV6Type when scope_ids are needed
 
 
 0.22.11 (2021-10-31)
