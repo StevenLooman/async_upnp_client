@@ -73,7 +73,7 @@ class UpnpProfileDevice:
         """
         responses = set()
 
-        async def on_response(data: SsdpHeaders) -> None:
+        async def on_response(data: SsdpHeaders, _addr: AddressTupleVXType) -> None:
             if "st" in data and data["st"] in cls.DEVICE_TYPES:
                 responses.add(data)
 

@@ -411,7 +411,7 @@ class SsdpListener:
         assert self._search_listener is not None, "Call async_start() first"
         self._search_listener.async_search(override_target)
 
-    async def _on_search(self, headers: SsdpHeaders) -> None:
+    async def _on_search(self, headers: SsdpHeaders, _addr: AddressTupleVXType) -> None:
         """Search callback."""
         (
             propagate,
@@ -424,7 +424,7 @@ class SsdpListener:
             assert ssdp_source is not None
             await self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
 
-    async def _on_alive(self, headers: SsdpHeaders) -> None:
+    async def _on_alive(self, headers: SsdpHeaders, _addr: AddressTupleVXType) -> None:
         """On alive."""
         (
             propagate,
@@ -437,7 +437,7 @@ class SsdpListener:
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
             )
 
-    async def _on_byebye(self, headers: SsdpHeaders) -> None:
+    async def _on_byebye(self, headers: SsdpHeaders, _addr: AddressTupleVXType) -> None:
         """On byebye."""
         (
             propagate,
@@ -450,7 +450,7 @@ class SsdpListener:
                 ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
             )
 
-    async def _on_update(self, headers: SsdpHeaders) -> None:
+    async def _on_update(self, headers: SsdpHeaders, _addr: AddressTupleVXType) -> None:
         """On update."""
         (
             propagate,

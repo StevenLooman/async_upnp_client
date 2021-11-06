@@ -24,6 +24,7 @@ from async_upnp_client.ssdp import (
     SSDP_MX,
     SSDP_PORT,
     SSDP_ST_ALL,
+    AddressTupleVXType,
     get_source_address_tuple,
     get_target_address_tuple,
 )
@@ -311,7 +312,7 @@ async def search(search_args: Any) -> None:
     source_ip = ip_address(source_ip) if source_ip else None
     source = get_source_address_tuple(target, source_ip)
 
-    async def on_response(headers: SsdpHeaders) -> None:
+    async def on_response(headers: SsdpHeaders, _addr: AddressTupleVXType) -> None:
         headers = {key: str(value) for key, value in headers.items()}
         print(json.dumps(headers, indent=pprint_indent))
 
@@ -336,7 +337,7 @@ async def advertisements(advertisement_args: Any) -> None:
     if target_ip:
         target_ip = ip_address(target_ip)
 
-    async def on_notify(headers: SsdpHeaders) -> None:
+    async def on_notify(headers: SsdpHeaders, _addr: AddressTupleVXType) -> None:
         headers = {key: str(value) for key, value in headers.items()}
         print(json.dumps(headers, indent=pprint_indent))
 

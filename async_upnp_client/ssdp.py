@@ -221,18 +221,24 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     return urlunsplit(data._replace(netloc=netloc))
 
 
+def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:
+    """Construct a SSDP packet."""
+    headers_str = "\r\n".join([f"{key}:{value}" for key, value in headers.items()])
+    return f"{status_line}\r\n{headers_str}\r\n\r\n".encode()
+
+
 def build_ssdp_search_packet(
     ssdp_target: AddressTupleVXType, ssdp_mx: int, ssdp_st: str
 ) -> bytes:
-    """Construct a SSDP packet."""
-    return (
-        f"M-SEARCH * HTTP/1.1\r\n"
-        f"HOST:{get_host_port_string(ssdp_target)}\r\n"
-        f'MAN:"ssdp:discover"\r\n'
-        f"MX:{ssdp_mx}\r\n"
-        f"ST:{ssdp_st}\r\n"
-        f"\r\n"
-    ).encode()
+    """Construct a SSDP M-SEARCH packet."""
+    request_line = "M-SEARCH * HTTP/1.1"
+    headers = {
+        "HOST": f"{get_host_port_string(ssdp_target)}",
+        "MAN": '"ssdp:discover"',
+        "MX": f"{ssdp_mx}",
+        "ST": f"{ssdp_st}",
+    }
+    return build_ssdp_packet(request_line, headers)
 
 
 def is_valid_ssdp_packet(data: bytes) -> bool:
@@ -264,7 +270,7 @@ def decode_ssdp_packet(
     """Decode a message."""
     lines = data.replace(b"\r\n", b"\n").split(b"\n")
 
-    # request_line
+    # Request_line.
     request_line = lines[0].strip().decode()
 
     if lines and lines[-1] != b"":
@@ -273,15 +279,16 @@ def decode_ssdp_packet(
     parsed_headers, _ = HeadersParser().parse_headers(lines)
     headers = CaseInsensitiveDict(parsed_headers)
 
-    # adjust some headers
+    # Adjust some headers.
     if "location" in headers:
         headers["_location_original"] = headers["location"]
         headers["location"] = get_adjusted_url(headers["location"], addr)
 
-    # own data
+    # Own data.
     headers["_timestamp"] = datetime.now()
     headers["_host"] = get_host_string(addr)
     headers["_port"] = addr[1]
+    headers["_addr"] = addr
 
     udn = udn_from_headers(headers)
     if udn:
@@ -297,7 +304,9 @@ class SsdpProtocol(BaseProtocol):
         self,
         loop: AbstractEventLoop,
         on_connect: Optional[Callable[[DatagramTransport], Awaitable]] = None,
-        on_data: Optional[Callable[[str, SsdpHeaders], Awaitable]] = None,
+        on_data: Optional[
+            Callable[[str, SsdpHeaders, AddressTupleVXType], Awaitable]
+        ] = None,
     ) -> None:
         """Initialize."""
         self.loop = loop
@@ -322,7 +331,7 @@ class SsdpProtocol(BaseProtocol):
 
         if is_valid_ssdp_packet(data) and self.on_data:
             request_line, headers = decode_ssdp_packet(data, addr)
-            callback = self.on_data(request_line, headers)
+            callback = self.on_data(request_line, headers, addr)
             self.loop.create_task(callback)
 
     def error_received(self, exc: Exception) -> None:
@@ -336,8 +345,15 @@ class SsdpProtocol(BaseProtocol):
 
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
-        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self.transport)
-        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
+        _LOGGER.debug(
+            "Sending SSDP packet, transport: %s, target: %s", self.transport, target
+        )
+        _LOGGER_TRAFFIC_SSDP.debug(
+            "Sending SSDP packet, transport: %s, target: %s, data: %s",
+            self.transport,
+            target,
+            packet,
+        )
         assert self.transport is not None
         self.transport.sendto(packet, target)
 

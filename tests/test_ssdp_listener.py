@@ -19,6 +19,7 @@ from async_upnp_client.ssdp_listener import SsdpListener, same_headers_differ
 from async_upnp_client.utils import CaseInsensitiveDict
 
 from .common import (
+    ADDR,
     ADVERTISEMENT_HEADERS_DEFAULT,
     ADVERTISEMENT_REQUEST_LINE,
     SEARCH_HEADERS_DEFAULT,
@@ -68,7 +69,9 @@ async def test_see_advertisement_alive() -> None:
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -76,7 +79,9 @@ async def test_see_advertisement_alive() -> None:
     callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_not_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -97,7 +102,9 @@ async def test_see_advertisement_byebye() -> None:
     callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_not_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
 
@@ -105,7 +112,9 @@ async def test_see_advertisement_byebye() -> None:
     callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_awaited_once()
     assert callback.await_args is not None
     device, dst, _ = callback.await_args.args
@@ -116,7 +125,9 @@ async def test_see_advertisement_byebye() -> None:
     callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_awaited_once()
     assert callback.await_args is not None
     device, dst, _ = callback.await_args.args
@@ -140,7 +151,9 @@ async def test_see_advertisement_update() -> None:
     callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -149,7 +162,9 @@ async def test_see_advertisement_update() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_UPDATE
     headers["BOOTID.UPNP.ORG"] = "2"
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -168,7 +183,7 @@ async def test_see_search() -> None:
 
     # See device for the first time through search.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -189,7 +204,7 @@ async def test_see_search_then_alive() -> None:
 
     # See device for the first time through search.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -197,7 +212,9 @@ async def test_see_search_then_alive() -> None:
     callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(
+        ADVERTISEMENT_REQUEST_LINE, headers, ADDR
+    )
     callback.assert_not_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -216,13 +233,13 @@ async def test_purge_devices() -> None:
 
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -233,7 +250,7 @@ async def test_purge_devices() -> None:
 
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
@@ -301,7 +318,7 @@ async def test_see_search_invalid_usn() -> None:
     ] = "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal"
     headers["USN"] = "[fe80::aaaa:bbbb:cccc:dddd]:3540"
     del headers["_udn"]
-    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_not_awaited()
 
     await listener.async_stop()
@@ -320,7 +337,7 @@ async def test_see_search_invalid_location() -> None:
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     headers["location"] = "192.168.1.1"
-    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_not_awaited()
 
     await listener.async_stop()
@@ -346,7 +363,7 @@ async def test_see_search_localhost_location(location: str) -> None:
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     headers["location"] = location
-    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_not_awaited()
 
     await listener.async_stop()

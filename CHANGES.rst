@@ -7,6 +7,7 @@ Changes
 - Fix IPv6 support for SSDP
     - Change `ssdp_listener`, `advertisement`, `search` to use `AddressTupleVXType` or `IPvXAddress`
     - With Python <3.9, use AddressTupleV6Type when scope_ids are needed
+- Added parameter `addr` to callbacks for `search.SsdpSearchListener`, `search.async_search`, `advertisement.SsdpAdvertisementListener`
 
 
 0.22.11 (2021-10-31)

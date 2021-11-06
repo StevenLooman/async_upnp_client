@@ -7,6 +7,7 @@ from async_upnp_client.ssdp import (
     SSDP_IP_V4,
     SSDP_IP_V6,
     SSDP_PORT,
+    build_ssdp_packet,
     build_ssdp_search_packet,
     decode_ssdp_packet,
     get_adjusted_url,
@@ -213,11 +214,29 @@ def test_get_adjusted_url() -> None:
     )
 
 
-def test_build_ssdp_search_packet() -> None:
-    """Test SSDP search packet generation."""
-    msg = build_ssdp_search_packet(("239.255.255.250", SSDP_PORT), 4, "ssdp:all")
+def test_build_ssdp_packet() -> None:
+    """Test build_ssdp_packet()."""
     assert (
-        msg == "M-SEARCH * HTTP/1.1\r\n"
+        build_ssdp_packet(
+            "M-SEARCH * HTTP/1.1",
+            {
+                "HOST": "239.255.255.250:1900",
+                "MAN": '"ssdp:discover"',
+            },
+        )
+        == (
+            "M-SEARCH * HTTP/1.1\r\n"
+            + "HOST:239.255.255.250:1900\r\n"
+            + 'MAN:"ssdp:discover"\r\n'
+            + "\r\n"
+        ).encode()
+    )
+
+
+def test_build_ssdp_search_packet() -> None:
+    """Test build_ssdp_search_packet()."""
+    assert build_ssdp_search_packet(("239.255.255.250", SSDP_PORT), 4, "ssdp:all") == (
+        "M-SEARCH * HTTP/1.1\r\n"
         "HOST:239.255.255.250:1900\r\n"
         'MAN:"ssdp:discover"\r\n'
         "MX:4\r\n"
@@ -225,12 +244,8 @@ def test_build_ssdp_search_packet() -> None:
         "\r\n".encode()
     )
 
-
-def test_build_ssdp_search_packet_v6() -> None:
-    """Test SSDP search packet generation."""
-    msg = build_ssdp_search_packet(("FF02::C", SSDP_PORT, 0, 2), 4, "ssdp:all")
-    assert (
-        msg == "M-SEARCH * HTTP/1.1\r\n"
+    assert build_ssdp_search_packet(("FF02::C", SSDP_PORT, 0, 2), 4, "ssdp:all") == (
+        "M-SEARCH * HTTP/1.1\r\n"
         "HOST:[FF02::C]:1900\r\n"
         'MAN:"ssdp:discover"\r\n'
         "MX:4\r\n"
@@ -289,6 +304,7 @@ def test_decode_ssdp_packet() -> None:
         "_location_original": "http://192.168.1.1:80/RootDevice.xml",
         "_host": "addr",
         "_port": 123,
+        "_addr": ("addr", 123),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -322,6 +338,7 @@ def test_decode_ssdp_packet_missing_ending() -> None:
         "_location_original": "http://192.168.107.148:8088/description",
         "_host": "addr",
         "_port": 123,
+        "_addr": ("addr", 123),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -340,6 +357,7 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
         "cache-control": "max-age = 1800",
         "_host": "addr",
         "_port": 123,
+        "_addr": ("addr", 123),
         "_timestamp": ANY,
     }
 
@@ -369,6 +387,7 @@ def test_decode_ssdp_packet_v6() -> None:
         "_location_original": "http://[fe80::2]:80/RootDevice.xml",
         "_host": "fe80::2%3",
         "_port": 123,
+        "_addr": ("fe80::2", 123, 0, 3),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -433,5 +452,6 @@ def test_microsoft_butchers_ssdp() -> None:
         "_location_original": "192.168.1.1",
         "_host": "192.168.1.1",
         "_port": 1900,
+        "_addr": ("192.168.1.1", 1900),
         "_timestamp": ANY,
     }

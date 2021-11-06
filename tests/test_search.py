@@ -14,6 +14,7 @@ from async_upnp_client.ssdp import SSDP_IP_V4
 from async_upnp_client.utils import CaseInsensitiveDict
 
 from .common import (
+    ADDR,
     ADVERTISEMENT_HEADERS_DEFAULT,
     ADVERTISEMENT_REQUEST_LINE,
     SEARCH_HEADERS_DEFAULT,
@@ -28,9 +29,9 @@ async def test_receive_search_response() -> None:
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    await listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
 
-    callback.assert_called_with(headers)
+    callback.assert_called_with(headers, ADDR)
 
 
 def test_create_ssdp_listener_with_alternate_target() -> None:
@@ -59,6 +60,6 @@ async def test_receive_ssdp_alive_advertisement() -> None:
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
-    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers, ADDR)
 
     callback.assert_not_called()

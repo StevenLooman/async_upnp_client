@@ -27,11 +27,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
-    """SSDP Search (response) listener."""
+    """SSDP Search response listener."""
 
     def __init__(
         self,
-        async_callback: Callable[[SsdpHeaders], Awaitable],
+        async_callback: Callable[[SsdpHeaders, AddressTupleVXType], Awaitable],
         loop: Optional[AbstractEventLoop] = None,
         source: Union[AddressTupleVXType, IPvXAddress, None] = None,
         target: Union[AddressTupleVXType, IPvXAddress, None] = None,
@@ -39,7 +39,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         service_type: str = SSDP_ST_ALL,
         async_connect_callback: Optional[Callable[[], Awaitable]] = None,
     ) -> None:
-        """Init the ssdp listener class."""
+        """Init the ssdp search listener class."""
         self.async_callback = async_callback
         self.async_connect_callback = async_connect_callback
         self.service_type = service_type
@@ -62,14 +62,16 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         target = override_target or self.target
         protocol.send_ssdp_packet(packet, target)
 
-    async def _async_on_data(self, request_line: str, headers: SsdpHeaders) -> None:
+    async def _async_on_data(
+        self, request_line: str, headers: SsdpHeaders, addr: AddressTupleVXType
+    ) -> None:
         """Handle data."""
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.
             return
         if "NTS" in headers:
             _LOGGER.debug(
-                "Got non-search response packet: %s, %s", request_line, headers
+                "Ignoring advertisement packet: %s, %s", request_line, headers
             )
             return
 
@@ -77,9 +79,10 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
-        await self.async_callback(headers)
+        await self.async_callback(headers, addr)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
+        """Handle on connect."""
         self._transport = transport
         if self.async_connect_callback:
             await self.async_connect_callback()
@@ -96,6 +99,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         else:
             self._target_host = ""
 
+        _LOGGER.debug("Binding to address: %s", sock_source)
         sock.bind(sock_source)
 
         loop = self.loop or asyncio.get_event_loop()
@@ -113,7 +117,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
 
 async def async_search(
-    async_callback: Callable[[SsdpHeaders], Awaitable],
+    async_callback: Callable[[SsdpHeaders, AddressTupleVXType], Awaitable],
     timeout: int = SSDP_MX,
     service_type: str = SSDP_ST_ALL,
     source: Union[IPvXAddress, AddressTupleVXType, None] = None,

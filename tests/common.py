@@ -4,6 +4,7 @@ from datetime import datetime
 
 from async_upnp_client.utils import CaseInsensitiveDict
 
+ADDR = ("192.168.1.1", 1900)
 ADVERTISEMENT_REQUEST_LINE = "NOTIFY * HTTP/1.1"
 ADVERTISEMENT_HEADERS_DEFAULT = CaseInsensitiveDict(
     {
@@ -15,9 +16,10 @@ ADVERTISEMENT_HEADERS_DEFAULT = CaseInsensitiveDict(
         "BOOTID.UPNP.ORG": "1",
         "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
         "_timestamp": datetime.now(),
-        "_host": "192.168.1.1",
-        "_port": "1900",
+        "_host": ADDR[0],
+        "_port": ADDR[1],
         "_udn": "uuid:...",
+        "_addr": ADDR,
     }
 )
 SEARCH_REQUEST_LINE = "HTTP/1.1 200 OK"
@@ -31,8 +33,9 @@ SEARCH_HEADERS_DEFAULT = CaseInsensitiveDict(
         "SERVER": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
         "DATE": "Fri, 1 Jan 2021 12:00:00 GMT",
         "_timestamp": datetime.now(),
-        "_host": "192.168.1.1",
-        "_port": "1900",
+        "_host": ADDR[0],
+        "_port": ADDR[1],
         "_udn": "uuid:...",
+        "_addr": ("192.168.1.1", 1900),
     }
 )
