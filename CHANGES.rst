@@ -1,7 +1,9 @@
 Changes
 =======
 
-0.22.12 (unreleased)
+0.22.12 (2021-11-06)
+
+- Relax async-timeout dependency, cleanup deprecated sync use (@frenck)
 
 
 0.22.11 (2021-10-31)
