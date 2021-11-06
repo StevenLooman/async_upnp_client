@@ -91,7 +91,7 @@ class StateVariable(object):
         for sid, url in SUBSCRIBED_CLIENTS[service_name].items():
             headers = {"SID": sid}
             with ClientSession(loop=asyncio.get_event_loop()) as session:
-                with async_timeout.timeout(10):
+                async with async_timeout.timeout(10):
                     data = DET.ElementTree.tostring(el_notify)
                     LOGGER.debug("Calling: %s", url)
                     yield from session.request(
