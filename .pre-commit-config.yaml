@@ -53,3 +53,4 @@ repos:
         additional_dependencies:
           - pytest==6.2.4
           - aiohttp==3.7.4
+        files: ^(async_upnp_client|tests)/.+\.py$
