@@ -301,7 +301,7 @@ class UpnpFactory:
         """Create UpnpActions from scpd_el."""
         action_list_el = scpd_el.find("./service:actionList", NS)
         if action_list_el is None:
-            raise UpnpError("Could not find action list element")
+            return []
 
         actions = []
         for action_el in action_list_el.findall("./service:action", NS):
