@@ -32,7 +32,14 @@ from async_upnp_client.const import (
     SsdpHeaders,
     StateVariableInfo,
 )
-from async_upnp_client.exceptions import UpnpError, UpnpValueError, UpnpXmlParseError
+from async_upnp_client.exceptions import (
+    UpnpActionError,
+    UpnpActionResponseError,
+    UpnpError,
+    UpnpResponseError,
+    UpnpValueError,
+    UpnpXmlParseError,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
@@ -597,8 +604,19 @@ class UpnpAction:
             raise UpnpError("Did not receive a body")
 
         if status_code != 200:
-            raise UpnpError(
-                f"Error during async_call(), status: {status_code}, body: {response_body}"
+            try:
+                xml = DET.fromstring(response_body.strip(" \t\r\n\0"))
+            except ET.ParseError:
+                pass
+            else:
+                _parse_fault(xml, status_code, response_headers)
+
+            # Couldn't parse body for fault details, raise generic response error
+            raise UpnpResponseError(
+                status=status_code,
+                headers=response_headers,
+                message=f"Error during async_call(), status: {status_code}, "
+                f"body: {response_body}",
             )
 
         # parse body
@@ -657,15 +675,9 @@ class UpnpAction:
             _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
             raise UpnpXmlParseError(err) from err
 
-        query = ".//soap_envelope:Body/soap_envelope:Fault"
-        if xml.find(query, NS):
-            error_code = xml.findtext(".//control:errorCode", None, NS)
-            error_description = xml.findtext(".//control:errorDescription", None, NS)
-            raise UpnpError(
-                f"Error during call_action, "
-                f"error_code: {error_code}, "
-                f"error_description: {error_description}"
-            )
+        # Check if a SOAP fault occurred. It should have been caught earlier, by
+        # the device sending an HTTP 500 status, but not all devices do.
+        _parse_fault(xml)
 
         try:
             return self._parse_response_args(service_type, xml)
@@ -707,6 +719,40 @@ class UpnpAction:
             args[name] = arg.value
 
         return args
+
+
+def _parse_fault(
+    xml: ET.Element,
+    status_code: Optional[int] = None,
+    response_headers: Optional[Mapping] = None,
+) -> None:
+    """Parse SOAP fault and raise appropriate exception."""
+    fault = xml.find(".//soap_envelope:Body/soap_envelope:Fault", NS)
+    if not fault:
+        return
+
+    error_code_str = fault.findtext(".//control:errorCode", None, NS)
+    if error_code_str:
+        error_code: Optional[int] = int(error_code_str)
+    else:
+        error_code = None
+    error_desc = fault.findtext(".//control:errorDescription", None, NS)
+
+    if status_code is not None:
+        raise UpnpActionResponseError(
+            error_code=error_code,
+            error_desc=error_desc,
+            status=status_code,
+            headers=response_headers,
+            message=f"Error during async_call(), status: {status_code},"
+            f" upnp error: {error_code} ({error_desc})",
+        )
+
+    raise UpnpActionError(
+        error_code=error_code,
+        error_desc=error_desc,
+        message=f"Error during async_call(), upnp error: {error_code} ({error_desc})",
+    )
 
 
 T = TypeVar("T")  # pylint: disable=invalid-name

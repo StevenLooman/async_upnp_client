@@ -68,7 +68,7 @@ async def test_async_browse_metadata() -> None:
     assert metadata.resources[0].duration == "0:02:00.938"
 
     # Bad object ID should result in a UpnpError (HTTP 701: No such object)
-    requester.exceptions.append(UpnpResponseError(701))
+    requester.exceptions.append(UpnpResponseError(status=701))
     with pytest.raises(UpnpResponseError) as err:
         await profile.async_browse_metadata("no object")
 
@@ -145,7 +145,7 @@ async def test_async_browse_children() -> None:
     assert result.result == []
 
     # Bad object ID should result in a UpnpError (HTTP 701: No such object)
-    requester.exceptions.append(UpnpResponseError(701))
+    requester.exceptions.append(UpnpResponseError(status=701))
     with pytest.raises(UpnpResponseError) as err:
         await profile.async_browse_direct_children("no object")
 

@@ -232,8 +232,8 @@ class TestUpnpProfileDevice:
         profile = DmrDevice(device, event_handler=event_handler)
 
         # All requests give a response error
-        requester.exceptions.append(UpnpResponseError(501))
-        requester.exceptions.append(UpnpResponseError(501))
+        requester.exceptions.append(UpnpResponseError(status=501))
+        requester.exceptions.append(UpnpResponseError(status=501))
 
         with pytest.raises(UpnpResponseError):
             await profile.async_subscribe_services(True)

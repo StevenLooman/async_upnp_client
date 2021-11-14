@@ -254,8 +254,8 @@ class AiohttpNotifyServer:
                 err,
             )
             raise UpnpServerOSError(
-                err.errno,
-                err.strerror,
+                errno=err.errno,
+                strerror=err.strerror,
             ) from err
 
         # All ports that the event server is listening on (maybe multiple IP stacks)

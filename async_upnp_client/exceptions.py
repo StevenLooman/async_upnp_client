@@ -11,11 +11,36 @@ import aiohttp
 
 
 class UpnpError(Exception):
-    """UpnpError."""
+    """Base class for all errors raised by this library."""
+
+    def __init__(
+        self, *args: Any, message: Optional[str] = None, **_kwargs: Any
+    ) -> None:
+        """Initialize base UpnpError."""
+        super().__init__(*args, message)
 
 
 class UpnpContentError(UpnpError):
     """Content of UPnP response is invalid."""
+
+
+class UpnpActionError(UpnpError):
+    """Server returned a SOAP Fault in response to an Action."""
+
+    def __init__(
+        self,
+        *args: Any,
+        error_code: Optional[int] = None,
+        error_desc: Optional[str] = None,
+        message: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize from response body."""
+        if not message:
+            message = f"Received UPnP error {error_code} ({error_desc})"
+        super().__init__(*args, message=message, **kwargs)
+        self.error_code = error_code
+        self.error_desc = error_desc
 
 
 class UpnpXmlParseError(UpnpError, ET.ParseError):
@@ -33,7 +58,7 @@ class UpnpValueError(UpnpContentError):
 
     def __init__(self, name: str, value: Any) -> None:
         """Initialize."""
-        super().__init__(f"Invalid value for {name}: '{value}'")
+        super().__init__(message=f"Invalid value for {name}: '{value}'")
         self.name = name
         self.value = value
 
@@ -50,12 +75,53 @@ class UpnpResponseError(UpnpCommunicationError):
     """HTTP error code returned by the UPnP device."""
 
     def __init__(
-        self, status: int, headers: Optional[aiohttp.typedefs.LooseHeaders] = None
+        self,
+        *args: Any,
+        status: int,
+        headers: Optional[aiohttp.typedefs.LooseHeaders] = None,
+        message: Optional[str] = None,
+        **kwargs: Any,
     ) -> None:
         """Initialize."""
-        super().__init__(f"Did not receive HTTP 200 but {status}")
+        if not message:
+            message = f"Did not receive HTTP 200 but {status}"
+        super().__init__(*args, message=message, **kwargs)
         self.status = status
         self.headers = headers
+
+
+class UpnpActionResponseError(UpnpActionError, UpnpResponseError):
+    """HTTP error code and UPnP error code.
+
+    UPnP errors are usually indicated with HTTP 500 (Internal Server Error) and
+    actual details in the response body as a SOAP Fault.
+    """
+
+    def __init__(
+        self,
+        *args: Any,
+        status: int,
+        headers: Optional[aiohttp.typedefs.LooseHeaders] = None,
+        error_code: Optional[int] = None,
+        error_desc: Optional[str] = None,
+        message: Optional[str] = None,
+        **kwargs: Any,
+    ) -> None:
+        """Initialize."""
+        if not message:
+            message = (
+                f"Received HTTP error code {status}, UPnP error code"
+                f" {error_code} ({error_desc})"
+            )
+        super().__init__(
+            *args,
+            status=status,
+            headers=headers,
+            error_code=error_code,
+            error_desc=error_desc,
+            message=message,
+            **kwargs,
+        )
 
 
 class UpnpClientResponseError(aiohttp.ClientResponseError, UpnpResponseError):
@@ -84,6 +150,4 @@ class UpnpServerOSError(UpnpServerError, OSError):
 
     def __init___(self, errno: int, strerror: str) -> None:
         """Initialize simplified version of OSError."""
-        super().__init__(errno, strerror)
-        self.errno = errno
-        self.strerror = strerror
+        OSError.__init__(self, errno, strerror)

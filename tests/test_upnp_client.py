@@ -24,6 +24,12 @@ from async_upnp_client import (
     UpnpStateVariable,
     UpnpValueError,
 )
+from async_upnp_client.exceptions import (
+    UpnpActionError,
+    UpnpActionErrorCode,
+    UpnpActionResponseError,
+    UpnpResponseError,
+)
 
 from .upnp_test_requester import RESPONSE_MAP, UpnpTestRequester, read_file
 
@@ -409,11 +415,10 @@ class TestUpnpAction:
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
         response = read_file("dlna/dmr/action_GetVolumeError.xml")
-        try:
+        with pytest.raises(UpnpActionError) as exc:
             action.parse_response(service_type, {}, response)
-            assert False
-        except UpnpError:
-            pass
+        assert exc.value.error_code == UpnpActionErrorCode.INVALID_ARGS
+        assert exc.value.error_desc == "Invalid Args"
 
     @pytest.mark.asyncio
     async def test_parse_response_escape(self) -> None:
@@ -567,6 +572,72 @@ class TestUpnpService:
 
         result = await service.async_call_action(action, InstanceID=0, Channel="Master")
         assert result["CurrentVolume"] == 3
+
+    @pytest.mark.asyncio
+    async def test_soap_fault_http_error(self) -> None:
+        """Test an action response with HTTP error and SOAP fault raises exception."""
+        responses: MutableMapping = {
+            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+                500,
+                {},
+                read_file("dlna/dmr/action_GetVolumeError.xml"),
+            )
+        }
+        responses.update(RESPONSE_MAP)
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        action = service.action("GetVolume")
+
+        with pytest.raises(UpnpActionResponseError) as exc:
+            await service.async_call_action(action, InstanceID=0, Channel="Master")
+        assert exc.value.error_code == UpnpActionErrorCode.INVALID_ARGS
+        assert exc.value.error_desc == "Invalid Args"
+        assert exc.value.status == 500
+
+    @pytest.mark.asyncio
+    async def test_http_error(self) -> None:
+        """Test an action response with HTTP error and blank body raises exception."""
+        responses: MutableMapping = {
+            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+                500,
+                {},
+                "",
+            )
+        }
+        responses.update(RESPONSE_MAP)
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        action = service.action("GetVolume")
+
+        with pytest.raises(UpnpResponseError) as exc:
+            await service.async_call_action(action, InstanceID=0, Channel="Master")
+        assert exc.value.status == 500
+
+    @pytest.mark.asyncio
+    async def test_soap_fault_http_ok(self) -> None:
+        """Test an action response with HTTP OK but SOAP fault raises exception."""
+        responses: MutableMapping = {
+            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+                200,
+                {},
+                read_file("dlna/dmr/action_GetVolumeError.xml"),
+            )
+        }
+        responses.update(RESPONSE_MAP)
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        action = service.action("GetVolume")
+
+        with pytest.raises(UpnpActionError) as exc:
+            await service.async_call_action(action, InstanceID=0, Channel="Master")
+        assert exc.value.error_code == UpnpActionErrorCode.INVALID_ARGS
+        assert exc.value.error_desc == "Invalid Args"
 
 
 class TestUpnpEventHandler:
