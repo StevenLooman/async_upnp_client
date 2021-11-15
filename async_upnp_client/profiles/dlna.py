@@ -6,7 +6,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from enum import Enum, IntFlag
+from enum import Enum, IntEnum, IntFlag
 from mimetypes import guess_type
 from typing import (
     Any,
@@ -1515,3 +1515,27 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return browse_result
 
     # endregion
+
+
+class ContentDirectoryErrorCode(IntEnum):
+    """Error codes specific to DLNA Content Directory actions."""
+
+    NO_SUCH_OBJECT = 701
+    INVALID_CURRENT_TAG_VALUE = 702
+    INVALID_NEW_TAG_VALUE = 703
+    REQUIRED_TAG = 704
+    READ_ONLY_TAG = 705
+    PARAMETER_MISMATCH = 706
+    INVALID_SEARCH_CRITERIA = 708
+    INVALID_SORT_CRITERIA = 709
+    NO_SUCH_CONTAINER = 710
+    RESTRICTED_OJECT = 711
+    BAD_METADATA = 712
+    RESTRICTED_PARENT_OBJECT = 713
+    NO_SUCH_SOURCE_RESOURCES = 714
+    SOURCE_RESOURCE_ACCESS_DENIED = 715
+    TRANSFER_BUSY = 716
+    NO_SUCH_FILE_TRANSFER = 717
+    NO_SUCH_DESTINATION_SOURCE = 718
+    DESTINATION_RESOURCE_ACCESS_DENIED = 719
+    CANNOT_PROCESS_REQUEST = 720

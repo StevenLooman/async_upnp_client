@@ -2,6 +2,7 @@
 """Exceptions raised by async_upnp_client."""
 
 import asyncio
+from enum import IntEnum
 from typing import Any, Optional
 from xml.etree import ElementTree as ET
 
@@ -22,6 +23,21 @@ class UpnpError(Exception):
 
 class UpnpContentError(UpnpError):
     """Content of UPnP response is invalid."""
+
+
+class UpnpActionErrorCode(IntEnum):
+    """Error codes for UPnP Action errors."""
+
+    INVALID_ACTION = 401
+    INVALID_ARGS = 402
+    # (DO_NOT_USE) = 403
+    ACTION_FAILED = 501
+    ARGUMENT_VALUE_INVALID = 600
+    ARGUMENT_VALUE_OUT_OF_RANGE = 601
+    OPTIONAL_ACTION_NOT_IMPLEMENTED = 602
+    OUT_OF_MEMORY = 603
+    HUMAN_INTERVENTION_REQUIRED = 604
+    STRING_ARGUMENT_TOO_LONG = 605
 
 
 class UpnpActionError(UpnpError):
