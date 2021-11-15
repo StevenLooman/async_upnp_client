@@ -3,6 +3,8 @@ Changes
 
 0.22.13 (unreleased)
 
+- Allow for renderers that do not provide a list of actions. (@Flameeyes)
+
 
 0.22.12 (2021-11-06)
 
