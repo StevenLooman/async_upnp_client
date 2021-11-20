@@ -29,15 +29,16 @@ from .server import (
     SsdpSearchResponder,
     UpnpServerDevice,
     UpnpServerService,
+    action_handler,
     callable_action,
-    soap_handler,
+    subscribe_handler,
     to_xml,
 )
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_tv")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
-LOGGER_SSDP_TRAFFIC.setLevel(logging.INFO)
+LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
 # SOURCE = ("192.168.178.72", 0)
 SOURCE = ("fe80::3ad9:95f3:78a7:9ca9", 0, 0, 2)  # Your IP here!
 HTTP_PORT = 8000
@@ -46,21 +47,22 @@ HTTP_PORT = 8000
 class MediaRendererDevice(UpnpServerDevice):
     """Media Renderer device."""
 
+    DEVICE_DEFINITION = DeviceInfo(
+        device_type="urn:schemas-upnp-org:device:MediaRenderer:1",
+        friendly_name="Dummy TV",
+        manufacturer="Steven",
+        model_name="DummyTV v1",
+        udn="uuid:ea2181c0-c677-4a09-80e6-f9e69a951284",
+        model_description="Dummy TV DMR",
+        model_number="v0.0.1",
+        serial_number="0000001",
+        url="/device.xml",
+        icons=[],
+        xml=ET.Element("server_device"),
+    )
+
     def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
         """Initialize."""
-        device_info = DeviceInfo(
-            device_type="urn:schemas-upnp-org:device:MediaRenderer:1",
-            friendly_name="Dummy TV",
-            manufacturer="Steven",
-            model_name="DummyTV v1",
-            udn="uuid:ea2181c0-c677-4a09-80e6-f9e69a951284",
-            model_description="Dummy TV DMR",
-            model_number="v0.0.1",
-            serial_number="0000001",
-            url="/device.xml",
-            icons=[],
-            xml=ET.Element("server_device"),
-        )
         services = [
             RenderingControlService(requester=requester),
             AVTransportService(requester=requester),
@@ -68,7 +70,6 @@ class MediaRendererDevice(UpnpServerDevice):
         ]
         super().__init__(
             requester=requester,
-            device_info=device_info,
             base_uri=base_uri,
             services=services,
         )
@@ -77,7 +78,7 @@ class MediaRendererDevice(UpnpServerDevice):
 class RenderingControlService(UpnpServerService):
     """Rendering Control service."""
 
-    SERVICE_INFO = ServiceInfo(
+    SERVICE_DEFINITION = ServiceInfo(
         service_id="urn:upnp-org:serviceId:RenderingControl",
         service_type="urn:schemas-upnp-org:service:RenderingControl:1",
         control_url="/upnp/control/RenderingControl1",
@@ -88,8 +89,8 @@ class RenderingControlService(UpnpServerService):
 
     STATE_VARIABLE_DEFINITIONS = {
         "Volume": StateVariableTypeInfo(
-            data_type="i4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["i4"],
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
             default_value="0",
             allowed_value_range={
                 "min": "0",
@@ -98,9 +99,17 @@ class RenderingControlService(UpnpServerService):
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
         ),
+        "Mute": StateVariableTypeInfo(
+            data_type="boolean",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["boolean"],
+            default_value="0",
+            allowed_value_range={},
+            allowed_values=["0", "1", ],
+            xml=ET.Element("server_stateVariable"),
+        ),
         "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
             data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["i4"],
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
             default_value=None,
             allowed_value_range={},
             allowed_values=None,
@@ -115,28 +124,6 @@ class RenderingControlService(UpnpServerService):
             xml=ET.Element("server_stateVariable"),
         ),
     }
-
-    def __init__(self, requester: UpnpRequester) -> None:
-        """Initialize."""
-        super().__init__(requester, RenderingControlService.SERVICE_INFO)
-
-    @callable_action(
-        name="SetVolume",
-        in_args={
-            "InstanceID": "A_ARG_TYPE_InstanceID",
-            "Channel": "A_ARG_TYPE_Channel",
-            "DesiredVolume": "Volume",
-        },
-        out_args={},
-    )
-    async def set_volume(
-        self, InstanceID: int, Channel: str, DesiredVolume: int
-    ) -> Dict[str, UpnpStateVariable]:
-        """Set Volume."""
-        # pylint: disable=invalid-name, unused-argument
-        volume = self.state_variable("Volume")
-        volume.value = DesiredVolume
-        return {}
 
     @callable_action(
         name="GetVolume",
@@ -157,11 +144,66 @@ class RenderingControlService(UpnpServerService):
             "CurrentVolume": self.state_variable("Volume"),
         }
 
+    @callable_action(
+        name="SetVolume",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+            "DesiredVolume": "Volume",
+        },
+        out_args={},
+    )
+    async def set_volume(
+        self, InstanceID: int, Channel: str, DesiredVolume: int
+    ) -> Dict[str, UpnpStateVariable]:
+        """Set Volume."""
+        # pylint: disable=invalid-name, unused-argument
+        volume = self.state_variable("Volume")
+        volume.value = DesiredVolume
+        return {}
+
+    @callable_action(
+        name="GetMute",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+        },
+        out_args={
+            "CurrentMute": "Mute",
+        },
+    )
+    async def get_mute(
+        self, InstanceID: int, Channel: str
+    ) -> Dict[str, UpnpStateVariable]:
+        """Get Mute."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentMute": self.state_variable("Mute"),
+        }
+
+    @callable_action(
+        name="SetMute",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+            "DesiredMute": "Mute",
+        },
+        out_args={},
+    )
+    async def set_mute(
+        self, InstanceID: int, Channel: str, DesiredMute: bool
+    ) -> Dict[str, UpnpStateVariable]:
+        """Set Volume."""
+        # pylint: disable=invalid-name, unused-argument
+        volume = self.state_variable("Mute")
+        volume.value = DesiredMute
+        return {}
+
 
 class AVTransportService(UpnpServerService):
     """AVTransport service."""
 
-    SERVICE_INFO = ServiceInfo(
+    SERVICE_DEFINITION = ServiceInfo(
         service_id="urn:upnp-org:serviceId:AVTransport",
         service_type="urn:schemas-upnp-org:service:AVTransport:1",
         control_url="/upnp/control/AVTransport1",
@@ -173,23 +215,181 @@ class AVTransportService(UpnpServerService):
     STATE_VARIABLE_DEFINITIONS = {
         "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
             data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["i4"],
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
             default_value=None,
             allowed_value_range={},
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
         ),
+        "CurrentTrackURI": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentTrack": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "AVTransportURI": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "TransportState": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="STOPPED",
+            allowed_value_range={},
+            allowed_values=["STOPPED", "PLAYING", "PAUSED_PLAYBACK", "TRANSITIONING", ],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "TransportStatus": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "TransportPlaySpeed": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="1",
+            allowed_value_range={},
+            allowed_values=["1"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PossiblePlaybackStorageMedia": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PossibleRecordStorageMedia": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PossibleRecordQualityModes": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentPlayMode": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NORMAL",
+            allowed_value_range={},
+            allowed_values=["NORMAL"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentRecordQualityMode": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
     }
 
-    def __init__(self, requester: UpnpRequester) -> None:
-        """Initialize."""
-        super().__init__(requester, AVTransportService.SERVICE_INFO)
+    @callable_action(
+        name="GetTransportInfo",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "CurrentTransportState": "TransportState",
+            "CurrentTransportStatus": "TransportStatus",
+            "CurrentSpeed": "TransportPlaySpeed",
+        },
+    )
+    async def get_transport_info(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Transport Info."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentTransportState": self.state_variable("TransportState"),
+            "CurrentTransportStatus": self.state_variable("TransportStatus"),
+            "CurrentSpeed": self.state_variable("TransportPlaySpeed"),
+        }
+
+    @callable_action(
+        name="GetMediaInfo",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "CurrentURI": "AVTransportURI",
+        },
+    )
+    async def get_media_info(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Media Info."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentURI": self.state_variable("AVTransportURI"),
+        }
+
+    @callable_action(
+        name="GetDeviceCapabilities",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "PlayMedia": "PossiblePlaybackStorageMedia",
+            "RecMedia": "PossibleRecordStorageMedia",
+            "RecQualityModes": "PossibleRecordQualityModes",
+        },
+    )
+    async def get_device_capabilities(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Device Capabilities."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "PlayMedia": self.state_variable("PossiblePlaybackStorageMedia"),
+            "RecMedia": self.state_variable("PossibleRecordStorageMedia"),
+            "RecQualityModes": self.state_variable("PossibleRecordQualityModes"),
+        }
+
+    @callable_action(
+        name="GetTransportSettings",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "PlayMode": "CurrentPlayMode",
+            "RecQualityMode": "CurrentRecordQualityMode",
+        },
+    )
+    async def get_transport_settings(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Transport Settings."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "PlayMode": self.state_variable("CurrentPlayMode"),
+            "RecQualityMode": self.state_variable("CurrentRecordQualityMode"),
+        }
 
 
 class ConnectionManagerService(UpnpServerService):
     """ConnectionManager service."""
 
-    SERVICE_INFO = ServiceInfo(
+    SERVICE_DEFINITION = ServiceInfo(
         service_id="urn:upnp-org:serviceId:ConnectionManager",
         service_type="urn:schemas-upnp-org:service:ConnectionManager:1",
         control_url="/upnp/control/ConnectionManager1",
@@ -201,17 +401,13 @@ class ConnectionManagerService(UpnpServerService):
     STATE_VARIABLE_DEFINITIONS = {
         "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
             data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["i4"],
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
             default_value=None,
             allowed_value_range={},
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
         ),
     }
-
-    def __init__(self, requester: UpnpRequester) -> None:
-        """Initialize."""
-        super().__init__(requester, ConnectionManagerService.SERVICE_INFO)
 
 
 async def async_main() -> None:
@@ -220,16 +416,21 @@ async def async_main() -> None:
     app = aiohttp_web.Application()
 
     requester = NopRequester()
-    base_uri = f"http://{SOURCE[0]}:{HTTP_PORT}"
+    base_uri = (
+        f"http://[{SOURCE[0]}]:{HTTP_PORT}"
+        if ":" in SOURCE[0]
+        else f"http://{SOURCE[0]}:{HTTP_PORT}"
+    )
     device = MediaRendererDevice(requester, base_uri)
 
     # Set up routes.
     app.router.add_get(device.device_url, partial(to_xml, device))
     for service in device.services.values():
-        app.router.add_get(service._service_info.scpd_url, partial(to_xml, service))
+        app.router.add_get(service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service))
         app.router.add_post(
-            service._service_info.control_url, partial(soap_handler, service)
+            service.SERVICE_DEFINITION.control_url, partial(action_handler, service)
         )
+        app.router.add_route("SUBSCRIBE", service.SERVICE_DEFINITION.event_sub_url, partial(subscribe_handler, service))
 
     runner = aiohttp_web.AppRunner(app)
     await runner.setup()

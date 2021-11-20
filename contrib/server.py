@@ -162,7 +162,7 @@ class UpnpStateVariable(_UpnpStateVariable):
     def to_xml(self) -> ET.Element:
         """Serialize to XML."""
         state_var_el = ET.Element(
-            "stateVariable", send_events="yes" if self.send_events else "no"
+            "stateVariable", sendEvents="yes" if self.send_events else "no"
         )
         ET.SubElement(state_var_el, "name").text = self.name
         ET.SubElement(state_var_el, "dataType").text = self.data_type
@@ -247,10 +247,11 @@ class UpnpDevice(_UpnpDevice):
 class UpnpServerService(UpnpService):
     """UPnP Service representation."""
 
+    SERVICE_DEFINITION: ServiceInfo
     STATE_VARIABLE_DEFINITIONS: Mapping[str, StateVariableTypeInfo]
 
-    def __init__(self, requester: UpnpRequester, service_info: ServiceInfo) -> None:
-        super().__init__(requester, service_info, [], [])
+    def __init__(self, requester: UpnpRequester) -> None:
+        super().__init__(requester, self.SERVICE_DEFINITION, [], [])
 
         self._init_state_variables()
         self._init_actions()
@@ -323,7 +324,7 @@ class UpnpServerService(UpnpService):
 
         for arg_name, state_var_name in out_args.items():
             # Build out-argument.
-            self.state_variable(state_var_name)
+            state_var = self.state_variable(state_var_name)
             arg_info = ActionArgumentInfo(
                 arg_name,
                 direction="out",
@@ -348,35 +349,36 @@ class UpnpServerService(UpnpService):
         action.validate_arguments(**kwargs)
         return await action.async_handle(**kwargs)
 
-    def to_xml_string(self) -> Any:
+    def to_xml_string(self, encoding: Optional[str] = None) -> Any:
         """To XML string."""
-        return ET.tostring(self.to_xml(), encoding="utf-8")
+        return ET.tostring(self.to_xml(), encoding=encoding or "utf-8")
 
 
 class UpnpServerDevice(UpnpDevice):
     """UPnP Device representation."""
 
+    DEVICE_DEFINITION: DeviceInfo
+
     def __init__(
         self,
         requester: UpnpRequester,
-        device_info: DeviceInfo,
         services: Sequence[UpnpService],
         base_uri: str,
     ) -> None:
         """Initialize."""
         super().__init__(
             requester=requester,
-            device_info=device_info,
+            device_info=self.DEVICE_DEFINITION,
             services=services,
             embedded_devices=[],
         )
         self.base_uri = base_uri
 
-    def to_xml_string(self) -> Any:
+    def to_xml_string(self, encoding: Optional[str] = None) -> Any:
         """To XML string."""
         root = self.to_xml()
         ET.SubElement(root, "URLBase").text = self.base_uri
-        return ET.tostring(root, encoding="utf-8")
+        return ET.tostring(root, encoding=encoding or "utf-8")
 
 
 # Decorators.
@@ -402,10 +404,10 @@ def callable_action(
 # Utils.
 
 
-async def soap_handler(
+async def action_handler(
     service: UpnpServerService, request: aiohttp_web.Request
 ) -> aiohttp_web.Response:
-    """SOAP handler."""
+    """Action handler."""
     # pylint: disable=too-many-locals
     # Parse call.
     soap = request.headers.get("SOAPAction", "").strip('"')
@@ -449,10 +451,17 @@ async def soap_handler(
     )
 
 
+async def subscribe_handler(service: UpnpServerService, request: aiohttp_web.Request
+) -> aiohttp_web.Response:
+    """SUBSCRIBE handler."""
+    return aiohttp_web.Response(status=404)
+
+
 async def to_xml(
     thing: Union[UpnpServerDevice, UpnpServerService], _request: aiohttp_web.Request
 ) -> aiohttp_web.Response:
     """To XML."""
+    encoding = "utf-8"
     return aiohttp_web.Response(
-        content_type="text/xml", charset="utf-8", body=thing.to_xml_string()
+        content_type="text/xml", charset=encoding, body=thing.to_xml_string(encoding)
     )
