@@ -51,6 +51,8 @@ repos:
     hooks:
       - id: pylint
         additional_dependencies:
-          - pytest==6.2.4
           - aiohttp==3.7.4
+          - defusedxml>=0.6.0
+          - pytest==6.2.4
+          - voluptuous>=0.12.1
         files: ^(async_upnp_client|tests)/.+\.py$
