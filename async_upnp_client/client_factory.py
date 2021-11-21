@@ -265,9 +265,10 @@ class UpnpFactory:
             validators.append(data_type_validator)
 
         if not self._non_strict:
+            in_coercer = data_type_mapping["in"]
             if type_info.allowed_values:
                 allowed_values = [
-                    data_type(allowed_value)
+                    in_coercer(allowed_value)
                     for allowed_value in type_info.allowed_values
                 ]
                 in_ = vol.In(allowed_values)
@@ -276,8 +277,8 @@ class UpnpFactory:
             if type_info.allowed_value_range:
                 min_ = type_info.allowed_value_range.get("min", None)
                 max_ = type_info.allowed_value_range.get("max", None)
-                min_ = data_type(min_) if min_ else None
-                max_ = data_type(max_) if max_ else None
+                min_ = in_coercer(min_) if min_ else None
+                max_ = in_coercer(max_) if max_ else None
                 if min_ is not None or max_ is not None:
                     range_ = vol.Range(min=min_, max=max_)
                     validators.append(range_)
