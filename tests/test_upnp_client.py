@@ -1,31 +1,15 @@
 # -*- coding: utf-8 -*-
 """Unit tests for client_factory and client modules."""
 
-import socket
 from datetime import datetime, timedelta, timezone
-from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import MutableMapping, Sequence
-from unittest.mock import patch
-
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    # For python 3.6/3.7
-    from mock import AsyncMock  # type: ignore
+from typing import MutableMapping
 
 import defusedxml.ElementTree as DET
 import pytest
 
-from async_upnp_client import (
-    UpnpError,
-    UpnpEventHandler,
-    UpnpFactory,
-    UpnpService,
-    UpnpStateVariable,
-    UpnpValueError,
-)
+from async_upnp_client import UpnpError, UpnpFactory, UpnpStateVariable, UpnpValueError
 
-from .upnp_test_requester import RESPONSE_MAP, UpnpTestRequester, read_file
+from .conftest import RESPONSE_MAP, UpnpTestRequester, read_fixture
 
 
 class TestUpnpStateVariable:
@@ -380,7 +364,7 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_GetVolume.xml")
+        response = read_fixture("dlna/dmr/action_GetVolume.xml")
         result = action.parse_response(service_type, {}, response)
         assert result == {"CurrentVolume": 3}
 
@@ -394,7 +378,7 @@ class TestUpnpAction:
         action = service.action("SetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_SetVolume.xml")
+        response = read_fixture("dlna/dmr/action_SetVolume.xml")
         result = action.parse_response(service_type, {}, response)
         assert result == {}
 
@@ -408,7 +392,7 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_GetVolumeError.xml")
+        response = read_fixture("dlna/dmr/action_GetVolumeError.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -425,7 +409,7 @@ class TestUpnpAction:
         action = service.action("GetMediaInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response = read_file("dlna/dmr/action_GetMediaInfo.xml")
+        response = read_fixture("dlna/dmr/action_GetMediaInfo.xml")
         result = action.parse_response(service_type, {}, response)
         assert result == {
             "CurrentURI": "uri://1.mp3",
@@ -459,7 +443,7 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_GetVolumeInvalidServiceType.xml")
+        response = read_fixture("dlna/dmr/action_GetVolumeInvalidServiceType.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -476,7 +460,9 @@ class TestUpnpAction:
         action = service.action("GetTransportInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response = read_file("dlna/dmr/action_GetTransportInfoInvalidServiceType.xml")
+        response = read_fixture(
+            "dlna/dmr/action_GetTransportInfoInvalidServiceType.xml"
+        )
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -496,7 +482,7 @@ class TestUpnpAction:
         service = device.service(service_type)
         action = service.action(test_action)
 
-        response = read_file("dlna/dmr/action_GetVolumeExtraOutParameter.xml")
+        response = read_fixture("dlna/dmr/action_GetVolumeExtraOutParameter.xml")
         try:
             action.parse_response(service_type, {}, response)
             assert False
@@ -555,7 +541,7 @@ class TestUpnpService:
             ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
                 200,
                 {},
-                read_file("dlna/dmr/action_GetVolume.xml"),
+                read_fixture("dlna/dmr/action_GetVolume.xml"),
             )
         }
         responses.update(RESPONSE_MAP)
@@ -567,120 +553,3 @@ class TestUpnpService:
 
         result = await service.async_call_action(action, InstanceID=0, Channel="Master")
         assert result["CurrentVolume"] == 3
-
-
-class TestUpnpEventHandler:
-    """Tests for UPnpEventHandler."""
-
-    # pylint: disable=no-self-use
-
-    @pytest.mark.asyncio
-    async def test_subscribe(self) -> None:
-        """Test subscribing to a UpnpService."""
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
-
-        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        sid, timeout = await event_handler.async_subscribe(service)
-        assert event_handler.service_for_sid("uuid:dummy") == service
-        assert sid == "uuid:dummy"
-        assert timeout == timedelta(seconds=300)
-        callback_url = await event_handler.async_callback_url_for_service(service)
-        assert callback_url == "http://localhost:11302"
-
-    @pytest.mark.asyncio
-    async def test_deferred_callback_url(self) -> None:
-        """Test creating a UpnpEventHandler with unspecified host and port."""
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler(
-            "http://{host}:{port}", requester, {socket.AF_INET: 11302}
-        )
-
-        with patch(
-            "async_upnp_client.event_handler.async_get_local_ip",
-            AsyncMock(return_value=(AddressFamily.AF_INET, "127.0.0.1")),
-        ):
-            service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-            callback_url = await event_handler.async_callback_url_for_service(service)
-            assert callback_url == "http://127.0.0.1:11302"
-
-    @pytest.mark.asyncio
-    async def test_subscribe_renew(self) -> None:
-        """Test renewing an existing subscription to a UpnpService."""
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
-
-        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        sid, timeout = await event_handler.async_subscribe(service)
-        assert sid == "uuid:dummy"
-        assert event_handler.service_for_sid("uuid:dummy") == service
-        assert timeout == timedelta(seconds=300)
-
-        sid, timeout = await event_handler.async_resubscribe(service)
-        assert event_handler.service_for_sid("uuid:dummy") == service
-        assert sid == "uuid:dummy"
-        assert timeout == timedelta(seconds=300)
-
-    @pytest.mark.asyncio
-    async def test_unsubscribe(self) -> None:
-        """Test unsubscribing from a UpnpService."""
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
-
-        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        sid, timeout = await event_handler.async_subscribe(service)
-        assert event_handler.service_for_sid("uuid:dummy") == service
-        assert sid == "uuid:dummy"
-        assert timeout == timedelta(seconds=300)
-
-        old_sid = await event_handler.async_unsubscribe(service)
-        assert event_handler.service_for_sid("uuid:dummy") is None
-        assert old_sid == "uuid:dummy"
-
-    @pytest.mark.asyncio
-    async def test_on_notify_upnp_event(self) -> None:
-        """Test handling of a UPnP event."""
-        changed_vars: Sequence[UpnpStateVariable] = []
-
-        def on_event(
-            _self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]
-        ) -> None:
-            nonlocal changed_vars
-            changed_vars = changed_state_variables
-
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-        service.on_event = on_event
-        await event_handler.async_subscribe(service)
-
-        headers = {
-            "NT": "upnp:event",
-            "NTS": "upnp:propchange",
-            "SID": "uuid:dummy",
-        }
-        body = """
-<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
-    <e:property>
-        <Volume>60</Volume>
-    </e:property>
-</e:propertyset>
-"""
-
-        result = await event_handler.handle_notify(headers, body)
-        assert result == 200
-
-        assert len(changed_vars) == 1
-
-        state_var = service.state_variable("Volume")
-        assert state_var.value == 60

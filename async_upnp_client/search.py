@@ -7,6 +7,7 @@ from asyncio.events import AbstractEventLoop
 from typing import Awaitable, Callable, Optional, Union, cast
 
 from async_upnp_client.const import SsdpSource
+from async_upnp_client.net import get_source_address_tuple
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
     SSDP_MX,
@@ -17,7 +18,6 @@ from async_upnp_client.ssdp import (
     SsdpProtocol,
     build_ssdp_search_packet,
     get_host_string,
-    get_source_address_tuple,
     get_ssdp_socket,
     get_target_address_tuple,
     ip_address_from_address_tuple,

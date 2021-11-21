@@ -8,12 +8,12 @@ from asyncio.transports import BaseTransport, DatagramTransport
 from typing import Awaitable, Callable, Optional, Union
 
 from async_upnp_client.const import AddressTupleVXType, NotificationSubType, SsdpSource
+from async_upnp_client.net import get_source_address_tuple
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
     IPvXAddress,
     SsdpHeaders,
     SsdpProtocol,
-    get_source_address_tuple,
     get_ssdp_socket,
     get_target_address_tuple,
 )

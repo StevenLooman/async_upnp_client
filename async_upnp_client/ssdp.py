@@ -7,19 +7,24 @@ import sys
 from asyncio import BaseProtocol, BaseTransport, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
-from ipaddress import IPv4Address, IPv6Address, ip_address
+from ipaddress import IPv4Address, IPv6Address
 from typing import Awaitable, Callable, Optional, Tuple, Union, cast
-from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_parser import HeadersParser
 
 from async_upnp_client.const import (
-    AddressTupleV4Type,
     AddressTupleV6Type,
     AddressTupleVXType,
     IPvXAddress,
     SsdpHeaders,
     UniqueDeviceName,
+)
+from async_upnp_client.net import (
+    get_adjusted_url,
+    get_host_port_string,
+    get_host_string,
+    ip_address_from_address_tuple,
+    ip_address_str_from_address_tuple,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
 
@@ -38,86 +43,12 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 
-def ip_address_from_address_tuple(address_tuple: AddressTupleVXType) -> IPvXAddress:
-    """Get IPvXAddress from AddressTupleVXType."""
-    if len(address_tuple) == 4:
-        address_tuple = cast(AddressTupleV6Type, address_tuple)
-        min_ver = (
-            3,
-            9,
-        )  # Python >=3.9 supports IPv6Address with scope_id
-        if sys.version_info >= min_ver and address_tuple[3]:
-            return IPv6Address(f"{address_tuple[0]}%{address_tuple[3]}")
-        return IPv6Address(address_tuple[0])
-
-    return IPv4Address(address_tuple[0])
-
-
-def ip_address_str_from_address_tuple(address_tuple: AddressTupleVXType) -> str:
-    """Get IP address as string from AddressTupleVXType."""
-    # This function is mostly used to work around Python <3.9 IPv6Address not supporting scope_ids.
-    if len(address_tuple) == 4:
-        address_tuple = cast(AddressTupleV6Type, address_tuple)
-        if "%" not in address_tuple[0] and address_tuple[3]:
-            return f"{address_tuple[0]}%{address_tuple[3]}"
-
-    return f"{address_tuple[0]}"
-
-
-def get_source_address_tuple(
-    target: AddressTupleVXType,
-    source: Union[AddressTupleVXType, IPvXAddress, None] = None,
-) -> AddressTupleVXType:
-    """Get source address tuple from address tuple/ip address, if given."""
-    if isinstance(source, tuple):
-        return source
-
-    if isinstance(source, IPv4Address):
-        return (
-            str(source),
-            0,
-        )
-
-    if isinstance(source, IPv6Address):
-        source_str = str(source)
-        scope_id = getattr(source, "scope_id", "0") or "0"
-        scope_id_index = source_str.rfind("%")
-        if scope_id_index != -1:
-            source_str = source_str[:scope_id_index]
-        if scope_id.isdigit():
-            scope_id = int(scope_id)
-        return (
-            source_str,
-            0,
-            0,
-            cast(int, scope_id),
-        )
-
-    if isinstance(target, tuple) and len(target) == 2:
-        target = cast(AddressTupleV4Type, target)
-        return (
-            "0.0.0.0",
-            0,
-        )
-
-    if isinstance(target, tuple) and len(target) == 4:
-        target = cast(AddressTupleV6Type, target)
-        return (
-            "::",
-            0,
-            0,
-            target[3],
-        )
-
-    raise NotImplementedError()
-
-
 def get_target_address_tuple(
     target: Union[AddressTupleVXType, IPvXAddress, None] = None,
-    target_port: Optional[int] = None,
+    target_port: int = SSDP_PORT,
     source: Union[AddressTupleVXType, IPvXAddress, None] = None,
 ) -> AddressTupleVXType:
-    """Get target address tuple."""
+    """Get target address tuple for SSDP."""
     # pylint: disable=too-many-return-statements
     if isinstance(target, tuple):
         return target
@@ -125,7 +56,7 @@ def get_target_address_tuple(
     if isinstance(target, IPv4Address):
         return (
             str(target),
-            target_port or SSDP_PORT,
+            target_port,
         )
 
     if isinstance(target, IPv6Address):
@@ -138,7 +69,7 @@ def get_target_address_tuple(
             scope_id = int(scope_id)
         return (
             target_str,
-            target_port or SSDP_PORT,
+            target_port,
             0,
             cast(int, scope_id),
         )
@@ -150,7 +81,7 @@ def get_target_address_tuple(
     ):
         return (
             SSDP_IP_V4,
-            target_port or SSDP_PORT,
+            target_port,
         )
 
     if isinstance(source, IPv6Address):
@@ -159,7 +90,7 @@ def get_target_address_tuple(
             scope_id = int(scope_id)
         return (
             SSDP_IP_V6,
-            target_port or SSDP_PORT,
+            target_port,
             0,
             cast(int, scope_id),
         )
@@ -168,7 +99,7 @@ def get_target_address_tuple(
         source = cast(AddressTupleV6Type, source)
         return (
             SSDP_IP_V6,
-            target_port or SSDP_PORT,
+            target_port,
             0,
             source[3],
         )
@@ -176,49 +107,8 @@ def get_target_address_tuple(
     # Default to IPv4.
     return (
         SSDP_IP_V4,
-        target_port or SSDP_PORT,
+        target_port,
     )
-
-
-def get_host_string(addr: AddressTupleVXType) -> str:
-    """Construct host string from address tuple."""
-    if len(addr) == 4:
-        addr = cast(AddressTupleV6Type, addr)
-        if addr[3]:
-            return f"{addr[0]}%{addr[3]}"
-    return addr[0]
-
-
-def get_host_port_string(addr: AddressTupleVXType) -> str:
-    """Return a properly escaped host port pair."""
-    host = addr[0]
-    if ":" in host:
-        return f"[{host}]:{addr[1]}"
-    return f"{host}:{addr[1]}"
-
-
-def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
-    """Adjust a url with correction for link local scope."""
-    if len(addr) < 4:
-        return url
-
-    addr = cast(AddressTupleV6Type, addr)
-    if not addr[3]:
-        return url
-
-    data = urlsplit(url)
-    try:
-        address = ip_address(data.hostname)
-    except ValueError:
-        return url
-
-    if not address.is_link_local:
-        return url
-
-    netloc = f"[{data.hostname}%{addr[3]}]"
-    if data.port:
-        netloc += f":{data.port}"
-    return urlunsplit(data._replace(netloc=netloc))
 
 
 def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:

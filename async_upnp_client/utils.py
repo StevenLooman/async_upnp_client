@@ -1,22 +1,15 @@
 # -*- coding: utf-8 -*-
 """Utils for async_upnp_client."""
 
-import asyncio
 import re
-import socket
 from collections import defaultdict
 from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
-from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Callable, Dict, Generator, Optional, Tuple
-from urllib.parse import urljoin, urlsplit
+from typing import Any, Callable, Dict, Generator, Optional
 
 import defusedxml.ElementTree as DET
 from voluptuous import Invalid
-
-EXTERNAL_IP = "1.1.1.1"
-EXTERNAL_PORT = 80
 
 
 class CaseInsensitiveDict(abcMutableMapping):
@@ -127,19 +120,6 @@ def str_to_time(string: str) -> Optional[timedelta]:
     )
 
 
-def absolute_url(device_url: str, url: str) -> str:
-    """
-    Convert a relative URL to an absolute URL pointing at device.
-
-    If url is already an absolute url (i.e., starts with http:/https:),
-    then the url itself is returned.
-    """
-    if url.startswith("http:") or url.startswith("https:"):
-        return url
-
-    return urljoin(device_url, url)
-
-
 def require_tzinfo(value: Any) -> Any:
     """Require tzinfo."""
     if value.tzinfo is None:
@@ -189,56 +169,6 @@ def parse_date_time(value: str) -> Any:
         if re.match(pattern, value):
             return parser(value)
     raise ValueError("Unknown date/time: " + value)
-
-
-def _target_url_to_addr(target_url: Optional[str]) -> Tuple[str, int]:
-    """Resolve target_url into an address usable for get_local_ip."""
-    if target_url:
-        if "//" not in target_url:
-            # Make sure urllib can work with target_url to get the host
-            target_url = "//" + target_url
-        target_url_split = urlsplit(target_url)
-        target_host = target_url_split.hostname or EXTERNAL_IP
-        target_port = target_url_split.port or EXTERNAL_PORT
-    else:
-        target_host = EXTERNAL_IP
-        target_port = EXTERNAL_PORT
-
-    return target_host, target_port
-
-
-def get_local_ip(target_url: Optional[str] = None) -> str:
-    """Try to get the local IP of this machine, used to talk to target_url."""
-    target_addr = _target_url_to_addr(target_url)
-
-    try:
-        temp_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        temp_sock.connect(target_addr)
-        local_ip: str = temp_sock.getsockname()[0]
-        return local_ip
-    finally:
-        temp_sock.close()
-
-
-async def async_get_local_ip(
-    target_url: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
-) -> Tuple[AddressFamily, str]:
-    """Try to get the local IP of this machine, used to talk to target_url."""
-    target_addr = _target_url_to_addr(target_url)
-    loop = loop or asyncio.get_event_loop()
-
-    # Create a UDP connection to the target. This won't cause any network
-    # traffic but will assign a local IP to the socket.
-    transport, _ = await loop.create_datagram_endpoint(
-        asyncio.protocols.DatagramProtocol, remote_addr=target_addr
-    )
-
-    try:
-        sock = transport.get_extra_info("socket")
-        sockname = sock.getsockname()
-        return sock.family, sockname[0]
-    finally:
-        transport.close()
 
 
 # Adapted from http://stackoverflow.com/a/10077069

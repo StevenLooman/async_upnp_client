@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Profiles for upnp_client."""
+"""Conftest."""
 
 import asyncio
 import os.path
@@ -7,10 +7,10 @@ from collections import deque
 from copy import deepcopy
 from typing import Deque, Mapping, MutableMapping, Optional, Tuple, cast
 
-from async_upnp_client import UpnpRequester
+from async_upnp_client import UpnpNotifyServer, UpnpRequester
 
 
-def read_file(filename: str) -> str:
+def read_fixture(filename: str) -> str:
     """Read file."""
     path = os.path.join("tests", "fixtures", filename)
     with open(path, encoding="utf-8") as file:
@@ -26,7 +26,7 @@ class UpnpTestRequester(UpnpRequester):
         self,
         response_map: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]],
     ) -> None:
-        """Class initializer."""
+        """Initialize."""
         self.response_map: MutableMapping[
             Tuple[str, str],
             Tuple[int, MutableMapping[str, str], str],
@@ -55,37 +55,52 @@ class UpnpTestRequester(UpnpRequester):
         return self.response_map[key]
 
 
+class UpnpTestNotifyServer(UpnpNotifyServer):
+    """Test notify server."""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self, callback_url: Optional[str] = None) -> None:
+        """Initialize."""
+        self._callback_url = callback_url or "http://192.168.1.2:8000/notify"
+
+    @property
+    def callback_url(self) -> str:
+        """Return callback URL on which we are callable."""
+        return self._callback_url
+
+
 RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
     # DLNA/DMR
     ("GET", "http://dlna_dmr:1234/device.xml"): (
         200,
         {},
-        read_file("dlna/dmr/device.xml"),
+        read_fixture("dlna/dmr/device.xml"),
     ),
     ("GET", "http://dlna_dmr:1234/device_embedded.xml"): (
         200,
         {},
-        read_file("dlna/dmr/device_embedded.xml"),
+        read_fixture("dlna/dmr/device_embedded.xml"),
     ),
     ("GET", "http://dlna_dmr:1234/device_incomplete.xml"): (
         200,
         {},
-        read_file("dlna/dmr/device_incomplete.xml"),
+        read_fixture("dlna/dmr/device_incomplete.xml"),
     ),
     ("GET", "http://dlna_dmr:1234/RenderingControl_1.xml"): (
         200,
         {},
-        read_file("dlna/dmr/RenderingControl_1.xml"),
+        read_fixture("dlna/dmr/RenderingControl_1.xml"),
     ),
     ("GET", "http://dlna_dmr:1234/ConnectionManager_1.xml"): (
         200,
         {},
-        read_file("dlna/dmr/ConnectionManager_1.xml"),
+        read_fixture("dlna/dmr/ConnectionManager_1.xml"),
     ),
     ("GET", "http://dlna_dmr:1234/AVTransport_1.xml"): (
         200,
         {},
-        read_file("dlna/dmr/AVTransport_1.xml"),
+        read_fixture("dlna/dmr/AVTransport_1.xml"),
     ),
     ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1"): (
         200,
@@ -108,20 +123,20 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         "",
     ),
     # IGD
-    ("GET", "http://igd:1234/device.xml"): (200, {}, read_file("igd/device.xml")),
+    ("GET", "http://igd:1234/device.xml"): (200, {}, read_fixture("igd/device.xml")),
     ("GET", "http://igd:1234/Layer3Forwarding.xml"): (
         200,
         {},
-        read_file("igd/Layer3Forwarding.xml"),
+        read_fixture("igd/Layer3Forwarding.xml"),
     ),
     ("GET", "http://igd:1234/WANCommonInterfaceConfig.xml"): (
         200,
         {},
-        read_file("igd/WANCommonInterfaceConfig.xml"),
+        read_fixture("igd/WANCommonInterfaceConfig.xml"),
     ),
     ("GET", "http://igd:1234/WANIPConnection.xml"): (
         200,
         {},
-        read_file("igd/WANIPConnection.xml"),
+        read_fixture("igd/WANIPConnection.xml"),
     ),
 }

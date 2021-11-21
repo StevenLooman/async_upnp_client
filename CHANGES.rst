@@ -4,10 +4,13 @@ Changes
 0.23.0 (unreleased)
 
 - Fix error in cli if target_port is absent in search command
-- Fix IPv6 support for SSDP
+- Breaking change: Fix IPv6 support for SSDP
     - Change `ssdp_listener`, `advertisement`, `search` to use `AddressTupleVXType` or `IPvXAddress`
     - With Python <3.9, use AddressTupleV6Type when scope_ids are needed
-- Added parameter `addr` to callbacks for `search.SsdpSearchListener`, `search.async_search`, `advertisement.SsdpAdvertisementListener`
+- Breaking change: Added parameter `addr` to callbacks for `search.SsdpSearchListener`, `search.async_search`, `advertisement.SsdpAdvertisementListener`
+- Breaking change: Clean up `aiohttp.AiohttpNotifyServer`/`event_handler.UpnpEventHandler`
+    - Fix IPv6 support
+    - Only `aiohttp.AiohttpNotifyServer` handles all communication related parts, such as listening port
 
 
 0.22.12 (2021-11-06)

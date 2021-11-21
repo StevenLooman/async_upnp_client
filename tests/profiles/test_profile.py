@@ -17,7 +17,12 @@ from async_upnp_client.exceptions import (
 from async_upnp_client.profiles.dlna import DmrDevice
 from async_upnp_client.profiles.igd import IgdDevice
 
-from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester, read_file
+from ..conftest import (
+    RESPONSE_MAP,
+    UpnpTestNotifyServer,
+    UpnpTestRequester,
+    read_fixture,
+)
 
 
 class TestUpnpProfileDevice:
@@ -28,10 +33,11 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_action_exists(self) -> None:
         """Test getting existing action."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # doesn't error
@@ -40,10 +46,11 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_action_not_exists(self) -> None:
         """Test getting non-existing action."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # doesn't error
@@ -52,10 +59,11 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_icon(self) -> None:
         """Test getting an icon returns the best available."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         assert profile.icon == "http://dlna_dmr:1234/device_icon_120.png"
@@ -88,10 +96,11 @@ class TestUpnpProfileDevice:
     async def test_subscribe_manual_resubscribe(self) -> None:
         """Test subscribing, resub, unsub, without auto_resubscribe."""
         now = time.monotonic()
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # Test subscription
@@ -135,10 +144,11 @@ class TestUpnpProfileDevice:
     async def test_subscribe_auto_resubscribe(self) -> None:
         """Test subscribing, resub, unsub, with auto_resubscribe."""
         now = time.monotonic()
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # Tweak timeouts to get a resubscription in a time suitable for testing.
@@ -199,10 +209,11 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_subscribe_fail(self) -> None:
         """Test subscribing fails with UpnpError if device is offline."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # First request is fine, 2nd raises an exception, when trying to subscribe
@@ -220,10 +231,11 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_subscribe_rejected(self) -> None:
         """Test subscribing rejected by device."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
 
         # All requests give a response error
@@ -241,10 +253,11 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_auto_resubscribe_fail(self) -> None:
         """Test auto-resubscription when the device goes offline."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
         assert device.available is True
 
@@ -286,14 +299,15 @@ class TestUpnpProfileDevice:
     @pytest.mark.asyncio
     async def test_poll_state_variables(self) -> None:
         """Test polling state variables by calling a Get* action."""
+        notify_server = UpnpTestNotifyServer()
         requester = UpnpTestRequester(RESPONSE_MAP)
         requester.response_map[
             ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = (200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        ] = (200, {}, read_fixture("dlna/dmr/action_GetPositionInfo.xml"))
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        event_handler = UpnpEventHandler(notify_server, requester)
         profile = DmrDevice(device, event_handler=event_handler)
         assert device.available is True
 

@@ -29,7 +29,7 @@ from async_upnp_client.const import (
     StateVariableTypeInfo,
 )
 from async_upnp_client.exceptions import UpnpXmlParseError
-from async_upnp_client.utils import absolute_url
+from async_upnp_client.net import absolute_url
 
 _LOGGER = logging.getLogger(__name__)
 

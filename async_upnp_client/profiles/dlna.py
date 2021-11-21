@@ -17,8 +17,9 @@ from didl_lite import didl_lite
 
 from async_upnp_client import UpnpError, UpnpService, UpnpStateVariable
 from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
+from async_upnp_client.net import absolute_url
 from async_upnp_client.profiles.profile import UpnpProfileDevice
-from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
+from async_upnp_client.utils import str_to_time, time_to_str
 
 _LOGGER = logging.getLogger(__name__)
 

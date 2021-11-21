@@ -3,15 +3,18 @@
 
 import asyncio
 import logging
+import socket
 from asyncio.events import AbstractEventLoop, AbstractServer
-from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Mapping, Optional, Tuple
+from ipaddress import ip_address
+from typing import Mapping, Optional, Tuple
 
 import aiohttp
 import aiohttp.web
 import async_timeout
 
-from async_upnp_client import UpnpEventHandler, UpnpRequester
+from async_upnp_client.client import UpnpRequester
+from async_upnp_client.const import AddressTupleVXType, IPvXAddress
+from async_upnp_client.event_handler import UpnpEventHandler, UpnpNotifyServer
 from async_upnp_client.exceptions import (
     UpnpClientResponseError,
     UpnpCommunicationError,
@@ -19,6 +22,7 @@ from async_upnp_client.exceptions import (
     UpnpConnectionTimeoutError,
     UpnpServerOSError,
 )
+from async_upnp_client.net import get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
@@ -208,49 +212,47 @@ class AiohttpSessionRequester(UpnpRequester):
         return status, resp_headers, resp_body_text
 
 
-class AiohttpNotifyServer:
-    """AIO HTTP Server to handle incoming events."""
+class AiohttpNotifyServer(UpnpNotifyServer):
+    """
+    Aio HTTP Server to handle incoming events.
 
-    CALLBACK_URL_FMT = "http://{host}:{port}/notify"
+    It is advisable to use one AiohttpNotifyServer
+    per listening IP. UpnpDevices can share a AiohttpNotifyServer/UpnpEventHandler.
+
+    """
+
+    # XXX TODO: To determine the source-tuple use the ...
 
     def __init__(
         self,
         requester: UpnpRequester,
-        listen_port: int = 0,
-        listen_host: Optional[str] = None,
+        source: AddressTupleVXType,
         callback_url: Optional[str] = None,
         loop: Optional[AbstractEventLoop] = None,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
-        self._listen_port = listen_port
-        self._listen_host = listen_host
+        self._source = source
+        self._callback_url = callback_url
         self._loop = loop or asyncio.get_event_loop()
 
         self._aiohttp_server: Optional[aiohttp.web.Server] = None
         self._server: Optional[AbstractServer] = None
 
-        # callback_url may contain format fields for filling in once the server
-        # is started and listening ports are known
-        callback_url = callback_url or self.CALLBACK_URL_FMT
-        callback_url = callback_url.format(
-            host=self._listen_host or "{host}",
-            port=self._listen_port or "{port}",
-        )
-        self.event_handler = UpnpEventHandler(callback_url, requester)
+        self.event_handler = UpnpEventHandler(self, requester)
 
     async def start_server(self) -> None:
         """Start the HTTP server."""
         self._aiohttp_server = aiohttp.web.Server(self._handle_request)
+
         try:
             self._server = await self._loop.create_server(
-                self._aiohttp_server, self._listen_host, self._listen_port
+                self._aiohttp_server, self._source[0], self._source[1]
             )
         except OSError as err:
             _LOGGER.error(
                 "Failed to create HTTP server at %s:%d: %s",
-                self._listen_host,
-                self._listen_port,
+                self._source[0],
+                self._source[1],
                 err,
             )
             raise UpnpServerOSError(
@@ -258,24 +260,16 @@ class AiohttpNotifyServer:
                 err.strerror,
             ) from err
 
-        # All ports that the event server is listening on (maybe multiple IP stacks)
-        if self._server.sockets:
-            listen_ports = {
-                AddressFamily(sock.family): sock.getsockname()[1]
-                for sock in self._server.sockets
-            }
-        else:
-            _LOGGER.warning("No listening sockets for AiohttpNotifyServer")
-            listen_ports = {}
-
-        # Set event_handler's listen_ports  for it to format the callback_url correctly
-        _LOGGER.debug("event_handler listening on %s", listen_ports)
-        self.event_handler.listen_ports = listen_ports
+        # Get listening port.
+        socks = self._server.sockets
+        assert socks and len(socks) == 1
+        sock = socks[0]
+        self._source = sock.getsockname()
+        _LOGGER.debug("New source for NotifyServer: %s", self._source)
 
     async def stop_server(self) -> None:
         """Stop the HTTP server."""
         await self.event_handler.async_unsubscribe_all()
-        self.event_handler.listen_ports = {}
 
         if self._aiohttp_server:
             await self._aiohttp_server.shutdown(10)
@@ -285,7 +279,9 @@ class AiohttpNotifyServer:
             self._server.close()
             self._server = None
 
-    async def _handle_request(self, request: Any) -> aiohttp.web.Response:
+    async def _handle_request(
+        self, request: aiohttp.web.BaseRequest
+    ) -> aiohttp.web.StreamResponse:
         """Handle incoming requests."""
         _LOGGER.debug("Received request: %s", request)
 
@@ -312,6 +308,40 @@ class AiohttpNotifyServer:
         return aiohttp.web.Response(status=status)
 
     @property
+    def _listen_ip(self) -> IPvXAddress:
+        """Get listenting IP Address."""
+        host = self._source[0]
+        address = ip_address(host)  # type: IPvXAddress
+
+        if address.is_unspecified:
+            # Figure ip.
+            family = socket.AF_INET if address.version == 4 else socket.AF_INET6
+            host = get_local_ip(None, family)
+            specific_addr = ip_address(host)  # type: IPvXAddress
+            return specific_addr
+
+        return address
+
+    @property
+    def listen_host(self) -> str:
+        """Get listening host."""
+        return str(self._listen_ip)
+
+    @property
+    def listen_port(self) -> int:
+        """Get the listening port."""
+        assert self._server
+
+        return self._source[1]
+
+    @property
     def callback_url(self) -> str:
         """Return callback URL on which we are callable."""
-        return self.event_handler.callback_url
+        assert self._server
+
+        listen_ip = self._listen_ip
+        return self._callback_url or (
+            self._callback_url or f"http://{self.listen_host}:{self.listen_port}/notify"
+            if listen_ip.version == 4
+            else f"http://[{self.listen_host}]:{self.listen_port}/notify"
+        )
