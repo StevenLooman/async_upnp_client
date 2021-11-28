@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-from typing import Mapping, Optional, Union, cast
+from typing import Any, Mapping, Optional, Union, cast
 
 import aiohttp
 import defusedxml.ElementTree as DET
@@ -40,7 +40,7 @@ class DescriptionCache:
         """Initialize."""
         self._requester = requester
         self._cache_dict: dict[
-            str, Union[asyncio.Event, Optional[Mapping[str, str]]]
+            str, Union[asyncio.Event, Optional[Mapping[str, Any]]]
         ] = {}
 
     async def async_get_description_xml(self, location: str) -> Optional[str]:
@@ -54,7 +54,7 @@ class DescriptionCache:
 
     async def async_get_description_dict(
         self, location: Optional[str]
-    ) -> Optional[Mapping[str, str]]:
+    ) -> Optional[Mapping[str, Any]]:
         """Get a description as dict, either from cache or download it."""
         if location is None:
             return None
@@ -76,7 +76,7 @@ class DescriptionCache:
                     self._cache_dict[location] = None
             evt.set()
 
-        return cast(Optional[Mapping[str, str]], self._cache_dict[location])
+        return cast(Optional[Mapping[str, Any]], self._cache_dict[location])
 
     def uncache_description(self, location: str) -> None:
         """Uncache a description."""

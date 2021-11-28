@@ -7,6 +7,7 @@ Changes
 - Fix parsing of allowedValueList (@StevenLooman)
 - Add DMS profile for interfacing with DLNA Digital Media Servers (@chishm)
 - More details reported in Action exceptions (@chishm)
+- Fix type hints in `description_cache` (@epenet, @StevenLooman)
 
 
 0.22.12 (2021-11-06)
