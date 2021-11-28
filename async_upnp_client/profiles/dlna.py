@@ -6,9 +6,21 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from enum import Enum, IntFlag
+from enum import Enum, IntEnum, IntFlag
 from mimetypes import guess_type
-from typing import Any, List, Mapping, MutableMapping, Optional, Sequence, Set, Union
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Mapping,
+    MutableMapping,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+)
 from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
@@ -199,7 +211,65 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     service.notify_changed_state_variables(changes_0)
 
 
-class DmrDevice(UpnpProfileDevice):
+class ConnectionManagerMixin(UpnpProfileDevice):
+    """Mix-in to support ConnectionManager actions and state variables."""
+
+    _SERVICE_TYPES = {
+        "CM": {
+            "urn:schemas-upnp-org:service:ConnectionManager:3",
+            "urn:schemas-upnp-org:service:ConnectionManager:2",
+            "urn:schemas-upnp-org:service:ConnectionManager:1",
+        },
+    }
+
+    __did_first_update: bool = False
+
+    async def async_update(self) -> None:
+        """Retrieve latest data."""
+        if not self.__did_first_update:
+            await self._async_poll_state_variables("CM", "GetProtocolInfo")
+            self.__did_first_update = True
+
+    # region CM
+    @property
+    def has_get_protocol_info(self) -> bool:
+        """Check if device can report its protocol info."""
+        return self._action("CM", "GetProtocolInfo") is not None
+
+    async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
+        """Get protocol info."""
+        action = self._action("CM", "GetProtocolInfo")
+        if not action:
+            return {"source": [], "sink": []}
+
+        protocol_info = await action.async_call()
+        return {
+            "source": protocol_info["Source"].split(","),
+            "sink": protocol_info["Sink"].split(","),
+        }
+
+    @property
+    def source_protocol_info(self) -> List[str]:
+        """Supported source protocols."""
+        state_var = self._state_variable("CM", "SourceProtocolInfo")
+        if state_var is None or not state_var.value:
+            return []
+
+        return [info.strip() for info in state_var.value.split(",")]
+
+    @property
+    def sink_protocol_info(self) -> List[str]:
+        """Supported sink protocols."""
+        state_var = self._state_variable("CM", "SinkProtocolInfo")
+        if state_var is None or not state_var.value:
+            return []
+
+        return [info.strip() for info in state_var.value.split(",")]
+
+    # endregion
+
+
+class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     """Representation of a DLNA DMR device."""
 
     # pylint: disable=too-many-public-methods
@@ -229,6 +299,7 @@ class DmrDevice(UpnpProfileDevice):
             "urn:schemas-upnp-org:service:AVTransport:2",
             "urn:schemas-upnp-org:service:AVTransport:1",
         },
+        **ConnectionManagerMixin._SERVICE_TYPES,
     }
 
     _current_track_meta_data: Optional[didl_lite.DidlObject] = None
@@ -239,6 +310,9 @@ class DmrDevice(UpnpProfileDevice):
 
         :param do_ping: Poll device to check if it is available (online).
         """
+        # pylint: disable=arguments-differ
+        await super().async_update()
+
         # call GetTransportInfo/GetPositionInfo regularly
         avt_service = self._service("AVT")
         if avt_service:
@@ -754,7 +828,7 @@ class DmrDevice(UpnpProfileDevice):
     ) -> None:
         """Enqueue a piece of media for playing immediately after the current media."""
         # escape media_url
-        _LOGGER.debug("Set transport uri: %s", media_url)
+        _LOGGER.debug("Set next transport uri: %s", media_url)
         media_url_parts = urlparse(media_url)
         media_url = urlunparse(
             [
@@ -903,34 +977,15 @@ class DmrDevice(UpnpProfileDevice):
         xml_string: bytes = didl_lite.to_xml_string(item)
         return xml_string.decode("utf-8")
 
-    @property
-    def has_get_protocol_info(self) -> bool:
-        """Check if device can report its protocol info."""
-        return self._action("CM", "GetProtocolInfo") is not None
-
-    async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
-        """Get protocol info."""
-        action = self._action("CM", "GetProtocolInfo")
-        if not action:
-            return {"source": [], "sink": []}
-
-        protocol_info = await action.async_call()
-        return {
-            "source": protocol_info["Source"].split(","),
-            "sink": protocol_info["Sink"].split(","),
-        }
-
     async def _async_get_sink_protocol_info_for_mime_type(
         self, mime_type: str
     ) -> List[List[str]]:
         """Get protocol_info for a specific mime type."""
-        protocol_info = await self.async_get_protocol_info()
-        source = protocol_info["source"]
         # example entry:
         # http-get:*:video/mpeg:DLNA.ORG_PN=MPEG_TS_HD_KO_ISO;DLNA.ORG_FLAGS=ED100000000000000000...
         return [
             entry.split(":")
-            for entry in source
+            for entry in self.source_protocol_info
             if ":" in entry and entry.split(":")[2] == mime_type
         ]
 
@@ -1208,3 +1263,279 @@ class DmrDevice(UpnpProfileDevice):
         return self._get_av_transport_meta_data("title")
 
     # endregion
+
+
+class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
+    """Representation of a DLNA DMS device."""
+
+    DEVICE_TYPES = [
+        "urn:schemas-upnp-org:device:MediaServer:1",
+        "urn:schemas-upnp-org:device:MediaServer:2",
+        "urn:schemas-upnp-org:device:MediaServer:3",
+        "urn:schemas-upnp-org:device:MediaServer:4",
+    ]
+
+    SERVICE_IDS = frozenset(
+        (
+            "urn:upnp-org:serviceId:ConnectionManager",
+            "urn:upnp-org:serviceId:ContentDirectory",
+        )
+    )
+
+    _SERVICE_TYPES = {
+        "CD": {
+            "urn:schemas-upnp-org:service:ContentDirectory:4",
+            "urn:schemas-upnp-org:service:ContentDirectory:3",
+            "urn:schemas-upnp-org:service:ContentDirectory:2",
+            "urn:schemas-upnp-org:service:ContentDirectory:1",
+        },
+        **ConnectionManagerMixin._SERVICE_TYPES,
+    }
+
+    METADATA_FILTER_ALL = "*"
+    DEFAULT_METADATA_FILTER = METADATA_FILTER_ALL
+    DEFAULT_SORT_CRITERIA = ""
+
+    __did_first_update: bool = False
+
+    async def async_update(self, do_ping: bool = False) -> None:
+        """Retrieve the latest data."""
+        # pylint: disable=arguments-differ
+        await super().async_update()
+
+        # Retrieve unevented changeable values
+        if not self.is_subscribed or not self.__did_first_update:
+            await self._async_poll_state_variables("CD", "GetSystemUpdateID")
+        elif do_ping:
+            await self.profile_device.async_ping()
+
+        # Retrieve unchanging state variables only once
+        if not self.__did_first_update:
+            await self._async_poll_state_variables(
+                "CD", ["GetSearchCapabilities", "GetSortCapabilities"]
+            )
+            self.__did_first_update = True
+
+    def get_absolute_url(self, url: str) -> str:
+        """Resolve a URL returned by the device into an absolute URL."""
+        return absolute_url(self.device.device_url, url)
+
+    # region CD
+    @property
+    def search_capabilities(self) -> List[str]:
+        """List of capabilities that are supported for search."""
+        state_var = self._state_variable("CD", "SearchCapabilities")
+        if state_var is None or state_var.value is None:
+            return []
+
+        return [capability.strip() for capability in state_var.value.split(",")]
+
+    @property
+    def sort_capabilities(self) -> List[str]:
+        """List of meta-data tags that can be used in sort_criteria."""
+        state_var = self._state_variable("CD", "SortCapabilities")
+        if state_var is None or state_var.value is None:
+            return []
+
+        return [capability.strip() for capability in state_var.value.split(",")]
+
+    @property
+    def system_update_id(self) -> Optional[int]:
+        """Return the latest update SystemUpdateID.
+
+        Changes to this ID indicate that changes have occurred in the Content
+        Directory.
+        """
+        state_var = self._state_variable("CD", "SystemUpdateID")
+        if state_var is None or state_var.value is None:
+            return None
+
+        return int(state_var.value)
+
+    @property
+    def has_container_update_ids(self) -> bool:
+        """Check if device supports the ContainerUpdateIDs variable."""
+        return self._action("CD", "ContainerUpdateIDs") is not None
+
+    @property
+    def container_update_ids(self) -> Optional[Dict[str, int]]:
+        """Return latest list of changed containers.
+
+        This variable is evented only, and optional. If it's None, use the
+        system_update_id to track container changes instead.
+
+        :return: Mapping of container IDs to container update IDs
+        """
+        state_var = self._state_variable("CD", "ContainerUpdateIDs")
+        if state_var is None or state_var.value is None:
+            return None
+
+        # Convert list of containerID,updateID,containerID,updateID pairs to dict
+        id_list = state_var.value.split(",")
+        return {id_list[i]: int(id_list[i + 1]) for i in range(0, len(id_list), 2)}
+
+    class BrowseResult(NamedTuple):
+        """Result returned from a Browse or Search action."""
+
+        result: List[Union[didl_lite.DidlObject, didl_lite.Descriptor]]
+        number_returned: int
+        total_matches: int
+        update_id: int
+
+    async def async_browse(
+        self,
+        object_id: str,
+        browse_flag: str,
+        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        starting_index: int = 0,
+        requested_count: int = 0,
+        sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
+    ) -> BrowseResult:
+        """Retrieve an object's metadata or its children."""
+        # pylint: disable=too-many-arguments
+        action = self._action("CD", "Browse")
+        if not action:
+            raise UpnpError("Missing action CD/Browse")
+
+        if not isinstance(metadata_filter, str):
+            metadata_filter = ",".join(metadata_filter)
+
+        if not isinstance(sort_criteria, str):
+            sort_criteria = ",".join(sort_criteria)
+
+        result = await action.async_call(
+            ObjectID=object_id,
+            BrowseFlag=browse_flag,
+            Filter=metadata_filter,
+            StartingIndex=starting_index,
+            RequestedCount=requested_count,
+            SortCriteria=sort_criteria,
+        )
+
+        return DmsDevice.BrowseResult(
+            didl_lite.from_xml_string(result["Result"], strict=False),
+            int(result["NumberReturned"]),
+            int(result["TotalMatches"]),
+            int(result["UpdateID"]),
+        )
+
+    async def async_browse_metadata(
+        self,
+        object_id: str,
+        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+    ) -> didl_lite.DidlObject:
+        """Get the metadata (properties) of an object."""
+        _LOGGER.debug("browse_metadata(%r, %r)", object_id, metadata_filter)
+        result = await self.async_browse(
+            object_id,
+            "BrowseMetadata",
+            metadata_filter,
+        )
+        metadata = result.result[0]
+        assert isinstance(metadata, didl_lite.DidlObject)
+        _LOGGER.debug("browse_metadata -> %r", metadata)
+        return metadata
+
+    async def async_browse_direct_children(
+        self,
+        object_id: str,
+        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        starting_index: int = 0,
+        requested_count: int = 0,
+        sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
+    ) -> BrowseResult:
+        """Get the direct children of an object."""
+        # pylint: disable=too-many-arguments
+        _LOGGER.debug("browse_direct_children(%r, %r)", object_id, metadata_filter)
+        result = await self.async_browse(
+            object_id,
+            "BrowseDirectChildren",
+            metadata_filter,
+            starting_index,
+            requested_count,
+            sort_criteria,
+        )
+        _LOGGER.debug("browse_direct_children -> %r", result)
+        return result
+
+    @property
+    def has_search_directory(self) -> bool:
+        """Check if device supports the Search action."""
+        return self._action("CD", "Search") is not None
+
+    async def async_search_directory(
+        self,
+        container_id: str,
+        search_criteria: str,
+        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        starting_index: int = 0,
+        requested_count: int = 0,
+        sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
+    ) -> BrowseResult:
+        """Search ContentDirectory for objects that match some criteria.
+
+        NOTE: This is not UpnpProfileDevice.async_search, which searches for
+        matching UPnP devices.
+        """
+        # pylint: disable=too-many-arguments
+        _LOGGER.debug(
+            "search_directory(%r, %r, %r)",
+            container_id,
+            search_criteria,
+            metadata_filter,
+        )
+
+        action = self._action("CD", "Search")
+        if not action:
+            raise UpnpError("Missing action CD/Search")
+
+        if not isinstance(metadata_filter, str):
+            metadata_filter = ",".join(metadata_filter)
+        if not isinstance(sort_criteria, str):
+            sort_criteria = ",".join(sort_criteria)
+
+        result = await action.async_call(
+            ContainerID=container_id,
+            SearchCriteria=search_criteria,
+            Filter=metadata_filter,
+            StartingIndex=starting_index,
+            RequestedCount=requested_count,
+            SortCriteria=sort_criteria,
+        )
+
+        browse_result = DmsDevice.BrowseResult(
+            didl_lite.from_xml_string(result["Result"], strict=False),
+            int(result["NumberReturned"]),
+            int(result["TotalMatches"]),
+            int(result["UpdateID"]),
+        )
+
+        _LOGGER.debug("search_directory -> %r", browse_result)
+
+        return browse_result
+
+    # endregion
+
+
+class ContentDirectoryErrorCode(IntEnum):
+    """Error codes specific to DLNA Content Directory actions."""
+
+    NO_SUCH_OBJECT = 701
+    INVALID_CURRENT_TAG_VALUE = 702
+    INVALID_NEW_TAG_VALUE = 703
+    REQUIRED_TAG = 704
+    READ_ONLY_TAG = 705
+    PARAMETER_MISMATCH = 706
+    INVALID_SEARCH_CRITERIA = 708
+    INVALID_SORT_CRITERIA = 709
+    NO_SUCH_CONTAINER = 710
+    RESTRICTED_OJECT = 711
+    BAD_METADATA = 712
+    RESTRICTED_PARENT_OBJECT = 713
+    NO_SUCH_SOURCE_RESOURCES = 714
+    SOURCE_RESOURCE_ACCESS_DENIED = 715
+    TRANSFER_BUSY = 716
+    NO_SUCH_FILE_TRANSFER = 717
+    NO_SUCH_DESTINATION_SOURCE = 718
+    DESTINATION_RESOURCE_ACCESS_DENIED = 719
+    CANNOT_PROCESS_REQUEST = 720

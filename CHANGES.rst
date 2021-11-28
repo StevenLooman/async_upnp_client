@@ -1,10 +1,11 @@
 Changes
 =======
 
-0.22.13 (unreleased)
+0.23.0 (unreleased)
 
 - Allow for renderers that do not provide a list of actions. (@Flameeyes)
-
+- Add DMS profile for interfacing with DLNA Digital Media Servers (@chishm)
+- More details reported in Action exceptions (@chishm)
 
 0.22.12 (2021-11-06)
 
