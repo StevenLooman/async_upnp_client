@@ -101,7 +101,7 @@ To do profiling it is recommended to install `pytest-profiling <https://pypi.org
     $ xdg-open prof/combined.svg
 
 
-Alternatively, you can generate a profiling data file, use `pyprof2calltree <https://github.com/pwaller/pyprof2calltree/>`_ to convert the data and open `kcachegrind <http://kcachegrind.sourceforge.net/html/Home.html>`_. For example:
+Alternatively, you can generate a profiling data file, use `pyprof2calltree <https://github.com/pwaller/pyprof2calltree/>`_ to convert the data and open `kcachegrind <http://kcachegrind.sourceforge.net/html/Home.html>`_. For example::
 
     # Run tests with profiling enabled, this will generate `prof/*.prof` files.
     $ pytest --profile -k test_case_insensitive_dict_profile
