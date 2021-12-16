@@ -428,7 +428,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     def _level(self, var_name: str) -> Optional[float]:
         state_var = self._state_variable("RC", var_name)
         if state_var is None:
-            raise UpnpError(f"Missing StateVariable RC/{var_name}")
+            _LOGGER.debug("Missing StateVariable RC/%s", var_name)
+            return None
 
         value: Optional[float] = state_var.value
         if value is None:
@@ -578,7 +579,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """List of valid preset names."""
         state_var = self._state_variable("RC", "PresetNameList")
         if state_var is None:
-            raise UpnpError("Missing StateVariable RC/PresetNameList")
+            _LOGGER.debug("Missing StateVariable RC/PresetNameList")
+            return []
 
         value: Optional[str] = state_var.value
         if value is None:
@@ -766,7 +768,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Return the URI of the currently playing track."""
         state_var = self._state_variable("AVT", "CurrentTrackURI")
         if state_var is None:
-            raise UpnpError("Missing StateVariable AVT/CurrentTrackURI")
+            _LOGGER.debug("Missing StateVariable AVT/CurrentTrackURI")
+            return None
 
         return state_var.value
 
@@ -775,7 +778,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Return the URI of the currently playing resource (playlist or track)."""
         state_var = self._state_variable("AVT", "AVTransportURI")
         if state_var is None:
-            raise UpnpError("Missing StateVariable AVT/AVTransportURI")
+            _LOGGER.debug("Missing StateVariable AVT/AVTransportURI")
+            return None
 
         return state_var.value
 
@@ -1109,7 +1113,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Track number of current playing media."""
         state_var = self._state_variable("AVT", "CurrentTrack")
         if state_var is None:
-            raise UpnpError("Missing StateVariable AVT/CurrentTrack")
+            _LOGGER.debug("Missing StateVariable AVT/CurrentTrack")
+            return None
 
         value: Optional[int] = state_var.value
         return value
