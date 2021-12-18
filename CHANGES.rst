@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.23.1 (unreleased)
+0.23.1 (2021-12-18)
 
 - Bump `python-didl-lite` to 1.3.2
 - Log missing state vars instead of raising UpnpError in DmrDevice (@chishm)
