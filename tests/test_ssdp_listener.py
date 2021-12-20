@@ -390,6 +390,7 @@ async def test_combined_headers() -> None:
 
     assert isinstance(device, SsdpDevice)
     combined = device.combined_headers(dst)
+    assert isinstance(combined, CaseInsensitiveDict)
     result = {k.lower(): str(v) for k, v in combined.as_dict().items()}
     del result["_timestamp"]
     assert result == {
