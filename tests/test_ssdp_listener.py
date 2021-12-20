@@ -16,7 +16,11 @@ import pytest
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp_listener import SsdpListener, same_headers_differ
+from async_upnp_client.ssdp_listener import (
+    SsdpListener,
+    same_headers_differ,
+    SsdpDevice,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 from .common import (
@@ -350,5 +354,40 @@ async def test_see_search_localhost_location(location: str) -> None:
     headers["location"] = location
     await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
     callback.assert_not_awaited()
+
+    await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_combined_headers() -> None:
+    """Test combined headers."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+    search_listener = listener._search_listener
+    assert search_listener is not None
+
+    # See device for the first time through search.
+    headers = CaseInsensitiveDict({**SEARCH_HEADERS_DEFAULT, "Original": "2"})
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert callback.await_args is not None
+    device, dst, _ = callback.await_args.args
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    # See device for the second time through alive-advertisement, not triggering callback.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(
+        {**ADVERTISEMENT_HEADERS_DEFAULT, "BooTID.UPNP.ORG": "2"}
+    )
+    headers["NTS"] = NotificationSubType.SSDP_ALIVE
+    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+
+    assert isinstance(device, SsdpDevice)
+    assert device.combined_headers(dst)["original"] == "2"
+    assert device.combined_headers(dst)["bootid.upnp.org"] == "2"
 
     await listener.async_stop()
