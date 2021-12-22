@@ -11,6 +11,7 @@ from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Awaitable, Callable, Optional, Tuple, cast
 from urllib.parse import urlsplit, urlunsplit
 
+from aiohttp.http_exceptions import InvalidHeader
 from aiohttp.http_parser import HeadersParser
 
 from async_upnp_client.const import (
@@ -179,7 +180,12 @@ class SsdpProtocol(BaseProtocol):
         _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
 
         if is_valid_ssdp_packet(data) and self.on_data:
-            request_line, headers = decode_ssdp_packet(data, addr)
+            try:
+                request_line, headers = decode_ssdp_packet(data, addr)
+            except InvalidHeader as exc:
+                _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
+                return
+
             callback = self.on_data(request_line, headers)
             self.loop.create_task(callback)
 
