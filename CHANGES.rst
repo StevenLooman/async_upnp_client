@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.23.2 (unreleased)
+0.23.2 (2021-12-22)
 
 - Speed up combined_headers in ssdp_listener (@bdraco, #115)
 - Add handling of broken SSDP-headers (#116)
