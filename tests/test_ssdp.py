@@ -1,7 +1,13 @@
 """Unit tests for ssdp."""
 import asyncio
 from ipaddress import IPv4Address
-from unittest.mock import ANY, AsyncMock
+from unittest.mock import ANY
+
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # For python 3.6/3.7
+    from mock import AsyncMock  # type: ignore
 
 import pytest
 
