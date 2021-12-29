@@ -269,6 +269,44 @@ class UpnpDevice:
         """To string."""
         return f"<UpnpDevice({self.udn})>"
 
+    def to_xml(self) -> ET.Element:
+        """Serialize to XML."""
+        device_el = ET.Element("device", xmlns="urn:schemas-upnp-org:device-1-0")
+        ET.SubElement(device_el, "deviceType").text = self.device_type
+        ET.SubElement(device_el, "friendlyName").text = self.friendly_name
+        ET.SubElement(device_el, "manufacturer").text = self.manufacturer
+        ET.SubElement(device_el, "modelDescription").text = self.model_description
+        ET.SubElement(device_el, "modelName").text = self.model_name
+        ET.SubElement(device_el, "modelNumber").text = self.model_number
+        ET.SubElement(device_el, "serialNumber").text = self.serial_number
+        ET.SubElement(device_el, "UDN").text = self.udn
+
+        icon_list_el = ET.SubElement(device_el, "iconList")
+        for icon in self.icons:
+            icon_el = ET.SubElement(icon_list_el, "icon")
+            ET.SubElement(icon_el, "mimetype").text = icon.mimetype
+            ET.SubElement(icon_el, "width").text = icon.width
+            ET.SubElement(icon_el, "height").text = icon.height
+            ET.SubElement(icon_el, "depth").text = icon.depth
+            ET.SubElement(icon_el, "url").text = icon.url
+
+        service_list_el = ET.SubElement(device_el, "serviceList")
+        for service in self.services.values():
+            service_el = ET.SubElement(device_el, "service")
+            ET.SubElement(service_el, "serviceType").text = service.service_type
+            ET.SubElement(service_el, "serviceId").text = service.service_id
+            ET.SubElement(service_el, "controlURL").text = service.control_url
+            ET.SubElement(service_el, "eventSubURL").text = service.event_sub_url
+            ET.SubElement(service_el, "SCPDURL").text = service.scpd_url
+            service_list_el.append(service_el)
+
+        device_list_el = ET.SubElement(device_el, "deviceList")
+        for device in self.embedded_devices.values():
+            child_device_el = device.to_xml()
+            device_list_el.append(child_device_el)
+
+        return device_el
+
 
 class UpnpService:
     """UPnP Service representation."""
@@ -429,6 +467,25 @@ class UpnpService:
             udn = self._device.udn
         return f"<UpnpService({self.service_id}, {udn})>"
 
+    def to_xml(self) -> ET.Element:
+        """Serialize to XML."""
+        scpd_el = ET.Element("scpd", xmlns="urn:schemas-upnp-org:service-1-0")
+        spec_version_el = ET.SubElement(scpd_el, "specVersion")
+        ET.SubElement(spec_version_el, "major").text = "1"
+        ET.SubElement(spec_version_el, "minor").text = "0"
+
+        action_list_el = ET.SubElement(scpd_el, "actionList")
+        for action in self.actions.values():
+            action_el = action.to_xml()
+            action_list_el.append(action_el)
+
+        state_table_el = ET.SubElement(scpd_el, "serviceStateTable")
+        for state_var in self.state_variables.values():
+            state_var_el = state_var.to_xml()
+            state_table_el.append(state_var_el)
+
+        return scpd_el
+
 
 class UpnpAction:
     """Representation of an Action."""
@@ -501,6 +558,16 @@ class UpnpAction:
         def __repr__(self) -> str:
             """To repr."""
             return f"<UpnpAction.Argument({self.name}, {self.direction})>"
+
+        def to_xml(self) -> ET.Element:
+            """Serialize to XML."""
+            arg_el = ET.Element("argument")
+            ET.SubElement(arg_el, "name").text = self.name
+            ET.SubElement(arg_el, "direction").text = self.direction
+            ET.SubElement(
+                arg_el, "relatedStateVariable"
+            ).text = self.related_state_variable.name
+            return arg_el
 
     def __init__(
         self,
@@ -708,6 +775,22 @@ class UpnpAction:
 
         return args
 
+    def to_xml(self) -> ET.Element:
+        """Serialize to XML."""
+        action_el = ET.Element("action")
+        ET.SubElement(action_el, "name").text = self.name
+
+        if self.arguments:
+            arg_list_el = ET.SubElement(action_el, "argumentList")
+            for arg in self.in_arguments():
+                arg_el = arg.to_xml()
+                arg_list_el.append(arg_el)
+            for arg in self.out_arguments():
+                arg_el = arg.to_xml()
+                arg_list_el.append(arg_el)
+
+        return action_el
+
 
 T = TypeVar("T")  # pylint: disable=invalid-name
 
@@ -892,3 +975,26 @@ class UpnpStateVariable(Generic[T]):
     def __repr__(self) -> str:
         """To repr."""
         return f"<UpnpStateVariable({self.name}: {self.data_type} = {self.value!r})>"
+
+    def to_xml(self) -> ET.Element:
+        """Serialize to XML."""
+        state_var_el = ET.Element(
+            "stateVariable", sendEvents="yes" if self.send_events else "no"
+        )
+        ET.SubElement(state_var_el, "name").text = self.name
+        ET.SubElement(state_var_el, "dataType").text = self.data_type
+
+        if self.allowed_values:
+            value_list_el = ET.SubElement(state_var_el, "allowedValueList")
+            for allowed_value in self.allowed_values:
+                ET.SubElement(value_list_el, "allowedValue").text = str(allowed_value)
+
+        if not None in (self.min_value, self.max_value):
+            value_range_el = ET.SubElement(state_var_el, "allowedValueRange")
+            ET.SubElement(value_range_el, "minimum").text = str(self.min_value)
+            ET.SubElement(value_range_el, "maximum").text = str(self.max_value)
+
+        if self.default_value is not None:
+            ET.SubElement(state_var_el, "defaultValue").text = str(self.default_value)
+
+        return state_var_el

@@ -18,6 +18,7 @@ from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.const import SsdpHeaders
 from async_upnp_client.exceptions import UpnpResponseError
+from async_upnp_client.net import get_source_address_tuple
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import (
@@ -25,7 +26,6 @@ from async_upnp_client.ssdp import (
     SSDP_PORT,
     SSDP_ST_ALL,
     AddressTupleVXType,
-    get_source_address_tuple,
     get_target_address_tuple,
 )
 

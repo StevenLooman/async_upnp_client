@@ -11,12 +11,16 @@ import aiohttp.web as aiohttp_web
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
 
 from async_upnp_client import ssdp
-from async_upnp_client.client import UpnpAction as _UpnpAction
-from async_upnp_client.client import UpnpDevice as _UpnpDevice
-from async_upnp_client.client import UpnpError, UpnpRequester
-from async_upnp_client.client import UpnpService as _UpnpService
-from async_upnp_client.client import UpnpStateVariable as _UpnpStateVariable
-from async_upnp_client.client_factory import UpnpFactory as _UpnpFactory
+from async_upnp_client import net
+from async_upnp_client.client import (
+    UpnpAction,
+    UpnpDevice,
+    UpnpError,
+    UpnpRequester,
+    UpnpService,
+    UpnpStateVariable,
+)
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import (
     ActionArgumentInfo,
     ActionInfo,
@@ -43,7 +47,7 @@ class SsdpSearchResponder:
         """Init the ssdp search responder class."""
         self.device = device
         self.target = ssdp.get_target_address_tuple(target, source=source)
-        self.source = ssdp.get_source_address_tuple(self.target, source)
+        self.source = net.get_source_address_tuple(self.target, source)
         self._transport: Optional[DatagramTransport] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
@@ -118,127 +122,13 @@ class NopRequester(UpnpRequester):  # pylint: disable=too-few-public-methods
 # XML patching.
 
 
-class UpnpAction(_UpnpAction):
+class UpnpServerAction(UpnpAction):
     """Representation of an Action."""
-
-    class Argument(_UpnpAction.Argument):
-        """Representation of an Argument of an Action."""
-
-        def to_xml(self) -> ET.Element:
-            """Serialize to XML."""
-            arg_el = ET.Element("argument")
-            ET.SubElement(arg_el, "name").text = self.name
-            ET.SubElement(arg_el, "direction").text = self.direction
-            ET.SubElement(
-                arg_el, "relatedStateVariable"
-            ).text = self.related_state_variable.name
-            return arg_el
-
-    def to_xml(self) -> ET.Element:
-        """Serialize to XML."""
-        action_el = ET.Element("action")
-        ET.SubElement(action_el, "name").text = self.name
-
-        if self.arguments:
-            arg_list_el = ET.SubElement(action_el, "argumentList")
-            for arg in self.in_arguments():
-                arg_el = arg.to_xml()
-                arg_list_el.append(arg_el)
-            for arg in self.out_arguments():
-                arg_el = arg.to_xml()
-                arg_list_el.append(arg_el)
-
-        return action_el
 
     async def async_handle(self, **kwargs: Any) -> Any:
         """Handle action."""
         self.validate_arguments(**kwargs)
         raise NotImplementedError()
-
-
-class UpnpStateVariable(_UpnpStateVariable):
-    """Representation of a State Variable."""
-
-    def to_xml(self) -> ET.Element:
-        """Serialize to XML."""
-        state_var_el = ET.Element(
-            "stateVariable", sendEvents="yes" if self.send_events else "no"
-        )
-        ET.SubElement(state_var_el, "name").text = self.name
-        ET.SubElement(state_var_el, "dataType").text = self.data_type
-
-        if self.allowed_values:
-            value_list_el = ET.SubElement(state_var_el, "allowedValueList")
-            for allowed_value in self.allowed_values:
-                ET.SubElement(value_list_el, "allowedValue").text = str(allowed_value)
-
-        if not None in (self.min_value, self.max_value):
-            value_range_el = ET.SubElement(state_var_el, "allowedValueRange")
-            ET.SubElement(value_range_el, "minimum").text = str(self.min_value)
-            ET.SubElement(value_range_el, "maximum").text = str(self.max_value)
-
-        if self.default_value is not None:
-            ET.SubElement(state_var_el, "defaultValue").text = str(self.default_value)
-
-        return state_var_el
-
-
-class UpnpService(_UpnpService):
-    """UPnP Service representation."""
-
-    def to_xml(self) -> ET.Element:
-        """Serialize to XML."""
-        scpd_el = ET.Element("scpd", xmlns="urn:schemas-upnp-org:service-1-0")
-        spec_ver_el = ET.SubElement(scpd_el, "specVersion")
-        ET.SubElement(spec_ver_el, "major").text = "1"
-        ET.SubElement(spec_ver_el, "minor").text = "0"
-
-        action_list_el = ET.SubElement(scpd_el, "actionList")
-        for action in self.actions.values():
-            action_el = action.to_xml()
-            action_list_el.append(action_el)
-
-        state_table_el = ET.SubElement(scpd_el, "serviceStateTable")
-        for state_var in self.state_variables.values():
-            state_var_el = state_var.to_xml()
-            state_table_el.append(state_var_el)
-
-        return scpd_el
-
-
-class UpnpDevice(_UpnpDevice):
-    """UPnP Device representation."""
-
-    def to_xml(self) -> ET.Element:
-        """Serialize to XML."""
-        root_el = ET.Element("root", xmlns="urn:schemas-upnp-org:device-1-0")
-        state_var_el = ET.SubElement(root_el, "specVersion")
-        ET.SubElement(state_var_el, "major").text = "1"
-        ET.SubElement(state_var_el, "minor").text = "0"
-        device_el = ET.SubElement(root_el, "device")
-        ET.SubElement(device_el, "deviceType").text = self.device_type
-        ET.SubElement(device_el, "friendlyName").text = self.friendly_name
-        ET.SubElement(device_el, "manufacturer").text = self.manufacturer
-        ET.SubElement(device_el, "modelDescription").text = self.model_description
-        ET.SubElement(device_el, "modelName").text = self.model_name
-        ET.SubElement(device_el, "modelNumber").text = self.model_number
-        ET.SubElement(device_el, "serialNumber").text = self.serial_number
-        ET.SubElement(device_el, "UDN").text = self.udn
-
-        servicelist = ET.SubElement(device_el, "serviceList")
-        for service in self.services.values():
-            service_el = ET.SubElement(servicelist, "service")
-            ET.SubElement(service_el, "serviceType").text = service.service_type
-            ET.SubElement(service_el, "serviceId").text = service.service_id
-            ET.SubElement(
-                service_el, "controlURL"
-            ).text = service._service_info.control_url
-            ET.SubElement(
-                service_el, "eventSubURL"
-            ).text = service._service_info.event_sub_url
-            ET.SubElement(service_el, "SCPDURL").text = service._service_info.scpd_url
-
-        return root_el
 
 
 # Usable frontends.
@@ -277,7 +167,7 @@ class UpnpServerService(UpnpService):
         )
         state_var = UpnpStateVariable(
             state_var_info,
-            _UpnpFactory(self.requester)._state_variable_create_schema(type_info),
+            UpnpFactory(self.requester)._state_variable_create_schema(type_info),
         )
         state_var.service = self
         if type_info.default_value is not None:
@@ -349,10 +239,6 @@ class UpnpServerService(UpnpService):
         action.validate_arguments(**kwargs)
         return await action.async_handle(**kwargs)
 
-    def to_xml_string(self, encoding: Optional[str] = None) -> Any:
-        """To XML string."""
-        return ET.tostring(self.to_xml(), encoding=encoding or "utf-8")
-
 
 class UpnpServerDevice(UpnpDevice):
     """UPnP Device representation."""
@@ -363,6 +249,7 @@ class UpnpServerDevice(UpnpDevice):
         self,
         requester: UpnpRequester,
         services: Sequence[UpnpService],
+        embedded_devices: Sequence[UpnpDevice],
         base_uri: str,
     ) -> None:
         """Initialize."""
@@ -370,15 +257,9 @@ class UpnpServerDevice(UpnpDevice):
             requester=requester,
             device_info=self.DEVICE_DEFINITION,
             services=services,
-            embedded_devices=[],
+            embedded_devices=embedded_devices,
         )
         self.base_uri = base_uri
-
-    def to_xml_string(self, encoding: Optional[str] = None) -> Any:
-        """To XML string."""
-        root = self.to_xml()
-        ET.SubElement(root, "URLBase").text = self.base_uri
-        return ET.tostring(root, encoding=encoding or "utf-8")
 
 
 # Decorators.
@@ -460,8 +341,16 @@ async def subscribe_handler(service: UpnpServerService, request: aiohttp_web.Req
 async def to_xml(
     thing: Union[UpnpServerDevice, UpnpServerService], _request: aiohttp_web.Request
 ) -> aiohttp_web.Response:
-    """To XML."""
+    """Construct device/service description."""
+    root_el = ET.Element("root", xmlns="urn:schemas-upnp-org:device-1-0")
+    spec_version_el = ET.SubElement(root_el, "specVersion")
+    ET.SubElement(spec_version_el, "major").text = "1"
+    ET.SubElement(spec_version_el, "minor").text = "0"
+
+    thing_el = thing.to_xml()
+    root_el.append(thing_el)
+
     encoding = "utf-8"
     return aiohttp_web.Response(
-        content_type="text/xml", charset=encoding, body=thing.to_xml_string(encoding)
+        content_type="text/xml", charset=encoding, body=ET.tostring(root_el, encoding=encoding)
     )

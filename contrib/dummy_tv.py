@@ -5,7 +5,7 @@
 # - Change `SOURCE``. When using IPv6, be sure to set the scope_id, the last value in the tuple.
 # - Run this module.
 # - Run upnp-client (change IP to your own IP):
-#    upnp-client call-action 'http://[fe80::3ad9:95f3:78a7:9ca9%2]:8000/device.xml' \
+#    upnp-client call-action 'http://[fe80::215:5dff:fe3f:a047%2]:8000/device.xml' \
 #                RC/GetVolume InstanceID=0 Channel=Master
 
 import asyncio
@@ -40,7 +40,7 @@ LOGGER = logging.getLogger("dummy_tv")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
 # SOURCE = ("192.168.178.72", 0)
-SOURCE = ("fe80::3ad9:95f3:78a7:9ca9", 0, 0, 2)  # Your IP here!
+SOURCE = ("fe80::215:5dff:fe3f:a047", 0, 0, 2)  # Your IP here!
 HTTP_PORT = 8000
 
 
@@ -72,6 +72,7 @@ class MediaRendererDevice(UpnpServerDevice):
             requester=requester,
             base_uri=base_uri,
             services=services,
+            embedded_devices=[],
         )
 
 
@@ -416,16 +417,20 @@ async def async_main() -> None:
     app = aiohttp_web.Application()
 
     requester = NopRequester()
+    is_ipv6 = ":" in SOURCE[0]
     base_uri = (
         f"http://[{SOURCE[0]}]:{HTTP_PORT}"
-        if ":" in SOURCE[0]
+        if is_ipv6
         else f"http://{SOURCE[0]}:{HTTP_PORT}"
     )
     device = MediaRendererDevice(requester, base_uri)
 
     # Set up routes.
+    # Root device.
     app.router.add_get(device.device_url, partial(to_xml, device))
-    for service in device.services.values():
+
+    # Services.
+    for service in device.all_services:
         app.router.add_get(service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service))
         app.router.add_post(
             service.SERVICE_DEFINITION.control_url, partial(action_handler, service)
@@ -435,7 +440,8 @@ async def async_main() -> None:
     runner = aiohttp_web.AppRunner(app)
     await runner.setup()
 
-    site = aiohttp_web.TCPSite(runner, f"{SOURCE[0]}%{SOURCE[3]}", HTTP_PORT)
+    host = f"{SOURCE[0]}%{SOURCE[3]}" if is_ipv6 else SOURCE[0]
+    site = aiohttp_web.TCPSite(runner, host, HTTP_PORT)
     await site.start()
 
     LOGGER.info("Device at %s%s", device.base_uri, device.device_url)

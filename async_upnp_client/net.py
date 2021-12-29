@@ -8,7 +8,7 @@ from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Optional, Union, cast
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
-from async_upnp_client.const import AddressTupleV6Type, AddressTupleVXType, IPvXAddress
+from async_upnp_client.const import AddressTupleV4Type, AddressTupleV6Type, AddressTupleVXType, IPvXAddress
 
 EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_IP_V6 = "2001::1"
@@ -34,16 +34,19 @@ def get_local_ip(
     """Try to get the local IP of this machine, used to talk to target_url or external world."""
     if target_ip is None:
         if family == socket.AF_INET:
-            target_ip = (target_ip or EXTERNAL_IP, 0)
+            target_ip = (target_ip or EXTERNAL_IP, 0)  # TODO: Nope
         elif family == socket.AF_INET6:
-            target_ip = (target_ip or EXTERNAL_IP_V6, 0)
+            target_ip = (target_ip or EXTERNAL_IP_V6, 0)  # TODO: Nope
     elif target_ip.version == 4:
-        family =
+        family = AddressFamily.AF_INET
+    elif target_ip.version == 6:
+        family = AddressFamily.AF_INET6
 
-    target_addr = (str(target_ip) or EXTERNAL_IP, 0)
+    target_addr = (str(target_ip) if target_ip else EXTERNAL_IP, 0, 0, 6)  # XXX TODO: Nope
     family = family or socket.AF_INET
     try:
         temp_sock = socket.socket(family, socket.SOCK_DGRAM)
+        print('target_addr: ', target_addr)
         temp_sock.connect(
             target_addr
         )  # Connecting using SOCK_DGRAM doesn't cause any network activity.
@@ -150,15 +153,18 @@ def get_source_address_tuple(
         )
 
     if isinstance(target, tuple) and len(target) == 2:
+        target = cast(AddressTupleV4Type, target)
+        target_ip_address = IPv4Address(target[0])
         return (
-            get_local_ip(None, socket.AF_INET),  # XXX TODO: target[0]
+            get_local_ip(target_ip_address, socket.AF_INET),
             0,
         )
 
     if isinstance(target, tuple) and len(target) == 4:
         target = cast(AddressTupleV6Type, target)
+        target_ip_address = IPv6Address(target[0])  # XXX TODO: scope_id
         return (
-            get_local_ip(None, socket.AF_INET6),  # XXX TODO: target[0]
+            get_local_ip(target_ip_address, socket.AF_INET6),
             0,
             0,
             target[3],
