@@ -15,7 +15,11 @@ import pytest
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp_listener import SsdpListener, same_headers_differ
+from async_upnp_client.ssdp_listener import (
+    SsdpListener,
+    same_headers_differ,
+    SsdpDevice,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 from .common import (
@@ -365,5 +369,61 @@ async def test_see_search_localhost_location(location: str) -> None:
     headers["location"] = location
     await advertisement_listener._async_on_data(SEARCH_REQUEST_LINE, headers, ADDR)
     callback.assert_not_awaited()
+
+    await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_combined_headers() -> None:
+    """Test combined headers."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+    search_listener = listener._search_listener
+    assert search_listener is not None
+
+    # See device for the first time through search.
+    headers = CaseInsensitiveDict(
+        {**SEARCH_HEADERS_DEFAULT, "booTID.UPNP.ORG": "0", "Original": "2"}
+    )
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert callback.await_args is not None
+    device, dst, _ = callback.await_args.args
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    # See device for the second time through alive-advertisement, not triggering callback.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(
+        {**ADVERTISEMENT_HEADERS_DEFAULT, "BooTID.UPNP.ORG": "2"}
+    )
+    headers["NTS"] = NotificationSubType.SSDP_ALIVE
+    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+
+    assert isinstance(device, SsdpDevice)
+    combined = device.combined_headers(dst)
+    assert isinstance(combined, CaseInsensitiveDict)
+    result = {k.lower(): str(v) for k, v in combined.as_dict().items()}
+    del result["_timestamp"]
+    assert result == {
+        "_host": "192.168.1.1",
+        "_port": "1900",
+        "_udn": "uuid:...",
+        "bootid.upnp.org": "2",
+        "cache-control": "max-age=1800",
+        "date": "Fri, 1 Jan 2021 12:00:00 GMT",
+        "location": "http://192.168.1.1:80/RootDevice.xml",
+        "nt": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        "nts": "NotificationSubType.SSDP_ALIVE",
+        "original": "2",
+        "server": "Linux/2.0 UPnP/1.0 async_upnp_client/0.1",
+        "st": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        "usn": "uuid:...::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+    }
+    assert combined["original"] == "2"
+    assert combined["bootid.upnp.org"] == "2"
 
     await listener.async_stop()

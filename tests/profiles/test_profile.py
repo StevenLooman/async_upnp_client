@@ -111,13 +111,15 @@ class TestUpnpProfileDevice:
 
         assert set(profile._subscriptions.keys()) == {
             "uuid:dummy-avt1",
+            "uuid:dummy-cm1",
             "uuid:dummy",
         }
 
-        # 2 timeouts, ~ 150 and ~ 300 seconds
+        # 3 timeouts, ~ 150, ~ 175, and ~ 300 seconds
         timeouts = sorted(profile._subscriptions.values())
         assert timeouts[0] == pytest.approx(now + 150, abs=1)
-        assert timeouts[1] == pytest.approx(now + 300, abs=1)
+        assert timeouts[1] == pytest.approx(now + 175, abs=1)
+        assert timeouts[2] == pytest.approx(now + 300, abs=1)
 
         # Tweak timeouts to check resubscription did something
         requester.response_map[
@@ -130,6 +132,7 @@ class TestUpnpProfileDevice:
         assert timedelta(seconds=(89 - 60)) <= timeout <= timedelta(seconds=(91 - 60))
         assert set(profile._subscriptions.keys()) == {
             "uuid:dummy-avt1",
+            "uuid:dummy-cm1",
             "uuid:dummy",
         }
         timeouts = sorted(profile._subscriptions.values())
@@ -165,6 +168,7 @@ class TestUpnpProfileDevice:
         # Check subscriptions are correct
         assert set(profile._subscriptions.keys()) == {
             "uuid:dummy-avt1",
+            "uuid:dummy-cm1",
             "uuid:dummy",
         }
         timeouts = sorted(profile._subscriptions.values())
@@ -188,6 +192,7 @@ class TestUpnpProfileDevice:
         # Check subscriptions and task again
         assert set(profile._subscriptions.keys()) == {
             "uuid:dummy-avt1",
+            "uuid:dummy-cm1",
             "uuid:dummy",
         }
         timeouts = sorted(profile._subscriptions.values())
@@ -239,8 +244,8 @@ class TestUpnpProfileDevice:
         profile = DmrDevice(device, event_handler=event_handler)
 
         # All requests give a response error
-        requester.exceptions.append(UpnpResponseError(501))
-        requester.exceptions.append(UpnpResponseError(501))
+        requester.exceptions.append(UpnpResponseError(status=501))
+        requester.exceptions.append(UpnpResponseError(status=501))
 
         with pytest.raises(UpnpResponseError):
             await profile.async_subscribe_services(True)

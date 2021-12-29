@@ -1,12 +1,22 @@
 """Unit tests for ssdp."""
+import asyncio
 import sys
 from ipaddress import IPv4Address, IPv6Address
 from unittest.mock import ANY
+
+try:
+    from unittest.mock import AsyncMock
+except ImportError:
+    # For python 3.6/3.7
+    from mock import AsyncMock  # type: ignore
+
+import pytest
 
 from async_upnp_client.ssdp import (
     SSDP_IP_V4,
     SSDP_IP_V6,
     SSDP_PORT,
+    SsdpProtocol,
     build_ssdp_packet,
     build_ssdp_search_packet,
     decode_ssdp_packet,
@@ -238,6 +248,19 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
         "_addr": ("addr", 123),
         "_timestamp": ANY,
     }
+
+
+@pytest.mark.asyncio
+async def test_ssdp_protocol_handles_broken_headers() -> None:
+    """Test SsdpProtocol is able to handle broken headers."""
+    msg = b"HTTP/1.1 200 OK\r\n" b"DEFUNCT\r\n" b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
+    addr = ("addr", 123)
+    loop = asyncio.get_event_loop()
+
+    on_data_mock = AsyncMock()
+    protocol = SsdpProtocol(loop, on_data=on_data_mock)
+    protocol.datagram_received(msg, addr)
+    on_data_mock.assert_not_awaited()
 
 
 def test_decode_ssdp_packet_v6() -> None:

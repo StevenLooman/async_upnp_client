@@ -110,15 +110,15 @@ class SsdpDevice:
         device_or_service_type: DeviceOrServiceType,
     ) -> SsdpHeaders:
         """Get headers from search and advertisement for a given device- or service type."""
-        headers = CaseInsensitiveDict(
-            {
-                **self.search_headers.get(device_or_service_type, {}),
-                **self.advertisement_headers.get(device_or_service_type, {}),
-            }
-        )
+        if device_or_service_type in self.search_headers:
+            headers = {**self.search_headers[device_or_service_type].as_dict()}
+        else:
+            headers = {}
+        if device_or_service_type in self.advertisement_headers:
+            headers.update(self.advertisement_headers[device_or_service_type].as_dict())
         if "_source" in headers:
             del headers["_source"]
-        return headers
+        return CaseInsensitiveDict(headers)
 
     @property
     def all_combined_headers(self) -> Mapping[DeviceOrServiceType, SsdpHeaders]:
@@ -211,10 +211,10 @@ class SsdpDeviceTracker:
         ssdp_source = SsdpSource.SEARCH_CHANGED if changed else SsdpSource.SEARCH_ALIVE
 
         # Update stored headers.
-        current_headers = ssdp_device.search_headers.setdefault(
-            search_target, CaseInsensitiveDict()
-        )
-        current_headers.replace(headers)
+        if search_target in ssdp_device.search_headers:
+            ssdp_device.search_headers[search_target].replace(headers)
+        else:
+            ssdp_device.search_headers[search_target] = CaseInsensitiveDict(headers)
 
         return True, ssdp_device, search_target, ssdp_source
 
@@ -257,10 +257,12 @@ class SsdpDeviceTracker:
         )
 
         # Update stored headers.
-        current_headers = ssdp_device.advertisement_headers.setdefault(
-            notification_type, CaseInsensitiveDict()
-        )
-        current_headers.replace(headers)
+        if notification_type in ssdp_device.advertisement_headers:
+            ssdp_device.advertisement_headers[notification_type].replace(headers)
+        else:
+            ssdp_device.advertisement_headers[notification_type] = CaseInsensitiveDict(
+                headers
+            )
 
         return propagate, ssdp_device, notification_type
 
@@ -313,10 +315,12 @@ class SsdpDeviceTracker:
 
         # Update device before propagating it
         notification_type: NotificationType = headers["NT"]
-        current_headers = ssdp_device.advertisement_headers.setdefault(
-            notification_type, CaseInsensitiveDict()
-        )
-        current_headers.replace(headers)
+        if notification_type in ssdp_device.search_headers:
+            ssdp_device.advertisement_headers[notification_type].replace(headers)
+        else:
+            ssdp_device.advertisement_headers[notification_type] = CaseInsensitiveDict(
+                headers
+            )
 
         propagate = True  # Always true, if this is the 2nd unsee then device is already deleted.
         return propagate, ssdp_device, notification_type

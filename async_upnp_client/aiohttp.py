@@ -256,8 +256,8 @@ class AiohttpNotifyServer(UpnpNotifyServer):
                 err,
             )
             raise UpnpServerOSError(
-                err.errno,
-                err.strerror,
+                errno=err.errno,
+                strerror=err.strerror,
             ) from err
 
         # Get listening port.

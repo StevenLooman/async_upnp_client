@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.23.0 (unreleased)
+0.24.0 (unreleased)
 
 - Fix error in cli if target_port is absent in search command
 - Breaking change: Fix IPv6 support for SSDP
@@ -11,6 +11,27 @@ Changes
 - Breaking change: Clean up `aiohttp.AiohttpNotifyServer`/`event_handler.UpnpEventHandler`
     - Fix IPv6 support
     - Only `aiohttp.AiohttpNotifyServer` handles all communication related parts, such as listening port
+
+
+0.23.2 (2021-12-22)
+
+- Speed up combined_headers in ssdp_listener (@bdraco, #115)
+- Add handling of broken SSDP-headers (#116)
+
+
+0.23.1 (2021-12-18)
+
+- Bump `python-didl-lite` to 1.3.2
+- Log missing state vars instead of raising UpnpError in DmrDevice (@chishm)
+
+
+0.23.0 (2021-11-28)
+
+- Allow for renderers that do not provide a list of actions. (@Flameeyes)
+- Fix parsing of allowedValueList (@StevenLooman)
+- Add DMS profile for interfacing with DLNA Digital Media Servers (@chishm)
+- More details reported in Action exceptions (@chishm)
+- Fix type hints in `description_cache` (@epenet, @StevenLooman)
 
 
 0.22.12 (2021-11-06)

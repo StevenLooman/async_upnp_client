@@ -19,7 +19,7 @@ INSTALL_REQUIRES = [
     "voluptuous >= 0.12.1",
     "aiohttp >= 3.7.4",
     "async-timeout >=3.0, <5.0",
-    "python-didl-lite ~= 1.3.1",
+    "python-didl-lite ~= 1.3.2",
     "defusedxml >= 0.6.0",
 ]
 
@@ -35,7 +35,7 @@ TEST_REQUIRES = [
 
 setup(
     name="async_upnp_client",
-    version="0.23.0.dev0",
+    version="0.24.0.dev0",
     description="Async UPnP Client",
     long_description=LONG_DESCRIPTION,
     url="https://github.com/StevenLooman/async_upnp_client",
