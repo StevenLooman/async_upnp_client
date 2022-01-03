@@ -11,10 +11,7 @@
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
-from functools import partial
 from typing import Dict
-
-import aiohttp.web as aiohttp_web
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -25,14 +22,10 @@ from async_upnp_client.const import (
 )
 
 from .server import (
-    NopRequester,
-    SsdpSearchResponder,
     UpnpServerDevice,
     UpnpServerService,
-    action_handler,
     callable_action,
-    subscribe_handler,
-    to_xml,
+    run_server,
 )
 
 logging.basicConfig(level=logging.DEBUG)
@@ -413,44 +406,7 @@ class ConnectionManagerService(UpnpServerService):
 
 async def async_main() -> None:
     """Main."""
-    # HTTP
-    app = aiohttp_web.Application()
-
-    requester = NopRequester()
-    is_ipv6 = ":" in SOURCE[0]
-    base_uri = (
-        f"http://[{SOURCE[0]}]:{HTTP_PORT}"
-        if is_ipv6
-        else f"http://{SOURCE[0]}:{HTTP_PORT}"
-    )
-    device = MediaRendererDevice(requester, base_uri)
-
-    # Set up routes.
-    # Root device.
-    app.router.add_get(device.device_url, partial(to_xml, device))
-
-    # Services.
-    for service in device.all_services:
-        app.router.add_get(service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service))
-        app.router.add_post(
-            service.SERVICE_DEFINITION.control_url, partial(action_handler, service)
-        )
-        app.router.add_route("SUBSCRIBE", service.SERVICE_DEFINITION.event_sub_url, partial(subscribe_handler, service))
-
-    runner = aiohttp_web.AppRunner(app)
-    await runner.setup()
-
-    host = f"{SOURCE[0]}%{SOURCE[3]}" if is_ipv6 else SOURCE[0]
-    site = aiohttp_web.TCPSite(runner, host, HTTP_PORT)
-    await site.start()
-
-    LOGGER.info("Device at %s%s", device.base_uri, device.device_url)
-
-    # SSDP
-    search_responder = SsdpSearchResponder(device, SOURCE)
-    await search_responder.async_start()
-
-    await asyncio.sleep(3600)
+    await run_server(SOURCE, HTTP_PORT, MediaRendererDevice)
 
 
 if __name__ == "__main__":

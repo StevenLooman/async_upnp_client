@@ -227,7 +227,7 @@ class SsdpProtocol(BaseProtocol):
                 _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
                 return
 
-            callback = self.on_data(request_line, headers)
+            callback = self.on_data(request_line, headers, addr)
             self.loop.create_task(callback)
 
     def error_received(self, exc: Exception) -> None:

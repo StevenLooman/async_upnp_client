@@ -668,7 +668,7 @@ class TestUpnpEventHandler:
 
         with patch(
             "async_upnp_client.event_handler.async_get_local_ip",
-            AsyncMock(return_value=(AddressFamily.AF_INET, "127.0.0.1")),
+            AsyncMock(return_value=(socket.AddressFamily.AF_INET, "127.0.0.1")),
         ):
             service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
             callback_url = await event_handler.async_callback_url_for_service(service)

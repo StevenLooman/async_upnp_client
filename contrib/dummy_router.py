@@ -7,15 +7,14 @@
 # - Run upnp-client (change IP to your own IP):
 #    upnp-client call-action 'http://[fe80::215:5dff:fe3f:a047%6]:8000/device.xml' \
 #                RC/GetVolume InstanceID=0 Channel=Master
+#    upnp-client call-action 'http://0.0.0.0:8000/device.xml' \
+#                RC/GetVolume InstanceID=0 Channel=Master
 
 import asyncio
 import logging
 import time
 import xml.etree.ElementTree as ET
-from functools import partial
-from typing import Dict, cast
-
-import aiohttp.web as aiohttp_web
+from typing import Dict
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -26,23 +25,19 @@ from async_upnp_client.const import (
 )
 
 from .server import (
-    NopRequester,
-    SsdpSearchResponder,
     UpnpServerDevice,
     UpnpServerService,
-    action_handler,
     callable_action,
-    subscribe_handler,
-    to_xml,
+    run_server,
 )
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_router")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
-# SOURCE = ("192.168.178.72", 0)
-SOURCE = ("fe80::215:5dff:fe3f:a047", 0, 0, 6)  # Your IP here!
-HTTP_PORT = 8000
+SOURCE = ("0.0.0.0", 0)  # XXX TODO: get_local_ip()
+# SOURCE = ("::", 0, 0, 6)  # Your IP here!
+HTTP_PORT = 8011
 
 
 class IgdDevice(UpnpServerDevice):
@@ -82,10 +77,10 @@ class Layer3ForwardingService(UpnpServerService):
     """Layer3Forwarding service."""
 
     SERVICE_DEFINITION = ServiceInfo(
-        service_id="urn:upnp-org:serviceId:Layer3Forwarding",
+        service_id="urn:upnp-org:serviceId:Layer3Forwarding1",
         service_type="urn:schemas-upnp-org:service:Layer3Forwarding:1",
-        control_url="/upnp/control/Layer3Forwarding",
-        event_sub_url="/upnp/event/Layer3Forwarding",
+        control_url="/upnp/control/Layer3Forwarding1",
+        event_sub_url="/upnp/event/Layer3Forwarding1",
         scpd_url="/Layer3Forwarding_1.xml",
         xml=ET.Element("server_service"),
     )
@@ -131,10 +126,10 @@ class WANCommonInterfaceConfigService(UpnpServerService):
     """WANCommonInterfaceConfig service."""
 
     SERVICE_DEFINITION = ServiceInfo(
-        service_id="urn:upnp-org:serviceId:WANCommonInterfaceConfig",
+        service_id="urn:upnp-org:serviceId:WANCommonInterfaceConfig1",
         service_type="urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
-        control_url="/upnp/control/WANCommonInterfaceConfig",
-        event_sub_url="/upnp/event/WANCommonInterfaceConfig",
+        control_url="/upnp/control/WANCommonInterfaceConfig1",
+        event_sub_url="/upnp/event/WANCommonInterfaceConfig1",
         scpd_url="/WANCommonInterfaceConfig_1.xml",
         xml=ET.Element("server_service"),
     )
@@ -143,7 +138,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
         "TotalBytesReceived": StateVariableTypeInfo(
             data_type="ui4",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
+            default_value="0",
             allowed_value_range={},
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
@@ -151,7 +146,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
         "TotalBytesSent": StateVariableTypeInfo(
             data_type="ui4",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
+            default_value="0",
             allowed_value_range={},
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
@@ -159,7 +154,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
         "TotalPacketsReceived": StateVariableTypeInfo(
             data_type="ui4",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
+            default_value="0",
             allowed_value_range={},
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
@@ -167,7 +162,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
         "TotalPacketsSent": StateVariableTypeInfo(
             data_type="ui4",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
+            default_value="0",
             allowed_value_range={},
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
@@ -176,6 +171,17 @@ class WANCommonInterfaceConfigService(UpnpServerService):
 
     MAX_COUNTER = 2 ** 32
 
+    def _update_bytes(self, state_var_name: str) -> None:
+        """Update bytes state variable."""
+        new_bytes = int(time.time() * 1000) % self.MAX_COUNTER
+        self.state_variable(state_var_name).value = new_bytes
+
+    def _update_packets(self, state_var_name: str) -> None:
+        """Update state variable values."""
+        new_packets = int(time.time()) % self.MAX_COUNTER
+        self.state_variable(state_var_name).value = new_packets
+        self.state_variable(state_var_name).value = new_packets
+
     @callable_action(
         name="GetTotalBytesReceived",
         in_args={},
@@ -183,10 +189,11 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalBytesReceived": "TotalBytesReceived",
         },
     )
-    def get_total_bytes_received(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_bytes_received(self) -> Dict[str, UpnpStateVariable]:
         """Get total bytes received."""
+        self._update_bytes("TotalBytesReceived")
         return {
-            "NewTotalBytesReceived": time.time() % self.MAX_COUNTER
+            "NewTotalBytesReceived": self.state_variable("TotalBytesReceived"),
         }
 
     @callable_action(
@@ -196,10 +203,11 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalBytesSent": "TotalBytesSent",
         },
     )
-    def get_total_bytes_sent(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_bytes_sent(self) -> Dict[str, UpnpStateVariable]:
         """Get total bytes sent."""
+        self._update_bytes("TotalBytesSent")
         return {
-            "NewTotalBytesSent": time.time() % self.MAX_COUNTER
+            "NewTotalBytesSent": self.state_variable("TotalBytesSent"),
         }
 
     @callable_action(
@@ -209,10 +217,11 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalPacketsReceived": "TotalPacketsReceived",
         },
     )
-    def get_total_packets_received(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_packets_received(self) -> Dict[str, UpnpStateVariable]:
         """Get total packets received."""
+        self._update_packets("TotalPacketsReceived")
         return {
-            "NewTotalPacketsReceived": time.time() % self.MAX_COUNTER
+            "NewTotalPacketsReceived": self.state_variable("TotalPacketsReceived"),
         }
 
     @callable_action(
@@ -222,10 +231,11 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalPacketsSent": "TotalPacketsSent",
         },
     )
-    def get_total_packets_sent(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_packets_sent(self) -> Dict[str, UpnpStateVariable]:
         """Get total packets sent."""
+        self._update_packets("TotalPacketsSent")
         return {
-            "NewTotalPacketsSent": time.time() % self.MAX_COUNTER
+            "NewTotalPacketsSent": self.state_variable("TotalPacketsSent"),
         }
 
 
@@ -263,10 +273,10 @@ class WANIPConnectionService(UpnpServerService):
     """WANIPConnection service."""
 
     SERVICE_DEFINITION = ServiceInfo(
-        service_id="urn:upnp-org:serviceId:WANIPConnection",
+        service_id="urn:upnp-org:serviceId:WANIPConnection1",
         service_type="urn:schemas-upnp-org:service:WANIPConnection:1",
-        control_url="/upnp/control/WANIPConnection",
-        event_sub_url="/upnp/event/WANIPConnection",
+        control_url="/upnp/control/WANIPConnection1",
+        event_sub_url="/upnp/event/WANIPConnection1",
         scpd_url="/WANIPConnection_1.xml",
         xml=ET.Element("server_service"),
     )
@@ -277,45 +287,7 @@ class WANIPConnectionService(UpnpServerService):
 
 async def async_main() -> None:
     """Main."""
-    # HTTP
-    app = aiohttp_web.Application()
-
-    requester = NopRequester()
-    is_ipv6 = ":" in SOURCE[0]
-    base_uri = (
-        f"http://[{SOURCE[0]}]:{HTTP_PORT}"
-        if is_ipv6
-        else f"http://{SOURCE[0]}:{HTTP_PORT}"
-    )
-    device = IgdDevice(requester, base_uri)
-
-    # Set up routes.
-    # Root device.
-    app.router.add_get(device.device_url, partial(to_xml, device))
-
-    # Services.
-    for service in device.all_services:
-        service = cast(UpnpServerService, service)
-        app.router.add_get(service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service))
-        app.router.add_post(
-            service.SERVICE_DEFINITION.control_url, partial(action_handler, service)
-        )
-        app.router.add_route("SUBSCRIBE", service.SERVICE_DEFINITION.event_sub_url, partial(subscribe_handler, service))
-
-    runner = aiohttp_web.AppRunner(app)
-    await runner.setup()
-
-    host = f"{SOURCE[0]}%{SOURCE[3]}" if is_ipv6 else SOURCE[0]
-    site = aiohttp_web.TCPSite(runner, host, HTTP_PORT)
-    await site.start()
-
-    LOGGER.info("Device at %s%s", device.base_uri, device.device_url)
-
-    # SSDP
-    search_responder = SsdpSearchResponder(device, SOURCE)
-    await search_responder.async_start()
-
-    await asyncio.sleep(3600)
+    await run_server(SOURCE, HTTP_PORT, IgdDevice)
 
 
 if __name__ == "__main__":

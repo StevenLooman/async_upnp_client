@@ -32,28 +32,32 @@ def get_local_ip(
     target_ip: Optional[IPvXAddress] = None, family: Optional[AddressFamily] = None
 ) -> str:
     """Try to get the local IP of this machine, used to talk to target_url or external world."""
+    # XXX TODO: Instead of target_ip, we want to use target_url?
     if target_ip is None:
         if family == socket.AF_INET:
-            target_ip = (target_ip or EXTERNAL_IP, 0)  # TODO: Nope
+            target_addr = (EXTERNAL_IP, 0)
         elif family == socket.AF_INET6:
-            target_ip = (target_ip or EXTERNAL_IP_V6, 0)  # TODO: Nope
+            target_addr = (EXTERNAL_IP_V6, 0, 0, 0)  # XXX TODO: How to get scope_id?
+        else:
+            family = AddressFamily.AF_INET
+            target_addr = (EXTERNAL_IP, 0)
     elif target_ip.version == 4:
         family = AddressFamily.AF_INET
+        target_addr = (str(target_ip), 0)
     elif target_ip.version == 6:
         family = AddressFamily.AF_INET6
+        target_addr = (str(target_ip), 0, 0, 0)  # XXX TODO: How to get scope_id?
 
-    target_addr = (str(target_ip) if target_ip else EXTERNAL_IP, 0, 0, 6)  # XXX TODO: Nope
-    family = family or socket.AF_INET
     try:
-        temp_sock = socket.socket(family, socket.SOCK_DGRAM)
+        sock = socket.socket(family, socket.SOCK_DGRAM)
         print('target_addr: ', target_addr)
-        temp_sock.connect(
+        sock.connect(
             target_addr
         )  # Connecting using SOCK_DGRAM doesn't cause any network activity.
-        local_ip: str = temp_sock.getsockname()[0]
+        local_ip: str = sock.getsockname()[0]
         return local_ip
     finally:
-        temp_sock.close()
+        sock.close()
 
 
 def ip_address_from_address_tuple(address_tuple: AddressTupleVXType) -> IPvXAddress:
