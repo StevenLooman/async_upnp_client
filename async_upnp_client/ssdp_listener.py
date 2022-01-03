@@ -316,7 +316,7 @@ class SsdpDeviceTracker:
 
         # Update device before propagating it
         notification_type: NotificationType = headers["NT"]
-        if notification_type in ssdp_device.search_headers:
+        if notification_type in ssdp_device.advertisement_headers:
             ssdp_device.advertisement_headers[notification_type].replace(headers)
         else:
             ssdp_device.advertisement_headers[notification_type] = CaseInsensitiveDict(

@@ -17,9 +17,9 @@ from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp_listener import (
+    SsdpDevice,
     SsdpListener,
     same_headers_differ,
-    SsdpDevice,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
 
@@ -183,7 +183,7 @@ async def test_see_search() -> None:
 
 @pytest.mark.asyncio
 async def test_see_search_then_alive() -> None:
-    """Test seeing a device through a search, then a ssdp:update-advertisement."""
+    """Test seeing a device through a search, then a ssdp:alive-advertisement."""
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpListener(async_callback=callback)
@@ -206,6 +206,65 @@ async def test_see_search_then_alive() -> None:
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
     callback.assert_not_awaited()
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_see_search_then_update() -> None:
+    """Test seeing a device through a search, then a ssdp:update-advertisement."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+    search_listener = listener._search_listener
+    assert search_listener is not None
+
+    # See device for the first time through search.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    # See device for the second time through update-advertisement, triggering callback.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    headers["NTS"] = NotificationSubType.SSDP_UPDATE
+    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_see_search_then_byebyee() -> None:
+    """Test seeing a device through a search, then a ssdp:byebye-advertisement."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+    advertisement_listener = listener._advertisement_listener
+    assert advertisement_listener is not None
+    search_listener = listener._search_listener
+    assert search_listener is not None
+
+    # See device for the first time through search.
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    # See device for the second time through byebye-advertisement,
+    # triggering byebye-callback and device removed.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    headers["NTS"] = NotificationSubType.SSDP_BYEBYE
+    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    callback.assert_awaited()
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
 
     await listener.async_stop()
 

@@ -3,6 +3,8 @@ Changes
 
 0.23.3 (unreleased)
 
+- `SsdpListener`: Fix error where a device seen through a search, then byebye-advertisement (@StevenLooman, #117)
+
 
 0.23.2 (2021-12-22)
 
