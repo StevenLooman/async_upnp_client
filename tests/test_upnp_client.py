@@ -2,9 +2,7 @@
 """Unit tests for client_factory and client modules."""
 
 from datetime import datetime, timedelta, timezone
-import socket
 from typing import MutableMapping, Sequence
-from unittest.mock import AsyncMock, patch
 
 import defusedxml.ElementTree as DET
 import pytest
@@ -655,24 +653,6 @@ class TestUpnpEventHandler:
         assert timeout == timedelta(seconds=300)
         callback_url = await event_handler.async_callback_url_for_service(service)
         assert callback_url == "http://localhost:11302"
-
-    @pytest.mark.asyncio
-    async def test_deferred_callback_url(self) -> None:
-        """Test creating a UpnpEventHandler with unspecified host and port."""
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler(
-            "http://{host}:{port}", requester, {socket.AF_INET: 11302}
-        )
-
-        with patch(
-            "async_upnp_client.event_handler.async_get_local_ip",
-            AsyncMock(return_value=(socket.AddressFamily.AF_INET, "127.0.0.1")),
-        ):
-            service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
-            callback_url = await event_handler.async_callback_url_for_service(service)
-            assert callback_url == "http://127.0.0.1:11302"
 
     @pytest.mark.asyncio
     async def test_subscribe_renew(self) -> None:

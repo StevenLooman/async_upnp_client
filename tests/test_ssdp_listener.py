@@ -389,7 +389,8 @@ async def test_combined_headers() -> None:
     headers = CaseInsensitiveDict(
         {**SEARCH_HEADERS_DEFAULT, "booTID.UPNP.ORG": "0", "Original": "2"}
     )
-    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    addr = ('192.168.1.1', 1900)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers, addr)
     callback.assert_awaited()
     assert callback.await_args is not None
     device, dst, _ = callback.await_args.args
@@ -401,7 +402,7 @@ async def test_combined_headers() -> None:
         {**ADVERTISEMENT_HEADERS_DEFAULT, "BooTID.UPNP.ORG": "2"}
     )
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
-    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers, addr)
 
     assert isinstance(device, SsdpDevice)
     combined = device.combined_headers(dst)
@@ -412,6 +413,7 @@ async def test_combined_headers() -> None:
         "_host": "192.168.1.1",
         "_port": "1900",
         "_udn": "uuid:...",
+        "_addr": "('192.168.1.1', 1900)",
         "bootid.upnp.org": "2",
         "cache-control": "max-age=1800",
         "date": "Fri, 1 Jan 2021 12:00:00 GMT",

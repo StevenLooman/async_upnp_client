@@ -136,17 +136,17 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
     ("GET", "http://dlna_dms:1234/device.xml"): (
         200,
         {},
-        read_file("dlna/dms/device.xml"),
+        read_fixture("dlna/dms/device.xml"),
     ),
     ("GET", "http://dlna_dms:1234/ConnectionManager_1.xml"): (
         200,
         {},
-        read_file("dlna/dms/ConnectionManager_1.xml"),
+        read_fixture("dlna/dms/ConnectionManager_1.xml"),
     ),
     ("GET", "http://dlna_dms:1234/ContentDirectory_1.xml"): (
         200,
         {},
-        read_file("dlna/dms/ContentDirectory_1.xml"),
+        read_fixture("dlna/dms/ContentDirectory_1.xml"),
     ),
     ("SUBSCRIBE", "http://dlna_dms:1234/upnp/event/ConnectionManager1"): (
         200,

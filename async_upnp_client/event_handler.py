@@ -3,23 +3,25 @@
 
 import asyncio
 import logging
+from re import X
 import weakref
 from abc import ABC
 from datetime import timedelta
 from http import HTTPStatus
-from typing import Dict, Mapping, Optional, Tuple, Union
+from typing import Dict, Mapping, Optional, Set, Tuple, Type, Union
 from urllib.parse import urlparse
 
 import defusedxml.ElementTree as DET
 
-from async_upnp_client.client import UpnpRequester, UpnpService
-from async_upnp_client.const import NS
+from async_upnp_client.client import UpnpDevice, UpnpRequester, UpnpService
+from async_upnp_client.const import NS, AddressTupleVXType, ServiceId
 from async_upnp_client.exceptions import (
     UpnpConnectionError,
     UpnpError,
     UpnpResponseError,
     UpnpSIDError,
 )
+from async_upnp_client.net import get_source_address_tuple_for_location
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,11 +29,17 @@ _LOGGER = logging.getLogger(__name__)
 class UpnpNotifyServer(ABC):
     """Base Notify Server."""
 
-    # pylint: disable=too-few-public-methods
-
     @property
     def callback_url(self) -> str:
         """Return callback URL on which we are callable."""
+        raise NotImplementedError()
+
+    async def start_server(self) -> None:
+        """Start the server."""
+        raise NotImplementedError()
+
+    async def stop_server(self) -> None:
+        """Stop the server."""
         raise NotImplementedError()
 
 
@@ -56,9 +64,9 @@ class UpnpEventHandler:
         self._requester = requester
 
         self._subscriptions: weakref.WeakValueDictionary[
-            str, UpnpService
+            ServiceId, UpnpService
         ] = weakref.WeakValueDictionary()
-        self._backlog: Dict[str, Tuple[Mapping, str]] = {}
+        self._backlog: Dict[ServiceId, Tuple[Mapping, str]] = {}
 
     @property
     def callback_url(self) -> str:
@@ -70,7 +78,7 @@ class UpnpEventHandler:
         """
         return self._notify_server.callback_url
 
-    def sid_for_service(self, service: UpnpService) -> Optional[str]:
+    def sid_for_service(self, service: UpnpService) -> Optional[ServiceId]:
         """Get the service connected to SID."""
         for sid, subscribed_service in self._subscriptions.items():
             if subscribed_service == service:
@@ -78,18 +86,18 @@ class UpnpEventHandler:
 
         return None
 
-    def service_for_sid(self, sid: str) -> Optional[UpnpService]:
+    def service_for_sid(self, sid: ServiceId) -> Optional[UpnpService]:
         """Get a UpnpService for SID."""
         return self._subscriptions.get(sid)
 
     def _sid_and_service(
-        self, service_or_sid: Union[UpnpService, str]
-    ) -> Tuple[str, UpnpService]:
+        self, service_or_sid: Union[UpnpService, ServiceId]
+    ) -> Tuple[ServiceId, UpnpService]:
         """Resolve a SID or service to both SID and service.
 
         :raise KeyError: Cannot determine SID from UpnpService, or vice versa.
         """
-        sid: Optional[str]
+        sid: Optional[ServiceId]
         service: Optional[UpnpService]
 
         if isinstance(service_or_sid, UpnpService):
@@ -118,7 +126,7 @@ class UpnpEventHandler:
         ):
             return HTTPStatus.PRECONDITION_FAILED
 
-        sid = headers["SID"]
+        sid: ServiceId = headers["SID"]
         service = self._subscriptions.get(sid)
 
         # SID not known yet? store it in the backlog
@@ -151,7 +159,7 @@ class UpnpEventHandler:
         self,
         service: UpnpService,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[str, timedelta]:
+    ) -> Tuple[ServiceId, timedelta]:
         """
         Subscription to a UpnpService.
 
@@ -201,7 +209,7 @@ class UpnpEventHandler:
             timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
             timeout = timedelta(seconds=timeout_seconds)
 
-        sid = response_headers["sid"]
+        sid: ServiceId = response_headers["sid"]
         self._subscriptions[sid] = service
         _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
 
@@ -217,9 +225,9 @@ class UpnpEventHandler:
     async def _async_do_resubscribe(
         self,
         service: UpnpService,
-        sid: str,
+        sid: ServiceId,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[str, timedelta]:
+    ) -> Tuple[ServiceId, timedelta]:
         """Perform only a resubscribe, caller can retry subscribe if this fails."""
         # do SUBSCRIBE request
         headers = {
@@ -239,7 +247,7 @@ class UpnpEventHandler:
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
         if "sid" in response_headers and response_headers["sid"]:
-            new_sid: str = response_headers["sid"]
+            new_sid: ServiceId = response_headers["sid"]
             if new_sid != sid:
                 del self._subscriptions[sid]
                 sid = new_sid
@@ -261,9 +269,9 @@ class UpnpEventHandler:
 
     async def async_resubscribe(
         self,
-        service_or_sid: Union[UpnpService, str],
+        service_or_sid: Union[UpnpService, ServiceId],
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[str, timedelta]:
+    ) -> Tuple[ServiceId, timedelta]:
         """Renew subscription to a UpnpService.
 
         :param service_or_sid: UpnpService or existing SID to resubscribe
@@ -310,8 +318,8 @@ class UpnpEventHandler:
 
     async def async_unsubscribe(
         self,
-        service_or_sid: Union[UpnpService, str],
-    ) -> str:
+        service_or_sid: Union[UpnpService, ServiceId],
+    ) -> ServiceId:
         """Unsubscribe from a UpnpService."""
         sid, service = self._sid_and_service(service_or_sid)
 
@@ -348,3 +356,68 @@ class UpnpEventHandler:
             *(self.async_unsubscribe(sid) for sid in sids),
             return_exceptions=True,
         )
+
+    async def async_stop(self) -> None:
+        """Stop event the UpnpNotifyServer."""
+        # This calls async_unsubscribe_all() via the notify server.
+        await self._notify_server.stop_server()
+
+
+class UpnpEventHandlerRegister:
+    """Event handler register to handle multiple interfaces."""
+
+    def __init__(self, requester: UpnpRequester, notify_server_type: Type) -> None:
+        """Initialize."""
+        self.requester = requester
+        self.notify_server_type = notify_server_type
+        self._event_handlers: Dict[AddressTupleVXType, Tuple[UpnpEventHandler, Set[UpnpDevice]]] = {}
+
+    def _get_event_handler_for_device(self, device: UpnpDevice) -> Optional[UpnpEventHandler]:
+        """Get the event handler for the device, if known."""
+        source_addr: AddressTupleVXType = get_source_address_tuple_for_location(device.device_url)
+        if not source_addr in self._event_handlers:
+            return None
+
+        event_handler, devices = self._event_handlers[source_addr]
+        if device in devices:
+            return event_handler
+
+        return None
+
+    def has_event_handler_for_device(self, device: UpnpDevice) -> bool:
+        """Check if an event handler for a device is already available."""
+        return self._get_event_handler_for_device(device) is not None
+
+    async def async_add_device(self, device: UpnpDevice) -> UpnpEventHandler:
+        """Add a new device, creates or gets the event handler for this device."""
+        source_addr: AddressTupleVXType = get_source_address_tuple_for_location(device.device_url)
+        if not source_addr in self._event_handlers:
+            event_handler = self._create_event_handler_for_device(device)
+            self._event_handlers[source_addr] = (event_handler, set(device))
+            return event_handler
+
+        event_handler, devices = self._event_handlers[source_addr]
+        devices.add(device)
+
+        return event_handler
+
+    async def _create_event_handler_for_device(self, device: UpnpDevice) -> UpnpEventHandler:
+        """Create a new event handler for a device."""
+        source_addr: AddressTupleVXType = get_source_address_tuple_for_location(device.device_url)
+        notify_server: UpnpNotifyServer = self.notify_server_type(self.requester, source_addr)
+        await notify_server.start_server()
+        return UpnpEventHandler(notify_server, self.requester)
+
+    async def async_remove_device(self, device: UpnpDevice) -> Optional[UpnpEventHandler]:
+        """Remove an existing device, destroys the event handler if needed."""
+        source_addr: AddressTupleVXType = get_source_address_tuple_for_location(device.device_url)
+        assert source_addr in self._event_handlers
+
+        event_handler, devices = self._event_handlers[source_addr]
+        assert device in devices
+        devices.remove(device)
+        # XXX TODO: event_handelr.unsubscribe_all for device
+
+        if not devices:
+            await event_handler.async_stop()
+            del self._event_handlers[source_addr]

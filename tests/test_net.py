@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 """Unit tests for net."""
 
-import ipaddress
 import sys
 from ipaddress import IPv4Address, IPv6Address
+from unittest.mock import patch
 
 import pytest
+from async_upnp_client.const import AddressTupleVXType
 
 from async_upnp_client.net import (
     get_adjusted_url,
     get_host_port_string,
     get_host_string,
-    get_local_ip,
     get_source_address_tuple,
+    get_source_address_tuple_for_location,
     ip_address_from_address_tuple,
     ip_address_str_from_address_tuple,
 )
@@ -119,9 +120,12 @@ def test_get_source_address_tuple() -> None:
         0,
         0,
     )
-    assert get_source_address_tuple((SSDP_IP_V4, SSDP_PORT)) == ("0.0.0.0", 0)
-    assert get_source_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 0)) == ("::", 0, 0, 0)
-    assert get_source_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 3)) == ("::", 0, 0, 3)
+    with patch('async_upnp_client.net.get_local_ip', return_value="192.168.1.1"):
+        assert get_source_address_tuple((SSDP_IP_V4, SSDP_PORT)) == ("192.168.1.1", 0)
+    
+    with patch('async_upnp_client.net.get_local_ip', return_value="fe80::1"):
+        assert get_source_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 0)) == ("fe80::1", 0, 0, 0)
+        assert get_source_address_tuple((SSDP_IP_V6, SSDP_PORT, 0, 3)) == ("fe80::1", 0, 0, 3)
 
     if sys.version_info >= (
         3,
@@ -135,16 +139,11 @@ def test_get_source_address_tuple() -> None:
         )
 
 
-@pytest.mark.parametrize(
-    "target_ip",
-    [
-        None,
-        "8.8.8.8",
-        "2001::1",
-    ],
-)
-def test_get_local_ip(target_ip: str) -> None:
-    """Test getting of a local IP that is not loopback."""
-    local_ip_str = get_local_ip(target_ip)
-    local_ip = ipaddress.ip_address(local_ip_str)
-    assert not local_ip.is_loopback
+@pytest.mark.parametrize("location,expected", [
+    ("http://192.168.1.1/igddesc.xml", ("192.168.1.2", 0)),
+    ("http://[fe80::1]/igddesc.xml", ("fe80::2", 0, 0, 0)),
+])
+def test_get_source_address_tuple_for_location(location: str, expected: AddressTupleVXType) -> None:
+    """Test get_source_address_tuple_for_location()."""
+    with patch("async_upnp_client.net.get_local_ip", return_value=expected[0]):
+        assert get_source_address_tuple_for_location(location) == expected

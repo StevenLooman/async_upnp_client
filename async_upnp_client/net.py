@@ -6,7 +6,7 @@ import sys
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Optional, Union, cast
-from urllib.parse import urljoin, urlsplit, urlunsplit
+from urllib.parse import urljoin, urlparse, urlsplit, urlunsplit
 
 from async_upnp_client.const import AddressTupleV4Type, AddressTupleV6Type, AddressTupleVXType, IPvXAddress
 
@@ -32,7 +32,6 @@ def get_local_ip(
     target_ip: Optional[IPvXAddress] = None, family: Optional[AddressFamily] = None
 ) -> str:
     """Try to get the local IP of this machine, used to talk to target_url or external world."""
-    # XXX TODO: Instead of target_ip, we want to use target_url?
     if target_ip is None:
         if family == socket.AF_INET:
             target_addr = (EXTERNAL_IP, 0)
@@ -45,12 +44,16 @@ def get_local_ip(
         family = AddressFamily.AF_INET
         target_addr = (str(target_ip), 0)
     elif target_ip.version == 6:
+        target_ip = cast(IPv6Address, target_ip)
         family = AddressFamily.AF_INET6
-        target_addr = (str(target_ip), 0, 0, 0)  # XXX TODO: How to get scope_id?
+        try:
+            scope_id = int(target_ip.scope_id)
+        except:
+            scope_id = 0
+        target_addr = (str(target_ip), 0, 0, scope_id)
 
     try:
         sock = socket.socket(family, socket.SOCK_DGRAM)
-        print('target_addr: ', target_addr)
         sock.connect(
             target_addr
         )  # Connecting using SOCK_DGRAM doesn't cause any network activity.
@@ -175,3 +178,10 @@ def get_source_address_tuple(
         )
 
     raise NotImplementedError()
+
+
+def get_source_address_tuple_for_location(location) -> AddressTupleVXType:
+    """Get the source address tuple for a given location."""
+    parts = urlparse(location)
+    target = (parts.hostname, 0, 0, 0) if ':' in parts.netloc else (parts.hostname, 0)
+    return get_source_address_tuple(target)

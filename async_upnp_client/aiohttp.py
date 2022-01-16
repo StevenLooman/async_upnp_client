@@ -218,7 +218,6 @@ class AiohttpNotifyServer(UpnpNotifyServer):
 
     It is advisable to use one AiohttpNotifyServer
     per listening IP. UpnpDevices can share a AiohttpNotifyServer/UpnpEventHandler.
-
     """
 
     # XXX TODO: To determine the source-tuple use the ...
@@ -269,6 +268,7 @@ class AiohttpNotifyServer(UpnpNotifyServer):
 
     async def stop_server(self) -> None:
         """Stop the HTTP server."""
+        # XXX TODO: Shouldn't the event_handler do this?
         await self.event_handler.async_unsubscribe_all()
 
         if self._aiohttp_server:
@@ -311,13 +311,18 @@ class AiohttpNotifyServer(UpnpNotifyServer):
     def _listen_ip(self) -> IPvXAddress:
         """Get listenting IP Address."""
         host = self._source[0]
-        address = ip_address(host)  # type: IPvXAddress
+        address: IPvXAddress = ip_address(host)
 
         if address.is_unspecified:
+            # XXX TODO: Do we really want this? 0.0.0.0 is unspecified too!
+            #           If we have a strict local IP, local IP changes might break things.
+            #           Then the original event handler might already be sufficient,
+            #           just needs a bit of improvement.
+            #           But how to handle with IPv6/scope_id? And why do we need scope_id again?
             # Figure ip.
             family = socket.AF_INET if address.version == 4 else socket.AF_INET6
             host = get_local_ip(None, family)
-            specific_addr = ip_address(host)  # type: IPvXAddress
+            specific_addr: IPvXAddress = ip_address(host)
             return specific_addr
 
         return address

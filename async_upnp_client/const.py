@@ -183,6 +183,10 @@ UniqueDeviceName = str  # UDN
 DeviceOrServiceType = str
 
 
+# Event handlers
+ServiceId = str  # Service id
+
+
 class NotificationSubType(str, Enum):
     """NTS header."""
 
