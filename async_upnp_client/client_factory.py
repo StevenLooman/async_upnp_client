@@ -29,6 +29,7 @@ from async_upnp_client.const import (
     StateVariableTypeInfo,
 )
 from async_upnp_client.exceptions import (
+    UpnpResponseError,
     UpnpXmlContentError,
     UpnpXmlParseError,
 )
@@ -376,12 +377,14 @@ class UpnpFactory:
 
     async def _async_get(self, url: str) -> ET.Element:
         """Get a url."""
-        status_code, _, response_body = await self.requester.async_http_request(
-            "GET", url
-        )
+        (
+            status_code,
+            response_headers,
+            response_body,
+        ) = await self.requester.async_http_request("GET", url)
 
         if status_code != 200:
-            raise UpnpError(f"Received status code: {status_code}")
+            raise UpnpResponseError(status=status_code, headers=response_headers)
 
         description: str = (response_body or "").rstrip(" \t\r\n\0")
         try:
