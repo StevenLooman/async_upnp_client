@@ -59,12 +59,12 @@ class UpnpActionError(UpnpError):
         self.error_desc = error_desc
 
 
-class UpnpXmlParseError(UpnpError, ET.ParseError):
+class UpnpXmlParseError(UpnpContentError, ET.ParseError):
     """UPnP response is not valid XML."""
 
     def __init__(self, orig_err: ET.ParseError) -> None:
         """Initialize from original ParseError, to match it."""
-        super().__init__(str(orig_err))
+        super().__init__(message=str(orig_err))
         self.code = orig_err.code
         self.position = orig_err.position
 
