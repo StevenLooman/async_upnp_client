@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpRequester, UpnpService
-from async_upnp_client.const import NS
+from async_upnp_client.const import NS, ServiceId
 from async_upnp_client.exceptions import (
     UpnpConnectionError,
     UpnpError,
@@ -54,9 +54,9 @@ class UpnpEventHandler:
 
         self._listen_ip: Optional[str] = None
         self._subscriptions: weakref.WeakValueDictionary[
-            str, UpnpService
+            ServiceId, UpnpService
         ] = weakref.WeakValueDictionary()
-        self._backlog: Dict[str, Tuple[Mapping, str]] = {}
+        self._backlog: Dict[ServiceId, Tuple[Mapping, str]] = {}
 
     @property
     def callback_url(self) -> str:
@@ -95,7 +95,7 @@ class UpnpEventHandler:
 
         return self._callback_url.format(host=local_host, port=port)
 
-    def sid_for_service(self, service: UpnpService) -> Optional[str]:
+    def sid_for_service(self, service: UpnpService) -> Optional[ServiceId]:
         """Get the service connected to SID."""
         for sid, subscribed_service in self._subscriptions.items():
             if subscribed_service == service:
@@ -103,18 +103,18 @@ class UpnpEventHandler:
 
         return None
 
-    def service_for_sid(self, sid: str) -> Optional[UpnpService]:
+    def service_for_sid(self, sid: ServiceId) -> Optional[UpnpService]:
         """Get a UpnpService for SID."""
         return self._subscriptions.get(sid)
 
     def _sid_and_service(
-        self, service_or_sid: Union[UpnpService, str]
-    ) -> Tuple[str, UpnpService]:
+        self, service_or_sid: Union[UpnpService, ServiceId]
+    ) -> Tuple[ServiceId, UpnpService]:
         """Resolve a SID or service to both SID and service.
 
         :raise KeyError: Cannot determine SID from UpnpService, or vice versa.
         """
-        sid: Optional[str]
+        sid: Optional[ServiceId]
         service: Optional[UpnpService]
 
         if isinstance(service_or_sid, UpnpService):
@@ -143,7 +143,7 @@ class UpnpEventHandler:
         ):
             return HTTPStatus.PRECONDITION_FAILED
 
-        sid = headers["SID"]
+        sid: ServiceId = headers["SID"]
         service = self._subscriptions.get(sid)
 
         # SID not known yet? store it in the backlog
@@ -176,7 +176,7 @@ class UpnpEventHandler:
         self,
         service: UpnpService,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[str, timedelta]:
+    ) -> Tuple[ServiceId, timedelta]:
         """
         Subscription to a UpnpService.
 
@@ -226,7 +226,7 @@ class UpnpEventHandler:
             timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
             timeout = timedelta(seconds=timeout_seconds)
 
-        sid = response_headers["sid"]
+        sid: ServiceId = response_headers["sid"]
         self._subscriptions[sid] = service
         _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
 
@@ -242,9 +242,9 @@ class UpnpEventHandler:
     async def _async_do_resubscribe(
         self,
         service: UpnpService,
-        sid: str,
+        sid: ServiceId,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[str, timedelta]:
+    ) -> Tuple[ServiceId, timedelta]:
         """Perform only a resubscribe, caller can retry subscribe if this fails."""
         # do SUBSCRIBE request
         headers = {
@@ -264,7 +264,7 @@ class UpnpEventHandler:
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
         if "sid" in response_headers and response_headers["sid"]:
-            new_sid: str = response_headers["sid"]
+            new_sid: ServiceId = response_headers["sid"]
             if new_sid != sid:
                 del self._subscriptions[sid]
                 sid = new_sid
@@ -286,9 +286,9 @@ class UpnpEventHandler:
 
     async def async_resubscribe(
         self,
-        service_or_sid: Union[UpnpService, str],
+        service_or_sid: Union[UpnpService, ServiceId],
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[str, timedelta]:
+    ) -> Tuple[ServiceId, timedelta]:
         """Renew subscription to a UpnpService.
 
         :param service_or_sid: UpnpService or existing SID to resubscribe
@@ -335,8 +335,8 @@ class UpnpEventHandler:
 
     async def async_unsubscribe(
         self,
-        service_or_sid: Union[UpnpService, str],
-    ) -> str:
+        service_or_sid: Union[UpnpService, ServiceId],
+    ) -> ServiceId:
         """Unsubscribe from a UpnpService."""
         sid, service = self._sid_and_service(service_or_sid)
 
