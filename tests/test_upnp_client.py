@@ -29,6 +29,7 @@ from async_upnp_client.exceptions import (
     UpnpActionErrorCode,
     UpnpActionResponseError,
     UpnpResponseError,
+    UpnpXmlContentError,
 )
 
 from .upnp_test_requester import RESPONSE_MAP, UpnpTestRequester, read_file
@@ -101,6 +102,20 @@ class TestUpnpStateVariable:
         argument = action.argument("InstanceID")
         assert argument is not None
         assert argument.xml is not None
+
+    @pytest.mark.asyncio
+    async def test_init_bad_xml(self) -> None:
+        """Test missing device element in device description."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/device.xml")] = (
+            200,
+            {},
+            read_file("dlna/dmr/device_bad_namespace.xml"),
+        )
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        with pytest.raises(UpnpXmlContentError):
+            await factory.async_create_device("http://dlna_dmr:1234/device.xml")
 
     @pytest.mark.asyncio
     async def test_set_value_volume(self) -> None:
@@ -638,6 +653,53 @@ class TestUpnpService:
             await service.async_call_action(action, InstanceID=0, Channel="Master")
         assert exc.value.error_code == UpnpActionErrorCode.INVALID_ARGS
         assert exc.value.error_desc == "Invalid Args"
+
+    @pytest.mark.parametrize(
+        "rc_doc",
+        [
+            "dlna/dmr/RenderingControl_1_bad_namespace.xml",  # Bad namespace
+            "dlna/dmr/RenderingControl_1_bad_root_tag.xml",  # Wrong root tag
+            "dlna/dmr/RenderingControl_1_missing_state_table.xml",  # Missing state table
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_bad_scpd_strict(self, rc_doc: str) -> None:
+        """Test handling of bad service descriptions in strict mode."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = (
+            200,
+            {},
+            read_file(rc_doc),
+        )
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        with pytest.raises(UpnpXmlContentError):
+            await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+
+    @pytest.mark.parametrize(
+        "rc_doc",
+        [
+            "dlna/dmr/RenderingControl_1_bad_namespace.xml",  # Bad namespace
+            "dlna/dmr/RenderingControl_1_bad_root_tag.xml",  # Wrong root tag
+            "dlna/dmr/RenderingControl_1_missing_state_table.xml",  # Missing state table
+        ],
+    )
+    @pytest.mark.asyncio
+    async def test_bad_scpd_non_strict_fails(self, rc_doc: str) -> None:
+        """Test bad SCPD in non-strict mode."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = (
+            200,
+            {},
+            read_file(rc_doc),
+        )
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester, non_strict=True)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        # Known good service
+        assert device.services["urn:schemas-upnp-org:service:AVTransport:1"]
+        # Bad service will also exist, to some extent
+        assert device.services["urn:schemas-upnp-org:service:RenderingControl:1"]
 
 
 class TestUpnpEventHandler:

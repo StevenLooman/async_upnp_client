@@ -83,6 +83,10 @@ class UpnpSIDError(UpnpContentError):
     """Missing Subscription Identifier from response."""
 
 
+class UpnpXmlContentError(UpnpContentError):
+    """XML document does not have expected content."""
+
+
 class UpnpCommunicationError(UpnpError, aiohttp.ClientError):
     """Error occurred while communicating with the UPnP device ."""
 
