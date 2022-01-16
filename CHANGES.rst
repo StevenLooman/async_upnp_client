@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.23.5 (unreleased)
+
+
 0.23.4 (2022-01-16)
 - Raise `UpnpXmlContentError` when device has bad description XML (@chishm, #118)
 - Raise `UpnpResponseError` for HTTP errors in UpnpFactory (@chishm, #118)
