@@ -83,6 +83,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         await self.async_callback(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
+        _LOGGER.debug("On connect, transport: %s", transport)
         self._transport = transport
         if self.async_connect_callback:
             await self.async_connect_callback()
@@ -110,6 +111,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         else:
             self._target_host = ""
 
+        _LOGGER.debug("Binding to address: %s", source)
         sock.bind(source)
         loop = self.loop or asyncio.get_event_loop()
 

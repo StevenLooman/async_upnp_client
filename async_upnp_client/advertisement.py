@@ -70,6 +70,7 @@ class SsdpAdvertisementListener:
             await self.on_update(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
+        _LOGGER.debug("On connect, transport: %s", transport)
         self._transport = transport
 
     async def async_start(self) -> None:
