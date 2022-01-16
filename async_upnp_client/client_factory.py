@@ -28,7 +28,11 @@ from async_upnp_client.const import (
     StateVariableInfo,
     StateVariableTypeInfo,
 )
-from async_upnp_client.exceptions import UpnpXmlParseError
+from async_upnp_client.exceptions import (
+    UpnpResponseError,
+    UpnpXmlContentError,
+    UpnpXmlParseError,
+)
 from async_upnp_client.utils import absolute_url
 
 _LOGGER = logging.getLogger(__name__)
@@ -70,7 +74,7 @@ class UpnpFactory:
         # get root device
         device_el = root_el.find("./device:device", NS)
         if device_el is None:
-            raise UpnpError("Could not find device element")
+            raise UpnpXmlContentError("Could not find device element")
 
         return await self._async_create_device(device_el, description_url)
 
@@ -141,6 +145,9 @@ class UpnpFactory:
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
         scpd_el = await self._async_get(scpd_url)
 
+        if not self._non_strict and scpd_el.tag != f"{{{NS['service']}}}scpd":
+            raise UpnpXmlContentError(f"Invalid document root: {scpd_el.tag}")
+
         service_info = self._parse_service_el(service_description_el)
         state_vars = self._create_state_variables(scpd_el)
         actions = self._create_actions(scpd_el, state_vars)
@@ -162,7 +169,10 @@ class UpnpFactory:
         """Create UpnpStateVariables from scpd_el."""
         service_state_table_el = scpd_el.find("./service:serviceStateTable", NS)
         if service_state_table_el is None:
-            raise UpnpError("Could not find service state table element")
+            if self._non_strict:
+                _LOGGER.debug("Could not find service state table element")
+                return []
+            raise UpnpXmlContentError("Could not find service state table element")
 
         state_vars = []
         for state_var_el in service_state_table_el.findall(
@@ -367,12 +377,14 @@ class UpnpFactory:
 
     async def _async_get(self, url: str) -> ET.Element:
         """Get a url."""
-        status_code, _, response_body = await self.requester.async_http_request(
-            "GET", url
-        )
+        (
+            status_code,
+            response_headers,
+            response_body,
+        ) = await self.requester.async_http_request("GET", url)
 
         if status_code != 200:
-            raise UpnpError(f"Received status code: {status_code}")
+            raise UpnpResponseError(status=status_code, headers=response_headers)
 
         description: str = (response_body or "").rstrip(" \t\r\n\0")
         try:
