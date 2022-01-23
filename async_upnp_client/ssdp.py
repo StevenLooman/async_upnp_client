@@ -80,7 +80,6 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     return urlunsplit(data._replace(netloc=netloc))
 
 
-
 def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:
     """Construct a SSDP packet."""
     headers_str = "\r\n".join([f"{key}:{value}" for key, value in headers.items()])
