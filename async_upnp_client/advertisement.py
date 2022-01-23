@@ -9,7 +9,7 @@ from asyncio.transports import BaseTransport, DatagramTransport
 from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Optional
 
-from async_upnp_client.const import AddressTupleVXType, NotificationSubType, SsdpSource
+from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
     SSDP_IP_V4,

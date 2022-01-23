@@ -88,6 +88,7 @@ def test_decode_ssdp_packet() -> None:
         "_location_original": "http://192.168.1.1:80/RootDevice.xml",
         "_host": "addr",
         "_port": 123,
+        "_addr": ("addr", 123),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -122,6 +123,7 @@ def test_decode_ssdp_packet_missing_ending() -> None:
         "_location_original": "http://192.168.107.148:8088/description",
         "_host": "addr",
         "_port": 123,
+        "_addr": ("addr", 123),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -140,6 +142,7 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
         "cache-control": "max-age = 1800",
         "_host": "addr",
         "_port": 123,
+        "_addr": ("addr", 123),
         "_timestamp": ANY,
     }
 
@@ -183,6 +186,7 @@ def test_decode_ssdp_packet_v6() -> None:
         "_location_original": "http://[fe80::2]:80/RootDevice.xml",
         "_host": "fe80::1%3",
         "_port": 123,
+        "_addr": ("fe80::1", 123, 0, 3),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -236,5 +240,6 @@ def test_microsoft_butchers_ssdp() -> None:
         "_location_original": "192.168.1.1",
         "_host": "192.168.1.1",
         "_port": 1900,
+        "_addr": ("192.168.1.1", 1900),
         "_timestamp": ANY,
     }
