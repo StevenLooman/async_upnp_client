@@ -1,332 +1,412 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Dummy TV supporting DLNA/DMR."""
+# Instructions:
+# - Change `SOURCE``. When using IPv6, be sure to set the scope_id, the last value in the tuple.
+# - Run this module.
+# - Run upnp-client (change IP to your own IP):
+#    upnp-client call-action 'http://0.0.0.0:8000/device.xml' \
+#                RC/GetVolume InstanceID=0 Channel=Master
+
 import asyncio
 import logging
-import uuid
+import xml.etree.ElementTree as ET
+from typing import Dict
 
-import async_timeout
-import defusedxml.ElementTree as DET
-from aiohttp import ClientSession, web
+from async_upnp_client.client import UpnpRequester, UpnpStateVariable
+from async_upnp_client.const import (
+    STATE_VARIABLE_TYPE_MAPPING,
+    DeviceInfo,
+    ServiceInfo,
+    StateVariableTypeInfo,
+)
+
+from .server import (
+    UpnpServerDevice,
+    UpnpServerService,
+    callable_action,
+    run_server,
+)
 
 logging.basicConfig(level=logging.DEBUG)
-LOGGER = logging.getLogger(__name__)
-PORT = 8000
+LOGGER = logging.getLogger("dummy_tv")
+LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
+LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
+SOURCE = ("0.0.0.0", 0)  # Your IP here!
+HTTP_PORT = 8000
 
 
-DET.ElementTree.register_namespace("envelope", "http://schemas.xmlsoap.org/soap/envelope/")
-DET.ElementTree.register_namespace("rc_service", "urn:schemas-upnp-org:service:RenderingControl:1")
-DET.ElementTree.register_namespace("rcs", "urn:schemas-upnp-org:metadata-1-0/RCS/")
+class MediaRendererDevice(UpnpServerDevice):
+    """Media Renderer device."""
 
-NS = {
-    "envelope": "http://schemas.xmlsoap.org/soap/envelope/",
-    "device": "urn:schemas-upnp-org:device-1-0",
-    "service": "urn:schemas-upnp-org:service-1-0",
-    "event": "urn:schemas-upnp-org:event-1-0",
-    "rc_service": "urn:schemas-upnp-org:service:RenderingControl:1",
-    "rcs": "urn:schemas-upnp-org:metadata-1-0/RCS/",
-}
-
-SUBSCRIBED_CLIENTS = {
-    "RC": {},
-    "AVT": {},
-}
-
-STATE_VARIABLES = {
-    "RC": {},
-    "AVT": {},
-}
-
-
-class StateVariable(object):
-    def __init__(self, value):
-        self._value = value
-
-    def matches_action(self, command):
-        return getattr(self, command, None) is not None
-
-    @asyncio.coroutine
-    def do_command(self, command, **kwargs):
-        m = getattr(self, command, None)
-        r = yield from m(**kwargs)
-        return r
-
-    @property
-    def name(self):
-        return self.__class__.__name__
-
-    @property
-    def value(self):
-        return self._value
-
-    @asyncio.coroutine
-    def async_notify_listeners(self, **kwargs):
-        property = str(self.__class__.__name__)
-        value = str(self.value)
-
-        LOGGER.debug("async_notify_listeners(): %s -> %s", property, value)
-
-        event_base = (
-            '<Event xmlns="urn:schemas-upnp-org:metadata-1-0/RCS/">'
-            '<InstanceID val="0" />'
-            "</Event>"
-        )
-        el_event = DET.ElementTree.fromstring(event_base)
-        el_instance_id = el_event.find(".//rcs:InstanceID", NS)
-        args = kwargs.copy()
-        args.update({"val": value})
-        DET.ElementTree.SubElement(el_instance_id, "rcs:" + property, **args)
-
-        notify_base = (
-            '<?xml version="1.0" encoding="utf-8"?>'
-            '<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">'
-            "<e:property>"
-            "<LastChange />"
-            "</e:property>"
-            "</e:propertyset>"
-        )
-        el_notify = DET.ElementTree.fromstring(notify_base)
-        el_last_change = el_notify.find(".//LastChange", NS)
-        el_last_change.text = DET.ElementTree.tostring(el_event).decode("utf-8")
-
-        global SUBSCRIBED_CLIENTS
-        service_name = self.SERVICE_NAME
-        for sid, url in SUBSCRIBED_CLIENTS[service_name].items():
-            headers = {"SID": sid}
-            with ClientSession(loop=asyncio.get_event_loop()) as session:
-                async with async_timeout.timeout(10):
-                    data = DET.ElementTree.tostring(el_notify)
-                    LOGGER.debug("Calling: %s", url)
-                    yield from session.request(
-                        "NOTIFY", url, headers=headers, data=data
-                    )
-
-    def __str__(self):
-        return "<{}({}, {})>".format(
-            self.__class__.__name__, self.SERVICE_NAME, self.value
-        )
-
-
-class Volume(StateVariable):
-
-    SERVICE_NAME = "RC"
-
-    def __init__(self):
-        super().__init__(0)
-
-    @asyncio.coroutine
-    def GetVolume(self, **kwargs):
-        LOGGER.debug("GetVolume(%s)", kwargs)
-        return dict(CurrentVolume=self.value)
-
-    @asyncio.coroutine
-    def SetVolume(self, **kwargs):
-        LOGGER.debug("SetVolume(%s)", kwargs)
-        self._value = kwargs["DesiredVolume"]
-        yield from self.async_notify_listeners(InstanceID="0", Channel="Master")
-        return dict()
-
-
-class Mute(StateVariable):
-
-    SERVICE_NAME = "RC"
-
-    def __init__(self):
-        super().__init__(0)
-
-    @asyncio.coroutine
-    def GetMute(self, **kwargs):
-        LOGGER.debug("GetMute(%s)", kwargs)
-        return dict(CurrentMute=self.value)
-
-    @asyncio.coroutine
-    def SetMute(self, **kwargs):
-        LOGGER.debug("SetMute(%s)", kwargs)
-        self._value = kwargs["DesiredMute"]
-        yield from self.async_notify_listeners(InstanceID="0", Channel="Master")
-        return dict()
-
-
-class TransportState(StateVariable):
-
-    SERVICE_NAME = "AVT"
-
-    def __init__(self):
-        # super().__init__('STOPPED')
-        super().__init__("PLAYING")
-
-    @asyncio.coroutine
-    def GetTransportInfo(self, **kwargs):
-        LOGGER.debug("GetTransportState(%s)", kwargs)
-        return dict(
-            CurrentTransportState=self.value,
-            CurrentTransportStatus="OK",
-            CurrentSpeed="1.0",
-        )
-
-
-class TrackDuration(StateVariable):
-
-    SERVICE_NAME = "AVT"
-
-    def __init__(self):
-        super().__init__("00:10:00")
-
-    @asyncio.coroutine
-    def GetPositionInfo(self, **kwargs):
-        LOGGER.debug("GetPositionInfo(%s)", kwargs)
-        return dict(
-            TrackDuration=self.value,
-            Track=1,
-            TrackMetaData="",
-            TrackURI="",
-            RelTime="00:05:00",
-            AbsTime="00:05:00",
-        )
-
-
-STATE_VARIABLES["RC"]["Volume"] = Volume()
-STATE_VARIABLES["RC"]["Mute"] = Mute()
-STATE_VARIABLES["AVT"]["TransportState"] = TransportState()
-STATE_VARIABLES["AVT"]["TrackDuration"] = TrackDuration()
-
-
-@asyncio.coroutine
-def async_handle_control_rc(request):
-    ns = "urn:schemas-upnp-org:service:RenderingControl:1"
-    response = yield from async_handle_control(request, STATE_VARIABLES["RC"], ns)
-    return response
-
-
-@asyncio.coroutine
-def async_handle_control_avt(request):
-    ns = "urn:schemas-upnp-org:service:AVTransport:1"
-    response = yield from async_handle_control(request, STATE_VARIABLES["AVT"], ns)
-    return response
-
-
-@asyncio.coroutine
-def async_handle_control(request, state_variables, xml_ns):
-    body = yield from request.content.read()
-
-    # read command and args
-    el_request = DET.ElementTree.fromstring(body)
-    el_body = el_request.find("envelope:Body", NS)
-    el_command = el_body.find("./")
-    command = el_command.tag.split("}")[1]
-    args = {el_arg.tag: el_arg.text for el_arg in el_command.findall("./")}
-    LOGGER.debug("Command: %s", command)
-    LOGGER.debug("Args: %s", args)
-
-    # do command
-    result = {}
-    for state_var in state_variables.values():
-        if state_var.matches_action(command):
-            result = yield from state_var.do_command(command, **args)
-    if result is None:
-        return web.Response(status=404)
-
-    LOGGER.debug("Result: %s", result)
-
-    # return result
-    response_base = (
-        '<?xml version="1.0" encoding="utf-8"?>'
-        '<s:Envelope s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">'
-        "<s:Body />"
-        "</s:Envelope>"
+    DEVICE_DEFINITION = DeviceInfo(
+        device_type="urn:schemas-upnp-org:device:MediaRenderer:1",
+        friendly_name="Dummy TV",
+        manufacturer="Steven",
+        model_name="DummyTV v1",
+        udn="uuid:ea2181c0-c677-4a09-80e6-f9e69a951284",
+        model_description="Dummy TV DMR",
+        model_number="v0.0.1",
+        serial_number="0000001",
+        url="/device.xml",
+        icons=[],
+        xml=ET.Element("server_device"),
     )
-    el_envelope = DET.ElementTree.fromstring(response_base)
-    el_body = el_envelope.find("./envelope:Body", NS)
-    el_response = DET.ElementTree.SubElement(el_body, "{" + xml_ns + "}" + command + "Response")
-    for key, value in result.items():
-        el_arg = DET.ElementTree.SubElement(el_response, key)
-        el_arg.text = str(value)
 
-    text = DET.ElementTree.tostring(el_envelope)
-    return web.Response(status=200, body=text)
+    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
+        """Initialize."""
+        services = [
+            RenderingControlService(requester=requester),
+            AVTransportService(requester=requester),
+            ConnectionManagerService(requester=requester),
+        ]
+        super().__init__(
+            requester=requester,
+            base_uri=base_uri,
+            services=services,
+            embedded_devices=[],
+        )
 
 
-# region Subscriptions
-# region Subscribe
-@asyncio.coroutine
-def async_handle_subscribe_rc(request):
-    response = yield from async_handle_subscribe(
-        request, SUBSCRIBED_CLIENTS["RC"], STATE_VARIABLES["RC"]
+class RenderingControlService(UpnpServerService):
+    """Rendering Control service."""
+
+    SERVICE_DEFINITION = ServiceInfo(
+        service_id="urn:upnp-org:serviceId:RenderingControl",
+        service_type="urn:schemas-upnp-org:service:RenderingControl:1",
+        control_url="/upnp/control/RenderingControl1",
+        event_sub_url="/upnp/event/RenderingControl1",
+        scpd_url="/RenderingControl_1.xml",
+        xml=ET.Element("server_service"),
     )
-    return response
 
+    STATE_VARIABLE_DEFINITIONS = {
+        "Volume": StateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value="0",
+            allowed_value_range={
+                "min": "0",
+                "max": "100",
+            },
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "Mute": StateVariableTypeInfo(
+            data_type="boolean",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["boolean"],
+            default_value="0",
+            allowed_value_range={},
+            allowed_values=["0", "1", ],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_Channel": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+    }
 
-@asyncio.coroutine
-def async_handle_subscribe_avt(request):
-    response = yield from async_handle_subscribe(
-        request, SUBSCRIBED_CLIENTS["AVT"], STATE_VARIABLES["AVT"]
+    @callable_action(
+        name="GetVolume",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+        },
+        out_args={
+            "CurrentVolume": "Volume",
+        },
     )
-    return response
+    async def get_volume(
+        self, InstanceID: int, Channel: str
+    ) -> Dict[str, UpnpStateVariable]:
+        """Get Volume."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentVolume": self.state_variable("Volume"),
+        }
+
+    @callable_action(
+        name="SetVolume",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+            "DesiredVolume": "Volume",
+        },
+        out_args={},
+    )
+    async def set_volume(
+        self, InstanceID: int, Channel: str, DesiredVolume: int
+    ) -> Dict[str, UpnpStateVariable]:
+        """Set Volume."""
+        # pylint: disable=invalid-name, unused-argument
+        volume = self.state_variable("Volume")
+        volume.value = DesiredVolume
+        return {}
+
+    @callable_action(
+        name="GetMute",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+        },
+        out_args={
+            "CurrentMute": "Mute",
+        },
+    )
+    async def get_mute(
+        self, InstanceID: int, Channel: str
+    ) -> Dict[str, UpnpStateVariable]:
+        """Get Mute."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentMute": self.state_variable("Mute"),
+        }
+
+    @callable_action(
+        name="SetMute",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+            "Channel": "A_ARG_TYPE_Channel",
+            "DesiredMute": "Mute",
+        },
+        out_args={},
+    )
+    async def set_mute(
+        self, InstanceID: int, Channel: str, DesiredMute: bool
+    ) -> Dict[str, UpnpStateVariable]:
+        """Set Volume."""
+        # pylint: disable=invalid-name, unused-argument
+        volume = self.state_variable("Mute")
+        volume.value = DesiredMute
+        return {}
 
 
-@asyncio.coroutine
-def async_handle_subscribe(request, subscribed_clients, state_variables):
-    callback_url = request.headers.get("CALLBACK")[1:-1]
-    sid = "uuid:" + str(uuid.uuid4())
-    subscribed_clients[sid] = callback_url
+class AVTransportService(UpnpServerService):
+    """AVTransport service."""
 
-    headers = {"SID": sid}
+    SERVICE_DEFINITION = ServiceInfo(
+        service_id="urn:upnp-org:serviceId:AVTransport",
+        service_type="urn:schemas-upnp-org:service:AVTransport:1",
+        control_url="/upnp/control/AVTransport1",
+        event_sub_url="/upnp/event/AVTransport1",
+        scpd_url="/AVTransport_1.xml",
+        xml=ET.Element("server_service"),
+    )
 
-    @asyncio.coroutine
-    def async_push_later(state_variable):
-        yield from asyncio.sleep(0.5)
-        yield from state_variable.async_notify_listeners()
+    STATE_VARIABLE_DEFINITIONS = {
+        "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentTrackURI": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentTrack": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "AVTransportURI": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "TransportState": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="STOPPED",
+            allowed_value_range={},
+            allowed_values=["STOPPED", "PLAYING", "PAUSED_PLAYBACK", "TRANSITIONING", ],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "TransportStatus": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "TransportPlaySpeed": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="1",
+            allowed_value_range={},
+            allowed_values=["1"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PossiblePlaybackStorageMedia": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PossibleRecordStorageMedia": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PossibleRecordQualityModes": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentPlayMode": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NORMAL",
+            allowed_value_range={},
+            allowed_values=["NORMAL"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "CurrentRecordQualityMode": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="NOT_IMPLEMENTED",
+            allowed_value_range={},
+            allowed_values=["NOT_IMPLEMENTED"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+    }
 
-    for state_variable in state_variables.values():
-        LOGGER.debug("Pushing state_variable on SUBSCRIBE: %s", state_variable.name)
-        asyncio.get_event_loop().create_task(async_push_later(state_variable))
+    @callable_action(
+        name="GetTransportInfo",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "CurrentTransportState": "TransportState",
+            "CurrentTransportStatus": "TransportStatus",
+            "CurrentSpeed": "TransportPlaySpeed",
+        },
+    )
+    async def get_transport_info(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Transport Info."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentTransportState": self.state_variable("TransportState"),
+            "CurrentTransportStatus": self.state_variable("TransportStatus"),
+            "CurrentSpeed": self.state_variable("TransportPlaySpeed"),
+        }
 
-    return web.Response(status=200, headers=headers)
+    @callable_action(
+        name="GetMediaInfo",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "CurrentURI": "AVTransportURI",
+        },
+    )
+    async def get_media_info(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Media Info."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "CurrentURI": self.state_variable("AVTransportURI"),
+        }
+
+    @callable_action(
+        name="GetDeviceCapabilities",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "PlayMedia": "PossiblePlaybackStorageMedia",
+            "RecMedia": "PossibleRecordStorageMedia",
+            "RecQualityModes": "PossibleRecordQualityModes",
+        },
+    )
+    async def get_device_capabilities(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Device Capabilities."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "PlayMedia": self.state_variable("PossiblePlaybackStorageMedia"),
+            "RecMedia": self.state_variable("PossibleRecordStorageMedia"),
+            "RecQualityModes": self.state_variable("PossibleRecordQualityModes"),
+        }
+
+    @callable_action(
+        name="GetTransportSettings",
+        in_args={
+            "InstanceID": "A_ARG_TYPE_InstanceID",
+        },
+        out_args={
+            "PlayMode": "CurrentPlayMode",
+            "RecQualityMode": "CurrentRecordQualityMode",
+        },
+    )
+    async def get_transport_settings(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+        """Get Transport Settings."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "PlayMode": self.state_variable("CurrentPlayMode"),
+            "RecQualityMode": self.state_variable("CurrentRecordQualityMode"),
+        }
 
 
-# endregion
+class ConnectionManagerService(UpnpServerService):
+    """ConnectionManager service."""
+
+    SERVICE_DEFINITION = ServiceInfo(
+        service_id="urn:upnp-org:serviceId:ConnectionManager",
+        service_type="urn:schemas-upnp-org:service:ConnectionManager:1",
+        control_url="/upnp/control/ConnectionManager1",
+        event_sub_url="/upnp/event/ConnectionManager1",
+        scpd_url="/ConnectionManager_1.xml",
+        xml=ET.Element("server_service"),
+    )
+
+    STATE_VARIABLE_DEFINITIONS = {
+        "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+    }
 
 
-# region Unsubscribe
-@asyncio.coroutine
-def async_handle_unsubscribe_rc(request):
-    response = yield from async_handle_unsubscribe(request, SUBSCRIBED_CLIENTS["RC"])
-    return response
+async def async_main() -> None:
+    """Main."""
+    await run_server(SOURCE, HTTP_PORT, MediaRendererDevice)
 
 
-@asyncio.coroutine
-def async_handle_unsubscribe_avt(request):
-    response = yield from async_handle_unsubscribe(request, SUBSCRIBED_CLIENTS["AVT"])
-    return response
-
-
-@asyncio.coroutine
-def async_handle_unsubscribe(request, subscribed_clients):
-    sid = request.headers.get("SID")
-    if sid not in subscribed_clients:
-        return web.Response(status=404)
-
-    del subscribed_clients[sid]
-    return web.Response(status=200)
-
-
-# endregion
-# endregion
-
-
-app = web.Application()
-app.router.add_static("/", path="dummy_tv/", name="static")
-app.router.add_route("POST", "/upnp/control/RenderingControl1", async_handle_control_rc)
-app.router.add_route(
-    "SUBSCRIBE", "/upnp/event/RenderingControl1", async_handle_subscribe_rc
-)
-app.router.add_route(
-    "UNSUBSCRIBE", "/upnp/event/RenderingControl1", async_handle_unsubscribe_rc
-)
-
-app.router.add_route("POST", "/upnp/control/AVTransport1", async_handle_control_avt)
-app.router.add_route(
-    "SUBSCRIBE", "/upnp/event/AVTransport1", async_handle_subscribe_avt
-)
-app.router.add_route(
-    "UNSUBSCRIBE", "/upnp/event/AVTransport1", async_handle_unsubscribe_avt
-)
-
-web.run_app(app, port=PORT)
+if __name__ == "__main__":
+    asyncio.run(async_main())

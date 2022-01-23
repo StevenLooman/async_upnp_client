@@ -3,8 +3,11 @@ Changes
 
 0.23.5 (unreleased)
 
+- Add new dummy_tv/dummy_router servers (@StevenLooman)
+
 
 0.23.4 (2022-01-16)
+
 - Raise `UpnpXmlContentError` when device has bad description XML (@chishm, #118)
 - Raise `UpnpResponseError` for HTTP errors in UpnpFactory (@chishm, #118)
 - Fix `UpnpXmlParseError` (@chishm, #118)

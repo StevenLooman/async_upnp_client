@@ -80,18 +80,25 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     return urlunsplit(data._replace(netloc=netloc))
 
 
+
+def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:
+    """Construct a SSDP packet."""
+    headers_str = "\r\n".join([f"{key}:{value}" for key, value in headers.items()])
+    return f"{status_line}\r\n{headers_str}\r\n\r\n".encode()
+
+
 def build_ssdp_search_packet(
     ssdp_target: AddressTupleVXType, ssdp_mx: int, ssdp_st: str
 ) -> bytes:
-    """Construct a SSDP packet."""
-    return (
-        f"M-SEARCH * HTTP/1.1\r\n"
-        f"HOST:{get_host_port_string(ssdp_target)}\r\n"
-        f'MAN:"ssdp:discover"\r\n'
-        f"MX:{ssdp_mx}\r\n"
-        f"ST:{ssdp_st}\r\n"
-        f"\r\n"
-    ).encode()
+    """Construct a SSDP M-SEARCH packet."""
+    request_line = "M-SEARCH * HTTP/1.1"
+    headers = {
+        "HOST": f"{get_host_port_string(ssdp_target)}",
+        "MAN": '"ssdp:discover"',
+        "MX": f"{ssdp_mx}",
+        "ST": f"{ssdp_st}",
+    }
+    return build_ssdp_packet(request_line, headers)
 
 
 def is_valid_ssdp_packet(data: bytes) -> bool:
@@ -141,6 +148,7 @@ def decode_ssdp_packet(
     headers["_timestamp"] = datetime.now()
     headers["_host"] = get_host_string(addr)
     headers["_port"] = addr[1]
+    headers["_addr"] = addr
 
     udn = udn_from_headers(headers)
     if udn:
@@ -179,7 +187,7 @@ class SsdpProtocol(BaseProtocol):
         """Handle a discovery-response."""
         _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
 
-        if is_valid_ssdp_packet(data) and self.on_data:
+        if self.on_data and is_valid_ssdp_packet(data):
             try:
                 request_line, headers = decode_ssdp_packet(data, addr)
             except InvalidHeader as exc:
@@ -212,7 +220,9 @@ def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:
         scope_id = getattr(target_ip, "scope_id", None)
         if scope_id:
             return IPv6Address("::%" + scope_id)
+
         return IPv6Address("::")
+
     return IPv4Address("0.0.0.0")
 
 
