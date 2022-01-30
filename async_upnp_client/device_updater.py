@@ -1,11 +1,10 @@
 """Device update listener."""
 
 import logging
-from ipaddress import IPv4Address
 from typing import Optional
 
 from async_upnp_client import SsdpAdvertisementListener, UpnpDevice, UpnpFactory
-from async_upnp_client.const import SsdpHeaders
+from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class DeviceUpdater:
         self,
         device: UpnpDevice,
         factory: UpnpFactory,
-        source_ip: Optional[IPv4Address] = None,
+        source: Optional[AddressTupleVXType] = None,
     ) -> None:
         """Initialize."""
         self._device = device
@@ -33,7 +32,7 @@ class DeviceUpdater:
             on_alive=self._on_alive,
             on_byebye=self._on_byebye,
             on_update=self._on_update,
-            source_ip=source_ip,
+            source=source,
         )
 
     async def async_start(self) -> None:

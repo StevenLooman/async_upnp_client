@@ -1081,7 +1081,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """DIDL-Lite class of currently playing media."""
         if not self._current_track_meta_data:
             return None
-        return self._current_track_meta_data.upnp_class
+        media_class: str = self._current_track_meta_data.upnp_class
+        return media_class
 
     @property
     def media_title(self) -> Optional[str]:

@@ -33,7 +33,7 @@ logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_router")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
-SOURCE = ("0.0.0.0", 0)  # Your IP here!
+SOURCE = ("fe80::215:5dff:fe3e:6d33", 0, 0, 6)  # Your IP here!
 HTTP_PORT = 8000
 
 

@@ -1,7 +1,6 @@
 """Unit tests for ssdp_listener."""
 
 from datetime import datetime, timedelta
-from ipaddress import ip_address
 from typing import AsyncGenerator
 from unittest.mock import patch
 
@@ -37,13 +36,12 @@ async def mock_start_listeners() -> AsyncGenerator:
     # pylint: disable=protected-access
 
     async def async_start(self: SsdpListener) -> None:
-        target_ip = ip_address(self.target[0])
         self._advertisement_listener = SsdpAdvertisementListener(
             on_alive=self._on_alive,
             on_update=self._on_update,
             on_byebye=self._on_byebye,
-            source_ip=self.source_ip,
-            target_ip=target_ip,
+            source=self.source,
+            target=self.target,
             loop=self.loop,
         )
         # await self._advertisement_listener.async_start()
@@ -51,7 +49,7 @@ async def mock_start_listeners() -> AsyncGenerator:
         self._search_listener = SsdpSearchListener(
             self._on_search,
             loop=self.loop,
-            source_ip=self.source_ip,
+            source=self.source,
             target=self.target,
             timeout=self.search_timeout,
         )

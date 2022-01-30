@@ -4,14 +4,12 @@ import logging
 import re
 from asyncio.events import AbstractEventLoop
 from datetime import datetime, timedelta
-from ipaddress import ip_address
 from typing import Any, Awaitable, Callable, Mapping, Optional, Tuple
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import (
     AddressTupleVXType,
     DeviceOrServiceType,
-    IPvXAddress,
     NotificationSubType,
     NotificationType,
     SearchTarget,
@@ -20,7 +18,7 @@ from async_upnp_client.const import (
     UniqueDeviceName,
 )
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp import SSDP_IP_V4, SSDP_MX, SSDP_PORT, udn_from_headers
+from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_headers
 from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
@@ -364,7 +362,7 @@ class SsdpListener:
         async_callback: Callable[
             [SsdpDevice, DeviceOrServiceType, SsdpSource], Awaitable
         ],
-        source_ip: Optional[IPvXAddress] = None,
+        source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
         search_timeout: int = SSDP_MX,
@@ -372,11 +370,7 @@ class SsdpListener:
         """Initialize."""
         # pylint: disable=too-many-arguments
         self.async_callback = async_callback
-        self.source_ip = source_ip
-        self.target: AddressTupleVXType = target or (
-            SSDP_IP_V4,
-            SSDP_PORT,
-        )
+        self.source, self.target = determine_source_target(source, target)
         self.loop = loop
         self.search_timeout = search_timeout
         self._device_tracker = SsdpDeviceTracker()
@@ -385,13 +379,12 @@ class SsdpListener:
 
     async def async_start(self) -> None:
         """Start search listener/advertisement listener."""
-        target_ip = ip_address(self.target[0])
         self._advertisement_listener = SsdpAdvertisementListener(
             on_alive=self._on_alive,
             on_update=self._on_update,
             on_byebye=self._on_byebye,
-            source_ip=self.source_ip,
-            target_ip=target_ip,
+            source=self.source,
+            target=self.target,
             loop=self.loop,
         )
         await self._advertisement_listener.async_start()
@@ -399,7 +392,7 @@ class SsdpListener:
         self._search_listener = SsdpSearchListener(
             self._on_search,
             loop=self.loop,
-            source_ip=self.source_ip,
+            source=self.source,
             target=self.target,
             timeout=self.search_timeout,
         )
