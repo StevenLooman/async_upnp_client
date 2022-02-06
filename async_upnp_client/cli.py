@@ -20,6 +20,7 @@ from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_IP_V4, SSDP_IP_V6, SSDP_PORT, SSDP_ST_ALL
+from async_upnp_client.utils import get_local_ip
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
@@ -120,23 +121,6 @@ def get_timestamp() -> Union[str, float]:
     if args.iso8601:
         return datetime.now().isoformat(" ")
     return time.time()
-
-
-def bind_host_port() -> Tuple[Optional[str], int]:
-    """Determine listening host/port."""
-    bind = args.bind
-
-    if not bind:
-        # Listen on any address, on a random port
-        return None, 0
-
-    if ":" in bind:
-        host, port = bind.split(":")
-    else:
-        host = bind
-        port = 0
-
-    return host, int(port)
 
 
 def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpService]:
@@ -273,9 +257,9 @@ async def subscribe(description_url: str, service_names: Any) -> None:
     device = await create_device(description_url)
 
     # start notify server/event handler
-    host, port = bind_host_port()
-    server = AiohttpNotifyServer(device.requester, port, listen_host=host)
-    await server.start_server()
+    source = (get_local_ip(device.device_url), 0)
+    server = AiohttpNotifyServer(device.requester, source=source)
+    await server.async_start_server()
     _LOGGER.debug("Listening on: %s", server.callback_url)
 
     # gather all wanted services

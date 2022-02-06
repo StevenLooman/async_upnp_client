@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
 """UPnP Server."""
 import asyncio
-from ipaddress import IPv4Address, IPv6Address
 import logging
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from functools import partial, wraps
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from ipaddress import IPv4Address, IPv6Address
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 import aiohttp.web
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
@@ -549,7 +560,7 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     LOGGER.info("Device at %s%s", device.base_uri, device.device_url)
 
     # SSDP
-    target = ssdp.SSDP_TARGET_V6 + (0, source[3],)
+    target = ssdp.SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else ssdp.SSDP_TARGET_V4
     search_responder = SsdpSearchResponder(device, source, target)
     await search_responder.async_start()
 

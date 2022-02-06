@@ -21,19 +21,15 @@ from async_upnp_client.const import (
     StateVariableTypeInfo,
 )
 
-from .server import (
-    UpnpServerDevice,
-    UpnpServerService,
-    callable_action,
-    run_server,
-)
+from .server import UpnpServerDevice, UpnpServerService, callable_action, run_server
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_tv")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
-SOURCE = ("0.0.0.0", 0)  # Your IP here!
-HTTP_PORT = 8000
+SOURCE = ("172.25.113.128", 0)  # Your IP here!
+#SOURCE = ("fe80::215:5dff:fe3e:6d23", 0, 0, 6)  # Your IP here!
+HTTP_PORT = 8001
 
 
 class MediaRendererDevice(UpnpServerDevice):
@@ -400,7 +396,40 @@ class ConnectionManagerService(UpnpServerService):
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
         ),
+        "SourceProtocolInfo": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "SinkProtocolInfo": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value="",
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
     }
+
+    @callable_action(
+        name="GetProtocolInfo",
+        in_args={
+        },
+        out_args={
+            "Source": "SourceProtocolInfo",
+            "Sink": "SinkProtocolInfo",
+        },
+    )
+    async def get_protocol_info(self) -> Dict[str, UpnpStateVariable]:
+        """Get Transport Settings."""
+        # pylint: disable=invalid-name, unused-argument
+        return {
+            "Source": self.state_variable("SourceProtocolInfo"),
+            "Sink": self.state_variable("SinkProtocolInfo"),
+        }
 
 
 async def async_main() -> None:

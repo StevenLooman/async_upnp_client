@@ -9,7 +9,7 @@ import pytest
 
 from async_upnp_client.description_cache import DescriptionCache
 
-from .upnp_test_requester import UpnpTestRequester
+from .conftest import UpnpTestRequester
 
 
 @pytest.mark.asyncio
