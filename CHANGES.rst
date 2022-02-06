@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.25.0 (unreleased)
+0.24.0 (unreleased)
 
 - Add new dummy_tv/dummy_router servers (@StevenLooman)
 - Drop python 3.6 support, add python 3.10 support (@StevenLooman)
