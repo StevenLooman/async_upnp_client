@@ -44,7 +44,7 @@ def valid_search_headers(headers: SsdpHeaders) -> bool:
         and st
         and location
         and location.startswith("http")
-        and not ("://127.0.0.1" in location or "://[::1]" in location)
+        and not ("://127.0.0.1" in location or "://[::1]" in location or "://169.254" in location)
     )
 
 
@@ -61,7 +61,7 @@ def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
         and nts
         and location
         and location.startswith("http")
-        and not ("://127.0.0.1" in location or "://[::1]" in location)
+        and not ("://127.0.0.1" in location or "://[::1]" in location or "://169.254" in location)
     )
 
 

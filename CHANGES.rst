@@ -5,6 +5,7 @@ Changes
 
 - Add new dummy_tv/dummy_router servers (@StevenLooman)
 - Drop python 3.6 support, add python 3.10 support
+- Ignore devices using link local addresses in their location (@Tigger2014, #119)
 
 
 0.23.4 (2022-01-16)
