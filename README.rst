@@ -209,3 +209,42 @@ An example of listening for advertisements, note that the program stays running 
         "_udn": "uuid:99cb221c-1f15-c620-dc29-395f415623c6",
         "_source": "advertisement"
     }
+
+
+IPv6 support
+------------
+
+IPv6 is supported for the UPnP client functionality as well as the SSDP functionality. Please do note that multicast over IPv6 does require a `scope_id`/interface ID. The `scope_id` is used to specify which interface should be used.
+
+There are several ways to get the `scope_id`. Via Python this can be done via the [ifaddr](https://github.com/pydron/ifaddr) library. From the (Linux) command line the `scope_id` can be found via the `ip` command:
+```
+$ ip address
+...
+6: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 00:15:5d:38:97:cf brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.2/24 brd 192.168.1.255 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::215:5dff:fe38:97cf/64 scope link
+       valid_lft forever preferred_lft forever
+```
+
+In this case, the interface index is 6 (start of the line) and thus the `scope_id` is `6`.
+
+Or on Windows using the `ipconfig` command:
+```
+C:\> ipconfig /all
+...
+Ethernet adapter Ethernet:
+
+   ...
+   Link-local IPv6 Address . . . . . : fe80::e530:c739:24d7:c8c7%8(Preferred)
+...
+```
+
+The `scope_id` is `8` in this example, as shown after the `%` character at the end of the IPv6 address.
+
+Be aware that Python `<3.9` does not support the `IPv6Address.scope_id` attribute. As such, a `AddressTupleVXType` is used to specify the `source`- and `target`-addresses. In case of IPv4, `AddressTupleV4Type` is a 2-tuple with `address`, `port`. `AddressTupleV6Type` is used for IPv6 and is a 4-tuple with `address`, `port`, `flowinfo`, `scope_id`. More information can be found in the Python `socket` module documentation.
+
+All functionality regarding SSDP uses `AddressTupleVXType` the specify addresses.
+
+For consistency, the `AiohttpNotifyServer` also uses a tuple the specify the `source` (the address and port the notify server listens on.)

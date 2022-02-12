@@ -4,7 +4,7 @@
 import logging
 import socket
 import sys
-from asyncio import BaseProtocol, BaseTransport, DatagramTransport
+from asyncio import BaseTransport, DatagramProtocol, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
@@ -21,13 +21,23 @@ from async_upnp_client.const import (
     SsdpHeaders,
     UniqueDeviceName,
 )
+from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.utils import CaseInsensitiveDict
 
 SSDP_PORT = 1900
 SSDP_IP_V4 = "239.255.255.250"
-SSDP_IP_V6 = "FF02::C"
+SSDP_IP_V6_LINK_LOCAL = "FF02::C"
+SSDP_IP_V6_SITE_LOCAL = "FF05::C"
+SSDP_IP_V6_ORGANISATION_LOCAL = "FF08::C"
+SSDP_IP_V6_GLOBAL = "FF0E::C"
+SSDP_IP_V6 = SSDP_IP_V6_LINK_LOCAL
 SSDP_TARGET_V4 = (SSDP_IP_V4, SSDP_PORT)
-SSDP_TARGET_V6 = (SSDP_IP_V6, SSDP_PORT)
+SSDP_TARGET_V6 = (
+    SSDP_IP_V6,
+    SSDP_PORT,
+    0,
+    0,
+)  # Replace the last item with your scope_id!
 SSDP_TARGET = SSDP_TARGET_V4
 SSDP_ST_ALL = "ssdp:all"
 SSDP_ST_ROOTDEVICE = "upnp:rootdevice"
@@ -40,10 +50,11 @@ _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 
 def get_host_string(addr: AddressTupleVXType) -> str:
     """Construct host string from address tuple."""
-    if len(addr) >= 3:
+    if len(addr) == 4:
         addr = cast(AddressTupleV6Type, addr)
         if addr[3]:
             return f"{addr[0]}%{addr[3]}"
+
     return addr[0]
 
 
@@ -124,7 +135,9 @@ def udn_from_headers(headers: SsdpHeaders) -> Optional[UniqueDeviceName]:
 
 
 def decode_ssdp_packet(
-    data: bytes, addr: AddressTupleVXType
+    data: bytes,
+    local_addr: Optional[AddressTupleVXType],
+    remote_addr: AddressTupleVXType,
 ) -> Tuple[str, CaseInsensitiveDict]:
     """Decode a message."""
     lines = data.replace(b"\r\n", b"\n").split(b"\n")
@@ -141,13 +154,14 @@ def decode_ssdp_packet(
     # adjust some headers
     if "location" in headers:
         headers["_location_original"] = headers["location"]
-        headers["location"] = get_adjusted_url(headers["location"], addr)
+        headers["location"] = get_adjusted_url(headers["location"], remote_addr)
 
     # own data
     headers["_timestamp"] = datetime.now()
-    headers["_host"] = get_host_string(addr)
-    headers["_port"] = addr[1]
-    headers["_addr"] = addr
+    headers["_host"] = get_host_string(remote_addr)
+    headers["_port"] = remote_addr[1]
+    headers["_local_addr"] = local_addr
+    headers["_remote_addr"] = remote_addr
 
     udn = udn_from_headers(headers)
     if udn:
@@ -156,7 +170,7 @@ def decode_ssdp_packet(
     return request_line, headers
 
 
-class SsdpProtocol(BaseProtocol):
+class SsdpProtocol(DatagramProtocol):
     """SSDP Protocol."""
 
     def __init__(
@@ -185,10 +199,13 @@ class SsdpProtocol(BaseProtocol):
     def datagram_received(self, data: bytes, addr: AddressTupleVXType) -> None:
         """Handle a discovery-response."""
         _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
+        assert self.transport
 
         if self.on_data and is_valid_ssdp_packet(data):
+            sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+            local_addr = sock.getsockname() if sock is not None else None
             try:
-                request_line, headers = decode_ssdp_packet(data, addr)
+                request_line, headers = decode_ssdp_packet(data, local_addr, addr)
             except InvalidHeader as exc:
                 _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
                 return
@@ -207,49 +224,87 @@ class SsdpProtocol(BaseProtocol):
 
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
-        _LOGGER.debug("Sending M-SEARCH packet, transport: %s", self.transport)
-        _LOGGER_TRAFFIC_SSDP.debug("Sending M-SEARCH packet: %s", packet)
+        _LOGGER.debug("Sending SSDP packet, transport: %s", self.transport)
+        _LOGGER_TRAFFIC_SSDP.debug(
+            "Sending SSDP packet, target: %s, data: %s", target, packet
+        )
         assert self.transport is not None
         self.transport.sendto(packet, target)
 
 
-def get_source_ip_from_target_ip(target_ip: IPvXAddress) -> IPvXAddress:
-    """Deduce a bind ip address from a target address potentially including scope."""
-    if isinstance(target_ip, IPv6Address):
-        scope_id = getattr(target_ip, "scope_id", None)
-        if scope_id:
-            return IPv6Address("::%" + scope_id)
+def determine_source_target(
+    source: Optional[AddressTupleVXType] = None,
+    target: Optional[AddressTupleVXType] = None,
+) -> Tuple[AddressTupleVXType, AddressTupleVXType]:
+    """Determine source and target."""
+    if source is None and target is None:
+        return ("0.0.0.0", 0), (SSDP_IP_V4, SSDP_PORT)
 
-        return IPv6Address("::")
+    if source is not None and target is None:
+        if len(source) == 2:
+            return source, (SSDP_IP_V4, SSDP_PORT)
 
-    return IPv4Address("0.0.0.0")
+        source = cast(AddressTupleV6Type, source)
+        return source, (SSDP_IP_V6, SSDP_PORT, 0, source[3])
+
+    if source is None and target is not None:
+        if len(target) == 2:
+            return (
+                "0.0.0.0",
+                0,
+            ), target
+
+        target = cast(AddressTupleV6Type, target)
+        return ("::", 0, 0, target[3]), target
+
+    if source is not None and target is not None and len(source) != len(target):
+        raise UpnpError("Source and target do not match protocol")
+
+    return cast(AddressTupleVXType, source), cast(AddressTupleVXType, target)
+
+
+def ip_port_from_address_tuple(
+    address_tuple: AddressTupleVXType,
+) -> Tuple[IPvXAddress, int]:
+    """Get IPvXAddress from AddressTupleVXType."""
+    if len(address_tuple) == 4:
+        address_tuple = cast(AddressTupleV6Type, address_tuple)
+        if "%" in address_tuple[0]:
+            return IPv6Address(address_tuple[0]), address_tuple[1]
+
+        return IPv6Address(f"{address_tuple[0]}%{address_tuple[3]}"), address_tuple[1]
+
+    return IPv4Address(address_tuple[0]), address_tuple[1]
 
 
 def get_ssdp_socket(
-    source_ip: IPvXAddress, target_ip: IPvXAddress, port: Optional[int] = None
+    source: AddressTupleVXType,
+    target: AddressTupleVXType,
 ) -> Tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
     """Create a socket to listen on."""
-    target = socket.getaddrinfo(
+    target_ip, target_port = ip_port_from_address_tuple(target)
+    target_info = socket.getaddrinfo(
         str(target_ip),
-        port or SSDP_PORT,
+        target_port,
         type=socket.SOCK_DGRAM,
         proto=socket.IPPROTO_UDP,
     )[0]
-    source = socket.getaddrinfo(
-        str(source_ip), 0, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
+    source_ip, source_port = ip_port_from_address_tuple(source)
+    source_info = socket.getaddrinfo(
+        str(source_ip), source_port, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
     )[0]
-    _LOGGER.debug("Creating socket on %s to %s", source, target)
+    _LOGGER.debug("Creating socket on %s to %s", source_info, target_info)
 
     # create socket
-    sock = socket.socket(source[0], source[1], source[2])
+    sock = socket.socket(source_info[0], source_info[1], source_info[2])
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # multicast
     if target_ip.is_multicast:
-        if source[0] == socket.AF_INET6:
+        if source_info[0] == socket.AF_INET6:
             sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_MULTICAST_HOPS, 2)
-            addr = cast(AddressTupleV6Type, source[4])
+            addr = cast(AddressTupleV6Type, source_info[4])
             if addr[3]:
                 mreq = target_ip.packed + addr[3].to_bytes(4, sys.byteorder)
                 sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
@@ -265,4 +320,4 @@ def get_ssdp_socket(
                 target_ip.packed + source_ip.packed,
             )
 
-    return sock, source[4], target[4]
+    return sock, source_info[4], target_info[4]

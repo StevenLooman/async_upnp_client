@@ -1,7 +1,13 @@
 Changes
 =======
 
-0.23.6 (unreleased)
+0.24.0 (unreleased)
+
+- Add new dummy_tv/dummy_router servers (@StevenLooman)
+- Drop python 3.6 support, add python 3.10 support (@StevenLooman)
+- Breaking change: Improve SSDP IPv6 support, for Python versions <3.9, due to missing IPv6Address.scope_id (@StevenLooman)
+  - `SsdpListener`, `SsdpAdvertisementListener`, `SsdpSearchListener`, `UpnpProfileDevice` now take `AddressTupleVXType` for source and target, instead of IPs
+- Breaking change: Separate multi-listener event handler functionality from `UpnpEventHandler` into `UpnpEventHandlerRegister` (@StevenLooman)
 
 
 0.23.5 (2022-02-06)

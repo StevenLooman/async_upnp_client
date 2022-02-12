@@ -7,7 +7,8 @@ from collections import deque
 from copy import deepcopy
 from typing import Deque, Mapping, MutableMapping, Optional, Tuple, cast
 
-from async_upnp_client import UpnpRequester
+from async_upnp_client import UpnpEventHandler, UpnpNotifyServer, UpnpRequester
+from async_upnp_client.const import AddressTupleVXType
 
 
 def read_file(filename: str) -> str:
@@ -171,3 +172,33 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         read_file("igd/WANIPConnection.xml"),
     ),
 }
+
+
+class UpnpTestNotifyServer(UpnpNotifyServer):
+    """Test notify server."""
+
+    def __init__(
+        self,
+        requester: UpnpRequester,
+        source: AddressTupleVXType,
+        callback_url: Optional[str] = None,
+    ) -> None:
+        """Initialize."""
+        self._requester = requester
+        self._source = source
+        self._callback_url = callback_url
+        self.event_handler = UpnpEventHandler(self, requester)
+
+    @property
+    def callback_url(self) -> str:
+        """Return callback URL on which we are callable."""
+        return (
+            self._callback_url or f"http://{self._source[0]}:{self._source[1]}/notify"
+        )
+
+    async def async_start_server(self) -> None:
+        """Start the server."""
+
+    async def async_stop_server(self) -> None:
+        """Stop the server."""
+        await self.event_handler.async_unsubscribe_all()

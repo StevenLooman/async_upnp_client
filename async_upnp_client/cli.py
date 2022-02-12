@@ -10,17 +10,17 @@ import operator
 import sys
 import time
 from datetime import datetime
-from ipaddress import ip_address
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union, cast
 
 from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
-from async_upnp_client.const import SsdpHeaders
+from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
 from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
-from async_upnp_client.ssdp import SSDP_PORT, SSDP_ST_ALL, AddressTupleVXType
+from async_upnp_client.ssdp import SSDP_IP_V4, SSDP_IP_V6, SSDP_PORT, SSDP_ST_ALL
+from async_upnp_client.utils import get_local_ip
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
@@ -44,6 +44,7 @@ parser.add_argument(
 parser.add_argument(
     "--iso8601", action="store_true", help="Print timestamp in ISO8601 format"
 )
+
 subparsers = parser.add_subparsers(title="Command", dest="command")
 subparsers.required = True
 
@@ -52,28 +53,52 @@ subparser.add_argument("device", help="URL to device description XML")
 subparser.add_argument(
     "call-action", nargs="+", help="service/action param1=val1 param2=val2"
 )
+
 subparser = subparsers.add_parser("subscribe", help="Subscribe to services")
 subparser.add_argument("device", help="URL to device description XML")
 subparser.add_argument(
     "service", nargs="+", help="service type or part or abbreviation"
 )
-subparser.add_argument("--bind", help="ip[:port], e.g., 192.168.0.10:8090")
+subparser.add_argument(
+    "--bind",
+    help="ip to bind to, e.g., 192.168.0.10",
+)
 subparser.add_argument(
     "--nolastchange", action="store_true", help="Do not show LastChange events"
 )
+
 subparser = subparsers.add_parser("search", help="Search for devices")
-subparser.add_argument("--bind", help="ip, e.g., 192.168.0.10")
+subparser.add_argument("--bind", help="ip to bind to, e.g., 192.168.0.10")
 subparser.add_argument(
-    "--target", help="ip, e.g., 192.168.0.10 or FF02::C to request from"
+    "--target",
+    help="target ip, e.g., 192.168.0.10 or FF02::C%6 to request from",
 )
-subparser.add_argument("--target_port", help="port, e.g., 1900 or 1892 to request from")
 subparser.add_argument(
-    "--service_type", help="service type to search for", default=SSDP_ST_ALL
+    "--target_port",
+    help="port, e.g., 1900 or 1892 to request from",
+    default=SSDP_PORT,
+    type=int,
 )
+subparser.add_argument(
+    "--service_type",
+    help="service type to search for",
+    default=SSDP_ST_ALL,
+)
+
 subparser = subparsers.add_parser("advertisements", help="Listen for advertisements")
-subparser.add_argument("--bind", help="ip, e.g., 192.168.0.10")
 subparser.add_argument(
-    "--target", help="ip, e.g., 239.255.255.250 or FF02::C to listen to"
+    "--bind",
+    help="ip to bind to, e.g., 192.168.0.10",
+)
+subparser.add_argument(
+    "--target",
+    help="target ip, e.g., 239.255.255.250 or FF02::C to listen to",
+)
+subparser.add_argument(
+    "--target_port",
+    help="port, e.g., 1900 or 1892 to request from",
+    default=SSDP_PORT,
+    type=int,
 )
 
 args = parser.parse_args()
@@ -96,23 +121,6 @@ def get_timestamp() -> Union[str, float]:
     if args.iso8601:
         return datetime.now().isoformat(" ")
     return time.time()
-
-
-def bind_host_port() -> Tuple[Optional[str], int]:
-    """Determine listening host/port."""
-    bind = args.bind
-
-    if not bind:
-        # Listen on any address, on a random port
-        return None, 0
-
-    if ":" in bind:
-        host, port = bind.split(":")
-    else:
-        host = bind
-        port = 0
-
-    return host, int(port)
 
 
 def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpService]:
@@ -249,9 +257,9 @@ async def subscribe(description_url: str, service_names: Any) -> None:
     device = await create_device(description_url)
 
     # start notify server/event handler
-    host, port = bind_host_port()
-    server = AiohttpNotifyServer(device.requester, port, listen_host=host)
-    await server.start_server()
+    source = (get_local_ip(device.device_url), 0)
+    server = AiohttpNotifyServer(device.requester, source=source)
+    await server.async_start_server()
     _LOGGER.debug("Listening on: %s", server.callback_url)
 
     # gather all wanted services
@@ -281,25 +289,79 @@ async def subscribe(description_url: str, service_names: Any) -> None:
         await event_handler.async_resubscribe_all()
 
 
+def source_target(
+    source: Optional[str],
+    target: Optional[str],
+    target_port: int,
+) -> Tuple[AddressTupleVXType, AddressTupleVXType]:
+    """Determine source/target."""
+    # pylint: disable=too-many-branches, too-many-return-statements
+    if source is None and target is None:
+        return (
+            "0.0.0.0",
+            0,
+        ), (SSDP_IP_V4, SSDP_PORT)
+
+    if source is not None and target is None:
+        if ":" not in source:
+            # IPv4
+            return (source, 0), (SSDP_IP_V4, SSDP_PORT)
+
+        # IPv6
+        if "%" in source:
+            idx = source.index("%")
+            source_ip, scope_id = source[:idx], int(source[idx + 1 :])
+        else:
+            source_ip, scope_id = source, 0
+
+        return (source_ip, 0, 0, scope_id), (SSDP_IP_V6, SSDP_PORT, 0, scope_id)
+
+    if source is None and target is not None:
+        if ":" not in target:
+            # IPv4
+            return (
+                "0.0.0.0",
+                0,
+            ), (target, target_port or SSDP_PORT)
+
+        # IPv6
+        if "%" in target:
+            idx = target.index("%")
+            target_ip, scope_id = target[:idx], int(target[idx + 1 :])
+        else:
+            target_ip, scope_id = target, 0
+
+        return ("::", 0, 0, scope_id), (
+            target_ip,
+            target_port or SSDP_PORT,
+            0,
+            scope_id,
+        )
+
+    source_version = 6 if ":" in (source or "") else 4
+    target_version = 6 if ":" in (target or "") else 4
+    if source is not None and target is not None and source_version != target_version:
+        print("Error: Source and target do not match protocol")
+        sys.exit(1)
+
+    if source is not None and target is not None and ":" in target:
+        if "%" in target:
+            idx = source.index("%")
+            target_ip, scope_id = target[:idx], int(target[idx + 1 :])
+        else:
+            target_ip, scope_id = target, 0
+        return (source, 0, 0, scope_id), (target_ip, target_port, 0, scope_id)
+
+    return (cast(str, source), 0), (cast(str, target), target_port)
+
+
 async def search(search_args: Any) -> None:
     """Discover devices."""
     timeout = args.timeout
     service_type = search_args.service_type
-    source_ip = search_args.bind
-    target_ip = search_args.target
-    target_port = search_args.target_port
-    if sys.platform == "win32" and not source_ip:
-        _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
-        source_ip = "0.0.0.0"  # force to IPv4 to prevent asyncio crash/WinError 10022
-    if source_ip:
-        source_ip = ip_address(source_ip)
-    if target_ip:
-        target: Optional[AddressTupleVXType] = (
-            target_ip,
-            int(target_port) or SSDP_PORT,
-        )
-    else:
-        target = None
+    source, target = source_target(
+        search_args.bind, search_args.target, search_args.target_port
+    )
 
     async def on_response(headers: SsdpHeaders) -> None:
         headers = {key: str(value) for key, value in headers.items()}
@@ -307,7 +369,7 @@ async def search(search_args: Any) -> None:
 
     await async_ssdp_search(
         service_type=service_type,
-        source_ip=source_ip,
+        source=source,
         target=target,
         timeout=timeout,
         async_callback=on_response,
@@ -316,15 +378,11 @@ async def search(search_args: Any) -> None:
 
 async def advertisements(advertisement_args: Any) -> None:
     """Listen for advertisements."""
-    source_ip = advertisement_args.bind
-    target_ip = advertisement_args.target
-    if sys.platform == "win32" and not source_ip:
-        _LOGGER.debug('Running on win32 without --bind argument, forcing to "0.0.0.0"')
-        source_ip = "0.0.0.0"  # force to IPv4 to prevent asyncio crash/WinError 10022
-    if source_ip:
-        source_ip = ip_address(source_ip)
-    if target_ip:
-        target_ip = ip_address(target_ip)
+    source, target = source_target(
+        advertisement_args.bind,
+        advertisement_args.target,
+        advertisement_args.target_port,
+    )
 
     async def on_notify(headers: SsdpHeaders) -> None:
         headers = {key: str(value) for key, value in headers.items()}
@@ -334,8 +392,8 @@ async def advertisements(advertisement_args: Any) -> None:
         on_alive=on_notify,
         on_byebye=on_notify,
         on_update=on_notify,
-        source_ip=source_ip,
-        target_ip=target_ip,
+        source=source,
+        target=target,
     )
     await listener.async_start()
     try:

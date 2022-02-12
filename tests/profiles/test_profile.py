@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from async_upnp_client import UpnpEventHandler, UpnpFactory
+from async_upnp_client import UpnpFactory
 from async_upnp_client.exceptions import (
     UpnpCommunicationError,
     UpnpConnectionError,
@@ -17,7 +17,7 @@ from async_upnp_client.exceptions import (
 from async_upnp_client.profiles.dlna import DmrDevice
 from async_upnp_client.profiles.igd import IgdDevice
 
-from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester, read_file
+from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester, read_file
 
 
 class TestUpnpProfileDevice:
@@ -31,7 +31,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         # doesn't error
@@ -43,7 +47,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         # doesn't error
@@ -55,7 +63,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         assert profile.icon == "http://dlna_dmr:1234/device_icon_120.png"
@@ -91,7 +103,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         # Test subscription
@@ -141,7 +157,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         # Tweak timeouts to get a resubscription in a time suitable for testing.
@@ -207,7 +227,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         # First request is fine, 2nd raises an exception, when trying to subscribe
@@ -228,7 +252,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
 
         # All requests give a response error
@@ -249,7 +277,11 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
         assert device.available is True
 
@@ -298,7 +330,11 @@ class TestUpnpProfileDevice:
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        event_handler = UpnpEventHandler("http://localhost:11302", requester)
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
         profile = DmrDevice(device, event_handler=event_handler)
         assert device.available is True
 

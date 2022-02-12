@@ -6,17 +6,14 @@ import logging
 import sys
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport, DatagramTransport
-from ipaddress import IPv4Address
 from typing import Awaitable, Callable, Optional
 
-from async_upnp_client.const import NotificationSubType, SsdpSource
+from async_upnp_client.const import AddressTupleVXType, NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
-    SSDP_IP_V4,
-    IPvXAddress,
     SsdpHeaders,
     SsdpProtocol,
-    get_source_ip_from_target_ip,
+    determine_source_target,
     get_ssdp_socket,
 )
 
@@ -31,8 +28,8 @@ class SsdpAdvertisementListener:
         on_alive: Optional[Callable[[SsdpHeaders], Awaitable]] = None,
         on_byebye: Optional[Callable[[SsdpHeaders], Awaitable]] = None,
         on_update: Optional[Callable[[SsdpHeaders], Awaitable]] = None,
-        source_ip: Optional[IPvXAddress] = None,
-        target_ip: Optional[IPvXAddress] = None,
+        source: Optional[AddressTupleVXType] = None,
+        target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
     ) -> None:
         """Initialize."""
@@ -40,8 +37,7 @@ class SsdpAdvertisementListener:
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
-        self.target_ip = target_ip or IPv4Address(SSDP_IP_V4)
-        self.source_ip = source_ip or get_source_ip_from_target_ip(self.target_ip)
+        self.source, self.target = determine_source_target(source, target)
         self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[BaseTransport] = None
 
@@ -78,7 +74,7 @@ class SsdpAdvertisementListener:
         _LOGGER.debug("Start listening for advertisements")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, source, target = get_ssdp_socket(self.source_ip, self.target_ip)
+        sock, source, target = get_ssdp_socket(self.source, self.target)
         address = source if sys.platform == "win32" else target
         _LOGGER.debug("Binding to address: %s", address)
         sock.bind(address)

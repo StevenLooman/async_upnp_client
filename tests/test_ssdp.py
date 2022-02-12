@@ -1,7 +1,6 @@
 """Unit tests for ssdp."""
 import asyncio
-from ipaddress import IPv4Address
-from unittest.mock import ANY
+from unittest.mock import ANY, MagicMock
 
 try:
     from unittest.mock import AsyncMock
@@ -74,7 +73,9 @@ def test_decode_ssdp_packet() -> None:
         b"USN: uuid:...::WANCommonInterfaceConfig:1\r\n"
         b"EXT:\r\n\r\n"
     )
-    request_line, headers = decode_ssdp_packet(msg, ("addr", 123))
+    request_line, headers = decode_ssdp_packet(
+        msg, ("local_addr", 1900), ("remote_addr", 12345)
+    )
 
     assert request_line == "HTTP/1.1 200 OK"
 
@@ -86,9 +87,10 @@ def test_decode_ssdp_packet() -> None:
         "usn": "uuid:...::WANCommonInterfaceConfig:1",
         "ext": "",
         "_location_original": "http://192.168.1.1:80/RootDevice.xml",
-        "_host": "addr",
-        "_port": 123,
-        "_addr": ("addr", 123),
+        "_host": "remote_addr",
+        "_port": 12345,
+        "_local_addr": ("local_addr", 1900),
+        "_remote_addr": ("remote_addr", 12345),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -107,7 +109,9 @@ def test_decode_ssdp_packet_missing_ending() -> None:
         b"USN: uuid:...::urn:myharmony-com:device:harmony:1\r\n"
         b"BOOTID.UPNP.ORG:1619366886\r\n"
     )
-    request_line, headers = decode_ssdp_packet(msg, ("addr", 123))
+    request_line, headers = decode_ssdp_packet(
+        msg, ("local_addr", 1900), ("remote_addr", 12345)
+    )
 
     assert request_line == "HTTP/1.1 200 OK"
 
@@ -121,9 +125,10 @@ def test_decode_ssdp_packet_missing_ending() -> None:
         "bootid.upnp.org": "1619366886",
         "ext": "",
         "_location_original": "http://192.168.107.148:8088/description",
-        "_host": "addr",
-        "_port": 123,
-        "_addr": ("addr", 123),
+        "_host": "remote_addr",
+        "_port": 12345,
+        "_local_addr": ("local_addr", 1900),
+        "_remote_addr": ("remote_addr", 12345),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -136,13 +141,14 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
         b"CACHE-CONTROL: max-age = 1800\r\n"
         b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
     )
-    _, headers = decode_ssdp_packet(msg, ("addr", 123))
+    _, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
     assert headers == {
         "cache-control": "max-age = 1800",
-        "_host": "addr",
-        "_port": 123,
-        "_addr": ("addr", 123),
+        "_host": "remote_addr",
+        "_port": 12345,
+        "_local_addr": ("local_addr", 1900),
+        "_remote_addr": ("remote_addr", 12345),
         "_timestamp": ANY,
     }
 
@@ -156,6 +162,7 @@ async def test_ssdp_protocol_handles_broken_headers() -> None:
 
     on_data_mock = AsyncMock()
     protocol = SsdpProtocol(loop, on_data=on_data_mock)
+    protocol.transport = MagicMock()
     protocol.datagram_received(msg, addr)
     on_data_mock.assert_not_awaited()
 
@@ -172,7 +179,9 @@ def test_decode_ssdp_packet_v6() -> None:
         b"EXT:\r\n\r\n"
     )
 
-    request_line, headers = decode_ssdp_packet(msg, ("fe80::1", 123, 0, 3))
+    request_line, headers = decode_ssdp_packet(
+        msg, ("FF02::C", 1900, 0, 3), ("fe80::1", 123, 0, 3)
+    )
 
     assert request_line == "HTTP/1.1 200 OK"
 
@@ -186,7 +195,8 @@ def test_decode_ssdp_packet_v6() -> None:
         "_location_original": "http://[fe80::2]:80/RootDevice.xml",
         "_host": "fe80::1%3",
         "_port": 123,
-        "_addr": ("fe80::1", 123, 0, 3),
+        "_local_addr": ("FF02::C", 1900, 0, 3),
+        "_remote_addr": ("fe80::1", 123, 0, 3),
         "_udn": "uuid:...",
         "_timestamp": ANY,
     }
@@ -195,18 +205,17 @@ def test_decode_ssdp_packet_v6() -> None:
 def test_get_ssdp_socket() -> None:
     """Test get_ssdp_socket accepts a port."""
     # Without a port, should default to SSDP_PORT
-    _, source_info, target_info = get_ssdp_socket(
-        IPv4Address("127.0.0.1"), IPv4Address("127.0.0.1")
-    )
-    assert source_info == ("127.0.0.1", 0)
-    assert target_info == ("127.0.0.1", SSDP_PORT)
+    _, source, target = get_ssdp_socket(("127.0.0.1", 0), ("127.0.0.1", SSDP_PORT))
+    assert source == ("127.0.0.1", 0)
+    assert target == ("127.0.0.1", SSDP_PORT)
 
-    # With a port
-    _, source_info, target_info = get_ssdp_socket(
-        IPv4Address("127.0.0.1"), IPv4Address("127.0.0.1"), 1234
+    # With a different port.
+    _, source, target = get_ssdp_socket(
+        ("127.0.0.1", 0),
+        ("127.0.0.1", 1234),
     )
-    assert source_info == ("127.0.0.1", 0)
-    assert target_info == ("127.0.0.1", 1234)
+    assert source == ("127.0.0.1", 0)
+    assert target == ("127.0.0.1", 1234)
 
 
 def test_microsoft_butchers_ssdp() -> None:
@@ -224,7 +233,9 @@ def test_microsoft_butchers_ssdp() -> None:
         b"Ext:\r\n"
     )
 
-    request_line, headers = decode_ssdp_packet(msg, ("192.168.1.1", 1900))
+    request_line, headers = decode_ssdp_packet(
+        msg, ("239.255.255.250", 1900), ("192.168.1.1", 12345)
+    )
 
     assert request_line == "HTTP/1.1 200 OK"
     assert headers == {
@@ -239,7 +250,8 @@ def test_microsoft_butchers_ssdp() -> None:
         "ext": "",
         "_location_original": "192.168.1.1",
         "_host": "192.168.1.1",
-        "_port": 1900,
-        "_addr": ("192.168.1.1", 1900),
+        "_port": 12345,
+        "_local_addr": ("239.255.255.250", 1900),
+        "_remote_addr": ("192.168.1.1", 12345),
         "_timestamp": ANY,
     }

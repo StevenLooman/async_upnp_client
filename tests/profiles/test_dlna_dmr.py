@@ -3,18 +3,18 @@
 from typing import List, Sequence
 
 import defusedxml.ElementTree
-from didl_lite import didl_lite
 import pytest
+from didl_lite import didl_lite
 
-from async_upnp_client import UpnpEventHandler, UpnpFactory, UpnpStateVariable
+from async_upnp_client import UpnpFactory, UpnpStateVariable
 from async_upnp_client.client import UpnpService
 from async_upnp_client.profiles.dlna import (
+    DmrDevice,
     _parse_last_change_event,
     dlna_handle_notify_last_change,
-    DmrDevice,
 )
 
-from ..upnp_test_requester import RESPONSE_MAP, UpnpTestRequester
+from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester
 
 
 def assert_xml_equal(
@@ -99,7 +99,11 @@ async def test_on_notify_dlna_event() -> None:
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
     service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
     service.on_event = on_event
-    event_handler = UpnpEventHandler("http://localhost:11302", requester)
+    notify_server = UpnpTestNotifyServer(
+        requester=requester,
+        source=("192.168.1.2", 8090),
+    )
+    event_handler = notify_server.event_handler
     await event_handler.async_subscribe(service)
 
     headers = {
@@ -138,7 +142,11 @@ async def test_construct_play_media_metadata_types() -> None:
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-    event_handler = UpnpEventHandler("http://localhost:11302", requester)
+    notify_server = UpnpTestNotifyServer(
+        requester=requester,
+        source=("192.168.1.2", 8090),
+    )
+    event_handler = notify_server.event_handler
     profile = DmrDevice(device, event_handler=event_handler)
 
     media_url = "http://dlna_dms:4321/object/file_1222"
@@ -382,7 +390,11 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-    event_handler = UpnpEventHandler("http://localhost:11302", requester)
+    notify_server = UpnpTestNotifyServer(
+        requester=requester,
+        source=("192.168.1.2", 8090),
+    )
+    event_handler = notify_server.event_handler
     profile = DmrDevice(device, event_handler=event_handler)
 
     media_url = "http://dlna_dms:4321/object/file_1222.mp3"

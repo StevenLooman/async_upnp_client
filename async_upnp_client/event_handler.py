@@ -4,55 +4,75 @@
 import asyncio
 import logging
 import weakref
+from abc import ABC
 from datetime import timedelta
 from http import HTTPStatus
-from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Dict, Mapping, Optional, Tuple, Union
+from ipaddress import ip_address
+from typing import Dict, Mapping, Optional, Set, Tuple, Type, Union
 from urllib.parse import urlparse
 
 import defusedxml.ElementTree as DET
 
-from async_upnp_client.client import UpnpRequester, UpnpService
-from async_upnp_client.const import NS, ServiceId
+from async_upnp_client.client import UpnpDevice, UpnpRequester, UpnpService
+from async_upnp_client.const import NS, IPvXAddress, ServiceId
 from async_upnp_client.exceptions import (
     UpnpConnectionError,
     UpnpError,
     UpnpResponseError,
     UpnpSIDError,
 )
-from async_upnp_client.utils import async_get_local_ip, get_local_ip
+from async_upnp_client.utils import get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
 
 
+class UpnpNotifyServer(ABC):
+    """
+    Base Notify Server, which binds to a UpnpEventHandler.
+
+    A single UpnpNotifyServer/UpnpEventHandler can be shared with multiple UpnpDevices.
+    """
+
+    @property
+    def callback_url(self) -> str:
+        """Return callback URL on which we are callable."""
+        raise NotImplementedError()
+
+    async def async_start_server(self) -> None:
+        """Start the server."""
+        raise NotImplementedError()
+
+    async def async_stop_server(self) -> None:
+        """Stop the server."""
+        raise NotImplementedError()
+
+
 class UpnpEventHandler:
     """
-    Handles upnp eventing.
+    Handles UPnP eventing.
 
     An incoming NOTIFY request should be pass to handle_notify().
     subscribe/resubscribe/unsubscribe handle subscriptions.
+
+    When using a reverse proxy in combination with a event handler, you should use
+    the option to override the callback url.
+
+    A single UpnpNotifyServer/UpnpEventHandler can be shared with multiple UpnpDevices.
     """
 
     def __init__(
         self,
-        callback_url: str,
+        notify_server: UpnpNotifyServer,
         requester: UpnpRequester,
-        listen_ports: Optional[Mapping[AddressFamily, int]] = None,
     ) -> None:
-        """Initialize.
-
-        callback_url can be a normal URL or a format string with {host} and
-            {port} placeholders that will be filled based on how the device is
-            connected.
-        listen_ports is a mapping of IP version to the local listening port,
-            used to determine callback_url for devices.
         """
-        self._callback_url = callback_url
+        Initialize.
+
+        notify_server is the notify server which is actually listening on a socket.
+        """
+        self._notify_server = notify_server
         self._requester = requester
 
-        self.listen_ports = listen_ports or {}
-
-        self._listen_ip: Optional[str] = None
         self._subscriptions: weakref.WeakValueDictionary[
             ServiceId, UpnpService
         ] = weakref.WeakValueDictionary()
@@ -60,40 +80,8 @@ class UpnpEventHandler:
 
     @property
     def callback_url(self) -> str:
-        """Return callback URL on which we are callable.
-
-        This URL should work for most cases, but makes assumptions about how
-        a device will connect. Use callback_url_for_service to get a more
-        specific URL.
-        """
-        if not self._listen_ip:
-            self._listen_ip = get_local_ip()
-        port = self.listen_ports.get(AddressFamily.AF_INET)
-        if not port and "{port}" in self._callback_url:
-            raise ValueError("callback_url format requires a listening port")
-        return self._callback_url.format(host=self._listen_ip, port=port)
-
-    async def async_callback_url_for_service(self, service: UpnpService) -> str:
-        """Determine a URL for the service to call back on.
-
-        This can vary based on the service device's IP address.
-        """
-        _LOGGER.debug("Determine callback URL for: %s", service)
-
-        # Shortcut when callback_url can be determined without connecting to the
-        # service device
-        if "{host}" not in self._callback_url and (
-            len(self.listen_ports) == 1 or "{port}" not in self._callback_url
-        ):
-            return self.callback_url
-
-        # Figure out how this host connects to the device, then infer how the
-        # device can connect back
-        device_host = urlparse(service.device.device_url).netloc
-        addr_family, local_host = await async_get_local_ip(device_host)
-        port = self.listen_ports[addr_family]
-
-        return self._callback_url.format(host=local_host, port=port)
+        """Return callback URL on which we are callable."""
+        return self._notify_server.callback_url
 
     def sid_for_service(self, service: UpnpService) -> Optional[ServiceId]:
         """Get the service connected to SID."""
@@ -110,7 +98,8 @@ class UpnpEventHandler:
     def _sid_and_service(
         self, service_or_sid: Union[UpnpService, ServiceId]
     ) -> Tuple[ServiceId, UpnpService]:
-        """Resolve a SID or service to both SID and service.
+        """
+        Resolve a SID or service to both SID and service.
 
         :raise KeyError: Cannot determine SID from UpnpService, or vice versa.
         """
@@ -192,16 +181,16 @@ class UpnpEventHandler:
         :raise UpnpCommunicationError (or subclass): Error while performing
             subscription request.
         """
-        callback_url = await self.async_callback_url_for_service(service)
-
-        _LOGGER.debug("Subscribing to: %s, callback URL: %s", service, callback_url)
+        _LOGGER.debug(
+            "Subscribing to: %s, callback URL: %s", service, self.callback_url
+        )
 
         # do SUBSCRIBE request
         headers = {
             "NT": "upnp:event",
             "TIMEOUT": "Second-" + str(timeout.seconds),
             "HOST": urlparse(service.event_sub_url).netloc,
-            "CALLBACK": f"<{callback_url}>",
+            "CALLBACK": f"<{self.callback_url}>",
         }
         response_status, response_headers, _ = await self._requester.async_http_request(
             "SUBSCRIBE", service.event_sub_url, headers
@@ -289,7 +278,8 @@ class UpnpEventHandler:
         service_or_sid: Union[UpnpService, ServiceId],
         timeout: timedelta = timedelta(seconds=1800),
     ) -> Tuple[ServiceId, timedelta]:
-        """Renew subscription to a UpnpService.
+        """
+        Renew subscription to a UpnpService.
 
         :param service_or_sid: UpnpService or existing SID to resubscribe
         :param timeout: Timeout of subscription
@@ -373,3 +363,84 @@ class UpnpEventHandler:
             *(self.async_unsubscribe(sid) for sid in sids),
             return_exceptions=True,
         )
+
+    async def async_stop(self) -> None:
+        """Stop event the UpnpNotifyServer."""
+        # This calls async_unsubscribe_all() via the notify server.
+        await self._notify_server.async_stop_server()
+
+
+class UpnpEventHandlerRegister:
+    """Event handler register to handle multiple interfaces."""
+
+    def __init__(self, requester: UpnpRequester, notify_server_type: Type) -> None:
+        """Initialize."""
+        self.requester = requester
+        self.notify_server_type = notify_server_type
+        self._event_handlers: Dict[
+            IPvXAddress, Tuple[UpnpEventHandler, Set[UpnpDevice]]
+        ] = {}
+
+    def _get_event_handler_for_device(
+        self, device: UpnpDevice
+    ) -> Optional[UpnpEventHandler]:
+        """Get the event handler for the device, if known."""
+        local_ip_str = get_local_ip(device.device_url)
+        local_ip = ip_address(local_ip_str)
+        if local_ip not in self._event_handlers:
+            return None
+
+        event_handler, devices = self._event_handlers[local_ip]
+        if device in devices:
+            return event_handler
+
+        return None
+
+    def has_event_handler_for_device(self, device: UpnpDevice) -> bool:
+        """Check if an event handler for a device is already available."""
+        return self._get_event_handler_for_device(device) is not None
+
+    async def async_add_device(self, device: UpnpDevice) -> UpnpEventHandler:
+        """Add a new device, creates or gets the event handler for this device."""
+        local_ip_str = get_local_ip(device.device_url)
+        local_ip = ip_address(local_ip_str)
+        if local_ip not in self._event_handlers:
+            event_handler = await self._create_event_handler_for_device(device)
+            self._event_handlers[local_ip] = (event_handler, set([device]))
+            return event_handler
+
+        event_handler, devices = self._event_handlers[local_ip]
+        devices.add(device)
+
+        return event_handler
+
+    async def _create_event_handler_for_device(
+        self, device: UpnpDevice
+    ) -> UpnpEventHandler:
+        """Create a new event handler for a device."""
+        local_ip_str = get_local_ip(device.device_url)
+        source_addr = (local_ip_str, 0)
+        notify_server: UpnpNotifyServer = self.notify_server_type(
+            requester=self.requester, source=source_addr
+        )
+        await notify_server.async_start_server()
+        return UpnpEventHandler(notify_server, self.requester)
+
+    async def async_remove_device(
+        self, device: UpnpDevice
+    ) -> Optional[UpnpEventHandler]:
+        """Remove an existing device, destroys the event handler and returns it, if needed."""
+        local_ip_str = get_local_ip(device.device_url)
+        local_ip = ip_address(local_ip_str)
+        assert local_ip in self._event_handlers
+
+        event_handler, devices = self._event_handlers[local_ip]
+        assert device in devices
+        devices.remove(device)
+
+        if not devices:
+            await event_handler.async_stop()
+            del self._event_handlers[local_ip]
+            return event_handler
+
+        return None

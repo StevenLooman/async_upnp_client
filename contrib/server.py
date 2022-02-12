@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
 """UPnP Server."""
 import asyncio
-from ipaddress import IPv4Address
 import logging
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from functools import partial, wraps
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple, Union, cast
+from ipaddress import IPv4Address, IPv6Address
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+    cast,
+)
 
 import aiohttp.web
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
@@ -25,6 +36,7 @@ from async_upnp_client.const import (
     ActionArgumentInfo,
     ActionInfo,
     DeviceInfo,
+    IPvXAddress,
     ServiceInfo,
     StateVariableInfo,
     StateVariableTypeInfo,
@@ -41,14 +53,12 @@ class SsdpSearchResponder:
     def __init__(
         self,
         device: "UpnpServerDevice",
-        source: Union[ssdp.AddressTupleVXType, ssdp.IPvXAddress, None] = None,
-        target: Union[ssdp.AddressTupleVXType, ssdp.IPvXAddress, None] = None,
+        source: Optional[ssdp.AddressTupleVXType] = None,
+        target: Optional[ssdp.AddressTupleVXType] = None,
     ) -> None:
         """Init the ssdp search responder class."""
         self.device = device
-        self.target = ssdp.SSDP_TARGET_V4  # XXX TODO: IPv4 only
-        is_ipv6 = len(self.target) == 4
-        self.source = ('::', 0, 0, 0) if is_ipv6 else ('0.0.0.0', 0)
+        self.source, self.target = ssdp.determine_source_target(source, target)
         self._transport: Optional[DatagramTransport] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
@@ -69,8 +79,8 @@ class SsdpSearchResponder:
         ):
             return
 
-        addr = headers["_addr"]
-        LOGGER.debug("Received M-SEARCH from: %s, headers: %s", addr, headers)
+        remote_addr = headers["_remote_addr"]
+        LOGGER.debug("Received M-SEARCH from: %s, headers: %s", remote_addr, headers)
 
         protocol = cast(ssdp.SsdpProtocol, self._transport.get_protocol())
         response_line = "HTTP/1.1 200 OK"
@@ -83,7 +93,7 @@ class SsdpSearchResponder:
             "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
         }
         packet = ssdp.build_ssdp_packet(response_line, response_headers)
-        protocol.send_ssdp_packet(packet, addr)
+        protocol.send_ssdp_packet(packet, remote_addr)
 
         # XXX TODO: 3n + 2k + 1?
         # 1 per device
@@ -92,12 +102,10 @@ class SsdpSearchResponder:
 
     async def async_start(self) -> None:
         """Start."""
-        LOGGER.debug("Start listening for advertisements")
+        LOGGER.debug("Start listening for search requests")
 
         # Construct a socket for use with this pairs of endpoints.
-        source = IPv4Address(self.source[0])
-        target = IPv4Address(self.target[0])
-        sock, _, sock_target = ssdp.get_ssdp_socket(source, target)  # XXX TODO: Tuple?
+        sock, sock_source, sock_target = ssdp.get_ssdp_socket(self.source, self.target)
         LOGGER.debug("Binding to address: %s", sock_target)
         sock.bind(sock_target)
 
@@ -112,13 +120,28 @@ class SsdpSearchResponder:
             sock=sock,
         )
 
+    @property
+    def source_ip(self) -> IPvXAddress:
+        """Get source ip."""
+        if ':' in self.source[0]:
+            return IPv6Address(self.source[0] + '%' + str(self.source[3]))
+
+        return IPv4Address(self.source[0])
+
+    @property
+    def target_ip(self) -> IPvXAddress:
+        """Get target ip."""
+        if ':' in self.target[0]:
+            return IPv6Address(self.target[0] + '%' + str(self.target[3]))
+
+        return IPv4Address(self.target[0])
+
     async def async_stop(self) -> None:
         """Stop listening for advertisements."""
         LOGGER.debug("Stop listening for advertisements")
 
         LOGGER.debug("Announcing ssdp:byebye")
         self._transport.close()
-        raise NotImplementedError()
 
 
 class UpnpXmlSerializer:
@@ -537,7 +560,8 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     LOGGER.info("Device at %s%s", device.base_uri, device.device_url)
 
     # SSDP
-    search_responder = SsdpSearchResponder(device, source)
+    target = ssdp.SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else ssdp.SSDP_TARGET_V4
+    search_responder = SsdpSearchResponder(device, source, target)
     await search_responder.async_start()
 
     try:
