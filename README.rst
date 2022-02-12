@@ -30,25 +30,25 @@ General set up
 The `UPnP Device Architecture <https://openconnectivity.org/upnp-specs/UPnP-arch-DeviceArchitecture-v2.0-20200417.pdf>`_ document contains several sections describing different parts of the UPnP standard. These chapters/sections can mostly be mapped to the following modules:
 
 * Chapter 1 Discovery
-   * Section 1.1 SSDP: `async_upnp_client.ssdp`
-   * Section 1.2 Advertisement: `async_upnp_client.advertisement` provides basic functionality to receive advertisements.
-   * Section 1.3 Search: `async_upnp_client.search` provides basic functionality to do search requests and gather the responses.
-   * `async_upnp_client.ssdp_client` contains the `SsdpListener` which combines advertisements and search to get the known devices and provides callbacks on changes. It is meant as something which runs continuously to provide useful information about the SSDP-active devices.
+   * Section 1.1 SSDP: ``async_upnp_client.ssdp``
+   * Section 1.2 Advertisement: ``async_upnp_client.advertisement`` provides basic functionality to receive advertisements.
+   * Section 1.3 Search: ``async_upnp_client.search`` provides basic functionality to do search requests and gather the responses.
+   * ``async_upnp_client.ssdp_client`` contains the ``SsdpListener`` which combines advertisements and search to get the known devices and provides callbacks on changes. It is meant as something which runs continuously to provide useful information about the SSDP-active devices.
 * Chapter 2 Description / Chapter 3 Control
-   * `async_upnp_client.client_factory`/`async_upnp_client.client` provide a series of classes to get information about the device/services using the 'description', and interact with these devices.
+   * ``async_upnp_client.client_factory``/``async_upnp_client.client`` provide a series of classes to get information about the device/services using the 'description', and interact with these devices.
 * Chapter 4 Eventing
-   * `async_upnp_client.event_handler` provides functionality to handle events received from the device.
+   * ``async_upnp_client.event_handler`` provides functionality to handle events received from the device.
 
 There are several 'profiles' which a device can implement to provide a standard interface to talk to. Some of these profiles are added to this library. The following profiles are currently available:
 
 * Internet Gateway Device (IGD)
-   * `async_upnp_client.profiles.igd`
+   * ``async_upnp_client.profiles.igd``
 * Digital Living Network Alliance (DLNA)
-   * `async_upnp_client.profiles.dlna`
+   * ``async_upnp_client.profiles.dlna``
 * Printers
-   * `async_upnp_client.profiles.printer`
+   * ``async_upnp_client.profiles.printer``
 
-For examples on how to use `async_upnp_client`, see `examples`/ .
+For examples on how to use ``async_upnp_client``, see ``examples``/ .
 
 Note that this library is most likely does not fully implement all functionality from the UPnP Device Architecture document and/or contains errors/bugs/mis-interpretations.
 
@@ -56,15 +56,15 @@ Note that this library is most likely does not fully implement all functionality
 Contributing
 ------------
 
-See `CONTRIBUTING.rst`.
+See ``CONTRIBUTING.rst``.
 
 
 Development
 -----------
 
-Development is done on the `development` branch.
+Development is done on the ``development`` branch.
 
-`pre-commit` is used to run several checks before committing. You can install `pre-commit` and the git-hook by doing::
+``pre-commit`` is used to run several checks before committing. You can install ``pre-commit`` and the git-hook by doing::
 
     $ pip install pre-commit
     $ pre-commit --install
@@ -75,17 +75,17 @@ Releasing
 
 Steps for releasing:
 
-- Switch to master: `git checkout master`
-- Merge development to master: `git merge development`
-- Update `setup.py` and `CHANGES.rst` to set version and commit: `git add setup.py CHANGES.rst && git commit -m "Releasing <version>"`
-- Tag release: `git tag <version>`
-- Checkout tag: `git checkout <version>`
-- Build: `rm -rf build dist && python setup.py build sdist`
-- Upload using twine: `twine upload dist/*`
-- Switch to development: `git checkout development`
-- Merge master to development: `git merge master`
-- Update `setup.py` and `CHANGES.rst` to set version and commit `git add setup.py CHANGES.rst && git commit -m "Continuing development"`
-- Push to github: `git push --all && git push --tags`
+- Switch to master: ``git checkout master``
+- Merge development to master: ``git merge development``
+- Update ``setup.py`` and ``CHANGES.rst`` to set version and commit: ``git add setup.py CHANGES.rst && git commit -m "Releasing <version>"``
+- Tag release: ``git tag <version>``
+- Checkout tag: ``git checkout <version>``
+- Build: ``rm -rf build dist && python setup.py build sdist``
+- Upload using twine: ``twine upload dist/*``
+- Switch to development: ``git checkout development``
+- Merge master to development: ``git merge master``
+- Update ``setup.py`` and ``CHANGES.rst`` to set version and commit ``git add setup.py CHANGES.rst && git commit -m "Continuing development"``
+- Push to github: ``git push --all && git push --tags``
 
 
 Profiling
@@ -93,7 +93,7 @@ Profiling
 
 To do profiling it is recommended to install `pytest-profiling <https://pypi.org/project/pytest-profiling>`_. Then run a test with profiling enabled, and write the results to a graph::
 
-    # Run tests with profiling and svg-output enabled. This will generate `prof/*.prof` files, and a svg file.
+    # Run tests with profiling and svg-output enabled. This will generate prof/*.prof files, and a svg file.
     $ pytest --profile-svg -k test_case_insensitive_dict_profile
     ...
 
@@ -103,7 +103,7 @@ To do profiling it is recommended to install `pytest-profiling <https://pypi.org
 
 Alternatively, you can generate a profiling data file, use `pyprof2calltree <https://github.com/pwaller/pyprof2calltree/>`_ to convert the data and open `kcachegrind <http://kcachegrind.sourceforge.net/html/Home.html>`_. For example::
 
-    # Run tests with profiling enabled, this will generate `prof/*.prof` files.
+    # Run tests with profiling enabled, this will generate prof/*.prof files.
     $ pytest --profile -k test_case_insensitive_dict_profile
     ...
 
@@ -114,7 +114,7 @@ Alternatively, you can generate a profiling data file, use `pyprof2calltree <htt
 upnp-client
 -----------
 
-A command line interface is provided via the `upnp-client` script. This script can be used to:
+A command line interface is provided via the ``upnp-client`` script. This script can be used to:
 
 - call an action
 - subscribe to services and listen for events
@@ -214,37 +214,34 @@ An example of listening for advertisements, note that the program stays running 
 IPv6 support
 ------------
 
-IPv6 is supported for the UPnP client functionality as well as the SSDP functionality. Please do note that multicast over IPv6 does require a `scope_id`/interface ID. The `scope_id` is used to specify which interface should be used.
+IPv6 is supported for the UPnP client functionality as well as the SSDP functionality. Please do note that multicast over IPv6 does require a ``scope_id``/interface ID. The ``scope_id`` is used to specify which interface should be used.
 
-There are several ways to get the `scope_id`. Via Python this can be done via the [ifaddr](https://github.com/pydron/ifaddr) library. From the (Linux) command line the `scope_id` can be found via the `ip` command:
-```
-$ ip address
-...
-6: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
-    link/ether 00:15:5d:38:97:cf brd ff:ff:ff:ff:ff:ff
-    inet 192.168.1.2/24 brd 192.168.1.255 scope global eth0
-       valid_lft forever preferred_lft forever
-    inet6 fe80::215:5dff:fe38:97cf/64 scope link
-       valid_lft forever preferred_lft forever
-```
+There are several ways to get the ``scope_id``. Via Python this can be done via the `ifaddr <https://github.com/pydron/ifaddr>`_ library. From the (Linux) command line the ``scope_id`` can be found via the `ip` command::
 
-In this case, the interface index is 6 (start of the line) and thus the `scope_id` is `6`.
+    $ ip address
+    ...
+    6: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+        link/ether 00:15:5d:38:97:cf brd ff:ff:ff:ff:ff:ff
+        inet 192.168.1.2/24 brd 192.168.1.255 scope global eth0
+            valid_lft forever preferred_lft forever
+        inet6 fe80::215:5dff:fe38:97cf/64 scope link
+            valid_lft forever preferred_lft forever
 
-Or on Windows using the `ipconfig` command:
-```
-C:\> ipconfig /all
-...
-Ethernet adapter Ethernet:
+In this case, the interface index is 6 (start of the line) and thus the ``scope_id`` is ``6``.
 
-   ...
-   Link-local IPv6 Address . . . . . : fe80::e530:c739:24d7:c8c7%8(Preferred)
-...
-```
+Or on Windows using the ``ipconfig`` command::
 
-The `scope_id` is `8` in this example, as shown after the `%` character at the end of the IPv6 address.
+    C:\> ipconfig /all
+    ...
+    Ethernet adapter Ethernet:
+        ...
+        Link-local IPv6 Address . . . . . : fe80::e530:c739:24d7:c8c7%8(Preferred)
+    ...
 
-Be aware that Python `<3.9` does not support the `IPv6Address.scope_id` attribute. As such, a `AddressTupleVXType` is used to specify the `source`- and `target`-addresses. In case of IPv4, `AddressTupleV4Type` is a 2-tuple with `address`, `port`. `AddressTupleV6Type` is used for IPv6 and is a 4-tuple with `address`, `port`, `flowinfo`, `scope_id`. More information can be found in the Python `socket` module documentation.
+The ``scope_id`` is ``8`` in this example, as shown after the ``%`` character at the end of the IPv6 address.
 
-All functionality regarding SSDP uses `AddressTupleVXType` the specify addresses.
+Be aware that Python ``<3.9`` does not support the ``IPv6Address.scope_id`` attribute. As such, a ``AddressTupleVXType`` is used to specify the ``source``- and ``target``-addresses. In case of IPv4, ``AddressTupleV4Type`` is a 2-tuple with ``address``, ``port``. ``AddressTupleV6Type`` is used for IPv6 and is a 4-tuple with ``address``, ``port``, ``flowinfo``, ``scope_id``. More information can be found in the Python ``socket`` module documentation.
 
-For consistency, the `AiohttpNotifyServer` also uses a tuple the specify the `source` (the address and port the notify server listens on.)
+All functionality regarding SSDP uses ``AddressTupleVXType`` the specify addresses.
+
+For consistency, the ``AiohttpNotifyServer`` also uses a tuple the specify the ``source`` (the address and port the notify server listens on.)
