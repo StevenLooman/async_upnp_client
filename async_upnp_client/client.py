@@ -98,7 +98,7 @@ class UpnpDevice:
             embedded_device.device_type: embedded_device
             for embedded_device in embedded_devices
         }
-        self._parent_device: Optional[UpnpDevice] = None
+        self._parent_device: Optional["UpnpDevice"] = None
 
         # bind services to ourselves
         for service in services:

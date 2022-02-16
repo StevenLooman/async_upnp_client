@@ -148,7 +148,7 @@ class TestUpnpProfileDevice:
 
         # Test unsubscription
         await profile.async_unsubscribe_services()
-        assert profile._subscriptions == {}
+        assert not profile._subscriptions
 
     @pytest.mark.asyncio
     async def test_subscribe_auto_resubscribe(self) -> None:
@@ -218,7 +218,7 @@ class TestUpnpProfileDevice:
 
         # Task and subscriptions should be gone
         assert profile._resubscriber_task is None
-        assert profile._subscriptions == {}
+        assert not profile._subscriptions
         assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
@@ -242,7 +242,7 @@ class TestUpnpProfileDevice:
             await profile.async_subscribe_services(True)
 
         # Subscriptions and resubscribe task should not exist
-        assert profile._subscriptions == {}
+        assert not profile._subscriptions
         assert profile._resubscriber_task is None
         assert profile.is_subscribed is False
 
@@ -267,7 +267,7 @@ class TestUpnpProfileDevice:
             await profile.async_subscribe_services(True)
 
         # Subscriptions and resubscribe task should not exist
-        assert profile._subscriptions == {}
+        assert not profile._subscriptions
         assert profile._resubscriber_task is None
         assert profile.is_subscribed is False
 
@@ -317,7 +317,7 @@ class TestUpnpProfileDevice:
 
         # Task and subscriptions should be gone
         assert profile._resubscriber_task is None
-        assert profile._subscriptions == {}
+        assert not profile._subscriptions
         assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
