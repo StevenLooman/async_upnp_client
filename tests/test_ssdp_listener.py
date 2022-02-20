@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 from typing import AsyncGenerator
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 try:
     from unittest.mock import AsyncMock
@@ -470,3 +470,47 @@ async def test_combined_headers() -> None:
     assert combined["bootid.upnp.org"] == "2"
 
     await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_see_search_device_ipv4_and_ipv6() -> None:
+    """Test seeing the same device via IPv4, then via IPv6."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+
+    # See device via IPv4.
+    location_ipv4 = "http://192.168.1.1:80/RootDevice.xml"
+    headers = CaseInsensitiveDict(
+        {
+            **SEARCH_HEADERS_DEFAULT,
+            "LOCATION": location_ipv4,
+        }
+    )
+    assert listener._search_listener is not None
+    await listener._search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+
+    # Ensure callback was called.
+    callback.assert_awaited_once_with(
+        ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_CHANGED
+    )
+    callback.reset_mock()
+
+    # See device via IPv6.
+    location_ipv6 = "http://[fe80::1]:80/RootDevice.xml"
+    headers = CaseInsensitiveDict(
+        {
+            **SEARCH_HEADERS_DEFAULT,
+            "LOCATION": location_ipv6,
+        }
+    )
+    await listener._search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+
+    # Ensure callback was NOT called. It is the same device, just from IPv6 instead of IPv4.
+    callback.assert_awaited_once_with(
+        ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_ALIVE
+    )
+    callback.reset_mock()
+
+    assert listener.devices[SEARCH_HEADERS_DEFAULT["_udn"]].locations

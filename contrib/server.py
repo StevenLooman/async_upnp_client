@@ -85,14 +85,15 @@ class SsdpSearchResponder:
         protocol = cast(ssdp.SsdpProtocol, self._transport.get_protocol())
         response_line = "HTTP/1.1 200 OK"
         response_headers = {
-            "Cache-Control": "max-age=1800",
-            "Server": "async-upnp-client/1.0 UPnP/1.0 Dummy_tv/1.0",
+            "CACHE-CONTROL": "max-age=1800",
+            "SERVER": "async-upnp-client/1.0 UPnP/1.0 DummyServer/1.0",
             "ST": f"{self.device.device_type}",
             "USN": f"{self.device.udn}::{self.device.device_type}",
             "EXT": "",
             "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
         }
         packet = ssdp.build_ssdp_packet(response_line, response_headers)
+        LOGGER.debug("Sending search response: %s", response_headers["ST"])
         protocol.send_ssdp_packet(packet, remote_addr)
 
         # XXX TODO: 3n + 2k + 1?
@@ -120,27 +121,82 @@ class SsdpSearchResponder:
             sock=sock,
         )
 
-    @property
-    def source_ip(self) -> IPvXAddress:
-        """Get source ip."""
-        if ':' in self.source[0]:
-            return IPv6Address(self.source[0] + '%' + str(self.source[3]))
+    async def async_stop(self) -> None:
+        """Stop listening for advertisements."""
+        LOGGER.debug("Stop listening for SEARCH requests")
+        self._transport.close()
 
-        return IPv4Address(self.source[0])
 
-    @property
-    def target_ip(self) -> IPvXAddress:
-        """Get target ip."""
-        if ':' in self.target[0]:
-            return IPv6Address(self.target[0] + '%' + str(self.target[3]))
+class SsdpAdvertisementAnnouncer:
 
-        return IPv4Address(self.target[0])
+    def __init__(
+        self,
+        device: "UpnpServerDevice",
+        source: Optional[ssdp.AddressTupleVXType] = None,
+        target: Optional[ssdp.AddressTupleVXType] = None,
+    ) -> None:
+        """Init the ssdp search responder class."""
+        self.device = device
+        self.source, self.target = ssdp.determine_source_target(source, target)
+        self.announcables = ...
+        # 3 (upnp:rootdevice, uuid:device-UUID, urn:schemas-upnp-org:device:deviceType:ver)
+        # + 2d (uuid:device-UUID, urn:schemas-upnp-org:device:deviceType:ver)
+        # + k (service)
+        self._transport: Optional[DatagramTransport] = None
+
+    async def _async_on_connect(self, transport: DatagramTransport) -> None:
+        """Handle on connect."""
+        self._transport = transport
+
+    async def async_start(self) -> None:
+        """Start."""
+        LOGGER.debug("Start advertisements announcer")
+
+        # Construct a socket for use with this pairs of endpoints.
+        sock, sock_source, sock_target = ssdp.get_ssdp_socket(self.source, self.target)
+        LOGGER.debug("Binding to address: %s", sock_target)
+        sock.bind(sock_target)
+
+        # Create protocol and send discovery packet.
+        loop = asyncio.get_event_loop()
+        await loop.create_datagram_endpoint(
+            lambda: ssdp.SsdpProtocol(
+                loop,
+                on_connect=self._async_on_connect,
+            ),
+            sock=sock,
+        )
+
+        self._announce()
+
+    def _announce(self):
+        """Announce."""
+        # Announce root device.
+        start_line = "NOTIFY * HTTP/1.1"
+        headers = {
+            "NTS": "ssdp:alive",
+            "NT": "upnp:rootdevice",
+            "USN": f"{self.device.udn}::upnp:rootdevice",
+            "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
+            "BOOTID.UPNP.ORG": "1",
+            "CONFIGID.UPNP.ORG": "1",
+            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
+        }
+        packet = ssdp.build_ssdp_packet(start_line, headers)
+        protocol = cast(ssdp.SsdpProtocol, self._transport.get_protocol())
+        LOGGER.debug("Sending advertisement: %s", headers["NT"])
+        protocol.send_ssdp_packet(packet, self.target)
+
+        # Reschedule self.
+        loop = asyncio.get_event_loop()
+        loop.call_later(30, self._announce)
 
     async def async_stop(self) -> None:
         """Stop listening for advertisements."""
-        LOGGER.debug("Stop listening for advertisements")
+        LOGGER.debug("Stop advertisements annoucner")
 
         LOGGER.debug("Announcing ssdp:byebye")
+
         self._transport.close()
 
 
@@ -561,11 +617,16 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
 
     # SSDP
     target = ssdp.SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else ssdp.SSDP_TARGET_V4
+
     search_responder = SsdpSearchResponder(device, source, target)
     await search_responder.async_start()
 
+    advertisement_announcer = SsdpAdvertisementAnnouncer(device, source, target)
+    await advertisement_announcer.async_start()
+
     try:
-        await asyncio.sleep(3600)
+        while True:
+            await asyncio.sleep(3600)
     except KeyboardInterrupt:
         pass
 

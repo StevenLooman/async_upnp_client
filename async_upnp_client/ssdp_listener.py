@@ -2,9 +2,14 @@
 
 import logging
 import re
+from asyncio import Lock
 from asyncio.events import AbstractEventLoop
+from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timedelta
-from typing import Any, Awaitable, Callable, Mapping, Optional, Tuple
+from ipaddress import ip_address
+from types import TracebackType
+from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Set, Tuple, Type
+from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import (
@@ -28,6 +33,7 @@ IGNORED_HEADERS = {
     "date",
     "cache-control",
     "server",
+    "location",  # Location-header is handled differently!
 }
 
 
@@ -106,11 +112,43 @@ class SsdpDevice:
         """Initialize."""
         self.udn = udn
         self.valid_to: datetime = valid_to
-        self.location: Optional[str] = None
+        self._locations: Dict[str, datetime] = {}
         self.last_seen: Optional[datetime] = None
         self.search_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.advertisement_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.userdata: Any = None
+
+    def add_location(self, location: str, valid_to: datetime) -> None:
+        """Add a (new) location the device can be reached at."""
+        self._locations[location] = valid_to
+
+    @property
+    def location(self) -> Optional[str]:
+        """
+        Get a location of the device.
+
+        Kept for compatibility, use method `locations`.
+        """
+        # Sort such that the same location will be given each time.
+        for location in sorted(self.locations):
+            return location
+
+        return None
+
+    @property
+    def locations(self) -> Set[str]:
+        """Get all know locations of the device."""
+        self.purge_locations()
+        return set(self._locations.keys())
+
+    def purge_locations(self) -> None:
+        """Purge locations which are no longer valid/timed out."""
+        now = datetime.now()
+        to_remove = [
+            location for location, valid_to in self._locations.items() if now > valid_to
+        ]
+        for location in to_remove:
+            del self._locations[location]
 
     def combined_headers(
         self,
@@ -143,7 +181,8 @@ def same_headers_differ(
 ) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
     for header, current_value in current_headers.as_dict().items():
-        if header.startswith("_") or header.lower() in IGNORED_HEADERS:
+        header_lowered = header.lower()
+        if header.startswith("_") or header_lowered in IGNORED_HEADERS:
             continue
         new_value = new_headers.get(header)
         if new_value is None:
@@ -162,7 +201,8 @@ def headers_differ_from_existing_advertisement(
     """Compare against existing advertisement headers to see if anything interesting has changed."""
     if dst not in ssdp_device.advertisement_headers:
         return False
-    return same_headers_differ(ssdp_device.advertisement_headers[dst], headers)
+    headers_old = ssdp_device.advertisement_headers[dst]
+    return same_headers_differ(headers_old, headers)
 
 
 def headers_differ_from_existing_search(
@@ -171,16 +211,66 @@ def headers_differ_from_existing_search(
     """Compare against existing search headers to see if anything interesting has changed."""
     if dst not in ssdp_device.search_headers:
         return False
-    return same_headers_differ(ssdp_device.search_headers[dst], headers)
+    headers_old = ssdp_device.search_headers[dst]
+    return same_headers_differ(headers_old, headers)
 
 
-class SsdpDeviceTracker:
-    """Device tracker."""
+def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
+    """Test if location changed for device."""
+    new_location = headers.get("location", "")
+    if not new_location:
+        return False
+
+    locations = ssdp_device.locations
+    if not locations:
+        return True
+
+    new_host = urlparse(new_location).hostname
+    new_host_ip = ip_address(new_host)
+
+    for location in ssdp_device.locations:
+        parts = urlparse(location)
+        host = parts.hostname
+        host_ip = ip_address(host)
+        if host_ip.version != new_host_ip.version:
+            continue
+
+        if location != new_location:
+            return True
+
+    return False
+
+
+class SsdpDeviceTracker(AbstractAsyncContextManager):
+    """
+    Device tracker.
+
+    Tracks SsdpDevices seen by the SsdpListener. Can be shared between SsdpListeners.
+
+    This uses a asyncio.Lock to prevent simulatinous device updates when the SsdpDeviceTracker
+    is shared between SsdpListeners (e.g., for simultaneous IPv4 and IPv6 handling
+    on the same network.)
+    """
 
     def __init__(self) -> None:
         """Initialize."""
         self.devices: dict[UniqueDeviceName, SsdpDevice] = {}
         self.next_valid_to: Optional[datetime] = None
+        self._lock = Lock()
+
+    async def __aenter__(self) -> "SsdpDeviceTracker":
+        """Acquire the lock."""
+        await self._lock.acquire()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Release the lock."""
+        self._lock.release()
 
     def see_search(
         self, headers: SsdpHeaders
@@ -188,6 +278,8 @@ class SsdpDeviceTracker:
         bool, Optional[SsdpDevice], Optional[DeviceOrServiceType], Optional[SsdpSource]
     ]:
         """See a device through a search."""
+        assert self._lock.locked(), "Lock first"
+
         if not valid_search_headers(headers):
             _LOGGER.debug("Received invalid search headers: %s", headers)
             return False, None, None, None
@@ -195,7 +287,7 @@ class SsdpDeviceTracker:
         udn = headers["_udn"]
         is_new_device = udn not in self.devices
 
-        ssdp_device = self._see_device(headers)
+        ssdp_device, new_location = self._see_device(headers)
         if not ssdp_device:
             return False, None, None, None
 
@@ -214,6 +306,7 @@ class SsdpDeviceTracker:
             or headers_differ_from_existing_advertisement(
                 ssdp_device, search_target, headers
             )
+            or new_location
         )
         ssdp_source = SsdpSource.SEARCH_CHANGED if changed else SsdpSource.SEARCH_ALIVE
 
@@ -229,6 +322,8 @@ class SsdpDeviceTracker:
         self, headers: SsdpHeaders
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through an advertisement."""
+        assert self._lock.locked(), "Lock first"
+
         if not valid_advertisement_headers(headers):
             _LOGGER.debug("Received invalid advertisement headers: %s", headers)
             return False, None, None
@@ -236,7 +331,7 @@ class SsdpDeviceTracker:
         udn = headers["_udn"]
         is_new_device = udn not in self.devices
 
-        ssdp_device = self._see_device(headers)
+        ssdp_device, new_location = self._see_device(headers)
         if not ssdp_device:
             return False, None, None
 
@@ -261,6 +356,7 @@ class SsdpDeviceTracker:
             or headers_differ_from_existing_search(
                 ssdp_device, notification_type, headers
             )
+            or new_location
         )
 
         # Update stored headers.
@@ -273,15 +369,15 @@ class SsdpDeviceTracker:
 
         return propagate, ssdp_device, notification_type
 
-    def _see_device(self, headers: SsdpHeaders) -> Optional[SsdpDevice]:
-        """See a device through a search."""
+    def _see_device(self, headers: SsdpHeaders) -> Tuple[Optional[SsdpDevice], bool]:
+        """See a device through a search or advertisement."""
         # Purge any old devices.
         self.purge_devices()
 
         udn = udn_from_headers(headers)
         if not udn:
             # Ignore broken devices.
-            return None
+            return None, False
 
         valid_to = extract_valid_to(headers)
 
@@ -294,18 +390,23 @@ class SsdpDeviceTracker:
             ssdp_device = self.devices[udn]
             ssdp_device.valid_to = valid_to
 
+        # Test if new location.
+        new_location = location_changed(ssdp_device, headers)
+
         # Update device.
-        ssdp_device.location = headers["location"]
+        ssdp_device.add_location(headers["location"], valid_to)
         ssdp_device.last_seen = headers["_timestamp"]
         if not self.next_valid_to or self.next_valid_to > ssdp_device.valid_to:
             self.next_valid_to = ssdp_device.valid_to
 
-        return ssdp_device
+        return ssdp_device, new_location
 
     def unsee_advertisement(
         self, headers: SsdpHeaders
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """Remove a device through an advertisement."""
+        assert self._lock.locked(), "Lock first"
+
         if not valid_byebye_headers(headers):
             return False, None, None
 
@@ -355,6 +456,7 @@ class SsdpDeviceTracker:
                 to_remove.append(usn)
             elif not self.next_valid_to or device.valid_to < self.next_valid_to:
                 self.next_valid_to = device.valid_to
+                device.purge_locations()
         for usn in to_remove:
             _LOGGER.debug("Purging device, USN: %s", usn)
             del self.devices[usn]
@@ -374,6 +476,7 @@ class SsdpListener:
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
         search_timeout: int = SSDP_MX,
+        device_tracker: Optional[SsdpDeviceTracker] = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
@@ -381,7 +484,7 @@ class SsdpListener:
         self.source, self.target = determine_source_target(source, target)
         self.loop = loop
         self.search_timeout = search_timeout
-        self._device_tracker = SsdpDeviceTracker()
+        self._device_tracker = device_tracker or SsdpDeviceTracker()
         self._advertisement_listener: Optional[SsdpAdvertisementListener] = None
         self._search_listener: Optional[SsdpSearchListener] = None
 
@@ -423,55 +526,61 @@ class SsdpListener:
 
     async def _on_search(self, headers: SsdpHeaders) -> None:
         """Search callback."""
-        (
-            propagate,
-            ssdp_device,
-            device_or_service_type,
-            ssdp_source,
-        ) = self._device_tracker.see_search(headers)
+        async with self._device_tracker:
+            (
+                propagate,
+                ssdp_device,
+                device_or_service_type,
+                ssdp_source,
+            ) = self._device_tracker.see_search(headers)
 
-        if propagate and ssdp_device and device_or_service_type:
-            assert ssdp_source is not None
-            await self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
+            if propagate and ssdp_device and device_or_service_type:
+                assert ssdp_source is not None
+                await self.async_callback(
+                    ssdp_device, device_or_service_type, ssdp_source
+                )
 
     async def _on_alive(self, headers: SsdpHeaders) -> None:
         """On alive."""
-        (
-            propagate,
-            ssdp_device,
-            device_or_service_type,
-        ) = self._device_tracker.see_advertisement(headers)
+        async with self._device_tracker:
+            (
+                propagate,
+                ssdp_device,
+                device_or_service_type,
+            ) = self._device_tracker.see_advertisement(headers)
 
-        if propagate and ssdp_device and device_or_service_type:
-            await self.async_callback(
-                ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
-            )
+            if propagate and ssdp_device and device_or_service_type:
+                await self.async_callback(
+                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
+                )
 
     async def _on_byebye(self, headers: SsdpHeaders) -> None:
         """On byebye."""
-        (
-            propagate,
-            ssdp_device,
-            device_or_service_type,
-        ) = self._device_tracker.unsee_advertisement(headers)
+        async with self._device_tracker:
+            (
+                propagate,
+                ssdp_device,
+                device_or_service_type,
+            ) = self._device_tracker.unsee_advertisement(headers)
 
-        if propagate and ssdp_device and device_or_service_type:
-            await self.async_callback(
-                ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
-            )
+            if propagate and ssdp_device and device_or_service_type:
+                await self.async_callback(
+                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
+                )
 
     async def _on_update(self, headers: SsdpHeaders) -> None:
         """On update."""
-        (
-            propagate,
-            ssdp_device,
-            device_or_service_type,
-        ) = self._device_tracker.see_advertisement(headers)
+        async with self._device_tracker:
+            (
+                propagate,
+                ssdp_device,
+                device_or_service_type,
+            ) = self._device_tracker.see_advertisement(headers)
 
-        if propagate and ssdp_device and device_or_service_type:
-            await self.async_callback(
-                ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
-            )
+            if propagate and ssdp_device and device_or_service_type:
+                await self.async_callback(
+                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
+                )
 
     @property
     def devices(self) -> Mapping[str, SsdpDevice]:
