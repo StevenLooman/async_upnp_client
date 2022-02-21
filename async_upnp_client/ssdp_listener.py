@@ -8,7 +8,18 @@ from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timedelta
 from ipaddress import ip_address
 from types import TracebackType
-from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Set, Tuple, Type
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    cast,
+)
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -221,22 +232,34 @@ def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
     if not new_location:
         return False
 
+    # Device did not have any location, must be new.
     locations = ssdp_device.locations
     if not locations:
         return True
 
-    new_host = urlparse(new_location).hostname
-    new_host_ip = ip_address(new_host)
+    # Ensure the new location is parsable.
+    try:
+        new_host = urlparse(new_location).hostname
+        new_host_ip = ip_address(new_host)
+    except ValueError:
+        return False
 
-    for location in ssdp_device.locations:
+    def same_ip_version(location: str) -> bool:
         parts = urlparse(location)
         host = parts.hostname
         host_ip = ip_address(host)
-        if host_ip.version != new_host_ip.version:
-            continue
+        return cast(int, host_ip.version) == cast(int, new_host_ip.version)
 
-        if location != new_location:
-            return True
+    for location in ssdp_device.locations:
+        try:
+            # Only test existing locations using the same IP version (IPv4/IPv6.)
+            if not same_ip_version(location):
+                continue
+
+            if location != new_location:
+                return True
+        except ValueError:
+            pass
 
     return False
 
