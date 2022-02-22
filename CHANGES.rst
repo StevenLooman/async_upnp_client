@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.25.1 (unreleased)
+
+
 0.25.0 (2022-02-22)
 
 - Better handle multi-stack devices by de-duplicating search responses/advertisements from different IP versions in `SsdpListener`
