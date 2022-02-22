@@ -50,7 +50,11 @@ class SsdpAdvertisementListener:
             _LOGGER.debug("Got non-advertisement packet: %s, %s", request_line, headers)
             return
 
-        _LOGGER.debug("Received advertisement, USN: %s", headers.get("USN", "<no USN>"))
+        _LOGGER.debug(
+            "Received advertisement, USN: %s, location: %s",
+            headers.get("USN", "<no USN>"),
+            headers.get("location", ""),
+        )
 
         headers["_source"] = SsdpSource.ADVERTISEMENT
         notification_sub_type = headers["NTS"]

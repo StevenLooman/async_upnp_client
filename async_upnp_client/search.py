@@ -71,7 +71,11 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
             )
             return
 
-        _LOGGER.debug("Received response, USN: %s", headers.get("USN", "<no USN>"))
+        _LOGGER.debug(
+            "Received advertisement, USN: %s, location: %s",
+            headers.get("USN", "<no USN>"),
+            headers.get("location", ""),
+        )
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return

@@ -2,7 +2,7 @@
 
 from datetime import datetime, timedelta
 from typing import AsyncGenerator
-from unittest.mock import patch
+from unittest.mock import ANY, patch
 
 try:
     from unittest.mock import AsyncMock
@@ -70,10 +70,15 @@ async def test_see_advertisement_alive() -> None:
     assert advertisement_listener is not None
 
     # See device for the first time through alive-advertisement.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_ALIVE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through alive-advertisement, not triggering callback.
@@ -110,7 +115,11 @@ async def test_see_advertisement_byebye() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited_once()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_ALIVE,
+    )
     assert callback.await_args is not None
     device, dst, _ = callback.await_args.args
     assert device.combined_headers(dst)["NTS"] == "ssdp:alive"
@@ -121,7 +130,11 @@ async def test_see_advertisement_byebye() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited_once()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_BYEBYE,
+    )
     assert callback.await_args is not None
     device, dst, _ = callback.await_args.args
     assert device.combined_headers(dst)["NTS"] == "ssdp:byebye"
@@ -145,7 +158,11 @@ async def test_see_advertisement_update() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_ALIVE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_ALIVE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through update-advertisement, triggering callback.
@@ -154,7 +171,11 @@ async def test_see_advertisement_update() -> None:
     headers["NTS"] = NotificationSubType.SSDP_UPDATE
     headers["BOOTID.UPNP.ORG"] = "2"
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_UPDATE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     await listener.async_stop()
@@ -171,9 +192,25 @@ async def test_see_search() -> None:
     assert search_listener is not None
 
     # See device for the first time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
+    assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
+
+    # See same device again through search, not triggering a change.
+    callback.reset_mock()
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_ALIVE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     await listener.async_stop()
@@ -192,9 +229,14 @@ async def test_see_search_then_alive() -> None:
     assert search_listener is not None
 
     # See device for the first time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through alive-advertisement, not triggering callback.
@@ -221,9 +263,14 @@ async def test_see_search_then_update() -> None:
     assert search_listener is not None
 
     # See device for the first time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through update-advertisement, triggering callback.
@@ -231,7 +278,11 @@ async def test_see_search_then_update() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_UPDATE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_UPDATE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     await listener.async_stop()
@@ -250,9 +301,14 @@ async def test_see_search_then_byebyee() -> None:
     assert search_listener is not None
 
     # See device for the first time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # See device for the second time through byebye-advertisement,
@@ -261,7 +317,11 @@ async def test_see_search_then_byebyee() -> None:
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = NotificationSubType.SSDP_BYEBYE
     await advertisement_listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_BYEBYE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
 
     await listener.async_stop()
@@ -277,30 +337,47 @@ async def test_purge_devices() -> None:
     search_listener = listener._search_listener
     assert search_listener is not None
 
-    # See device for the first time through alive-advertisement.
+    # See device for the first time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
-    # See device for the second time through alive-advertisement.
+    # See device for the second time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_ALIVE,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # "Wait" a bit... and purge devices.
+    callback.reset_mock()
     override_now = headers["_timestamp"] + timedelta(hours=1)
     listener._device_tracker.purge_devices(override_now)
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
 
-    # See device for the first time through alive-advertisement.
+    # See device for the first time through search.
+    callback.reset_mock()
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited()
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] in listener.devices
 
     # "Wait" a bit... and purge devices again.
+    callback.reset_mock()
     override_now = headers["_timestamp"] + timedelta(hours=1)
     listener._device_tracker.purge_devices(override_now)
     assert ADVERTISEMENT_HEADERS_DEFAULT["_udn"] not in listener.devices
@@ -470,3 +547,44 @@ async def test_combined_headers() -> None:
     assert combined["bootid.upnp.org"] == "2"
 
     await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_see_search_device_ipv4_and_ipv6() -> None:
+    """Test seeing the same device via IPv4, then via IPv6."""
+    # pylint: disable=protected-access
+    callback = AsyncMock()
+    listener = SsdpListener(async_callback=callback)
+    await listener.async_start()
+
+    # See device via IPv4, callback should be called.
+    callback.reset_mock()
+    location_ipv4 = "http://192.168.1.1:80/RootDevice.xml"
+    headers = CaseInsensitiveDict(
+        {
+            **SEARCH_HEADERS_DEFAULT,
+            "LOCATION": location_ipv4,
+        }
+    )
+    assert listener._search_listener is not None
+    await listener._search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited_once_with(
+        ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_CHANGED
+    )
+
+    # See device via IPv6, callback should be called with SsdpSource.SEARCH_ALIVE,
+    # not SEARCH_UPDATE.
+    callback.reset_mock()
+    location_ipv6 = "http://[fe80::1]:80/RootDevice.xml"
+    headers = CaseInsensitiveDict(
+        {
+            **SEARCH_HEADERS_DEFAULT,
+            "LOCATION": location_ipv6,
+        }
+    )
+    await listener._search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    callback.assert_awaited_once_with(
+        ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_ALIVE
+    )
+
+    assert listener.devices[SEARCH_HEADERS_DEFAULT["_udn"]].locations
