@@ -1,7 +1,7 @@
 Changes
 =======
 
-0.25.0 (unreleased)
+0.25.0 (2022-02-22)
 
 - Better handle multi-stack devices by de-duplicating search responses/advertisements from different IP versions in `SsdpListener`
   - Use the parameter `device_tracker` to share the `SsdpDeviceTracker` between `SsdpListener`s monitoring the same network
