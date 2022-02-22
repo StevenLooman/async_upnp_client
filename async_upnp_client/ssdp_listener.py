@@ -8,24 +8,14 @@ from contextlib import AbstractAsyncContextManager
 from datetime import datetime, timedelta
 from ipaddress import ip_address
 from types import TracebackType
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Mapping,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    cast,
-)
+from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Set, Tuple, Type
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import (
     AddressTupleVXType,
     DeviceOrServiceType,
+    IPvXAddress,
     NotificationSubType,
     NotificationType,
     SearchTarget,
@@ -226,6 +216,14 @@ def headers_differ_from_existing_search(
     return same_headers_differ(headers_old, headers)
 
 
+def same_ip_version(new_host_ip: IPvXAddress, location: str) -> bool:
+    """Test if location points to a host with the same IP version."""
+    parts = urlparse(location)
+    host = parts.hostname
+    host_ip: IPvXAddress = ip_address(host)
+    return host_ip.version == new_host_ip.version
+
+
 def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
     """Test if location changed for device."""
     new_location = headers.get("location", "")
@@ -244,16 +242,10 @@ def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
     except ValueError:
         return False
 
-    def same_ip_version(location: str) -> bool:
-        parts = urlparse(location)
-        host = parts.hostname
-        host_ip = ip_address(host)
-        return cast(int, host_ip.version) == cast(int, new_host_ip.version)
-
     for location in ssdp_device.locations:
         try:
             # Only test existing locations using the same IP version (IPv4/IPv6.)
-            if not same_ip_version(location):
+            if not same_ip_version(new_host_ip, location):
                 continue
 
             if location != new_location:
