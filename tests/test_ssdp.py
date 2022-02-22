@@ -16,6 +16,8 @@ from async_upnp_client.ssdp import (
     build_ssdp_search_packet,
     decode_ssdp_packet,
     get_ssdp_socket,
+    is_ipv4_address,
+    is_ipv6_address,
     is_valid_ssdp_packet,
 )
 
@@ -255,3 +257,15 @@ def test_microsoft_butchers_ssdp() -> None:
         "_remote_addr": ("192.168.1.1", 12345),
         "_timestamp": ANY,
     }
+
+
+def test_is_ipv4_address() -> None:
+    """Test is_ipv4_address()."""
+    assert is_ipv4_address(("192.168.1.1", 12345))
+    assert not is_ipv4_address(("fe80::1", 12345, 0, 6))
+
+
+def test_is_ipv6_address() -> None:
+    """Test is_ipv6_address()."""
+    assert is_ipv6_address(("fe80::1", 12345, 0, 6))
+    assert not is_ipv6_address(("192.168.1.1", 12345))

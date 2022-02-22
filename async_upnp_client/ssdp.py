@@ -91,6 +91,16 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     return urlunsplit(data._replace(netloc=netloc))
 
 
+def is_ipv4_address(addr: AddressTupleVXType) -> bool:
+    """Test if addr is a IPv4 tuple."""
+    return len(addr) == 2
+
+
+def is_ipv6_address(addr: AddressTupleVXType) -> bool:
+    """Test if addr is a IPv6 tuple."""
+    return len(addr) == 4
+
+
 def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:
     """Construct a SSDP packet."""
     headers_str = "\r\n".join([f"{key}:{value}" for key, value in headers.items()])
