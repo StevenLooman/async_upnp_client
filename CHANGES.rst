@@ -6,9 +6,9 @@ Changes
 
 0.25.0 (2022-02-22)
 
-- Better handle multi-stack devices by de-duplicating search responses/advertisements from different IP versions in `SsdpListener`
-  - Use the parameter `device_tracker` to share the `SsdpDeviceTracker` between `SsdpListener`s monitoring the same network
-  - Note that the `SsdpDeviceTracker` is now locked by the `SsdpListener` in case it is shared.
+- Better handle multi-stack devices by de-duplicating search responses/advertisements from different IP versions in ``SsdpListener``
+   - Use the parameter ``device_tracker`` to share the ``SsdpDeviceTracker`` between ``SsdpListener``s monitoring the same network
+   - Note that the ``SsdpDeviceTracker`` is now locked by the ``SsdpListener`` in case it is shared.
 
 
 0.24.0 (2022-02-12)
@@ -16,8 +16,8 @@ Changes
 - Add new dummy_tv/dummy_router servers (@StevenLooman)
 - Drop python 3.6 support, add python 3.10 support (@StevenLooman)
 - Breaking change: Improve SSDP IPv6 support, for Python versions <3.9, due to missing IPv6Address.scope_id (@StevenLooman)
-  - `SsdpListener`, `SsdpAdvertisementListener`, `SsdpSearchListener`, `UpnpProfileDevice` now take `AddressTupleVXType` for source and target, instead of IPs
-- Breaking change: Separate multi-listener event handler functionality from `UpnpEventHandler` into `UpnpEventHandlerRegister` (@StevenLooman)
+   - ``SsdpListener``, ``SsdpAdvertisementListener``, ``SsdpSearchListener``, ``UpnpProfileDevice`` now take ``AddressTupleVXType`` for source and target, instead of IPs
+- Breaking change: Separate multi-listener event handler functionality from ``UpnpEventHandler`` into ``UpnpEventHandlerRegister`` (@StevenLooman)
 
 
 0.23.5 (2022-02-06)
@@ -29,14 +29,14 @@ Changes
 
 0.23.4 (2022-01-16)
 
-- Raise `UpnpXmlContentError` when device has bad description XML (@chishm, #118)
-- Raise `UpnpResponseError` for HTTP errors in UpnpFactory (@chishm, #118)
-- Fix `UpnpXmlParseError` (@chishm, #118)
+- Raise ``UpnpXmlContentError`` when device has bad description XML (@chishm, #118)
+- Raise ``UpnpResponseError`` for HTTP errors in UpnpFactory (@chishm, #118)
+- Fix ``UpnpXmlParseError`` (@chishm, #118)
 
 
 0.23.3 (2022-01-03)
 
-- `SsdpListener`: Fix error where a device seen through a search, then byebye-advertisement (@StevenLooman, #117)
+- ``SsdpListener``: Fix error where a device seen through a search, then byebye-advertisement (@StevenLooman, #117)
 
 
 0.23.2 (2021-12-22)
@@ -47,7 +47,7 @@ Changes
 
 0.23.1 (2021-12-18)
 
-- Bump `python-didl-lite` to 1.3.2
+- Bump ``python-didl-lite`` to 1.3.2
 - Log missing state vars instead of raising UpnpError in DmrDevice (@chishm)
 
 
@@ -57,7 +57,7 @@ Changes
 - Fix parsing of allowedValueList (@StevenLooman)
 - Add DMS profile for interfacing with DLNA Digital Media Servers (@chishm)
 - More details reported in Action exceptions (@chishm)
-- Fix type hints in `description_cache` (@epenet, @StevenLooman)
+- Fix type hints in ``description_cache`` (@epenet, @StevenLooman)
 
 
 0.22.12 (2021-11-06)
@@ -74,41 +74,41 @@ Changes
 
 - Fix byebye advertisements not propagated because missing location (@chishm)
 - Require specific services for profile devices (@chishm)
-- Bump `python-didl-lite` to 1.3.1
+- Bump ``python-didl-lite`` to 1.3.1
 
 
 0.22.9 (2021-10-21)
 
 - CLI: Don't crash on upnperrors on upnp-client subscribe (@rytilahti)
 - DLNA/DMR Profile add support for (@chishm):
-    - play mode (repeat and shuffle)
-    - setting of play_media metadata
-    - SetNextAVTransportURI
-    - setting arbitrary metadata for SetAVTransportURI
-    - playlist title
+   - play mode (repeat and shuffle)
+   - setting of play_media metadata
+   - SetNextAVTransportURI
+   - setting arbitrary metadata for SetAVTransportURI
+   - playlist title
 - Ignore Cache-Control headers when comparing for change (@bdraco)
-- Fix Windows error: `[WinError 10022] An invalid argument was supplied`
-- Fix Windows error: `[WinError 10049] The requested address is not valid in its context`
+- Fix Windows error: ``[WinError 10022] An invalid argument was supplied``
+- Fix Windows error: ``[WinError 10049] The requested address is not valid in its context``
 
 
 0.22.8 (2021-10-08)
 
 - Log when async_http_request retries due to ServerDisconnectedError (@chishm)
-- More robustness when extracting UDN from USN in `ssdp.udn_from_headers`
+- More robustness when extracting UDN from USN in ``ssdp.udn_from_headers``
 
 
 0.22.7 (2021-10-08)
 
-- Ignore devices with an invalid location in `ssdp_listener.SsdpListener`
+- Ignore devices with an invalid location in ``ssdp_listener.SsdpListener``
 - More robustness in IGD profile when parsing StatusInfo
 - Log warning instead of an error with subscription related problems in profile devices
-- Ignore devices with a location pointing to localhost in `ssdp_listener.SsdpListener`
+- Ignore devices with a location pointing to localhost in ``ssdp_listener.SsdpListener``
 
 
 0.22.6 (2021-10-08)
 
 - Bump python-didl-lite to 1.3.0
-- More robustness in `ssdp_listener.SsdpListener` by requiring a parsed UDN (from USN) and location
+- More robustness in ``ssdp_listener.SsdpListener`` by requiring a parsed UDN (from USN) and location
 
 
 0.22.5 (2021-10-03)
@@ -148,8 +148,8 @@ Changes
 
 0.21.3 (2021-09-14)
 
-- Fix `ssdp_listener.SsdpDeviceTracker` to update device's headers upon ssdp:byebye advertisement (@chishm)
-- Several optimizations related to `ssdp_listener.SsdpListener` (@bdraco)
+- Fix ``ssdp_listener.SsdpDeviceTracker`` to update device's headers upon ssdp:byebye advertisement (@chishm)
+- Several optimizations related to ``ssdp_listener.SsdpListener`` (@bdraco)
 
 
 0.21.2 (2021-09-12)
@@ -167,25 +167,25 @@ Changes
 
 - More pylint/mypy
 - Fixed NoneType exception in DmrDevice.media_image_url (@mkliche)
-- Breaking change: Rename `advertisement.UpnpAdvertisementListener` to `advertisement.SsdpAdvertisementListener`
-- Breaking change: Rename `search.SSDPListener` to `search.SsdpSearchListener`
-- Add `ssdp_listener.SsdpListener`, class to keep track of devices seen via SSDP advertisements and searches
-- Breaking change: `UpnpDevice.boot_id` and `UpnpDevice.config_id` have been moved to `UpnpDevice.ssdp_headers`, using the respecitive keys from the SSDP headers
+- Breaking change: Rename ``advertisement.UpnpAdvertisementListener`` to ``advertisement.SsdpAdvertisementListener``
+- Breaking change: Rename ``search.SSDPListener`` to ``search.SsdpSearchListener``
+- Add ``ssdp_listener.SsdpListener``, class to keep track of devices seen via SSDP advertisements and searches
+- Breaking change: ``UpnpDevice.boot_id`` and ``UpnpDevice.config_id`` have been moved to ``UpnpDevice.ssdp_headers``, using the respecitive keys from the SSDP headers
 
 
 0.20.0 (2021-08-17)
 
-- Wrap XML `ParseError` in an error type derived from it and `UpnpError` too (@chishm)
-- Breaking change: Calling `async_start` on `SSDPListener` no longer calls `async_search` immediately. (#77) @bdraco
-- Breaking change: The `target_ip` argument of `search.SSDPListener` has been dropped and replaced with `target` which takes a `AddressTupleVXType` (#77) @bdraco
-- Breaking change: The `target_ip` argument of `search.async_search` has been dropped and replaced with `target` which takes a `AddressTupleVXType` (#77) @bdraco
+- Wrap XML ``ParseError`` in an error type derived from it and ``UpnpError`` too (@chishm)
+- Breaking change: Calling ``async_start`` on ``SSDPListener`` no longer calls ``async_search`` immediately. (#77) @bdraco
+- Breaking change: The ``target_ip`` argument of ``search.SSDPListener`` has been dropped and replaced with ``target`` which takes a ``AddressTupleVXType`` (#77) @bdraco
+- Breaking change: The ``target_ip`` argument of ``search.async_search`` has been dropped and replaced with ``target`` which takes a ``AddressTupleVXType`` (#77) @bdraco
 
 
 0.19.2 (2021-08-04)
 
-- Clean up `UpnpRequester`: Remove `body_type` parameter
-- Allow for overriding the `target` in `ssdp.SSDPListener.async_search()`
-- Set SO_BROADCAST flag, fixes `Permission denied` error when sending to global broadcast address
+- Clean up ``UpnpRequester``: Remove ``body_type`` parameter
+- Allow for overriding the ``target`` in ``ssdp.SSDPListener.async_search()``
+- Set SO_BROADCAST flag, fixes ``Permission denied`` error when sending to global broadcast address
 
 
 0.19.1 (2021-07-21)
@@ -195,13 +195,13 @@ Changes
 
 0.19.0 (2021-06-19)
 
-- Rename `profiles.dlna.DlanOrgFlags` to `DlnaOrgFlags` to fix a typo (@chishm)
+- Rename ``profiles.dlna.DlanOrgFlags`` to ``DlnaOrgFlags`` to fix a typo (@chishm)
 - Defer event callback URL determination until event subscriptions are created (@chishm)
-- Add `UpnpDevice.icons` and `UpnpProfileDevice.icon` to get URLs to device icons (@chishm)
+- Add ``UpnpDevice.icons`` and ``UpnpProfileDevice.icon`` to get URLs to device icons (@chishm)
 - Add more non-strict parsing of action responses (#68)
-- Stick with `asyncio.get_event_loop()` for Python 3.6 compatibility
-- asyncio and aiohttp exceptions are wrapped in exceptions derived from `UpnpError` to hide implementation details and make catching easier (@chishm)
-- `UpnpProfileDevice` can resubscribe to services automatically, using an asyncio task (@chishm)
+- Stick with ``asyncio.get_event_loop()`` for Python 3.6 compatibility
+- asyncio and aiohttp exceptions are wrapped in exceptions derived from ``UpnpError`` to hide implementation details and make catching easier (@chishm)
+- ``UpnpProfileDevice`` can resubscribe to services automatically, using an asyncio task (@chishm)
 
 
 0.18.0 (2021-05-23)
@@ -226,7 +226,7 @@ Changes
 0.16.1 (2021-04-22)
 
 - Don't double-unescape action responses (#50)
-- Add `UpnpDevice.service_id()` to get service by service_id. (@bazwilliams)
+- Add ``UpnpDevice.service_id()`` to get service by service_id. (@bazwilliams)
 - Fix 'was never awaited'-warning
 
 
@@ -234,10 +234,10 @@ Changes
 
 - Fix timespan formatting for content > 1h
 - Try to fix invalid device encodings
-- Rename `async_upnp_client.traffic` logger to `async_upnp_client.traffic.upnp` and add `async_upnp_client.traffic.ssdp` logger
-- Added `DeviceUpdater` to support updating the `UpnpDevice` inline on changes to `BOOTID.UPNP.ORG`/`CONFIGID.UPNP.ORG`/`LOCATION`
+- Rename ``async_upnp_client.traffic`` logger to ``async_upnp_client.traffic.upnp`` and add ``async_upnp_client.traffic.ssdp`` logger
+- Added ``DeviceUpdater`` to support updating the ``UpnpDevice`` inline on changes to ``BOOTID.UPNP.ORG``/``CONFIGID.UPNP.ORG``/``LOCATION``
 - Added support for PAUSED_PLAYBACK state (#56, @brgerig)
-- Add `DmrDevice.transport_state`, deprecate `DmrDevice.state`
+- Add ``DmrDevice.transport_state``, deprecate ``DmrDevice.state``
 - Ignore prefix/namespace in DLNA-Events for better compatibility
 - DLNA set_transport_uri: Allow supplying own meta_data (e.g. received from a content directory)
 - DLNA set_transport_uri: Backwards incompatible change: Only media_uri and media_title are required.
@@ -260,8 +260,8 @@ Changes
 - Option to print timestamp in ISO8601 (@kitlaan)
 - Option to not print LastChange subscription variable (@kitlaan)
 - Test with Python 3.8 (@scop)
-- Less stricter version pinning of `python-didl-lite` (@fabaff)
-- Drop Python 3.5 support, upgrade `pytest`/`pytest-asyncio`
+- Less stricter version pinning of ``python-didl-lite`` (@fabaff)
+- Drop Python 3.5 support, upgrade ``pytest``/``pytest-asyncio``
 - Convert type comments to annotations
 
 
@@ -272,7 +272,7 @@ Changes
 
 0.14.13 (2020-04-08)
 
-- Expose `device_type` on `UpnpDevice` and `UpnpProfileDevice`
+- Expose ``device_type`` on ``UpnpDevice`` and ``UpnpProfileDevice``
 
 
 0.14.12 (2019-11-12)
@@ -327,7 +327,7 @@ Changes
 
 0.14.3 (2019-01-27)
 
-- Upgrade to python-didl-lite==1.2.2 for typing info, add `py.typed` marker
+- Upgrade to python-didl-lite==1.2.2 for typing info, add ``py.typed`` marker
 - Add fix for HEOS-1 speakers: default subscription time-out to 9 minutes, only use channel Master (@stp6778)
 - Upgrade to python-didl-lite==1.2.3 for bugfix
 
@@ -348,7 +348,7 @@ Changes
 - Support advertisements and rename discovery to search
 - Use defusedxml to parse XML (@scop)
 - Fix UpnpProfileDevice.async_search() + add UpnpProfileDevice.upnp_discover() for backwards compatibility
-- Add work-around for win32-platform when using `upnp-client search`
+- Add work-around for win32-platform when using ``upnp-client search``
 - Minor changes
 - Typing fixes + automated type checking
 - Support binding to IP(v4) for search and advertisements
@@ -386,9 +386,9 @@ Changes
 
 0.13.3 (2018-11-18)
 
-- Add option to `upnp-client` to set timeout for device communication/discovery
+- Add option to ``upnp-client`` to set timeout for device communication/discovery
 - Add option to be strict (default false) with regard to invalid data
-- Add more error handling to `upnp-client`
+- Add more error handling to ``upnp-client``
 - Add async_discovery
 - Fix discovery-traffic not being logged to async_upnp_client.traffic-logger
 - Add discover devices specific from/for Profile
@@ -521,7 +521,7 @@ Changes
 
 0.9.1 (2018-04-28)
 
-- Support old style `sendEvents`
+- Support old style ``sendEvents``
 - Add response-body when an error is received when calling an action
 - Fixes to README
 - Fixes to setup
