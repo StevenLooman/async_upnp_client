@@ -304,6 +304,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
     _current_track_meta_data: Optional[didl_lite.DidlObject] = None
     _av_transport_uri_meta_data: Optional[didl_lite.DidlObject] = None
+    __did_first_update: bool = False
 
     async def async_update(self, do_ping: bool = True) -> None:
         """Retrieve the latest data.
@@ -331,16 +332,22 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
                 await self._async_poll_state_variables(
                     "AVT", "GetPositionInfo", InstanceID=0
                 )
-            if not self.is_subscribed:
+            if not self.is_subscribed or not self.__did_first_update:
                 # Events won't be sent, so poll all state variables
                 await self._async_poll_state_variables(
                     "AVT",
-                    ["GetMediaInfo", "GetDeviceCapabilities", "GetTransportSettings"],
+                    [
+                        "GetMediaInfo",
+                        "GetDeviceCapabilities",
+                        "GetTransportSettings",
+                        "GetCurrentTransportActions",
+                    ],
                     InstanceID=0,
                 )
                 await self._async_poll_state_variables(
                     "RC", ["GetMute", "GetVolume"], InstanceID=0, Channel="Master"
                 )
+                self.__did_first_update = True
         elif do_ping:
             await self.profile_device.async_ping()
 
