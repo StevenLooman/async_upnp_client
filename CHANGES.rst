@@ -3,6 +3,8 @@ Changes
 
 0.25.1 (unreleased)
 
+- Poll DLNA DMR state variables when first connecting (@chishm)
+- Add CurrentTransportActions to list of state variables to poll when DLNA DMR device is not successfully subscribed (@chishm)
 
 0.25.0 (2022-02-22)
 
