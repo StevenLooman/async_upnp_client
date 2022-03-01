@@ -21,7 +21,6 @@ from typing import (
     Set,
     Union,
 )
-from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
 from defusedxml.sax import parseString
@@ -792,17 +791,6 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Play a piece of media."""
         # escape media_url
         _LOGGER.debug("Set transport uri: %s", media_url)
-        media_url_parts = urlparse(media_url)
-        media_url = urlunparse(
-            [
-                media_url_parts.scheme,
-                media_url_parts.netloc,
-                media_url_parts.path,
-                "",
-                quote_plus(media_url_parts.query),
-                "",
-            ]
-        )
 
         # queue media
         if not isinstance(meta_data, str):
@@ -833,17 +821,6 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Enqueue a piece of media for playing immediately after the current media."""
         # escape media_url
         _LOGGER.debug("Set next transport uri: %s", media_url)
-        media_url_parts = urlparse(media_url)
-        media_url = urlunparse(
-            [
-                media_url_parts.scheme,
-                media_url_parts.netloc,
-                media_url_parts.path,
-                "",
-                quote_plus(media_url_parts.query),
-                "",
-            ]
-        )
 
         # queue media
         if not isinstance(meta_data, str):
