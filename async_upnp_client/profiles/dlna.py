@@ -21,7 +21,6 @@ from typing import (
     Set,
     Union,
 )
-from urllib.parse import quote_plus, urlparse, urlunparse
 from xml.sax.handler import ContentHandler, ErrorHandler
 
 from defusedxml.sax import parseString
@@ -304,6 +303,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
     _current_track_meta_data: Optional[didl_lite.DidlObject] = None
     _av_transport_uri_meta_data: Optional[didl_lite.DidlObject] = None
+    __did_first_update: bool = False
 
     async def async_update(self, do_ping: bool = True) -> None:
         """Retrieve the latest data.
@@ -331,16 +331,22 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
                 await self._async_poll_state_variables(
                     "AVT", "GetPositionInfo", InstanceID=0
                 )
-            if not self.is_subscribed:
+            if not self.is_subscribed or not self.__did_first_update:
                 # Events won't be sent, so poll all state variables
                 await self._async_poll_state_variables(
                     "AVT",
-                    ["GetMediaInfo", "GetDeviceCapabilities", "GetTransportSettings"],
+                    [
+                        "GetMediaInfo",
+                        "GetDeviceCapabilities",
+                        "GetTransportSettings",
+                        "GetCurrentTransportActions",
+                    ],
                     InstanceID=0,
                 )
                 await self._async_poll_state_variables(
                     "RC", ["GetMute", "GetVolume"], InstanceID=0, Channel="Master"
                 )
+                self.__did_first_update = True
         elif do_ping:
             await self.profile_device.async_ping()
 
@@ -792,17 +798,6 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Play a piece of media."""
         # escape media_url
         _LOGGER.debug("Set transport uri: %s", media_url)
-        media_url_parts = urlparse(media_url)
-        media_url = urlunparse(
-            [
-                media_url_parts.scheme,
-                media_url_parts.netloc,
-                media_url_parts.path,
-                "",
-                quote_plus(media_url_parts.query),
-                "",
-            ]
-        )
 
         # queue media
         if not isinstance(meta_data, str):
@@ -833,17 +828,6 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Enqueue a piece of media for playing immediately after the current media."""
         # escape media_url
         _LOGGER.debug("Set next transport uri: %s", media_url)
-        media_url_parts = urlparse(media_url)
-        media_url = urlunparse(
-            [
-                media_url_parts.scheme,
-                media_url_parts.netloc,
-                media_url_parts.path,
-                "",
-                quote_plus(media_url_parts.query),
-                "",
-            ]
-        )
 
         # queue media
         if not isinstance(meta_data, str):
