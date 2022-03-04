@@ -29,7 +29,6 @@ from .common import (
     SEARCH_REQUEST_LINE,
 )
 
-
 UDN = ADVERTISEMENT_HEADERS_DEFAULT["_udn"]
 
 
@@ -374,7 +373,7 @@ async def test_purge_devices() -> None:
 
 @pytest.mark.asyncio
 async def test_purge_devices_2() -> None:
-    """Test if a device is purged when it times out given the value of the CACHE-CONTROL header, part 2."""
+    """Test if a device is purged when it times out, part 2."""
     # pylint: disable=protected-access
     callback = AsyncMock()
     listener = SsdpListener(async_callback=callback)
@@ -398,12 +397,16 @@ async def test_purge_devices_2() -> None:
     callback.reset_mock()
     udn2 = "uuid:device_2"
     with patch("async_upnp_client.ssdp_listener.datetime") as datetime_mock:
-        datetime_mock.now.return_value = SEARCH_HEADERS_DEFAULT["_timestamp"] + timedelta(hours=1)
+        datetime_mock.now.return_value = SEARCH_HEADERS_DEFAULT[
+            "_timestamp"
+        ] + timedelta(hours=1)
         device_2_headers = CaseInsensitiveDict(
-            {**SEARCH_HEADERS_DEFAULT,
-            "USN": udn2 + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
-            "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
-            "_udn": udn2,
+            {
+                **SEARCH_HEADERS_DEFAULT,
+                "USN": udn2
+                + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
+                "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
+                "_udn": udn2,
             }
         )
         await search_listener._async_on_data(SEARCH_REQUEST_LINE, device_2_headers)
@@ -547,7 +550,11 @@ async def test_combined_headers() -> None:
         {**SEARCH_HEADERS_DEFAULT, "booTID.UPNP.ORG": "0", "Original": "2"}
     )
     await search_listener._async_on_data(SEARCH_REQUEST_LINE, headers)
-    callback.assert_awaited_once_with(ANY, "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1", SsdpSource.SEARCH_CHANGED)
+    callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
     assert callback.await_args is not None
     device, dst, _ = callback.await_args.args
     assert UDN in listener.devices
