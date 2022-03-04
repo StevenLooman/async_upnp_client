@@ -5,7 +5,6 @@ import logging
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from functools import partial, wraps
-from ipaddress import IPv4Address, IPv6Address
 from typing import (
     Any,
     Callable,
@@ -22,7 +21,16 @@ from typing import (
 import aiohttp.web
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
 
-from async_upnp_client import ssdp
+from async_upnp_client.ssdp import (
+    SSDP_DISCOVER,
+    SSDP_TARGET_V4,
+    SSDP_TARGET_V6,
+    SsdpHeaders,
+    SsdpProtocol,
+    build_ssdp_packet,
+    determine_source_target,
+    get_ssdp_socket
+)
 from async_upnp_client.client import (
     UpnpAction,
     UpnpDevice,
@@ -35,9 +43,10 @@ from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import (
     ActionArgumentInfo,
     ActionInfo,
+    AddressTupleVXType,
     DeviceInfo,
-    IPvXAddress,
     ServiceInfo,
+    SsdpHeaders,
     StateVariableInfo,
     StateVariableTypeInfo,
 )
@@ -53,12 +62,12 @@ class SsdpSearchResponder:
     def __init__(
         self,
         device: "UpnpServerDevice",
-        source: Optional[ssdp.AddressTupleVXType] = None,
-        target: Optional[ssdp.AddressTupleVXType] = None,
+        source: Optional[AddressTupleVXType] = None,
+        target: Optional[AddressTupleVXType] = None,
     ) -> None:
         """Init the ssdp search responder class."""
         self.device = device
-        self.source, self.target = ssdp.determine_source_target(source, target)
+        self.source, self.target = determine_source_target(source, target)
         self._transport: Optional[DatagramTransport] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
@@ -68,21 +77,21 @@ class SsdpSearchResponder:
     async def _async_on_data(
         self,
         request_line: str,
-        headers: ssdp.SsdpHeaders,
+        headers: SsdpHeaders,
     ) -> None:
         """Handle data."""
         assert self._transport
 
         if (
             request_line != "M-SEARCH * HTTP/1.1"
-            or headers.get("MAN") != ssdp.SSDP_DISCOVER
+            or headers.get("MAN") != SSDP_DISCOVER
         ):
             return
 
         remote_addr = headers["_remote_addr"]
         LOGGER.debug("Received M-SEARCH from: %s, headers: %s", remote_addr, headers)
 
-        protocol = cast(ssdp.SsdpProtocol, self._transport.get_protocol())
+        protocol = cast(SsdpProtocol, self._transport.get_protocol())
         response_line = "HTTP/1.1 200 OK"
         response_headers = {
             "CACHE-CONTROL": "max-age=1800",
@@ -92,7 +101,7 @@ class SsdpSearchResponder:
             "EXT": "",
             "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
         }
-        packet = ssdp.build_ssdp_packet(response_line, response_headers)
+        packet = build_ssdp_packet(response_line, response_headers)
         LOGGER.debug("Sending search response: %s", response_headers["ST"])
         protocol.send_ssdp_packet(packet, remote_addr)
 
@@ -106,14 +115,14 @@ class SsdpSearchResponder:
         LOGGER.debug("Start listening for search requests")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, sock_source, sock_target = ssdp.get_ssdp_socket(self.source, self.target)
+        sock, sock_source, sock_target = get_ssdp_socket(self.source, self.target)
         LOGGER.debug("Binding to address: %s", sock_target)
         sock.bind(sock_target)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
         await loop.create_datagram_endpoint(
-            lambda: ssdp.SsdpProtocol(
+            lambda: SsdpProtocol(
                 loop,
                 on_connect=self._async_on_connect,
                 on_data=self._async_on_data,
@@ -128,17 +137,16 @@ class SsdpSearchResponder:
 
 
 class SsdpAdvertisementAnnouncer:
-
     def __init__(
         self,
         device: "UpnpServerDevice",
-        source: Optional[ssdp.AddressTupleVXType] = None,
-        target: Optional[ssdp.AddressTupleVXType] = None,
+        source: Optional[AddressTupleVXType] = None,
+        target: Optional[AddressTupleVXType] = None,
     ) -> None:
         """Init the ssdp search responder class."""
         self.device = device
-        self.source, self.target = ssdp.determine_source_target(source, target)
-        self.announcables = ...
+        self.source, self.target = determine_source_target(source, target)
+        self.announcables = ...  # XXX TODO
         # 3 (upnp:rootdevice, uuid:device-UUID, urn:schemas-upnp-org:device:deviceType:ver)
         # + 2d (uuid:device-UUID, urn:schemas-upnp-org:device:deviceType:ver)
         # + k (service)
@@ -153,14 +161,14 @@ class SsdpAdvertisementAnnouncer:
         LOGGER.debug("Start advertisements announcer")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, sock_source, sock_target = ssdp.get_ssdp_socket(self.source, self.target)
+        sock, sock_source, sock_target = get_ssdp_socket(self.source, self.target)
         LOGGER.debug("Binding to address: %s", sock_target)
         sock.bind(sock_target)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
         await loop.create_datagram_endpoint(
-            lambda: ssdp.SsdpProtocol(
+            lambda: SsdpProtocol(
                 loop,
                 on_connect=self._async_on_connect,
             ),
@@ -182,8 +190,8 @@ class SsdpAdvertisementAnnouncer:
             "CONFIGID.UPNP.ORG": "1",
             "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
         }
-        packet = ssdp.build_ssdp_packet(start_line, headers)
-        protocol = cast(ssdp.SsdpProtocol, self._transport.get_protocol())
+        packet = build_ssdp_packet(start_line, headers)
+        protocol = cast(SsdpProtocol, self._transport.get_protocol())
         LOGGER.debug("Sending advertisement: %s", headers["NT"])
         protocol.send_ssdp_packet(packet, self.target)
 
@@ -193,7 +201,7 @@ class SsdpAdvertisementAnnouncer:
 
     async def async_stop(self) -> None:
         """Stop listening for advertisements."""
-        LOGGER.debug("Stop advertisements annoucner")
+        LOGGER.debug("Stop advertisements announcer")
 
         LOGGER.debug("Announcing ssdp:byebye")
 
@@ -328,11 +336,17 @@ class UpnpXmlSerializer:
 
         if not None in (state_variable.min_value, state_variable.max_value):
             value_range_el = ET.SubElement(state_var_el, "allowedValueRange")
-            ET.SubElement(value_range_el, "minimum").text = str(state_variable.min_value)
-            ET.SubElement(value_range_el, "maximum").text = str(state_variable.max_value)
+            ET.SubElement(value_range_el, "minimum").text = str(
+                state_variable.min_value
+            )
+            ET.SubElement(value_range_el, "maximum").text = str(
+                state_variable.max_value
+            )
 
         if state_variable.default_value is not None:
-            ET.SubElement(state_var_el, "defaultValue").text = str(state_variable.default_value)
+            ET.SubElement(state_var_el, "defaultValue").text = str(
+                state_variable.default_value
+            )
 
         return state_var_el
 
@@ -499,7 +513,9 @@ def callable_action(
     return decorator
 
 
-async def _parse_action_body(service: UpnpServerService, request: aiohttp.web.Request) -> Tuple[str, Dict[str, Any]]:
+async def _parse_action_body(
+    service: UpnpServerService, request: aiohttp.web.Request
+) -> Tuple[str, Dict[str, Any]]:
     """Parse action body."""
     # Parse call.
     soap = request.headers.get("SOAPAction", "").strip('"')
@@ -527,16 +543,23 @@ async def _parse_action_body(service: UpnpServerService, request: aiohttp.web.Re
     return action_name, kwargs
 
 
-def _create_action_response(service: UpnpServerService, action_name: str, result: Dict[str, UpnpStateVariable]) -> aiohttp.web.Response:
+def _create_action_response(
+    service: UpnpServerService, action_name: str, result: Dict[str, UpnpStateVariable]
+) -> aiohttp.web.Response:
     """Create action call response."""
     ns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
-    envelope_el = ET.Element("s:Envelope", attrib={
-        "xmlns:s": ns_soap,
-        "s:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/",
-    })
+    envelope_el = ET.Element(
+        "s:Envelope",
+        attrib={
+            "xmlns:s": ns_soap,
+            "s:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/",
+        },
+    )
     body_el = ET.SubElement(envelope_el, "s:Body")
 
-    response_el = ET.SubElement(body_el, f"st:{action_name}Response", attrib={"xmlns:st": service.service_type})
+    response_el = ET.SubElement(
+        body_el, f"st:{action_name}Response", attrib={"xmlns:st": service.service_type}
+    )
     for key, value in result.items():
         ET.SubElement(response_el, key).text = value.upnp_value
 
@@ -562,7 +585,8 @@ async def action_handler(
     return _create_action_response(service, action_name, call_result)
 
 
-async def subscribe_handler(service: UpnpServerService, request: aiohttp.web.Request
+async def subscribe_handler(
+    service: UpnpServerService, request: aiohttp.web.Request
 ) -> aiohttp.web.Response:
     """SUBSCRIBE handler."""
     return aiohttp.web.Response(status=404)
@@ -576,7 +600,9 @@ async def to_xml(
     thing_el = serializer.to_xml(thing)
     encoding = "utf-8"
     thing_xml = ET.tostring(thing_el, encoding=encoding)
-    return aiohttp.web.Response(content_type="text/xml", charset=encoding, body=thing_xml)
+    return aiohttp.web.Response(
+        content_type="text/xml", charset=encoding, body=thing_xml
+    )
 
 
 async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) -> None:
@@ -587,9 +613,7 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     requester = NopRequester()
     is_ipv6 = ":" in source[0]
     base_uri = (
-        f"http://[{source[0]}]:{port}"
-        if is_ipv6
-        else f"http://{source[0]}:{port}"
+        f"http://[{source[0]}]:{port}" if is_ipv6 else f"http://{source[0]}:{port}"
     )
     device = server_device(requester, base_uri)  # type: UpnpServerDevice
 
@@ -600,11 +624,17 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     # Services.
     for service in device.all_services:
         service = cast(UpnpServerService, service)
-        app.router.add_get(service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service))
+        app.router.add_get(
+            service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service)
+        )
         app.router.add_post(
             service.SERVICE_DEFINITION.control_url, partial(action_handler, service)
         )
-        app.router.add_route("SUBSCRIBE", service.SERVICE_DEFINITION.event_sub_url, partial(subscribe_handler, service))
+        app.router.add_route(
+            "SUBSCRIBE",
+            service.SERVICE_DEFINITION.event_sub_url,
+            partial(subscribe_handler, service),
+        )
 
     runner = aiohttp.web.AppRunner(app)
     await runner.setup()
@@ -616,7 +646,7 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     LOGGER.info("Device at %s%s", device.base_uri, device.device_url)
 
     # SSDP
-    target = ssdp.SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else ssdp.SSDP_TARGET_V4
+    target = SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else SSDP_TARGET_V4
 
     search_responder = SsdpSearchResponder(device, source, target)
     await search_responder.async_start()
@@ -630,4 +660,5 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     except KeyboardInterrupt:
         pass
 
+    await search_responder.async_stop()
     await search_responder.async_stop()

@@ -78,8 +78,7 @@ class Layer3ForwardingService(UpnpServerService):
         xml=ET.Element("server_service"),
     )
 
-    STATE_VARIABLE_DEFINITIONS = {
-    }
+    STATE_VARIABLE_DEFINITIONS = {}
 
 
 class WanDevice(UpnpServerDevice):
@@ -104,9 +103,7 @@ class WanDevice(UpnpServerDevice):
         services = [
             WANCommonInterfaceConfigService(requester=requester),
         ]
-        embedded_devices = [
-            WanConnectionDevice(requester=requester, base_uri=base_uri)
-        ]
+        embedded_devices = [WanConnectionDevice(requester=requester, base_uri=base_uri)]
         super().__init__(
             requester=requester,
             base_uri=base_uri,
@@ -162,7 +159,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
         ),
     }
 
-    MAX_COUNTER = 2 ** 32
+    MAX_COUNTER = 2**32
 
     def _update_bytes(self, state_var_name: str) -> None:
         """Update bytes state variable."""
@@ -274,8 +271,7 @@ class WANIPConnectionService(UpnpServerService):
         xml=ET.Element("server_service"),
     )
 
-    STATE_VARIABLE_DEFINITIONS = {
-    }
+    STATE_VARIABLE_DEFINITIONS = {}
 
 
 async def async_main() -> None:

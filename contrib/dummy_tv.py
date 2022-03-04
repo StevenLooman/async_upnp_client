@@ -93,7 +93,10 @@ class RenderingControlService(UpnpServerService):
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["boolean"],
             default_value="0",
             allowed_value_range={},
-            allowed_values=["0", "1", ],
+            allowed_values=[
+                "0",
+                "1",
+            ],
             xml=ET.Element("server_stateVariable"),
         ),
         "A_ARG_TYPE_InstanceID": StateVariableTypeInfo(
@@ -239,7 +242,12 @@ class AVTransportService(UpnpServerService):
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
             default_value="STOPPED",
             allowed_value_range={},
-            allowed_values=["STOPPED", "PLAYING", "PAUSED_PLAYBACK", "TRANSITIONING", ],
+            allowed_values=[
+                "STOPPED",
+                "PLAYING",
+                "PAUSED_PLAYBACK",
+                "TRANSITIONING",
+            ],
             xml=ET.Element("server_stateVariable"),
         ),
         "TransportStatus": StateVariableTypeInfo(
@@ -347,7 +355,9 @@ class AVTransportService(UpnpServerService):
             "RecQualityModes": "PossibleRecordQualityModes",
         },
     )
-    async def get_device_capabilities(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+    async def get_device_capabilities(
+        self, InstanceID: int
+    ) -> Dict[str, UpnpStateVariable]:
         """Get Device Capabilities."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -366,7 +376,9 @@ class AVTransportService(UpnpServerService):
             "RecQualityMode": "CurrentRecordQualityMode",
         },
     )
-    async def get_transport_settings(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+    async def get_transport_settings(
+        self, InstanceID: int
+    ) -> Dict[str, UpnpStateVariable]:
         """Get Transport Settings."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -416,8 +428,7 @@ class ConnectionManagerService(UpnpServerService):
 
     @callable_action(
         name="GetProtocolInfo",
-        in_args={
-        },
+        in_args={},
         out_args={
             "Source": "SourceProtocolInfo",
             "Sink": "SinkProtocolInfo",

@@ -260,10 +260,10 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
     """
     Device tracker.
 
-    Tracks SsdpDevices seen by the SsdpListener. Can be shared between SsdpListeners.
+    Tracks `SsdpDevices` seen by the `SsdpListener`. Can be shared between `SsdpListeners`.
 
-    This uses a asyncio.Lock to prevent simulatinous device updates when the SsdpDeviceTracker
-    is shared between SsdpListeners (e.g., for simultaneous IPv4 and IPv6 handling
+    This uses a `asyncio.Lock` to prevent simulatinous device updates when the `SsdpDeviceTracker`
+    is shared between `SsdpListeners` (e.g., for simultaneous IPv4 and IPv6 handling
     on the same network.)
     """
 
