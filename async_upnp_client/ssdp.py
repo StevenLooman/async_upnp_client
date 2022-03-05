@@ -303,7 +303,7 @@ def get_ssdp_socket(
     source_info = socket.getaddrinfo(
         str(source_ip), source_port, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
     )[0]
-    _LOGGER.debug("Creating socket on %s to %s", source_info, target_info)
+    _LOGGER.debug("Creating socket, source: %s, target: %s", source_info, target_info)
 
     # create socket
     sock = socket.socket(source_info[0], source_info[1], source_info[2])
