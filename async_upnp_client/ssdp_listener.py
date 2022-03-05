@@ -28,7 +28,7 @@ from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_he
 from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
-CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)")
+CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)", re.IGNORECASE)
 DEFAULT_MAX_AGE = timedelta(seconds=900)
 IGNORED_HEADERS = {
     "date",
