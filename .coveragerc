@@ -1,6 +1,0 @@
-[run]
-source = async_upnp_client
-
-omit =
-    async_upnp_client/aiohttp.py
-    async_upnp_client/cli.py
