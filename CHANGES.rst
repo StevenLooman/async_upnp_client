@@ -1,6 +1,9 @@
 Changes
 =======
 
+0.26.1 (unreleased)
+
+
 0.26.0 (2022-03-06)
 
 - DLNA DMR profile will pass ``media_url`` unmodified to SetAVTransportURI and SetNextAVTransportURI (@chishm)

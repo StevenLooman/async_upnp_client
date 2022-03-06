@@ -77,14 +77,14 @@ Steps for releasing:
 
 - Switch to master: ``git checkout master``
 - Merge development to master: ``git merge development``
-- Update ``setup.py`` and ``CHANGES.rst`` to set version and commit: ``git add setup.py CHANGES.rst && git commit -m "Releasing <version>"``
+- Update ``async_upnp_client/__init__.py`` and ``CHANGES.rst`` to set version and commit: ``git add async_upnp_client/__init__.py CHANGES.rst && git commit -m "Releasing <version>"``
 - Tag release: ``git tag <version>``
 - Checkout tag: ``git checkout <version>``
 - Build: ``rm -rf build dist && python setup.py build sdist``
 - Upload using twine: ``twine upload dist/*``
 - Switch to development: ``git checkout development``
 - Merge master to development: ``git merge master``
-- Update ``setup.py`` and ``CHANGES.rst`` to set version and commit ``git add setup.py CHANGES.rst && git commit -m "Continuing development"``
+- Update ``async_upnp_client/__init__.py`` and ``CHANGES.rst`` to set version and commit ``git add async_upnp_client/__init__.py CHANGES.rst && git commit -m "Continuing development"``
 - Push to github: ``git push --all && git push --tags``
 
 
