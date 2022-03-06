@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """UPnP module."""
 
+__version__ = '0.25.1'
+
 from async_upnp_client.advertisement import SsdpAdvertisementListener  # noqa: F401
 from async_upnp_client.client import UpnpAction  # noqa: F401
 from async_upnp_client.client import UpnpDevice  # noqa: F401
