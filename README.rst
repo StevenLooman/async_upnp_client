@@ -75,16 +75,18 @@ Releasing
 
 Steps for releasing:
 
-- Switch to master: ``git checkout master``
-- Merge development to master: ``git merge development``
-- Update ``async_upnp_client/__init__.py`` and ``CHANGES.rst`` to set version and commit: ``git add async_upnp_client/__init__.py CHANGES.rst && git commit -m "Releasing <version>"``
-- Tag release: ``git tag <version>``
+- Switch to development: ``git checkout development``
+- Do a pull: ``git pull``
+- Run towncrier: ``towncrier build``
+- Commit towncrier results: ``git commit -m "Towncrier"``
+- Run bump2version: ``bump2version --tag major/minor/patch``
+   - Note that this creates a new commit + tag.
 - Checkout tag: ``git checkout <version>``
 - Build: ``rm -rf build dist && python setup.py build sdist``
 - Upload using twine: ``twine upload dist/*``
+- Switch to master: ``git checkout master``
+- Merge tag to master: ``git merge <version>``
 - Switch to development: ``git checkout development``
-- Merge master to development: ``git merge master``
-- Update ``async_upnp_client/__init__.py`` and ``CHANGES.rst`` to set version and commit ``git add async_upnp_client/__init__.py CHANGES.rst && git commit -m "Continuing development"``
 - Push to github: ``git push --all && git push --tags``
 
 

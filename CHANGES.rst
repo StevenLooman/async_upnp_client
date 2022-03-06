@@ -1,8 +1,5 @@
-Changes
-=======
-
-0.26.1 (unreleased)
-
+Pre-towncrier changes
+=====================
 
 0.26.0 (2022-03-06)
 

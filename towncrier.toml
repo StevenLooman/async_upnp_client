@@ -1,0 +1,6 @@
+[tool.towncrier]
+name = "async_upnp_client"
+package = "async_upnp_client"
+package_dir = "async_upnp_client"
+directory = "changes"
+filename = "CHANGES.rst"
