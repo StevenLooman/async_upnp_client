@@ -7,6 +7,7 @@ Changes
 - Poll DLNA DMR state variables when first connecting (@chishm)
 - Add CurrentTransportActions to list of state variables to poll when DLNA DMR device is not successfully subscribed (@chishm)
 - More forgiving parsing of `Cache-Control` header value
+- ``UpnpProfileDevice`` can be used without an ``UpnpEventHandler``
 
 
 0.25.0 (2022-02-22)

@@ -107,7 +107,9 @@ class UpnpProfileDevice:
 
         return True
 
-    def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler) -> None:
+    def __init__(
+        self, device: UpnpDevice, event_handler: Optional[UpnpEventHandler]
+    ) -> None:
         """Initialize."""
         self.device = device
         self.profile_device = find_device_of_type(device, self.DEVICE_TYPES)
@@ -237,6 +239,8 @@ class UpnpProfileDevice:
         :param now: time.monotonic reference for current time
         :param notify_errors: Call on_event in case of error instead of raising
         """
+        assert self._event_handler
+
         if now is None:
             now = time.monotonic()
         renewal_threshold = now - RESUBSCRIBE_TOLERANCE_SECS
@@ -329,6 +333,10 @@ class UpnpProfileDevice:
         :raise UpnpError or subclass: Failed to subscribe to all interesting
             services.
         """
+        if not self._event_handler:
+            _LOGGER.info("No event_handler, event handling disabled")
+            return None
+
         # Using time.monotonic to avoid problems with system clock changes
         now = time.monotonic()
 
@@ -375,6 +383,8 @@ class UpnpProfileDevice:
 
     async def _async_unsubscribe_service(self, sid: str) -> None:
         """Unsubscribe from one service, handling possible exceptions."""
+        assert self._event_handler
+
         try:
             await self._event_handler.async_unsubscribe(sid)
         except UpnpError as err:

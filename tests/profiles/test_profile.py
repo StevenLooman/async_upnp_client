@@ -321,6 +321,17 @@ class TestUpnpProfileDevice:
         assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
+    async def test_subscribe_no_event_handler(self) -> None:
+        """Test no event handler."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        profile = DmrDevice(device, event_handler=None)
+
+        # Doesn't error, but also doesn't do anything.
+        await profile.async_subscribe_services()
+
+    @pytest.mark.asyncio
     async def test_poll_state_variables(self) -> None:
         """Test polling state variables by calling a Get* action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
