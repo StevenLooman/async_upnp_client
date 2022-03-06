@@ -3,10 +3,10 @@ Changes
 
 0.25.1 (unreleased)
 
-- DLNA DMR profile will pass `media_url` unmodified to SetAVTransportURI and SetNextAVTransportURI (@chishm)
+- DLNA DMR profile will pass ``media_url`` unmodified to SetAVTransportURI and SetNextAVTransportURI (@chishm)
 - Poll DLNA DMR state variables when first connecting (@chishm)
 - Add CurrentTransportActions to list of state variables to poll when DLNA DMR device is not successfully subscribed (@chishm)
-- More forgiving parsing of `Cache-Control` header value
+- More forgiving parsing of ``Cache-Control`` header value
 - ``UpnpProfileDevice`` can be used without an ``UpnpEventHandler``
 
 
