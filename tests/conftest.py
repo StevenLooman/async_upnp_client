@@ -7,8 +7,9 @@ from collections import deque
 from copy import deepcopy
 from typing import Deque, Mapping, MutableMapping, Optional, Tuple, cast
 
-from async_upnp_client import UpnpEventHandler, UpnpNotifyServer, UpnpRequester
+from async_upnp_client.client import UpnpRequester
 from async_upnp_client.const import AddressTupleVXType
+from async_upnp_client.event_handler import UpnpEventHandler, UpnpNotifyServer
 
 
 def read_file(filename: str) -> str:

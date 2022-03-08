@@ -4,7 +4,9 @@
 import logging
 from typing import Optional
 
-from async_upnp_client import SsdpAdvertisementListener, UpnpDevice, UpnpFactory
+from async_upnp_client.advertisement import SsdpAdvertisementListener
+from async_upnp_client.client import UpnpDevice
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
 
 _LOGGER = logging.getLogger(__name__)

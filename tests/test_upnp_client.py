@@ -7,12 +7,15 @@ from typing import MutableMapping
 import defusedxml.ElementTree as DET
 import pytest
 
-from async_upnp_client import UpnpError, UpnpFactory, UpnpStateVariable, UpnpValueError
+from async_upnp_client.client import UpnpStateVariable
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.exceptions import (
     UpnpActionError,
     UpnpActionErrorCode,
     UpnpActionResponseError,
+    UpnpError,
     UpnpResponseError,
+    UpnpValueError,
     UpnpXmlContentError,
 )
 

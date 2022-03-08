@@ -6,8 +6,8 @@ import defusedxml.ElementTree
 import pytest
 from didl_lite import didl_lite
 
-from async_upnp_client import UpnpFactory, UpnpStateVariable
-from async_upnp_client.client import UpnpService
+from async_upnp_client.client import UpnpService, UpnpStateVariable
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.profiles.dlna import (
     DmrDevice,
     _parse_last_change_event,

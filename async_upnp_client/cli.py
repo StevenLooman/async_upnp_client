@@ -12,9 +12,10 @@ import time
 from datetime import datetime
 from typing import Any, Optional, Sequence, Tuple, Union, cast
 
-from async_upnp_client import UpnpDevice, UpnpFactory, UpnpService, UpnpStateVariable
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
+from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
 from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change

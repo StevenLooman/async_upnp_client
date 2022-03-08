@@ -7,7 +7,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from async_upnp_client import UpnpFactory, UpnpService, UpnpStateVariable
+from async_upnp_client.client import UpnpService, UpnpStateVariable
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.event_handler import UpnpEventHandlerRegister
 
 from .conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester

@@ -2,7 +2,7 @@
 
 import pytest
 
-from async_upnp_client import UpnpFactory
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import DmsDevice
 
