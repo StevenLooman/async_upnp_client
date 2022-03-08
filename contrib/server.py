@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Sequence,
     Tuple,
+    Type,
     Union,
     cast,
 )
@@ -21,16 +22,6 @@ from typing import (
 import aiohttp.web
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
 
-from async_upnp_client.ssdp import (
-    SSDP_DISCOVER,
-    SSDP_TARGET_V4,
-    SSDP_TARGET_V6,
-    SsdpHeaders,
-    SsdpProtocol,
-    build_ssdp_packet,
-    determine_source_target,
-    get_ssdp_socket
-)
 from async_upnp_client.client import (
     UpnpAction,
     UpnpDevice,
@@ -50,9 +41,25 @@ from async_upnp_client.const import (
     StateVariableInfo,
     StateVariableTypeInfo,
 )
-from async_upnp_client.exceptions import UpnpValueError
+from async_upnp_client.exceptions import (
+    UpnpActionError,
+    UpnpActionErrorCode,
+    UpnpValueError,
+)
+from async_upnp_client.ssdp import (
+    SSDP_DISCOVER,
+    SSDP_TARGET_V4,
+    SSDP_TARGET_V6,
+    SsdpProtocol,
+    build_ssdp_packet,
+    determine_source_target,
+    get_ssdp_socket,
+)
 
-NAMESPACES = {"s": "http://schemas.xmlsoap.org/soap/envelope/"}
+NAMESPACES = {
+    "s": "http://schemas.xmlsoap.org/soap/envelope/",
+    "es": "http://schemas.xmlsoap.org/soap/encoding/",
+}
 LOGGER = logging.getLogger("async_upnp_client.server")
 
 
@@ -82,40 +89,33 @@ class SsdpSearchResponder:
         """Handle data."""
         assert self._transport
 
-        if (
-            request_line != "M-SEARCH * HTTP/1.1"
-            or headers.get("MAN") != SSDP_DISCOVER
-        ):
+        if request_line != "M-SEARCH * HTTP/1.1" or headers.get("MAN") != SSDP_DISCOVER:
             return
 
         remote_addr = headers["_remote_addr"]
         LOGGER.debug("Received M-SEARCH from: %s, headers: %s", remote_addr, headers)
 
-        protocol = cast(SsdpProtocol, self._transport.get_protocol())
-        response_line = "HTTP/1.1 200 OK"
-        response_headers = {
-            "CACHE-CONTROL": "max-age=1800",
-            "SERVER": "async-upnp-client/1.0 UPnP/1.0 DummyServer/1.0",
-            "ST": f"{self.device.device_type}",
-            "USN": f"{self.device.udn}::{self.device.device_type}",
-            "EXT": "",
-            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
-        }
-        packet = build_ssdp_packet(response_line, response_headers)
-        LOGGER.debug("Sending search response: %s", response_headers["ST"])
-        protocol.send_ssdp_packet(packet, remote_addr)
-
-        # XXX TODO: 3n + 2k + 1?
-        # 1 per device
-        # 1 per service
-        # ???
+        # 3 + 2d + k (d: embedded device, k: service)
+        # global:      ST: upnp:rootdevice
+        #              USN: uuid:device-UUID::upnp:rootdevice
+        # per device : ST: uuid:device-UUID
+        #              USN: uuid:device-UUID
+        # per device : ST: urn:schemas-upnp-org:device:deviceType:ver
+        #              USN: uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:ver
+        # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
+        #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
+        await self._async_send_response_rootdevice(remote_addr)
+        for device in self.device.all_devices:
+            await self._async_send_responses_device(remote_addr, device)
+        for service in self.device.all_services:
+            await self._async_send_responses_service(remote_addr, service)
 
     async def async_start(self) -> None:
         """Start."""
         LOGGER.debug("Start listening for search requests")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, sock_source, sock_target = get_ssdp_socket(self.source, self.target)
+        sock, _sock_source, sock_target = get_ssdp_socket(self.source, self.target)
         LOGGER.debug("Binding to address: %s", sock_target)
         sock.bind(sock_target)
 
@@ -132,11 +132,128 @@ class SsdpSearchResponder:
 
     async def async_stop(self) -> None:
         """Stop listening for advertisements."""
+        assert self._transport
+
         LOGGER.debug("Stop listening for SEARCH requests")
         self._transport.close()
 
+    async def _async_send_response_rootdevice(
+        self, remote_addr: AddressTupleVXType
+    ) -> None:
+        """Send root device reponse."""
+        await self._async_send_response(
+            remote_addr, "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
+        )
+
+    async def _async_send_responses_device(
+        self, remote_addr: AddressTupleVXType, device: UpnpDevice
+    ) -> None:
+        """Send device reponses."""
+        await self._async_send_response(remote_addr, device.udn, f"{self.device.udn}")
+        await self._async_send_response(
+            remote_addr, device.device_type, f"{self.device.udn}::{device.device_type}"
+        )
+
+    async def _async_send_responses_service(
+        self, remote_addr: AddressTupleVXType, service: UpnpService
+    ) -> None:
+        """Send service reponses."""
+        await self._async_send_response(
+            remote_addr,
+            service.service_type,
+            f"{self.device.udn}::{service.service_type}",
+        )
+
+    async def _async_send_response(
+        self,
+        remote_addr: AddressTupleVXType,
+        service_type: str,
+        unique_service_name: str,
+    ) -> None:
+        """Send a response."""
+        assert self._transport
+
+        response_headers = {
+            "CACHE-CONTROL": "max-age=150",
+            "SERVER": "async-upnp-client/1.0 UPnP/1.0 DummyServer/1.0",
+            "ST": service_type,
+            "USN": unique_service_name,
+            "EXT": "",
+            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
+        }
+
+        response_line = "HTTP/1.1 200 OK"
+        protocol = cast(SsdpProtocol, self._transport.get_protocol())
+        packet = build_ssdp_packet(response_line, response_headers)
+        LOGGER.debug(
+            "Sending search response, ST: %s, USN: %s, ",
+            response_headers["ST"],
+            response_headers["USN"],
+        )
+        protocol.send_ssdp_packet(packet, remote_addr)
+
+
+def _build_advertisements(root_device: "UpnpServerDevice") -> List[SsdpHeaders]:
+    """Build advertisements to be sent for a UpnpDevice."""
+    # 3 + 2d + k (d: embedded device, k: service)
+    # global:      ST: upnp:rootdevice
+    #              USN: uuid:device-UUID::upnp:rootdevice
+    # per device : ST: uuid:device-UUID
+    #              USN: uuid:device-UUID
+    # per device : ST: urn:schemas-upnp-org:device:deviceType:ver
+    #              USN: uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:ver
+    # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
+    #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
+    advertisements: List[SsdpHeaders] = []
+
+    base_headers = {
+        "NTS": "ssdp:alive",
+        "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
+        "BOOTID.UPNP.ORG": "1",
+        "CONFIGID.UPNP.ORG": "1",
+        "LOCATION": f"{root_device.base_uri}{root_device.device_url}",
+    }
+
+    # root device
+    advertisements.append(
+        {
+            **base_headers,
+            "NT": "upnp:rootdevice",
+            "USN": f"{root_device.udn}::upnp:rootdevice",
+        }
+    )
+
+    for device in root_device.all_devices:
+        advertisements.append(
+            {
+                **base_headers,
+                "NT": f"{device.udn}",
+                "USN": f"{device.udn}",
+            }
+        )
+        advertisements.append(
+            {
+                **base_headers,
+                "NT": f"{device.device_type}",
+                "USN": f"{device.udn}::{device.device_type}",
+            }
+        )
+
+    for service in root_device.all_services:
+        advertisements.append(
+            {
+                **base_headers,
+                "NT": f"{service.service_type}",
+                "USN": f"{service.device.udn}::{service.service_type}",
+            }
+        )
+
+    return advertisements
+
 
 class SsdpAdvertisementAnnouncer:
+    """SSDP Advertisement announcer."""
+
     def __init__(
         self,
         device: "UpnpServerDevice",
@@ -146,11 +263,10 @@ class SsdpAdvertisementAnnouncer:
         """Init the ssdp search responder class."""
         self.device = device
         self.source, self.target = determine_source_target(source, target)
-        self.announcables = ...  # XXX TODO
-        # 3 (upnp:rootdevice, uuid:device-UUID, urn:schemas-upnp-org:device:deviceType:ver)
-        # + 2d (uuid:device-UUID, urn:schemas-upnp-org:device:deviceType:ver)
-        # + k (service)
         self._transport: Optional[DatagramTransport] = None
+
+        self._advertisements = _build_advertisements(device)
+        self._advertisement_index = 0
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -161,7 +277,7 @@ class SsdpAdvertisementAnnouncer:
         LOGGER.debug("Start advertisements announcer")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, sock_source, sock_target = get_ssdp_socket(self.source, self.target)
+        sock, _sock_source, sock_target = get_ssdp_socket(self.source, self.target)
         LOGGER.debug("Binding to address: %s", sock_target)
         sock.bind(sock_target)
 
@@ -175,48 +291,79 @@ class SsdpAdvertisementAnnouncer:
             sock=sock,
         )
 
-        self._announce()
+        # Reschedule self.
+        loop = asyncio.get_event_loop()
+        loop.call_later(30, self._announce_next)
 
-    def _announce(self):
-        """Announce."""
-        # Announce root device.
+    async def async_stop(self) -> None:
+        """Stop listening for advertisements."""
+        assert self._transport
+
+        LOGGER.debug("Stop advertisements announcer")
+
+        self._send_byebye()
+        self._transport.close()
+
+    def _announce_next(self) -> None:
+        """Announce next advertisement."""
+        assert self._transport
+
         start_line = "NOTIFY * HTTP/1.1"
-        headers = {
-            "NTS": "ssdp:alive",
-            "NT": "upnp:rootdevice",
-            "USN": f"{self.device.udn}::upnp:rootdevice",
-            "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
-            "BOOTID.UPNP.ORG": "1",
-            "CONFIGID.UPNP.ORG": "1",
-            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
-        }
+        headers = self._advertisements[self._advertisement_index]
+        self._advertisement_index = (self._advertisement_index + 1) % len(
+            self._advertisements
+        )
+
         packet = build_ssdp_packet(start_line, headers)
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
-        LOGGER.debug("Sending advertisement: %s", headers["NT"])
+        LOGGER.debug(
+            "Sending advertisement, NTS: %s, NT: %s, USN: %s",
+            headers["NTS"],
+            headers["NT"],
+            headers["USN"],
+        )
         protocol.send_ssdp_packet(packet, self.target)
 
         # Reschedule self.
         loop = asyncio.get_event_loop()
-        loop.call_later(30, self._announce)
+        loop.call_later(30, self._announce_next)
 
-    async def async_stop(self) -> None:
-        """Stop listening for advertisements."""
-        LOGGER.debug("Stop advertisements announcer")
+    def _send_byebye(self) -> None:
+        """Send ssdp:byebye."""
+        assert self._transport
 
-        LOGGER.debug("Announcing ssdp:byebye")
-
-        self._transport.close()
+        start_line = "NOTIFY * HTTP/1.1"
+        headers = {
+            "NTS": "ssdp:byebye",
+            "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
+            # "BOOTID.UPNP.ORG": "1",
+            # "CONFIGID.UPNP.ORG": "1",
+            "NT": "upnp:rootdevice",
+            "USN": f"{self.device.udn}::upnp:rootdevice",
+            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
+        }
+        packet = build_ssdp_packet(start_line, headers)
+        protocol = cast(SsdpProtocol, self._transport.get_protocol())
+        LOGGER.debug(
+            "Sending advertisement, NTS: %s, NT: %s, USN: %s",
+            headers["NTS"],
+            headers["NT"],
+            headers["USN"],
+        )
+        protocol.send_ssdp_packet(packet, self.target)
 
 
 class UpnpXmlSerializer:
     """Helper class to create device/service description from UpnpDevice/UpnpService."""
+
+    # pylint: disable=too-few-public-methods
 
     @classmethod
     def to_xml(cls, thing: Union[UpnpDevice, UpnpService]) -> ET.Element:
         """Convert thing to XML."""
         if isinstance(thing, UpnpDevice):
             return cls._device_to_xml(thing)
-        elif isinstance(thing, UpnpService):
+        if isinstance(thing, UpnpService):
             return cls._service_to_xml(thing)
 
         raise NotImplementedError()
@@ -251,9 +398,9 @@ class UpnpXmlSerializer:
         for icon in device.icons:
             icon_el = ET.SubElement(icon_list_el, "icon")
             ET.SubElement(icon_el, "mimetype").text = icon.mimetype
-            ET.SubElement(icon_el, "width").text = icon.width
-            ET.SubElement(icon_el, "height").text = icon.height
-            ET.SubElement(icon_el, "depth").text = icon.depth
+            ET.SubElement(icon_el, "width").text = str(icon.width)
+            ET.SubElement(icon_el, "height").text = str(icon.height)
+            ET.SubElement(icon_el, "depth").text = str(icon.depth)
             ET.SubElement(icon_el, "url").text = icon.url
 
         service_list_el = ET.SubElement(device_el, "serviceList")
@@ -266,9 +413,9 @@ class UpnpXmlSerializer:
             ET.SubElement(service_el, "SCPDURL").text = service.scpd_url
 
         device_list_el = ET.SubElement(device_el, "deviceList")
-        for device in device.embedded_devices.values():
-            child_device_el = cls._device_to_xml_bare(device)
-            device_list_el.append(child_device_el)
+        for embedded_device in device.embedded_devices.values():
+            embedded_device_el = cls._device_to_xml_bare(embedded_device)
+            device_list_el.append(embedded_device_el)
 
         return device_el
 
@@ -399,7 +546,8 @@ class UpnpServerService(UpnpService):
             type_info=type_info,
             xml=ET.Element("stateVariable"),
         )
-        state_var = UpnpStateVariable(
+        # pylint: disable=protected-access
+        state_var: UpnpStateVariable = UpnpStateVariable(
             state_var_info,
             UpnpFactory(self.requester)._state_variable_create_schema(type_info),
         )
@@ -424,8 +572,12 @@ class UpnpServerService(UpnpService):
 
     def _init_action(self, func: Callable) -> UpnpAction:
         """Initialize action for method."""
-        name, in_args, out_args = func.__upnp_action__
+        name, in_args, out_args = cast(
+            Tuple[str, Mapping[str, str], Mapping[str, str]],
+            getattr(func, "__upnp_action__"),
+        )
 
+        arg_infos: List[ActionArgumentInfo] = []
         args: List[UpnpAction.Argument] = []
         for arg_name, state_var_name in in_args.items():
             # Validate function has parameter.
@@ -443,6 +595,8 @@ class UpnpServerService(UpnpService):
                 state_variable_name=state_var.name,
                 xml=ET.Element("server_argument"),
             )
+            arg_infos.append(arg_info)
+
             arg = UpnpAction.Argument(arg_info, state_var)
             args.append(arg)
 
@@ -455,13 +609,17 @@ class UpnpServerService(UpnpService):
                 state_variable_name=state_var.name,
                 xml=ET.Element("server_argument"),
             )
+            arg_infos.append(arg_info)
+
             arg = UpnpAction.Argument(arg_info, state_var)
             args.append(arg)
 
         action_info = ActionInfo(
-            name=name, arguments=args, xml=ET.Element("server_action")
+            name=name,
+            arguments=arg_infos,
+            xml=ET.Element("server_action"),
         )
-        action = UpnpAction(action_info, args)
+        action = UpnpServerAction(action_info, args)
         action.async_handle = func
         action.service = self
         self.actions[name] = action
@@ -469,7 +627,7 @@ class UpnpServerService(UpnpService):
 
     async def async_handle_action(self, action_name: str, **kwargs: Any) -> Any:
         """Handle action."""
-        action = self.actions[action_name]  # type: UpnpAction
+        action = cast(UpnpServerAction, self.actions[action_name])
         action.validate_arguments(**kwargs)
         return await action.async_handle(**kwargs)
 
@@ -478,15 +636,20 @@ class UpnpServerDevice(UpnpDevice):
     """UPnP Device representation."""
 
     DEVICE_DEFINITION: DeviceInfo
+    EMBEDDED_DEVICES: Sequence[Type["UpnpServerDevice"]]
+    SERVICES: Sequence[Type[UpnpServerService]]
 
     def __init__(
         self,
         requester: UpnpRequester,
-        services: Sequence[UpnpService],
-        embedded_devices: Sequence[UpnpDevice],
         base_uri: str,
     ) -> None:
         """Initialize."""
+        services = [service_type(requester=requester) for service_type in self.SERVICES]
+        embedded_devices = [
+            device_type(requester=requester, base_uri=base_uri)
+            for device_type in self.EMBEDDED_DEVICES
+        ]
         super().__init__(
             requester=requester,
             device_info=self.DEVICE_DEFINITION,
@@ -506,7 +669,7 @@ def callable_action(
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             return func(*args, **kwargs)
 
-        wrapper.__upnp_action__ = [name, in_args, out_args]
+        setattr(wrapper, "__upnp_action__", [name, in_args, out_args])
 
         return wrapper
 
@@ -518,13 +681,14 @@ async def _parse_action_body(
 ) -> Tuple[str, Dict[str, Any]]:
     """Parse action body."""
     # Parse call.
-    soap = request.headers.get("SOAPAction", "").strip('"')
+    soap_action = request.headers.get("SOAPAction", "").strip('"')
     try:
-        _, action_name = soap.split("#")
+        _, action_name = soap_action.split("#")
         data = await request.text()
         root_el: ET.Element = DET.fromstring(data)
-        body_els: Sequence[ET.Element] = root_el.find("s:Body", NAMESPACES)
-        rpc_el = body_els[0]
+        body_el = root_el.find("s:Body", NAMESPACES)
+        assert body_el
+        rpc_el = body_el[0]
     except Exception as exc:
         raise aiohttp.web.HTTPBadRequest(reason="InvalidSoap") from exc
 
@@ -536,9 +700,9 @@ async def _parse_action_body(
     for arg in rpc_el:
         action_arg = action.argument(arg.tag, direction="in")
         if action_arg is None:
-            raise aiohttp.web.HTTPBadRequest(reason="InvalidArg")
+            raise aiohttp.web.HTTPBadRequest(reason="InvalidActionArgument")
         state_var = action_arg.related_state_variable
-        kwargs[arg.tag] = state_var.coerce_python(arg.text)
+        kwargs[arg.tag] = state_var.coerce_python(arg.text or "")
 
     return action_name, kwargs
 
@@ -547,12 +711,11 @@ def _create_action_response(
     service: UpnpServerService, action_name: str, result: Dict[str, UpnpStateVariable]
 ) -> aiohttp.web.Response:
     """Create action call response."""
-    ns_soap = "http://schemas.xmlsoap.org/soap/envelope/"
     envelope_el = ET.Element(
         "s:Envelope",
         attrib={
-            "xmlns:s": ns_soap,
-            "s:encodingStyle": "http://schemas.xmlsoap.org/soap/encoding/",
+            "xmlns:s": NAMESPACES["s"],
+            "s:encodingStyle": NAMESPACES["es"],
         },
     )
     body_el = ET.SubElement(envelope_el, "s:Body")
@@ -570,6 +733,43 @@ def _create_action_response(
     )
 
 
+def _create_error_action_response(
+    exception: UpnpError,
+) -> aiohttp.web.Response:
+    """Create action call response."""
+    envelope_el = ET.Element(
+        "s:Envelope",
+        attrib={
+            "xmlns:s": NAMESPACES["s"],
+            "s:encodingStyle": NAMESPACES["es"],
+        },
+    )
+    body_el = ET.SubElement(envelope_el, "s:Body")
+    fault_el = ET.SubElement(body_el, "s:Fault")
+    ET.SubElement(fault_el, "faultcode").text = "s:Client"
+    ET.SubElement(fault_el, "faultstring").text = "UPnPError"
+    detail_el = ET.SubElement(fault_el, "detail")
+    error_el = ET.SubElement(
+        detail_el, "UPnPError", xmlns="urn:schemas-upnp-org:control-1-0"
+    )
+    error_code = (
+        exception.error_code or UpnpActionErrorCode.ACTION_FAILED.value
+        if isinstance(exception, UpnpActionError)
+        else 402
+        if isinstance(exception, UpnpValueError)
+        else 501
+    )
+    ET.SubElement(error_el, "errorCode").text = str(error_code)
+    ET.SubElement(error_el, "errorDescription").text = "Action Failed"
+
+    return aiohttp.web.Response(
+        status=500,
+        content_type="text/xml",
+        charset="utf-8",
+        body=ET.tostring(envelope_el, encoding="utf-8"),
+    )
+
+
 async def action_handler(
     service: UpnpServerService, request: aiohttp.web.Request
 ) -> aiohttp.web.Response:
@@ -580,13 +780,15 @@ async def action_handler(
     try:
         call_result = await service.async_handle_action(action_name, **kwargs)
     except UpnpValueError as exc:
-        raise aiohttp.web.HTTPBadRequest(reason="InvalidArgFormat") from exc
+        return _create_error_action_response(exc)
+    except UpnpActionError as exc:
+        return _create_error_action_response(exc)
 
     return _create_action_response(service, action_name, call_result)
 
 
 async def subscribe_handler(
-    service: UpnpServerService, request: aiohttp.web.Request
+    _service: UpnpServerService, _request: aiohttp.web.Request
 ) -> aiohttp.web.Response:
     """SUBSCRIBE handler."""
     return aiohttp.web.Response(status=404)
@@ -605,7 +807,9 @@ async def to_xml(
     )
 
 
-async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) -> None:
+async def run_server(
+    source: AddressTupleVXType, port: int, server_device: Type[UpnpServerDevice]
+) -> None:
     """Run server."""
     # HTTP
     app = aiohttp.web.Application()
@@ -646,7 +850,9 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     LOGGER.info("Device at %s%s", device.base_uri, device.device_url)
 
     # SSDP
-    target = SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else SSDP_TARGET_V4
+    target: AddressTupleVXType = (
+        SSDP_TARGET_V6[:-1] + (source[3],) if is_ipv6 else SSDP_TARGET_V4
+    )
 
     search_responder = SsdpSearchResponder(device, source, target)
     await search_responder.async_start()
@@ -660,5 +866,5 @@ async def run_server(source: tuple, port: int, server_device: UpnpServerDevice) 
     except KeyboardInterrupt:
         pass
 
-    await search_responder.async_stop()
+    await advertisement_announcer.async_stop()
     await search_responder.async_stop()

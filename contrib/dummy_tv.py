@@ -11,7 +11,7 @@
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
-from typing import Dict
+from typing import Dict, Sequence, Type
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -28,40 +28,8 @@ LOGGER = logging.getLogger("dummy_tv")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
 SOURCE = ("172.25.113.128", 0)  # Your IP here!
-#SOURCE = ("fe80::215:5dff:fe3e:6d23", 0, 0, 6)  # Your IP here!
+# SOURCE = ("fe80::215:5dff:fe3e:6d23", 0, 0, 6)  # Your IP here!
 HTTP_PORT = 8001
-
-
-class MediaRendererDevice(UpnpServerDevice):
-    """Media Renderer device."""
-
-    DEVICE_DEFINITION = DeviceInfo(
-        device_type="urn:schemas-upnp-org:device:MediaRenderer:1",
-        friendly_name="Dummy TV",
-        manufacturer="Steven",
-        model_name="DummyTV v1",
-        udn="uuid:ea2181c0-c677-4a09-80e6-f9e69a951284",
-        model_description="Dummy TV DMR",
-        model_number="v0.0.1",
-        serial_number="0000001",
-        url="/device.xml",
-        icons=[],
-        xml=ET.Element("server_device"),
-    )
-
-    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
-        """Initialize."""
-        services = [
-            RenderingControlService(requester=requester),
-            AVTransportService(requester=requester),
-            ConnectionManagerService(requester=requester),
-        ]
-        super().__init__(
-            requester=requester,
-            base_uri=base_uri,
-            services=services,
-            embedded_devices=[],
-        )
 
 
 class RenderingControlService(UpnpServerService):
@@ -441,6 +409,33 @@ class ConnectionManagerService(UpnpServerService):
             "Source": self.state_variable("SourceProtocolInfo"),
             "Sink": self.state_variable("SinkProtocolInfo"),
         }
+
+
+class MediaRendererDevice(UpnpServerDevice):
+    """Media Renderer device."""
+
+    DEVICE_DEFINITION = DeviceInfo(
+        device_type="urn:schemas-upnp-org:device:MediaRenderer:1",
+        friendly_name="Dummy TV",
+        manufacturer="Steven",
+        model_name="DummyTV v1",
+        udn="uuid:ea2181c0-c677-4a09-80e6-f9e69a951284",
+        model_description="Dummy TV DMR",
+        model_number="v0.0.1",
+        serial_number="0000001",
+        url="/device.xml",
+        icons=[],
+        xml=ET.Element("server_device"),
+    )
+    EMBEDDED_DEVICES: Sequence[Type[UpnpServerDevice]] = []
+    SERVICES = [RenderingControlService, AVTransportService, ConnectionManagerService]
+
+    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
+        """Initialize."""
+        super().__init__(
+            requester=requester,
+            base_uri=base_uri,
+        )
 
 
 async def async_main() -> None:
