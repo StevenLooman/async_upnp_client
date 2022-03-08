@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP IGD module."""
+"""async_upnp_client.profiles.igd module."""
 
 import logging
 from datetime import timedelta

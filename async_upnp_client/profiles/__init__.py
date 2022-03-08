@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-"""Profiles for upnp_client."""
+"""async_upnp_client.profiles module."""

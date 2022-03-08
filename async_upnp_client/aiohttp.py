@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""aiohttp requester module."""
+"""async_upnp_client.aiohttp module."""
 
 import asyncio
 import logging

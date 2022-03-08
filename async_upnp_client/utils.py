@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Utils for async_upnp_client."""
+"""async_upnp_client.utils module."""
 
 import asyncio
 import re

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Description cache."""
+"""async_upnp_client.description_cache module."""
 
 import asyncio
 import logging

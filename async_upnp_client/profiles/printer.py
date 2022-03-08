@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP printer module."""
+"""async_upnp_client.profiles.printer module."""
 
 import logging
 from typing import List, NamedTuple, Optional

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP discovery via Simple Service Discovery Protocol (SSDP)."""
+"""async_upnp_client.advertisement module."""
 
 import asyncio
 import logging

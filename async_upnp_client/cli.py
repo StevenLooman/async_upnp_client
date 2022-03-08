@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""CLI UPnP client module."""
+"""async_upnp_client.cli module."""
 # pylint: disable=invalid-name
 
 import argparse

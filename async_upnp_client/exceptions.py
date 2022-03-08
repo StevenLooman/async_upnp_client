@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Exceptions raised by async_upnp_client."""
+"""async_upnp_client.exceptions module."""
 
 import asyncio
 from enum import IntEnum

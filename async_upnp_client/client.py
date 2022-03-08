@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP client module."""
+"""async_upnp_client.client module."""
 
 import logging
 import urllib.parse

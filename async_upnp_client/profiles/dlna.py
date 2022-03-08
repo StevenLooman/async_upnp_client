@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP DLNA module."""
+"""async_upnp_client.profiles.dlna module."""
 
 # pylint: disable=too-many-lines
 

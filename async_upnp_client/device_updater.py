@@ -1,4 +1,5 @@
-"""Device update listener."""
+# -*- coding: utf-8 -*-
+"""async_upnp_client.device_updater module."""
 
 import logging
 from typing import Optional
