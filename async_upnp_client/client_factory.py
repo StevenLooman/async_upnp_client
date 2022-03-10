@@ -143,7 +143,15 @@ class UpnpFactory:
         """Retrieve the SCPD for a service and create a UpnpService from it."""
         scpd_url = service_description_el.findtext("device:SCPDURL", None, NS)
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
-        scpd_el = await self._async_get(scpd_url)
+
+        try:
+            scpd_el = await self._async_get(scpd_url)
+
+        except UpnpXmlParseError as err:
+            if not self._non_strict:
+                raise
+            _LOGGER.debug("Ignoring bad XML document from URL %s: %s", scpd_url, err)
+            scpd_el = ET.Element(f"{{{NS['service']}}}scpd")
 
         if not self._non_strict and scpd_el.tag != f"{{{NS['service']}}}scpd":
             raise UpnpXmlContentError(f"Invalid document root: {scpd_el.tag}")
