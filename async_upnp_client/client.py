@@ -651,7 +651,6 @@ class UpnpAction:
             "SOAPAction": f'"{soap_action}"',
             "Host": urllib.parse.urlparse(control_url).netloc,
             "Content-Type": 'text/xml; charset="utf-8"',
-            "Content-Length": str(len(body)),
         }
 
         return control_url, headers, body
