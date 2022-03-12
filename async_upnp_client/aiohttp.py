@@ -5,7 +5,7 @@ import asyncio
 import logging
 from asyncio.events import AbstractEventLoop, AbstractServer
 from ipaddress import ip_address
-from typing import Mapping, Optional, Tuple, cast
+from typing import Mapping, Optional, Tuple
 
 import aiohttp
 import aiohttp.web
@@ -305,7 +305,7 @@ class AiohttpNotifyServer(UpnpNotifyServer):
     @property
     def listen_ip(self) -> IPvXAddress:
         """Get listenting IP Address."""
-        return cast(IPvXAddress, ip_address(self._source[0]))
+        return ip_address(self._source[0])
 
     @property
     def listen_host(self) -> str:
