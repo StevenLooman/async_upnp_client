@@ -73,6 +73,11 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         {},
         read_file("dlna/dmr/device_incomplete.xml"),
     ),
+    ("GET", "http://dlna_dmr:1234/device_with_empty_descriptor.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/device_with_empty_descriptor.xml"),
+    ),
     ("GET", "http://dlna_dmr:1234/RenderingControl_1.xml"): (
         200,
         {},
@@ -87,6 +92,11 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         200,
         {},
         read_file("dlna/dmr/AVTransport_1.xml"),
+    ),
+    ("GET", "http://dlna_dmr:1234/Empty_Descriptor.xml"): (
+        200,
+        {},
+        read_file("dlna/dmr/Empty_Descriptor.xml"),
     ),
     ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/ConnectionManager1"): (
         200,
@@ -103,6 +113,11 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
         {"sid": "uuid:dummy-avt1", "timeout": "Second-150"},
         "",
     ),
+    ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/QPlay"): (
+        200,
+        {"sid": "uuid:dummy-qp1", "timeout": "Second-150"},
+        "",
+    ),
     ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/ConnectionManager1"): (
         200,
         {"sid": "uuid:dummy-cm1"},
@@ -116,6 +131,11 @@ RESPONSE_MAP: Mapping[Tuple[str, str], Tuple[int, Mapping[str, str], str]] = {
     ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1"): (
         200,
         {"sid": "uuid:dummy-avt1"},
+        "",
+    ),
+    ("UNSUBSCRIBE", "http://dlna_dmr:1234/upnp/event/QPlay"): (
+        200,
+        {"sid": "uuid:dummy-qp1"},
         "",
     ),
     # DLNA/DMS

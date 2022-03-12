@@ -14,6 +14,7 @@ from async_upnp_client.exceptions import (
     UpnpActionResponseError,
     UpnpResponseError,
     UpnpXmlContentError,
+    UpnpXmlParseError,
 )
 
 from .conftest import RESPONSE_MAP, UpnpTestRequester, read_file
@@ -100,6 +101,33 @@ class TestUpnpStateVariable:
         factory = UpnpFactory(requester)
         with pytest.raises(UpnpXmlContentError):
             await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+
+    @pytest.mark.asyncio
+    async def test_empty_descriptor(self) -> None:
+        """Test device with an empty descriptor file called in description.xml."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/device.xml")] = (
+            200,
+            {},
+            read_file("dlna/dmr/device_with_empty_descriptor.xml"),
+        )
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        with pytest.raises(UpnpXmlParseError):
+            await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+
+    @pytest.mark.asyncio
+    async def test_empty_descriptor_non_strict(self) -> None:
+        """Test device with an empty descriptor file called in description.xml."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/device.xml")] = (
+            200,
+            {},
+            read_file("dlna/dmr/device_with_empty_descriptor.xml"),
+        )
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester, non_strict=True)
+        await factory.async_create_device("http://dlna_dmr:1234/device.xml")
 
     @pytest.mark.asyncio
     async def test_set_value_volume(self) -> None:
