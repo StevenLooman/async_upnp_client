@@ -13,8 +13,8 @@ You can run contrib/dummy_tv.py locally to emulate a TV.
 import asyncio
 import logging
 
-from async_upnp_client import UpnpFactory
 from async_upnp_client.aiohttp import AiohttpRequester
+from async_upnp_client.client_factory import UpnpFactory
 
 logging.basicConfig(level=logging.INFO)
 

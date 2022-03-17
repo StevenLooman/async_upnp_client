@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP DLNA module."""
+"""async_upnp_client.profiles.dlna module."""
 
 # pylint: disable=too-many-lines
 
@@ -26,8 +26,9 @@ from xml.sax.handler import ContentHandler, ErrorHandler
 from defusedxml.sax import parseString
 from didl_lite import didl_lite
 
-from async_upnp_client import UpnpError, UpnpService, UpnpStateVariable
+from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
+from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
 

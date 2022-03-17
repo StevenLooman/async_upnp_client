@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP base-profile module."""
+"""async_upnp_client.profiles.profile module."""
 
 import asyncio
 import logging

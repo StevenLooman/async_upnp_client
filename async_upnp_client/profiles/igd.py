@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""UPnP IGD module."""
+"""async_upnp_client.profiles.igd module."""
 
 import logging
 from datetime import timedelta
 from ipaddress import IPv4Address
 from typing import List, NamedTuple, Optional, Sequence
 
-from async_upnp_client import UpnpAction
+from async_upnp_client.client import UpnpAction
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 _LOGGER = logging.getLogger(__name__)

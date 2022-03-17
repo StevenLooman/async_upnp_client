@@ -2,7 +2,7 @@
 
 import pytest
 
-from async_upnp_client import UpnpFactory
+from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.profiles.igd import IgdDevice
 
 from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester, read_file

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UPnP event handler module."""
+"""async_upnp_client.event_handler module."""
 
 import asyncio
 import logging

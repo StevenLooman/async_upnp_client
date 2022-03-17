@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Constants module."""
+"""async_upnp_client.const module."""
 
 from datetime import date, datetime, time
 from enum import Enum

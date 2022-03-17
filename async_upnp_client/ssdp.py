@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""SSPD protocol handler."""
+"""async_upnp_client.ssdp module."""
 
 import logging
 import socket

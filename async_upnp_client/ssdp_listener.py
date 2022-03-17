@@ -1,4 +1,5 @@
-"""SSDP Search + Advertisement listener, keeping track of known devices on the network."""
+# -*- coding: utf-8 -*-
+"""async_upnp_client.ssdp_listener module."""
 
 import logging
 import re
