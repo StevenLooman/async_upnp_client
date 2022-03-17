@@ -84,9 +84,6 @@ class TestUpnpProfileDevice:
         no_services = await factory.async_create_device(
             "http://dlna_dmr:1234/device_incomplete.xml"
         )
-        empty_descriptor = await factory.async_create_device(
-            "http://dlna_dmr:1234/device_with_empty_descriptor.xml"
-        )
         igd_device = await factory.async_create_device("http://igd:1234/device.xml")
 
         assert DmrDevice.is_profile_device(device) is True
@@ -97,7 +94,6 @@ class TestUpnpProfileDevice:
         assert IgdDevice.is_profile_device(device) is False
         assert IgdDevice.is_profile_device(embedded) is False
         assert IgdDevice.is_profile_device(no_services) is False
-        assert IgdDevice.is_profile_device(empty_descriptor) is False
         assert IgdDevice.is_profile_device(igd_device) is True
 
     @pytest.mark.asyncio
