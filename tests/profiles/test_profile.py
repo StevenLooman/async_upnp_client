@@ -97,6 +97,34 @@ class TestUpnpProfileDevice:
         assert IgdDevice.is_profile_device(igd_device) is True
 
     @pytest.mark.asyncio
+    async def test_is_profile_device_non_strict(self) -> None:
+        """Test is_profile_device works for root and embedded devices."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester, non_strict=True)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        embedded = await factory.async_create_device(
+            "http://dlna_dmr:1234/device_embedded.xml"
+        )
+        no_services = await factory.async_create_device(
+            "http://dlna_dmr:1234/device_incomplete.xml"
+        )
+        empty_descriptor = await factory.async_create_device(
+            "http://dlna_dmr:1234/device_with_empty_descriptor.xml"
+        )
+        igd_device = await factory.async_create_device("http://igd:1234/device.xml")
+
+        assert DmrDevice.is_profile_device(device) is True
+        assert DmrDevice.is_profile_device(embedded) is True
+        assert DmrDevice.is_profile_device(no_services) is False
+        assert DmrDevice.is_profile_device(igd_device) is False
+
+        assert IgdDevice.is_profile_device(device) is False
+        assert IgdDevice.is_profile_device(embedded) is False
+        assert IgdDevice.is_profile_device(no_services) is False
+        assert IgdDevice.is_profile_device(empty_descriptor) is False
+        assert IgdDevice.is_profile_device(igd_device) is True
+
+    @pytest.mark.asyncio
     async def test_subscribe_manual_resubscribe(self) -> None:
         """Test subscribing, resub, unsub, without auto_resubscribe."""
         now = time.monotonic()
