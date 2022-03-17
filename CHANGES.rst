@@ -1,3 +1,28 @@
+async_upnp_client 0.27.0 (2022-03-17)
+=====================================
+
+Features
+--------
+
+- Breaking change: Don't include parts of the library from the ``async_upnp_client`` module. (#126)
+- Don't raise parse errors if GET request returns an empty file.
+
+  Added an exception to client_factory.py to handle an empty XML document.
+  If XML document is invalid, scpd_el variable is replaced with a clean ElementTree. (#128)
+
+
+Bugfixes
+--------
+
+- Don't set Content-Length header but let aiohttp calculate it. This prevents an invalid Content-Length header value when using characters which are encoded to more than one byte. (#129)
+
+
+Misc
+----
+
+- bump2version, consolidate_setupcfg, towncrier
+
+
 Pre-towncrier changes
 =====================
 

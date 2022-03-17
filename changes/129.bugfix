@@ -1,1 +1,0 @@
-Don't set Content-Length header but let aiohttp calculate it. This prevents an invalid Content-Length header value when using characters which are encoded to more than one byte.

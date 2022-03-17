@@ -1,1 +1,0 @@
-Move ``pylintrc`` and ``.coveragerc`` to ``setup.cfg``
