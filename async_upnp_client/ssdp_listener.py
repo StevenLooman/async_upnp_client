@@ -16,7 +16,6 @@ from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import (
     AddressTupleVXType,
     DeviceOrServiceType,
-    IPvXAddress,
     NotificationSubType,
     NotificationType,
     SearchTarget,
