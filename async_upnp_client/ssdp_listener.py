@@ -5,7 +5,7 @@ import logging
 import re
 from asyncio import Lock
 from asyncio.events import AbstractEventLoop
-from contextlib import AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, suppress
 from datetime import datetime, timedelta
 from ipaddress import ip_address
 from types import TracebackType
@@ -217,12 +217,11 @@ def headers_differ_from_existing_search(
     return same_headers_differ(headers_old, headers)
 
 
-def same_ip_version(new_host_ip: IPvXAddress, location: str) -> bool:
-    """Test if location points to a host with the same IP version."""
-    parts = urlparse(location)
-    host = parts.hostname
-    host_ip: IPvXAddress = ip_address(host)
-    return host_ip.version == new_host_ip.version
+def ip_version_from_location(location: str) -> Optional[int]:
+    """Get the ip version for a location."""
+    with suppress(ValueError):
+        return ip_address(urlparse(location).hostname).version
+    return None
 
 
 def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
@@ -236,25 +235,21 @@ def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
     if not locations:
         return True
 
-    # Ensure the new location is parsable.
-    try:
-        new_host = urlparse(new_location).hostname
-        new_host_ip = ip_address(new_host)
-    except ValueError:
+    if new_location in locations:
         return False
 
-    for location in ssdp_device.locations:
-        try:
-            # Only test existing locations using the same IP version (IPv4/IPv6.)
-            if not same_ip_version(new_host_ip, location):
-                continue
+    # Ensure the new location is parsable.
+    new_ip_version = ip_version_from_location(new_location)
+    if new_ip_version is None:
+        return False
 
-            if location != new_location:
-                return True
-        except ValueError:
-            pass
-
-    return False
+    # We already established the location
+    # was not seen before. If we have any location
+    # saved that is the same ip version, we
+    # consider the location changed
+    return any(
+        ip_version_from_location(location) == new_ip_version for location in locations
+    )
 
 
 class SsdpDeviceTracker(AbstractAsyncContextManager):
