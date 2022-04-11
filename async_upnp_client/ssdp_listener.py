@@ -329,6 +329,8 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         # Update stored headers.
         if search_target in ssdp_device.search_headers:
             ssdp_device.search_headers[search_target].replace(headers)
+        elif isinstance(headers, CaseInsensitiveDict):
+            ssdp_device.search_headers[search_target] = headers
         else:
             ssdp_device.search_headers[search_target] = CaseInsensitiveDict(headers)
 
