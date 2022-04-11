@@ -8,7 +8,7 @@ from asyncio import BaseTransport, DatagramProtocol, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Awaitable, Callable, Optional, Tuple, cast
+from typing import Any, Awaitable, Callable, Optional, Tuple, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -159,24 +159,25 @@ def decode_ssdp_packet(
         lines.append(b"")
 
     parsed_headers, _ = HeadersParser().parse_headers(lines)
-    headers = CaseInsensitiveDict(parsed_headers)
+    extra: dict[str, Any] = {}
 
     # adjust some headers
-    if "location" in headers:
-        headers["_location_original"] = headers["location"]
-        headers["location"] = get_adjusted_url(headers["location"], remote_addr)
+    if "location" in parsed_headers:
+        extra["_location_original"] = parsed_headers["location"]
+        extra["location"] = get_adjusted_url(parsed_headers["location"], remote_addr)
 
     # own data
-    headers["_timestamp"] = datetime.now()
-    headers["_host"] = get_host_string(remote_addr)
-    headers["_port"] = remote_addr[1]
-    headers["_local_addr"] = local_addr
-    headers["_remote_addr"] = remote_addr
+    extra["_timestamp"] = datetime.now()
+    extra["_host"] = get_host_string(remote_addr)
+    extra["_port"] = remote_addr[1]
+    extra["_local_addr"] = local_addr
+    extra["_remote_addr"] = remote_addr
 
-    udn = udn_from_headers(headers)
+    udn = udn_from_headers(parsed_headers)
     if udn:
-        headers["_udn"] = udn
+        extra["_udn"] = udn
 
+    headers = CaseInsensitiveDict(parsed_headers, **extra)
     return request_line, headers
 
 
