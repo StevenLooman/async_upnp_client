@@ -8,11 +8,12 @@ from asyncio import BaseTransport, DatagramProtocol, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Any, Awaitable, Callable, Optional, Tuple, cast
+from typing import Any, Awaitable, Callable, Optional, Tuple, Union, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
 from aiohttp.http_parser import HeadersParser
+from multidict import CIMultiDictProxy
 
 from async_upnp_client.const import (
     AddressTupleV6Type,
@@ -134,7 +135,9 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
     )
 
 
-def udn_from_headers(headers: SsdpHeaders) -> Optional[UniqueDeviceName]:
+def udn_from_headers(
+    headers: Union[CIMultiDictProxy, SsdpHeaders]
+) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
     usn = headers.get("usn", "")
     if usn and usn.startswith("uuid:"):
