@@ -292,8 +292,7 @@ class SsdpAdvertisementAnnouncer:
         )
 
         # Reschedule self.
-        loop = asyncio.get_event_loop()
-        loop.call_later(30, self._announce_next)
+        self._announce_next()
 
     async def async_stop(self) -> None:
         """Stop listening for advertisements."""
