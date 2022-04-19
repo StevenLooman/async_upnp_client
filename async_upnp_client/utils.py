@@ -208,7 +208,10 @@ def _target_url_to_addr(target_url: Optional[str]) -> Tuple[str, int]:
 
 
 def get_local_ip(target_url: Optional[str] = None) -> str:
-    """Try to get the local IP of this machine, used to talk to target_url."""
+    """Try to get the local IP of this machine, used to talk to target_url.
+
+    Only IPv4 addresses are supported.
+    """
     target_addr = _target_url_to_addr(target_url)
 
     try:
@@ -223,7 +226,11 @@ def get_local_ip(target_url: Optional[str] = None) -> str:
 async def async_get_local_ip(
     target_url: Optional[str] = None, loop: Optional[asyncio.AbstractEventLoop] = None
 ) -> Tuple[AddressFamily, str]:
-    """Try to get the local IP of this machine, used to talk to target_url."""
+    """Try to get the local IP of this machine, used to talk to target_url.
+
+    IPv4 and IPv6 are supported. For IPv6 link-local addresses the local IP may
+    include the scope ID (zone index).
+    """
     target_addr = _target_url_to_addr(target_url)
     loop = loop or asyncio.get_event_loop()
 
@@ -236,7 +243,10 @@ async def async_get_local_ip(
     try:
         sock = transport.get_extra_info("socket")
         sockname = sock.getsockname()
-        return sock.family, sockname[0]
+        host, _ = socket.getnameinfo(
+            sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV
+        )
+        return sock.family, host
     finally:
         transport.close()
 
