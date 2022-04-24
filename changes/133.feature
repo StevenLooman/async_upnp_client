@@ -1,1 +1,0 @@
-Optimize CaseInsensitiveDict usage (@bdraco)

@@ -1,3 +1,20 @@
+async_upnp_client 0.28.0 (2022-04-24)
+=====================================
+
+Features
+--------
+
+- Optimize location_changed (@bdraco) (#132)
+- Optimize CaseInsensitiveDict usage (@bdraco) (#133)
+- Include scope ID in link-local IPv6 host addresses (@chishm)
+
+  When determining the local IPv6 address used to connect to a remote host,
+  include the scope ID in the returned address string if using a link-local
+  IPv6 address.
+
+  This is needed to bind event listeners to the correct network interface. (#134)
+
+
 async_upnp_client 0.27.0 (2022-03-17)
 =====================================
 
