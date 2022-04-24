@@ -1,3 +1,18 @@
+async_upnp_client 0.29.0 (2022-04-24)
+=====================================
+
+Features
+--------
+
+- Always use CaseInsensitiveDict for headers (@bdraco)
+
+  Headers were typed to not always be a CaseInsensitiveDict but
+  in practice they always were. By ensuring they are always a
+  CaseInsensitiveDict we can reduce the number of string
+  transforms since we already know when strings have been
+  lowercased. (#135)
+
+
 async_upnp_client 0.28.0 (2022-04-24)
 =====================================
 
