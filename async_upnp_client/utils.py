@@ -2,6 +2,7 @@
 """async_upnp_client.utils module."""
 
 import asyncio
+import logging
 import re
 import socket
 from collections import defaultdict
@@ -17,6 +18,7 @@ from voluptuous import Invalid
 
 EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
+_LOGGER = logging.getLogger(__name__)
 
 
 class CaseInsensitiveDict(abcMutableMapping):
@@ -34,6 +36,10 @@ class CaseInsensitiveDict(abcMutableMapping):
     def as_lower_dict(self) -> Dict[str, Any]:
         """Return the underlying dict in lowercase."""
         return {k.lower(): v for k, v in self._data.items()}
+
+    def get_lower(self, lower_key: str) -> Any:
+        """Get a lower case key."""
+        return self._data[self._case_map[lower_key]]
 
     def replace(self, new_data: abcMapping) -> None:
         """Replace the underlying dict."""

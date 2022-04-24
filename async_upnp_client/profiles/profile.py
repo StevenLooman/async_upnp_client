@@ -15,7 +15,7 @@ from async_upnp_client.client import (
     UpnpStateVariable,
     UpnpValueError,
 )
-from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
+from async_upnp_client.const import AddressTupleVXType
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.exceptions import (
     UpnpConnectionError,
@@ -24,6 +24,7 @@ from async_upnp_client.exceptions import (
 )
 from async_upnp_client.search import async_search
 from async_upnp_client.ssdp import SSDP_MX
+from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,7 +60,7 @@ class UpnpProfileDevice:
     @classmethod
     async def async_search(
         cls, source: Optional[AddressTupleVXType] = None, timeout: int = SSDP_MX
-    ) -> Set[SsdpHeaders]:
+    ) -> Set[CaseInsensitiveDict]:
         """
         Search for this device type.
 
@@ -71,7 +72,7 @@ class UpnpProfileDevice:
         """
         responses = set()
 
-        async def on_response(data: SsdpHeaders) -> None:
+        async def on_response(data: CaseInsensitiveDict) -> None:
             if "st" in data and data["st"] in cls.DEVICE_TYPES:
                 responses.add(data)
 
@@ -80,7 +81,7 @@ class UpnpProfileDevice:
         return responses
 
     @classmethod
-    async def async_discover(cls) -> Set[SsdpHeaders]:
+    async def async_discover(cls) -> Set[CaseInsensitiveDict]:
         """Alias for async_search."""
         return await cls.async_search()
 

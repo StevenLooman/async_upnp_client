@@ -19,7 +19,6 @@ from async_upnp_client.const import (
     NotificationSubType,
     NotificationType,
     SearchTarget,
-    SsdpHeaders,
     SsdpSource,
     UniqueDeviceName,
 )
@@ -38,7 +37,7 @@ IGNORED_HEADERS = {
 }
 
 
-def valid_search_headers(headers: SsdpHeaders) -> bool:
+def valid_search_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this search is usable."""
     # pylint: disable=invalid-name
     udn = headers.get("_udn")  # type: Optional[str]
@@ -57,7 +56,7 @@ def valid_search_headers(headers: SsdpHeaders) -> bool:
     )
 
 
-def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
+def valid_advertisement_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement is usable for connecting to a device."""
     # pylint: disable=invalid-name
     udn = headers.get("_udn")  # type: Optional[str]
@@ -78,7 +77,7 @@ def valid_advertisement_headers(headers: SsdpHeaders) -> bool:
     )
 
 
-def valid_byebye_headers(headers: SsdpHeaders) -> bool:
+def valid_byebye_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement has required headers for byebye."""
     # pylint: disable=invalid-name
     udn = headers.get("_udn")  # type: Optional[str]
@@ -87,7 +86,7 @@ def valid_byebye_headers(headers: SsdpHeaders) -> bool:
     return bool(udn and nt and nts)
 
 
-def extract_valid_to(headers: SsdpHeaders) -> datetime:
+def extract_valid_to(headers: CaseInsensitiveDict) -> datetime:
     """Extract/create valid to."""
     cache_control = headers.get("cache-control", "")
     match = CACHE_CONTROL_RE.search(cache_control)
@@ -154,7 +153,7 @@ class SsdpDevice:
     def combined_headers(
         self,
         device_or_service_type: DeviceOrServiceType,
-    ) -> SsdpHeaders:
+    ) -> CaseInsensitiveDict:
         """Get headers from search and advertisement for a given device- or service type."""
         if device_or_service_type in self.search_headers:
             headers = {**self.search_headers[device_or_service_type].as_dict()}
@@ -167,7 +166,7 @@ class SsdpDevice:
         return CaseInsensitiveDict(headers)
 
     @property
-    def all_combined_headers(self) -> Mapping[DeviceOrServiceType, SsdpHeaders]:
+    def all_combined_headers(self) -> Mapping[DeviceOrServiceType, CaseInsensitiveDict]:
         """Get all headers from search and advertisement for all known device- and service types."""
         dsts = set(self.advertisement_headers).union(set(self.search_headers))
         return {dst: self.combined_headers(dst) for dst in dsts}
@@ -178,17 +177,17 @@ class SsdpDevice:
 
 
 def same_headers_differ(
-    current_headers: CaseInsensitiveDict, new_headers: SsdpHeaders
+    current_headers: CaseInsensitiveDict, new_headers: CaseInsensitiveDict
 ) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
     for header, current_value in current_headers.as_dict().items():
-        header_lowered = header.lower()
-        if header.startswith("_") or header_lowered in IGNORED_HEADERS:
+        if header.startswith("_"):
             continue
-        new_value = new_headers.get(header)
-        if new_value is None:
+        lower_header = header.lower()
+        if lower_header in IGNORED_HEADERS:
             continue
-        if current_value != new_value:
+        new_value = new_headers.get_lower(lower_header)
+        if new_value is not None and current_value != new_value:
             _LOGGER.debug(
                 "Header %s changed from %s to %s", header, current_value, new_value
             )
@@ -197,7 +196,7 @@ def same_headers_differ(
 
 
 def headers_differ_from_existing_advertisement(
-    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: SsdpHeaders
+    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: CaseInsensitiveDict
 ) -> bool:
     """Compare against existing advertisement headers to see if anything interesting has changed."""
     if dst not in ssdp_device.advertisement_headers:
@@ -207,7 +206,7 @@ def headers_differ_from_existing_advertisement(
 
 
 def headers_differ_from_existing_search(
-    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: SsdpHeaders
+    ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: CaseInsensitiveDict
 ) -> bool:
     """Compare against existing search headers to see if anything interesting has changed."""
     if dst not in ssdp_device.search_headers:
@@ -223,7 +222,7 @@ def ip_version_from_location(location: str) -> Optional[int]:
     return None
 
 
-def location_changed(ssdp_device: SsdpDevice, headers: SsdpHeaders) -> bool:
+def location_changed(ssdp_device: SsdpDevice, headers: CaseInsensitiveDict) -> bool:
     """Test if location changed for device."""
     new_location = headers.get("location", "")
     if not new_location:
@@ -283,7 +282,7 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         self._lock.release()
 
     def see_search(
-        self, headers: SsdpHeaders
+        self, headers: CaseInsensitiveDict
     ) -> Tuple[
         bool, Optional[SsdpDevice], Optional[DeviceOrServiceType], Optional[SsdpSource]
     ]:
@@ -331,7 +330,7 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         return True, ssdp_device, search_target, ssdp_source
 
     def see_advertisement(
-        self, headers: SsdpHeaders
+        self, headers: CaseInsensitiveDict
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through an advertisement."""
         assert self._lock.locked(), "Lock first"
@@ -381,7 +380,9 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
 
         return propagate, ssdp_device, notification_type
 
-    def _see_device(self, headers: SsdpHeaders) -> Tuple[Optional[SsdpDevice], bool]:
+    def _see_device(
+        self, headers: CaseInsensitiveDict
+    ) -> Tuple[Optional[SsdpDevice], bool]:
         """See a device through a search or advertisement."""
         # Purge any old devices.
         self.purge_devices()
@@ -414,7 +415,7 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         return ssdp_device, new_location
 
     def unsee_advertisement(
-        self, headers: SsdpHeaders
+        self, headers: CaseInsensitiveDict
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """Remove a device through an advertisement."""
         assert self._lock.locked(), "Lock first"
@@ -445,7 +446,7 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         propagate = True  # Always true, if this is the 2nd unsee then device is already deleted.
         return propagate, ssdp_device, notification_type
 
-    def get_device(self, headers: SsdpHeaders) -> Optional[SsdpDevice]:
+    def get_device(self, headers: CaseInsensitiveDict) -> Optional[SsdpDevice]:
         """Get a device from headers."""
         if "usn" not in headers:
             return None
@@ -536,7 +537,7 @@ class SsdpListener:
         assert self._search_listener is not None, "Call async_start() first"
         self._search_listener.async_search(override_target)
 
-    async def _on_search(self, headers: SsdpHeaders) -> None:
+    async def _on_search(self, headers: CaseInsensitiveDict) -> None:
         """Search callback."""
         async with self._device_tracker:
             (
@@ -552,7 +553,7 @@ class SsdpListener:
                     ssdp_device, device_or_service_type, ssdp_source
                 )
 
-    async def _on_alive(self, headers: SsdpHeaders) -> None:
+    async def _on_alive(self, headers: CaseInsensitiveDict) -> None:
         """On alive."""
         async with self._device_tracker:
             (
@@ -566,7 +567,7 @@ class SsdpListener:
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
                 )
 
-    async def _on_byebye(self, headers: SsdpHeaders) -> None:
+    async def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
         """On byebye."""
         async with self._device_tracker:
             (
@@ -580,7 +581,7 @@ class SsdpListener:
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
                 )
 
-    async def _on_update(self, headers: SsdpHeaders) -> None:
+    async def _on_update(self, headers: CaseInsensitiveDict) -> None:
         """On update."""
         async with self._device_tracker:
             (

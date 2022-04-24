@@ -136,7 +136,7 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
 
 
 def udn_from_headers(
-    headers: Union[CIMultiDictProxy, SsdpHeaders]
+    headers: Union[CIMultiDictProxy, CaseInsensitiveDict]
 ) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
     usn = headers.get("usn", "")
@@ -191,7 +191,7 @@ class SsdpProtocol(DatagramProtocol):
         self,
         loop: AbstractEventLoop,
         on_connect: Optional[Callable[[DatagramTransport], Awaitable]] = None,
-        on_data: Optional[Callable[[str, SsdpHeaders], Awaitable]] = None,
+        on_data: Optional[Callable[[str, CaseInsensitiveDict], Awaitable]] = None,
     ) -> None:
         """Initialize."""
         self.loop = loop
