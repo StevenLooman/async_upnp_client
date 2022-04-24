@@ -39,7 +39,9 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def get_lower(self, lower_key: str) -> Any:
         """Get a lower case key."""
-        return self._data[self._case_map[lower_key]]
+        if lower_key in self._case_map:
+            return self._data[self._case_map[lower_key]]
+        return None
 
     def replace(self, new_data: abcMapping) -> None:
         """Replace the underlying dict."""
