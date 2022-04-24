@@ -17,7 +17,6 @@ from voluptuous import Invalid
 
 EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
-_LOGGER = logging.getLogger(__name__)
 
 
 class CaseInsensitiveDict(abcMutableMapping):
