@@ -2,7 +2,6 @@
 """async_upnp_client.utils module."""
 
 import asyncio
-import logging
 import re
 import socket
 from collections import defaultdict
