@@ -7,7 +7,8 @@ from typing import Optional
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.client import UpnpDevice
 from async_upnp_client.client_factory import UpnpFactory
-from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
+from async_upnp_client.const import AddressTupleVXType
+from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class DeviceUpdater:
         _LOGGER.debug("Stop listening for notifications.")
         await self._listener.async_stop()
 
-    async def _on_alive(self, headers: SsdpHeaders) -> None:
+    async def _on_alive(self, headers: CaseInsensitiveDict) -> None:
         """Handle on alive."""
         # Ensure for root devices only.
         if headers.get("nt") != "upnp:rootdevice":
@@ -61,12 +62,12 @@ class DeviceUpdater:
         _LOGGER.debug("Handling alive: %s", headers)
         await self._async_handle_alive_update(headers)
 
-    async def _on_byebye(self, headers: SsdpHeaders) -> None:
+    async def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
         """Handle on byebye."""
         _LOGGER.debug("Handling on_byebye: %s", headers)
         self._device.available = False
 
-    async def _on_update(self, headers: SsdpHeaders) -> None:
+    async def _on_update(self, headers: CaseInsensitiveDict) -> None:
         """Handle on update."""
         # Ensure for root devices only.
         if headers.get("nt") != "upnp:rootdevice":
@@ -79,7 +80,7 @@ class DeviceUpdater:
         _LOGGER.debug("Handling update: %s", headers)
         await self._async_handle_alive_update(headers)
 
-    async def _async_handle_alive_update(self, headers: SsdpHeaders) -> None:
+    async def _async_handle_alive_update(self, headers: CaseInsensitiveDict) -> None:
         """Handle on_alive or on_update."""
         do_reinit = False
 
@@ -115,7 +116,9 @@ class DeviceUpdater:
         # We heard from it, so mark it available.
         self._device.available = True
 
-    async def _reinit_device(self, location: str, ssdp_headers: SsdpHeaders) -> None:
+    async def _reinit_device(
+        self, location: str, ssdp_headers: CaseInsensitiveDict
+    ) -> None:
         """Reinitialize device."""
         # pylint: disable=protected-access
         _LOGGER.debug("Reinitializing device, location: %s", location)

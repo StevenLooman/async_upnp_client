@@ -15,13 +15,13 @@ from async_upnp_client.ssdp import (
     SSDP_ST_ALL,
     AddressTupleVXType,
     IPvXAddress,
-    SsdpHeaders,
     SsdpProtocol,
     build_ssdp_search_packet,
     determine_source_target,
     get_host_string,
     get_ssdp_socket,
 )
+from async_upnp_client.utils import CaseInsensitiveDict
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
     def __init__(
         self,
-        async_callback: Callable[[SsdpHeaders], Awaitable],
+        async_callback: Callable[[CaseInsensitiveDict], Awaitable],
         loop: Optional[AbstractEventLoop] = None,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
@@ -61,7 +61,9 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         target = override_target or self.target
         protocol.send_ssdp_packet(packet, target)
 
-    async def _async_on_data(self, request_line: str, headers: SsdpHeaders) -> None:
+    async def _async_on_data(
+        self, request_line: str, headers: CaseInsensitiveDict
+    ) -> None:
         """Handle data."""
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.
@@ -128,7 +130,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
 
 async def async_search(
-    async_callback: Callable[[SsdpHeaders], Awaitable],
+    async_callback: Callable[[CaseInsensitiveDict], Awaitable],
     timeout: int = SSDP_MX,
     service_type: str = SSDP_ST_ALL,
     source: Optional[AddressTupleVXType] = None,

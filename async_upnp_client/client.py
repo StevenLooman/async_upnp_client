@@ -29,7 +29,6 @@ from async_upnp_client.const import (
     DeviceIcon,
     DeviceInfo,
     ServiceInfo,
-    SsdpHeaders,
     StateVariableInfo,
 )
 from async_upnp_client.exceptions import (
@@ -109,7 +108,7 @@ class UpnpDevice:
             embedded_device.parent_device = self
 
         # SSDP headers.
-        self.ssdp_headers: SsdpHeaders = CaseInsensitiveDict()
+        self.ssdp_headers: CaseInsensitiveDict = CaseInsensitiveDict()
 
         # Just initialized, mark available.
         self.available = True

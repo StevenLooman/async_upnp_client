@@ -37,7 +37,6 @@ from async_upnp_client.const import (
     AddressTupleVXType,
     DeviceInfo,
     ServiceInfo,
-    SsdpHeaders,
     StateVariableInfo,
     StateVariableTypeInfo,
 )
@@ -55,6 +54,7 @@ from async_upnp_client.ssdp import (
     determine_source_target,
     get_ssdp_socket,
 )
+from async_upnp_client.utils import CaseInsensitiveDict
 
 NAMESPACES = {
     "s": "http://schemas.xmlsoap.org/soap/envelope/",
@@ -84,7 +84,7 @@ class SsdpSearchResponder:
     async def _async_on_data(
         self,
         request_line: str,
-        headers: SsdpHeaders,
+        headers: CaseInsensitiveDict,
     ) -> None:
         """Handle data."""
         assert self._transport
@@ -193,7 +193,7 @@ class SsdpSearchResponder:
         protocol.send_ssdp_packet(packet, remote_addr)
 
 
-def _build_advertisements(root_device: "UpnpServerDevice") -> List[SsdpHeaders]:
+def _build_advertisements(root_device: "UpnpServerDevice") -> List[CaseInsensitiveDict]:
     """Build advertisements to be sent for a UpnpDevice."""
     # 3 + 2d + k (d: embedded device, k: service)
     # global:      ST: upnp:rootdevice
@@ -204,7 +204,7 @@ def _build_advertisements(root_device: "UpnpServerDevice") -> List[SsdpHeaders]:
     #              USN: uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:ver
     # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
     #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
-    advertisements: List[SsdpHeaders] = []
+    advertisements: List[CaseInsensitiveDict] = []
 
     base_headers = {
         "NTS": "ssdp:alive",

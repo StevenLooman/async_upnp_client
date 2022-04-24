@@ -16,12 +16,12 @@ from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
 from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
-from async_upnp_client.const import AddressTupleVXType, SsdpHeaders
+from async_upnp_client.const import AddressTupleVXType
 from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.profiles.dlna import dlna_handle_notify_last_change
 from async_upnp_client.search import async_search as async_ssdp_search
 from async_upnp_client.ssdp import SSDP_IP_V4, SSDP_IP_V6, SSDP_PORT, SSDP_ST_ALL
-from async_upnp_client.utils import get_local_ip
+from async_upnp_client.utils import CaseInsensitiveDict, get_local_ip
 
 logging.basicConfig()
 _LOGGER = logging.getLogger("upnp-client")
@@ -364,9 +364,13 @@ async def search(search_args: Any) -> None:
         search_args.bind, search_args.target, search_args.target_port
     )
 
-    async def on_response(headers: SsdpHeaders) -> None:
-        headers = {key: str(value) for key, value in headers.items()}
-        print(json.dumps(headers, indent=pprint_indent))
+    async def on_response(headers: CaseInsensitiveDict) -> None:
+        print(
+            json.dumps(
+                {key: str(value) for key, value in headers.items()},
+                indent=pprint_indent,
+            )
+        )
 
     await async_ssdp_search(
         service_type=service_type,
@@ -385,9 +389,13 @@ async def advertisements(advertisement_args: Any) -> None:
         advertisement_args.target_port,
     )
 
-    async def on_notify(headers: SsdpHeaders) -> None:
-        headers = {key: str(value) for key, value in headers.items()}
-        print(json.dumps(headers, indent=pprint_indent))
+    async def on_notify(headers: CaseInsensitiveDict) -> None:
+        print(
+            json.dumps(
+                {key: str(value) for key, value in headers.items()},
+                indent=pprint_indent,
+            )
+        )
 
     listener = SsdpAdvertisementListener(
         on_alive=on_notify,
