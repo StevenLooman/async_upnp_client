@@ -8,7 +8,7 @@ from asyncio import BaseTransport, DatagramProtocol, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Any, Awaitable, Callable, Optional, Tuple, Union, cast
+from typing import Any, Callable, Coroutine, Optional, Tuple, Union, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -78,6 +78,7 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
         return url
 
     data = urlsplit(url)
+    assert data.hostname
     try:
         address = ip_address(data.hostname)
     except ValueError:
@@ -190,8 +191,12 @@ class SsdpProtocol(DatagramProtocol):
     def __init__(
         self,
         loop: AbstractEventLoop,
-        on_connect: Optional[Callable[[DatagramTransport], Awaitable]] = None,
-        on_data: Optional[Callable[[str, CaseInsensitiveDict], Awaitable]] = None,
+        on_connect: Optional[
+            Callable[[DatagramTransport], Coroutine[Any, Any, None]]
+        ] = None,
+        on_data: Optional[
+            Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]]
+        ] = None,
     ) -> None:
         """Initialize."""
         self.loop = loop

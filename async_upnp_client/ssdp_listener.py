@@ -218,7 +218,9 @@ def headers_differ_from_existing_search(
 def ip_version_from_location(location: str) -> Optional[int]:
     """Get the ip version for a location."""
     with suppress(ValueError):
-        return ip_address(urlparse(location).hostname).version
+        hostname = urlparse(location).hostname
+        assert hostname
+        return ip_address(hostname).version
     return None
 
 
