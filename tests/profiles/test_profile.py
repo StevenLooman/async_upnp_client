@@ -10,6 +10,7 @@ import pytest
 
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.exceptions import (
+    UpnpActionResponseError,
     UpnpCommunicationError,
     UpnpConnectionError,
     UpnpResponseError,
@@ -394,6 +395,130 @@ class TestUpnpProfileDevice:
         await profile._async_poll_state_variables(
             "AVT", ["GetPositionInfo"], InstanceID=0
         )
+
+        # on_event should be called with all changed variables
+        expected_service = device.services["urn:schemas-upnp-org:service:AVTransport:1"]
+        expected_changes = [
+            expected_service.state_variables[name]
+            for name in (
+                "CurrentTrack",
+                "CurrentTrackDuration",
+                "CurrentTrackMetaData",
+                "CurrentTrackURI",
+                "RelativeTimePosition",
+                "AbsoluteTimePosition",
+                "RelativeCounterPosition",
+                "AbsoluteCounterPosition",
+            )
+        ]
+        on_event_mock.assert_called_once_with(expected_service, expected_changes)
+
+        # Corresponding state variables should be updated
+        assert profile.media_track_number == 1
+        assert profile.media_duration == 194
+        assert profile.current_track_uri == "uri://1.mp3"
+        assert profile._current_track_meta_data is not None
+        assert profile.media_title == "Test track"
+        assert profile.media_artist == "A & B > C"
+
+    @pytest.mark.asyncio
+    async def test_poll_state_variables_missing_action(self) -> None:
+        """Test missing action used when polling state variables is handled gracefully."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        requester.response_map[
+            ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
+        ] = (200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        profile = DmrDevice(device, event_handler=None)
+        assert device.available is True
+
+        # Register an event handler, it should be called when variable is updated
+        on_event_mock = Mock(return_value=None)
+        profile.on_event = on_event_mock
+        assert profile.is_subscribed is False
+
+        # Check state variables are currently empty
+        assert profile.media_track_number is None
+        assert profile.media_duration is None
+        assert profile.current_track_uri is None
+        assert profile._current_track_meta_data is None
+        assert profile.media_title is None
+        assert profile.media_artist is None
+
+        # Call an invalid and a valid Get action, in one function call
+        await profile._async_poll_state_variables(
+            "AVT", ["GetInvalidAction", "GetPositionInfo"], InstanceID=0
+        )
+
+        # Missing (invalid) action should have no effect on valid action
+
+        # on_event should be called with all changed variables
+        expected_service = device.services["urn:schemas-upnp-org:service:AVTransport:1"]
+        expected_changes = [
+            expected_service.state_variables[name]
+            for name in (
+                "CurrentTrack",
+                "CurrentTrackDuration",
+                "CurrentTrackMetaData",
+                "CurrentTrackURI",
+                "RelativeTimePosition",
+                "AbsoluteTimePosition",
+                "RelativeCounterPosition",
+                "AbsoluteCounterPosition",
+            )
+        ]
+        on_event_mock.assert_called_once_with(expected_service, expected_changes)
+
+        # Corresponding state variables should be updated
+        assert profile.media_track_number == 1
+        assert profile.media_duration == 194
+        assert profile.current_track_uri == "uri://1.mp3"
+        assert profile._current_track_meta_data is not None
+        assert profile.media_title == "Test track"
+        assert profile.media_artist == "A & B > C"
+
+    @pytest.mark.asyncio
+    async def test_poll_state_variables_failed_action(self) -> None:
+        """Test failed action used when polling state variables is handled gracefully."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        # Good action response
+        requester.response_map[
+            ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
+        ] = (200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        profile = DmrDevice(device, event_handler=None)
+        assert device.available is True
+
+        # Register an event handler, it should be called when variable is updated
+        on_event_mock = Mock(return_value=None)
+        profile.on_event = on_event_mock
+        assert profile.is_subscribed is False
+
+        # Check state variables are currently empty
+        assert profile.media_track_number is None
+        assert profile.media_duration is None
+        assert profile.current_track_uri is None
+        assert profile._current_track_meta_data is None
+        assert profile.media_title is None
+        assert profile.media_artist is None
+
+        # Failed GetTransportInfo action resulting in an exception
+        requester.exceptions.append(
+            UpnpActionResponseError(
+                status=500, error_code=602, error_desc="Not implemented"
+            )
+        )
+
+        # Call a failing and a valid Get action, in one function call
+        await profile._async_poll_state_variables(
+            "AVT", ["GetTransportInfo", "GetPositionInfo"], InstanceID=0
+        )
+
+        # Missing (invalid) action should have no effect on valid action
 
         # on_event should be called with all changed variables
         expected_service = device.services["urn:schemas-upnp-org:service:AVTransport:1"]

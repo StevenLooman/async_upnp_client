@@ -431,8 +431,25 @@ class UpnpProfileDevice:
         changed_state_variables: List[UpnpStateVariable] = []
 
         for action_name in action_names:
-            action = service.action(action_name)
-            result = await action.async_call(**in_args)
+            try:
+                action = service.action(action_name)
+            except KeyError:
+                _LOGGER.debug(
+                    "Can't poll missing action %s:%s for state variables",
+                    service_name,
+                    action_name,
+                )
+                continue
+            try:
+                result = await action.async_call(**in_args)
+            except UpnpResponseError as err:
+                _LOGGER.debug(
+                    "Failed to call action %s:%s for state variables: %r",
+                    service_name,
+                    action_name,
+                    err,
+                )
+                continue
 
             for arg in action.arguments:
                 if arg.direction != "out":
