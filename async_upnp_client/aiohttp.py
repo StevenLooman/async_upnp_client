@@ -5,7 +5,8 @@ import asyncio
 import logging
 from asyncio.events import AbstractEventLoop, AbstractServer
 from ipaddress import ip_address
-from typing import Mapping, Optional, Tuple
+from typing import Dict, Mapping, Optional, Tuple
+from urllib.parse import urlparse
 
 import aiohttp
 import aiohttp.web
@@ -24,6 +25,22 @@ from async_upnp_client.exceptions import (
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
+
+
+def _fixed_host_header(url: str) -> Dict[str, str]:
+    """Strip scope_id from IPv6 host, if needed."""
+    url_parts = urlparse(url)
+    if url_parts.hostname and "%" in url_parts.hostname:
+        idx = url_parts.hostname.rindex("%")
+        fixed_hostname = url_parts.hostname[:idx]
+        if ":" in fixed_hostname:
+            fixed_hostname = f"[{fixed_hostname}]"
+        host = (
+            f"{fixed_hostname}:{url_parts.port}" if url_parts.port else fixed_hostname
+        )
+        return {"Host": host}
+
+    return {}
 
 
 class AiohttpRequester(UpnpRequester):
@@ -46,7 +63,11 @@ class AiohttpRequester(UpnpRequester):
         body: Optional[str] = None,
     ) -> Tuple[int, Mapping, str]:
         """Do a HTTP request."""
-        req_headers = {**self._http_headers, **(headers or {})}
+        req_headers = {
+            **_fixed_host_header(url),
+            **self._http_headers,
+            **(headers or {}),
+        }
 
         _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
@@ -69,7 +90,9 @@ class AiohttpRequester(UpnpRequester):
                         resp_body = await response.read()
 
                         _LOGGER_TRAFFIC_UPNP.debug(
-                            "Got response:\n%s\n%s\n\n%s",
+                            "Got response from %s %s:\n%s\n%s\n\n%s",
+                            method,
+                            url,
                             status,
                             "\n".join(
                                 [
@@ -154,7 +177,11 @@ class AiohttpSessionRequester(UpnpRequester):
     ) -> Tuple[int, Mapping[str, str], str]:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
-        req_headers = {**self._http_headers, **(headers or {})}
+        req_headers = {
+            **_fixed_host_header(url),
+            **self._http_headers,
+            **(headers or {}),
+        }
 
         _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
@@ -179,7 +206,9 @@ class AiohttpSessionRequester(UpnpRequester):
                     resp_body = await response.read()
 
                     _LOGGER_TRAFFIC_UPNP.debug(
-                        "Got response:\n%s\n%s\n\n%s",
+                        "Got response from %s %s:\n%s\n%s\n\n%s",
+                        method,
+                        url,
                         status,
                         "\n".join(
                             [key + ": " + value for key, value in resp_headers.items()]
@@ -291,10 +320,6 @@ class AiohttpNotifyServer(UpnpNotifyServer):
         if request.method != "NOTIFY":
             _LOGGER.debug("Not notify")
             return aiohttp.web.Response(status=405)
-
-        if not self.event_handler:
-            _LOGGER.debug("Event handler not created yet")
-            return aiohttp.web.Response(status=503, reason="Server not fully started")
 
         status = await self.event_handler.handle_notify(headers, body)
         _LOGGER.debug("NOTIFY response status: %s", status)
