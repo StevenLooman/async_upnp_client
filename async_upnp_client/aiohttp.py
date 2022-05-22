@@ -29,6 +29,9 @@ _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 def _fixed_host_header(url: str) -> Dict[str, str]:
     """Strip scope_id from IPv6 host, if needed."""
+    if "%" not in url:
+        return {}
+
     url_parts = urlparse(url)
     if url_parts.hostname and "%" in url_parts.hostname:
         idx = url_parts.hostname.rindex("%")
