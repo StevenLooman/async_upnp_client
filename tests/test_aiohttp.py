@@ -32,6 +32,10 @@ def test_fixed_host_header() -> None:
     assert _fixed_host_header("https://router.local/desc") == {}
     assert _fixed_host_header("https://[fe80::1%10]/desc") == {"Host": "[fe80::1]"}
 
+    assert _fixed_host_header("http://192.168.1.1:8000/root%desc") == {}
+    assert _fixed_host_header("http://router.local:8000/root%desc") == {}
+    assert _fixed_host_header("http://[fe80::1]:8000/root%desc") == {}
+
 
 def test_server_init() -> None:
     """Test initialization of an AiohttpNotifyServer."""
