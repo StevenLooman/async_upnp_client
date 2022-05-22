@@ -1,3 +1,15 @@
+async_upnp_client 0.30.1 (2022-05-22)
+=====================================
+
+Bugfixes
+--------
+
+- Work around aiohttp sending invalid Host-header. When the device url contains
+  a IPv6-addresshost with scope_id, aiohttp sends the scope_id with the
+  Host-header. This causes problems with some devices, returning a HTTP 404
+  error or perhaps a HTTP 400 error. (#138)
+
+
 async_upnp_client 0.30.0 (2022-05-20)
 =====================================
 
