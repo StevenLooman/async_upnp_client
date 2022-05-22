@@ -70,6 +70,27 @@ Development is done on the ``development`` branch.
     $ pre-commit --install
 
 
+Changes
+-------
+
+Changes are recorded using `Towncier <https://towncrier.readthedocs.io/>`_. Once a new release is created, towncrier is used to create the file ``CHANGES.rst``.
+
+To create a new change run:
+
+    $ towncrier create <pr-number>.<change type>
+
+A change type can be one of:
+
+- feature: Signifying a new feature.
+- bugfix: Signifying a bug fix.
+- doc: Signifying a documentation improvement.
+- removal: Signifying a deprecation or removal of public API.
+- misc: A ticket has been closed, but it is not of interest to users.
+
+A new file is then created in the ``changes`` directory. Add a short description of the change to that file.
+
+
+
 Releasing
 ---------
 
