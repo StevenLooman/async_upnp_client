@@ -108,9 +108,9 @@ class AiohttpRequester(UpnpRequester):
 
                         resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
-            raise UpnpConnectionTimeoutError(str(err)) from err
+            raise UpnpConnectionTimeoutError(repr(err)) from err
         except aiohttp.ClientConnectionError as err:
-            raise UpnpConnectionError(str(err)) from err
+            raise UpnpConnectionError(repr(err)) from err
         except aiohttp.ClientResponseError as err:
             raise UpnpClientResponseError(
                 request_info=err.request_info,
@@ -120,9 +120,9 @@ class AiohttpRequester(UpnpRequester):
                 headers=err.headers,
             ) from err
         except aiohttp.ClientError as err:
-            raise UpnpCommunicationError(str(err)) from err
+            raise UpnpCommunicationError(repr(err)) from err
         except UnicodeDecodeError as err:
-            raise UpnpCommunicationError(str(err)) from err
+            raise UpnpCommunicationError(repr(err)) from err
 
         return status, resp_headers, resp_body_text
 
@@ -164,12 +164,12 @@ class AiohttpSessionRequester(UpnpRequester):
         for _ in range(2):
             try:
                 return await self._async_http_request(method, url, headers, body)
-            except aiohttp.ServerDisconnectedError as err:
+            except aiohttp.ClientConnectionError as err:
                 _LOGGER.debug("%r during request; retrying", err)
         try:
             return await self._async_http_request(method, url, headers, body)
-        except aiohttp.ServerDisconnectedError as err:
-            raise UpnpConnectionError(str(err)) from err
+        except aiohttp.ClientConnectionError as err:
+            raise UpnpConnectionError(repr(err)) from err
 
     async def _async_http_request(
         self,
@@ -221,11 +221,9 @@ class AiohttpSessionRequester(UpnpRequester):
 
                     resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
-            raise UpnpConnectionTimeoutError(str(err)) from err
-        except aiohttp.ServerDisconnectedError:
+            raise UpnpConnectionTimeoutError(repr(err)) from err
+        except aiohttp.ClientConnectionError:
             raise
-        except aiohttp.ClientConnectionError as err:
-            raise UpnpConnectionError(str(err)) from err
         except aiohttp.ClientResponseError as err:
             raise UpnpClientResponseError(
                 request_info=err.request_info,
@@ -235,9 +233,9 @@ class AiohttpSessionRequester(UpnpRequester):
                 headers=err.headers,
             ) from err
         except aiohttp.ClientError as err:
-            raise UpnpCommunicationError(str(err)) from err
+            raise UpnpCommunicationError(repr(err)) from err
         except UnicodeDecodeError as err:
-            raise UpnpCommunicationError(str(err)) from err
+            raise UpnpCommunicationError(repr(err)) from err
 
         return status, resp_headers, resp_body_text
 
