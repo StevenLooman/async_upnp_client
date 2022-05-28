@@ -1,3 +1,18 @@
+async_upnp_client 0.31.0 (2022-05-28)
+=====================================
+
+Bugfixes
+--------
+
+- Fix errors raised when `AiohttpSessionRequester` is disconnected while writing a request body.
+
+  The server is allowed to disconnect at any time during a request session, which point we want to retry the request.
+
+  A disconnection could manifest as an `aiohttp.ServerDisconnectedError` if it happened between requests, or it could be `aiohttp.ClientOSError` if it happened while we are writing the request body. Both errors derive from `aiohttp.ClientConnectionError` for socket errors.
+
+  Also use `repr` when encapsulating errors for easier debugging. (#139)
+
+
 async_upnp_client 0.30.1 (2022-05-22)
 =====================================
 
