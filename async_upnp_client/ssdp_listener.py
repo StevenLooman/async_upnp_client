@@ -33,6 +33,7 @@ IGNORED_HEADERS = {
     "date",
     "cache-control",
     "server",
+    "host",
     "location",  # Location-header is handled differently!
 }
 
