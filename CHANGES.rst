@@ -1,3 +1,15 @@
+async_upnp_client 0.31.1 (2022-06-06)
+=====================================
+
+Bugfixes
+--------
+
+- Ignore the ``HOST``-header in ``SsdpListener``. When a device advertises on both IPv4 and IPV6, the advertisements
+  have the header ``239.255.255.250:1900`` and ``[FF02::C]:1900``, respectively. Given that the ``SsdpListener`` did
+  not ignore this header up to now, it was seen as a change and causing a reinitialisation in the Home Assistant
+  ``upnp`` component. (#140)
+
+
 async_upnp_client 0.31.0 (2022-05-28)
 =====================================
 
