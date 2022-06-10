@@ -7,6 +7,7 @@ import sys
 from asyncio import BaseTransport, DatagramProtocol, DatagramTransport
 from asyncio.events import AbstractEventLoop
 from datetime import datetime
+from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import Any, Callable, Coroutine, Optional, Tuple, Union, cast
 from urllib.parse import urlsplit, urlunsplit
@@ -148,12 +149,18 @@ def udn_from_headers(
     return None
 
 
-def decode_ssdp_packet(
+@lru_cache(maxsize=256)
+def _cached_header_parse(
     data: bytes,
-    local_addr: Optional[AddressTupleVXType],
-    remote_addr: AddressTupleVXType,
-) -> Tuple[str, CaseInsensitiveDict]:
-    """Decode a message."""
+) -> Tuple[CIMultiDictProxy[str], str, Optional[UniqueDeviceName]]:
+    """Cache parsing headers.
+
+    SSDP discover packets frequently end up being sent multiple
+    times on multiple interfaces.
+
+    We can avoid parsing the sames ones over and over
+    again with a simple lru_cache.
+    """
     lines = data.replace(b"\r\n", b"\n").split(b"\n")
 
     # request_line
@@ -163,23 +170,33 @@ def decode_ssdp_packet(
         lines.append(b"")
 
     parsed_headers, _ = HeadersParser().parse_headers(lines)
-    extra: dict[str, Any] = {}
+    udn = udn_from_headers(parsed_headers)
+
+    return parsed_headers, request_line, udn
+
+
+def decode_ssdp_packet(
+    data: bytes,
+    local_addr: Optional[AddressTupleVXType],
+    remote_addr: AddressTupleVXType,
+) -> Tuple[str, CaseInsensitiveDict]:
+    """Decode a message."""
+    parsed_headers, request_line, udn = _cached_header_parse(data)
+    # own data
+    extra: dict[str, Any] = {
+        "_timestamp": datetime.now(),
+        "_host": get_host_string(remote_addr),
+        "_port": remote_addr[1],
+        "_local_addr": local_addr,
+        "_remote_addr": remote_addr,
+    }
+    if udn:
+        extra["_udn"] = udn
 
     # adjust some headers
     if "location" in parsed_headers:
         extra["_location_original"] = parsed_headers["location"]
         extra["location"] = get_adjusted_url(parsed_headers["location"], remote_addr)
-
-    # own data
-    extra["_timestamp"] = datetime.now()
-    extra["_host"] = get_host_string(remote_addr)
-    extra["_port"] = remote_addr[1]
-    extra["_local_addr"] = local_addr
-    extra["_remote_addr"] = remote_addr
-
-    udn = udn_from_headers(parsed_headers)
-    if udn:
-        extra["_udn"] = udn
 
     headers = CaseInsensitiveDict(parsed_headers, **extra)
     return request_line, headers
