@@ -75,7 +75,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
             return
 
         _LOGGER.debug(
-            "Received advertisement, USN: %s, location: %s",
+            "Received search response, USN: %s, location: %s",
             headers.get("USN", "<no USN>"),
             headers.get("location", ""),
         )
