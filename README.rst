@@ -69,7 +69,7 @@ Development is done on the ``development`` branch.
     $ pip install pre-commit
     $ pre-commit --install
 
-The `Open Connectivity Foundation<https://openconnectivity.org/>`_ provides a bundle with all `UPnP Specifications<https://openconnectivity.org/developer/specifications/upnp-resources/upnp/>`_.
+The `Open Connectivity Foundation <https://openconnectivity.org/>`_ provides a bundle with all `UPnP Specifications <https://openconnectivity.org/developer/specifications/upnp-resources/upnp/>`_.
 
 
 Changes
