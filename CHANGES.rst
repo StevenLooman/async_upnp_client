@@ -1,3 +1,12 @@
+async_upnp_client 0.31.2 (2022-06-19)
+=====================================
+
+Bugfixes
+--------
+
+- Cache decoding ssdp packets (@bdraco) (#141)
+
+
 async_upnp_client 0.31.1 (2022-06-06)
 =====================================
 
