@@ -1,5 +1,7 @@
 """Unit tests for the DLNA DMR profile."""
 
+import asyncio
+import time
 from typing import List, Sequence
 
 import defusedxml.ElementTree
@@ -14,7 +16,27 @@ from async_upnp_client.profiles.dlna import (
     dlna_handle_notify_last_change,
 )
 
-from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester
+from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester, read_file
+
+AVT_NOTIFY_HEADERS = {
+    "NT": "upnp:event",
+    "NTS": "upnp:propchange",
+    "SID": "uuid:dummy-avt1",
+}
+
+AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT = """
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+    <e:property>
+        <LastChange>
+            &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/AVT/&quot;&gt;
+                &lt;InstanceID val=&quot;0&quot;&gt;
+                    &lt;CurrentTransportActions val=&quot;{actions}&quot;/&gt;
+                    &lt;/InstanceID&gt;
+            &lt;/Event&gt;
+        </LastChange>
+    </e:property>
+</e:propertyset>
+"""
 
 
 def assert_xml_equal(
@@ -133,6 +155,135 @@ async def test_on_notify_dlna_event() -> None:
 
     state_var = service.state_variable("Volume")
     assert state_var.value == 50
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_evented() -> None:
+    """Test async_wait_for_can_play with a variable change event."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+    notify_server = UpnpTestNotifyServer(
+        requester=requester,
+        source=("192.168.1.2", 8090),
+    )
+    event_handler = notify_server.event_handler
+    profile = DmrDevice(device, event_handler=event_handler)
+    await profile.async_subscribe_services()
+
+    # Send a NOTIFY of CurrentTransportActions without Play
+    result = await event_handler.handle_notify(
+        AVT_NOTIFY_HEADERS,
+        AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT.format(actions="Stop"),
+    )
+    assert result == 200
+
+    # Should not be able to play yet
+    assert not profile.can_play
+
+    # Trigger variable change event in 0.1 seconds, less than the sleep time of
+    # the wait loop
+    async def delayed_notify() -> None:
+        await asyncio.sleep(0.1)
+        # Send NOTIFY of change to CurrentTransportActions
+        result = await event_handler.handle_notify(
+            AVT_NOTIFY_HEADERS,
+            AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT.format(actions="Pause,Play"),
+        )
+        assert result == 200
+
+    loop = asyncio.get_event_loop()
+    notify_task = loop.create_task(delayed_notify())
+    assert notify_task
+
+    # Call async_wait_for_can_play and check it returned shortly after notification
+    started = time.monotonic()
+    await profile.async_wait_for_can_play()
+    waited_time = time.monotonic() - started
+
+    assert 0.1 <= waited_time <= 0.5
+
+    assert profile.can_play
+
+    await profile.async_unsubscribe_services()
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_polled() -> None:
+    """Test async_wait_for_can_play polling state variables."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+
+    # Polling of CurrentTransportActions does not contain "Play" yet
+    requester.response_map[
+        ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
+    ] = (
+        200,
+        {},
+        read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
+    )
+    # Force update of CurrentTransportActions
+    await profile._async_poll_state_variables(
+        "AVT", ["GetCurrentTransportActions"], InstanceID=0
+    )
+
+    # Should not be able to play yet
+    assert not profile.can_play
+
+    # Polling of CurrentTransportActions now contains "Play"
+    requester.response_map[
+        ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
+    ] = (
+        200,
+        {},
+        read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
+    )
+
+    # Call async_wait_for_can_play and check it returned after polling
+    started = time.monotonic()
+    await profile.async_wait_for_can_play()
+    waited_time = time.monotonic() - started
+
+    assert 0.1 <= waited_time <= 1.0
+
+    assert profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_timeout() -> None:
+    """Test async_wait_for_can_play times out waiting for ability to play."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+
+    # Polling of CurrentTransportActions does not contain "Play" yet
+    requester.response_map[
+        ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
+    ] = (
+        200,
+        {},
+        read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
+    )
+    # Force update of CurrentTransportActions
+    await profile._async_poll_state_variables(
+        "AVT", ["GetCurrentTransportActions"], InstanceID=0
+    )
+
+    # Should not be able to play
+    assert not profile.can_play
+
+    # Call async_wait_for_can_play with a shorter timeout (to not delay tests too long)
+    started = time.monotonic()
+    await profile.async_wait_for_can_play(max_wait_time=0.5)
+    waited_time = time.monotonic() - started
+
+    assert 0.5 <= waited_time <= 1.5
+
+    assert not profile.can_play
 
 
 @pytest.mark.asyncio
