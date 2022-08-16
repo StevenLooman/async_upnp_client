@@ -227,6 +227,7 @@ async def test_wait_for_can_play_polled() -> None:
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
     )
     # Force update of CurrentTransportActions
+    # pylint: disable=protected-access
     await profile._async_poll_state_variables(
         "AVT", ["GetCurrentTransportActions"], InstanceID=0
     )
@@ -270,6 +271,7 @@ async def test_wait_for_can_play_timeout() -> None:
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
     )
     # Force update of CurrentTransportActions
+    # pylint: disable=protected-access
     await profile._async_poll_state_variables(
         "AVT", ["GetCurrentTransportActions"], InstanceID=0
     )
@@ -290,38 +292,39 @@ async def test_wait_for_can_play_timeout() -> None:
 @pytest.mark.asyncio
 async def test_fetch_headers() -> None:
     """Test _fetch_headers when the server supports HEAD, GET with range, or just GET."""
+    # pylint: disable=protected-access
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
     profile = DmrDevice(device, event_handler=None)
 
-    MEDIA_URL = "http://dlna_dms:4321/object/file_1222"
-    FETCH_HEADERS = {"GetContentFeatures.dlna.org": "1"}
-    RESPONSE_HEADERS = {"Content-Length": "1024", "Content-Type": "audio/mpeg"}
+    media_url = "http://dlna_dms:4321/object/file_1222"
+    fetch_headers = {"GetContentFeatures.dlna.org": "1"}
+    expected_response_headers = {"Content-Length": "1024", "Content-Type": "audio/mpeg"}
 
     # When HEAD works
     with mock.patch.object(
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
-        ahr_mock.side_effect = [(200, RESPONSE_HEADERS, "")]
-        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
-        ahr_mock.assert_awaited_once_with("HEAD", MEDIA_URL, FETCH_HEADERS)
-        assert headers == RESPONSE_HEADERS
+        ahr_mock.side_effect = [(200, expected_response_headers, "")]
+        headers = await profile._fetch_headers(media_url, fetch_headers)
+        ahr_mock.assert_awaited_once_with("HEAD", media_url, fetch_headers)
+        assert headers == expected_response_headers
 
     # HEAD method is not allowed, but GET with Range works
     with mock.patch.object(
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
-        ranged_response_headers = dict(RESPONSE_HEADERS)
+        ranged_response_headers = dict(expected_response_headers)
         ranged_response_headers["Content-Range"] = "bytes 0-0/1024"
         ahr_mock.side_effect = [
-            (405, RESPONSE_HEADERS, ""),
+            (405, expected_response_headers, ""),
             (200, ranged_response_headers, ""),
         ]
-        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
-            mock.call("HEAD", MEDIA_URL, FETCH_HEADERS),
-            mock.call("GET", MEDIA_URL, FETCH_HEADERS | {"Range": "bytes=0-0"}),
+            mock.call("HEAD", media_url, fetch_headers),
+            mock.call("GET", media_url, dict(fetch_headers, Range="bytes=0-0")),
         ]
         assert headers == ranged_response_headers
 
@@ -330,18 +333,18 @@ async def test_fetch_headers() -> None:
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
         # Different headers for working response, to check correct thing returned
-        get_headers = dict(RESPONSE_HEADERS)
-        get_headers["Content-Length"] = 2
+        get_headers = dict(expected_response_headers)
+        get_headers["Content-Length"] = "2"
         ahr_mock.side_effect = [
-            (405, RESPONSE_HEADERS, ""),
-            (405, RESPONSE_HEADERS, ""),
+            (405, expected_response_headers, ""),
+            (405, expected_response_headers, ""),
             (200, get_headers, ""),
         ]
-        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
-            mock.call("HEAD", MEDIA_URL, FETCH_HEADERS),
-            mock.call("GET", MEDIA_URL, FETCH_HEADERS | {"Range": "bytes=0-0"}),
-            mock.call("GET", MEDIA_URL, FETCH_HEADERS),
+            mock.call("HEAD", media_url, fetch_headers),
+            mock.call("GET", media_url, dict(fetch_headers, Range="bytes=0-0")),
+            mock.call("GET", media_url, fetch_headers),
         ]
         assert headers == get_headers
 
@@ -350,12 +353,12 @@ async def test_fetch_headers() -> None:
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
         ahr_mock.side_effect = [
-            (404, RESPONSE_HEADERS, ""),
-            (405, RESPONSE_HEADERS, ""),
-            (200, RESPONSE_HEADERS, ""),
+            (404, expected_response_headers, ""),
+            (405, expected_response_headers, ""),
+            (200, expected_response_headers, ""),
         ]
-        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
-        ahr_mock.assert_called_once_with("HEAD", MEDIA_URL, FETCH_HEADERS)
+        headers = await profile._fetch_headers(media_url, fetch_headers)
+        ahr_mock.assert_called_once_with("HEAD", media_url, fetch_headers)
         assert headers is None
 
     # Repeated server failures should give no headers
@@ -364,11 +367,11 @@ async def test_fetch_headers() -> None:
     ) as ahr_mock:
         # Different headers for working response, to check correct thing returned
         ahr_mock.return_value = (500, {}, "")
-        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
-            mock.call("HEAD", MEDIA_URL, FETCH_HEADERS),
-            mock.call("GET", MEDIA_URL, FETCH_HEADERS | {"Range": "bytes=0-0"}),
-            mock.call("GET", MEDIA_URL, FETCH_HEADERS),
+            mock.call("HEAD", media_url, fetch_headers),
+            mock.call("GET", media_url, dict(fetch_headers, Range="bytes=0-0")),
+            mock.call("GET", media_url, fetch_headers),
         ]
         assert headers is None
 
