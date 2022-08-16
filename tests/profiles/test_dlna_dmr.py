@@ -3,6 +3,7 @@
 import asyncio
 import time
 from typing import List, Sequence
+from unittest import mock
 
 import defusedxml.ElementTree
 import pytest
@@ -284,6 +285,92 @@ async def test_wait_for_can_play_timeout() -> None:
     assert 0.5 <= waited_time <= 1.5
 
     assert not profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_fetch_headers() -> None:
+    """Test _fetch_headers when the server supports HEAD, GET with range, or just GET."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+
+    MEDIA_URL = "http://dlna_dms:4321/object/file_1222"
+    FETCH_HEADERS = {"GetContentFeatures.dlna.org": "1"}
+    RESPONSE_HEADERS = {"Content-Length": "1024", "Content-Type": "audio/mpeg"}
+
+    # When HEAD works
+    with mock.patch.object(
+        profile.profile_device.requester, "async_http_request"
+    ) as ahr_mock:
+        ahr_mock.side_effect = [(200, RESPONSE_HEADERS, "")]
+        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        ahr_mock.assert_awaited_once_with("HEAD", MEDIA_URL, FETCH_HEADERS)
+        assert headers == RESPONSE_HEADERS
+
+    # HEAD method is not allowed, but GET with Range works
+    with mock.patch.object(
+        profile.profile_device.requester, "async_http_request"
+    ) as ahr_mock:
+        ranged_response_headers = dict(RESPONSE_HEADERS)
+        ranged_response_headers["Content-Range"] = "bytes 0-0/1024"
+        ahr_mock.side_effect = [
+            (405, RESPONSE_HEADERS, ""),
+            (200, ranged_response_headers, ""),
+        ]
+        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        assert ahr_mock.await_args_list == [
+            mock.call("HEAD", MEDIA_URL, FETCH_HEADERS),
+            mock.call("GET", MEDIA_URL, FETCH_HEADERS | {"Range": "bytes=0-0"}),
+        ]
+        assert headers == ranged_response_headers
+
+    # HEAD method and GET with Range is not allowed, but plain GET works
+    with mock.patch.object(
+        profile.profile_device.requester, "async_http_request"
+    ) as ahr_mock:
+        # Different headers for working response, to check correct thing returned
+        get_headers = dict(RESPONSE_HEADERS)
+        get_headers["Content-Length"] = 2
+        ahr_mock.side_effect = [
+            (405, RESPONSE_HEADERS, ""),
+            (405, RESPONSE_HEADERS, ""),
+            (200, get_headers, ""),
+        ]
+        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        assert ahr_mock.await_args_list == [
+            mock.call("HEAD", MEDIA_URL, FETCH_HEADERS),
+            mock.call("GET", MEDIA_URL, FETCH_HEADERS | {"Range": "bytes=0-0"}),
+            mock.call("GET", MEDIA_URL, FETCH_HEADERS),
+        ]
+        assert headers == get_headers
+
+    # HTTP 404 should bail early
+    with mock.patch.object(
+        profile.profile_device.requester, "async_http_request"
+    ) as ahr_mock:
+        ahr_mock.side_effect = [
+            (404, RESPONSE_HEADERS, ""),
+            (405, RESPONSE_HEADERS, ""),
+            (200, RESPONSE_HEADERS, ""),
+        ]
+        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        ahr_mock.assert_called_once_with("HEAD", MEDIA_URL, FETCH_HEADERS)
+        assert headers is None
+
+    # Repeated server failures should give no headers
+    with mock.patch.object(
+        profile.profile_device.requester, "async_http_request"
+    ) as ahr_mock:
+        # Different headers for working response, to check correct thing returned
+        ahr_mock.return_value = (500, {}, "")
+        headers = await profile._fetch_headers(MEDIA_URL, FETCH_HEADERS)
+        assert ahr_mock.await_args_list == [
+            mock.call("HEAD", MEDIA_URL, FETCH_HEADERS),
+            mock.call("GET", MEDIA_URL, FETCH_HEADERS | {"Range": "bytes=0-0"}),
+            mock.call("GET", MEDIA_URL, FETCH_HEADERS),
+        ]
+        assert headers is None
 
 
 @pytest.mark.asyncio
