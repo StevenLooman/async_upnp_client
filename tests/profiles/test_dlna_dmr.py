@@ -1,6 +1,7 @@
 """Unit tests for the DLNA DMR profile."""
 
 import asyncio
+import sys
 import time
 from typing import List, Sequence
 from unittest import mock
@@ -289,6 +290,7 @@ async def test_wait_for_can_play_timeout() -> None:
     assert not profile.can_play
 
 
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="Need Python 3.8 for AsyncMock")
 @pytest.mark.asyncio
 async def test_fetch_headers() -> None:
     """Test _fetch_headers when the server supports HEAD, GET with range, or just GET."""
