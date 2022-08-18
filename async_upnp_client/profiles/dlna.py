@@ -7,7 +7,9 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, IntFlag
+from http import HTTPStatus
 from mimetypes import guess_type
+from time import monotonic as monotonic_timer
 from typing import (
     Any,
     Dict,
@@ -842,15 +844,23 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data
         )
 
-    async def async_wait_for_can_play(self, max_wait_time: int = 5) -> None:
+    async def async_wait_for_can_play(self, max_wait_time: float = 5) -> None:
         """Wait for play command to be ready."""
         loop_time = 0.25
-        count = int(max_wait_time / loop_time)
-        # wait for state variable AVT.AVTransportURI to change and
-        for _ in range(count):
+        end_time = monotonic_timer() + max_wait_time
+
+        while monotonic_timer() <= end_time:
             if self._can_transport_action("play"):
                 break
             await asyncio.sleep(loop_time)
+            # Check again before trying to poll, in case variable change event received
+            if self._can_transport_action("play"):
+                break
+            # Poll current transport actions, even if we're subscribed, just in
+            # case the device isn't eventing properly.
+            await self._async_poll_state_variables(
+                "AVT", "GetCurrentTransportActions", InstanceID=0
+            )
         else:
             _LOGGER.debug("break out of waiting game")
 
@@ -861,14 +871,27 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         requester = self.profile_device.requester
 
         # try a HEAD first
-        status, headers, _ = await requester.async_http_request("HEAD", url, headers)
+        status, rsp_hdrs, _ = await requester.async_http_request("HEAD", url, headers)
         if 200 <= status < 300:
-            return headers
+            return rsp_hdrs
 
-        # then try a GET
-        status, headers, _ = await requester.async_http_request("GET", url, headers)
+        if status == HTTPStatus.NOT_FOUND:
+            # Give up when the item doesn't exist, otherwise try GET below
+            return None
+
+        # then try a GET request for only the first byte of content
+        get_headers = dict(headers)
+        get_headers["Range"] = "bytes=0-0"
+        status, rsp_hdrs, _ = await requester.async_http_request(
+            "GET", url, get_headers
+        )
         if 200 <= status < 300:
-            return headers
+            return rsp_hdrs
+
+        # finally try a plain GET, which might return a lot of data
+        status, rsp_hdrs, _ = await requester.async_http_request("GET", url, headers)
+        if 200 <= status < 300:
+            return rsp_hdrs
 
         return None
 

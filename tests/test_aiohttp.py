@@ -37,7 +37,8 @@ def test_fixed_host_header() -> None:
     assert _fixed_host_header("http://[fe80::1]:8000/root%desc") == {}
 
 
-def test_server_init() -> None:
+@pytest.mark.asyncio
+async def test_server_init() -> None:
     """Test initialization of an AiohttpNotifyServer."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     server = AiohttpNotifyServer(requester, ("192.168.1.2", 8090))
