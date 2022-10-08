@@ -81,8 +81,8 @@ subparser.add_argument(
     type=int,
 )
 subparser.add_argument(
-    "--service_type",
-    help="service type to search for",
+    "--search_target",
+    help="search target to search for",
     default=SSDP_ST_ALL,
 )
 
@@ -359,7 +359,7 @@ def source_target(
 async def search(search_args: Any) -> None:
     """Discover devices."""
     timeout = args.timeout
-    service_type = search_args.service_type
+    search_target = search_args.search_target
     source, target = source_target(
         search_args.bind, search_args.target, search_args.target_port
     )
@@ -373,7 +373,7 @@ async def search(search_args: Any) -> None:
         )
 
     await async_ssdp_search(
-        service_type=service_type,
+        search_target=search_target,
         source=source,
         target=target,
         timeout=timeout,
