@@ -72,7 +72,7 @@ subparser = subparsers.add_parser("search", help="Search for devices")
 subparser.add_argument("--bind", help="ip to bind to, e.g., 192.168.0.10")
 subparser.add_argument(
     "--target",
-    help="target ip, e.g., 192.168.0.10 or FF02::C%6 to request from",
+    help="target ip, e.g., 192.168.0.10 or FF02::C%%6 to request from",
 )
 subparser.add_argument(
     "--target_port",
