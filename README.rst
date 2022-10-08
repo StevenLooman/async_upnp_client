@@ -36,6 +36,7 @@ The `UPnP Device Architecture <https://openconnectivity.org/upnp-specs/UPnP-arch
    * ``async_upnp_client.ssdp_client`` contains the ``SsdpListener`` which combines advertisements and search to get the known devices and provides callbacks on changes. It is meant as something which runs continuously to provide useful information about the SSDP-active devices.
 * Chapter 2 Description / Chapter 3 Control
    * ``async_upnp_client.client_factory``/``async_upnp_client.client`` provide a series of classes to get information about the device/services using the 'description', and interact with these devices.
+   * ``async_upnp_client.server`` provides a series of classes to set up a UPnP server, including SSDP discovery/advertisements.
 * Chapter 4 Eventing
    * ``async_upnp_client.event_handler`` provides functionality to handle events received from the device.
 
