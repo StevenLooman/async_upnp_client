@@ -36,13 +36,13 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         timeout: int = SSDP_MX,
-        service_type: str = SSDP_ST_ALL,
+        search_target: str = SSDP_ST_ALL,
         async_connect_callback: Optional[Callable[[], Awaitable]] = None,
     ) -> None:
         """Init the ssdp listener class."""
         self.async_callback = async_callback
         self.async_connect_callback = async_connect_callback
-        self.service_type = service_type
+        self.search_target = search_target
         self.source, self.target = determine_source_target(source, target)
         self.timeout = timeout
         self.loop = loop
@@ -54,7 +54,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
     ) -> None:
         """Start an SSDP search."""
         assert self._target_host is not None, "Call async_start() first"
-        packet = build_ssdp_search_packet(self.target, self.timeout, self.service_type)
+        packet = build_ssdp_search_packet(self.target, self.timeout, self.search_target)
 
         assert self._transport is not None
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
@@ -132,7 +132,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 async def async_search(
     async_callback: Callable[[CaseInsensitiveDict], Awaitable],
     timeout: int = SSDP_MX,
-    service_type: str = SSDP_ST_ALL,
+    search_target: str = SSDP_ST_ALL,
     source: Optional[AddressTupleVXType] = None,
     target: Optional[AddressTupleVXType] = None,
     loop: Optional[AbstractEventLoop] = None,
@@ -153,7 +153,7 @@ async def async_search(
         source=source,
         target=target,
         timeout=timeout,
-        service_type=service_type,
+        search_target=search_target,
         async_connect_callback=_async_connected,
     )
 

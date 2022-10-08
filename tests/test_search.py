@@ -43,13 +43,13 @@ def test_create_ssdp_listener_with_alternate_target() -> None:
     listener = SsdpSearchListener(
         async_callback=callback,
         async_connect_callback=connect_callback,
-        service_type=yeelight_service_type,
+        search_target=yeelight_service_type,
         target=yeelight_target,
     )
 
     assert listener.source == ("0.0.0.0", 0)
     assert listener.target == yeelight_target
-    assert listener.service_type == yeelight_service_type
+    assert listener.search_target == yeelight_service_type
     assert listener.async_callback == callback
     assert listener.async_connect_callback == connect_callback
 
