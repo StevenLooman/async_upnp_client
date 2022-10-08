@@ -1,0 +1,2 @@
+* `DmrDevice.async_wait_for_can_play` will poll for changes to the `CurrentTransportActions` state variable, instead of just waiting for events.
+* `DmrDevice._fetch_headers` will perform a GET with a Range for the first byte, to minimise unnecessary network traffic. (@chishm)
