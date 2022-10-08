@@ -22,7 +22,7 @@ from async_upnp_client.const import (
     StateVariableTypeInfo,
 )
 
-from .server import UpnpServerDevice, UpnpServerService, callable_action, run_server
+from async_upnp_client.server import UpnpServer, UpnpServerDevice, UpnpServerService, callable_action
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_router")
@@ -344,7 +344,16 @@ class IgdDevice(UpnpServerDevice):
 
 async def async_main() -> None:
     """Main."""
-    await run_server(SOURCE, HTTP_PORT, IgdDevice)
+    server = UpnpServer(SOURCE, HTTP_PORT, IgdDevice)
+    await server.async_start()
+
+    try:
+        while True:
+            await asyncio.sleep(3600)
+    except KeyboardInterrupt:
+        pass
+
+    await server.async_stop()
 
 
 if __name__ == "__main__":

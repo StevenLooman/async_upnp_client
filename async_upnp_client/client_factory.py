@@ -125,13 +125,21 @@ class UpnpFactory:
             device_type=device_desc_el.findtext("./device:deviceType", "", NS),
             friendly_name=device_desc_el.findtext("./device:friendlyName", "", NS),
             manufacturer=device_desc_el.findtext("./device:manufacturer", "", NS),
-            model_name=device_desc_el.findtext("./device:modelName", "", NS),
-            udn=device_desc_el.findtext("./device:UDN", "", NS),
+            manufacturer_url=device_desc_el.findtext(
+                "./device:manufacturerURL", "", NS
+            ),
             model_description=device_desc_el.findtext(
                 "./device:modelDescription", None, NS
             ),
+            model_name=device_desc_el.findtext("./device:modelName", "", NS),
             model_number=device_desc_el.findtext("./device:modelNumber", None, NS),
+            model_url=device_desc_el.findtext("./device:modelURL", None, NS),
             serial_number=device_desc_el.findtext("./device:serialNumber", None, NS),
+            udn=device_desc_el.findtext("./device:UDN", "", NS),
+            upc=device_desc_el.findtext("./device:UPC", "", NS),
+            presentation_url=device_desc_el.findtext(
+                "./device:presentationURL", "", NS
+            ),
             url=description_url,
             icons=icons,
             xml=device_desc_el,

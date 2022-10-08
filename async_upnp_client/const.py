@@ -12,7 +12,6 @@ from typing import (
     MutableMapping,
     NamedTuple,
     Optional,
-    Sequence,
     Tuple,
     Union,
 )
@@ -93,86 +92,84 @@ STATE_VARIABLE_TYPE_MAPPING: Mapping[str, Mapping[str, Callable]] = {
     },
 }
 
-DeviceIcon = NamedTuple(
-    "DeviceIcon",
-    [
-        ("mimetype", str),
-        ("width", int),
-        ("height", int),
-        ("depth", int),
-        ("url", str),
-    ],
-)
 
-DeviceInfo = NamedTuple(
-    "DeviceInfo",
-    [
-        ("device_type", str),
-        ("friendly_name", str),
-        ("manufacturer", str),
-        ("model_name", str),
-        ("model_number", Optional[str]),
-        ("model_description", Optional[str]),
-        ("serial_number", Optional[str]),
-        ("udn", str),
-        ("url", str),
-        ("icons", Sequence[DeviceIcon]),
-        ("xml", ET.Element),
-    ],
-)
+class DeviceIcon(NamedTuple):
+    """Device icon."""
 
-ServiceInfo = NamedTuple(
-    "ServiceInfo",
-    [
-        ("service_id", str),
-        ("service_type", str),
-        ("control_url", str),
-        ("event_sub_url", str),
-        ("scpd_url", str),
-        ("xml", ET.Element),
-    ],
-)
+    mimetype: str
+    width: int
+    height: int
+    depth: int
+    url: str
 
-ActionArgumentInfo = NamedTuple(
-    "ActionArgumentInfo",
-    [
-        ("name", str),
-        ("direction", str),
-        ("state_variable_name", str),
-        ("xml", ET.Element),
-    ],
-)
 
-ActionInfo = NamedTuple(
-    "ActionInfo",
-    [
-        ("name", str),
-        ("arguments", Sequence[ActionArgumentInfo]),
-        ("xml", ET.Element),
-    ],
-)
+class DeviceInfo(NamedTuple):
+    """Device info."""
 
-StateVariableTypeInfo = NamedTuple(
-    "StateVariableTypeInfo",
-    [
-        ("data_type", str),
-        ("data_type_mapping", Mapping[str, Callable]),
-        ("default_value", Optional[str]),
-        ("allowed_value_range", Mapping[str, Optional[str]]),
-        ("allowed_values", Optional[List[str]]),
-        ("xml", ET.Element),
-    ],
-)
+    device_type: str
+    friendly_name: str
+    manufacturer: str
+    manufacturer_url: Optional[str]
+    model_description: Optional[str]
+    model_name: str
+    model_number: Optional[str]
+    model_url: Optional[str]
+    serial_number: Optional[str]
+    udn: str
+    upc: Optional[str]
+    presentation_url: Optional[str]
+    url: str
+    icons: List[DeviceIcon]
+    xml: ET.Element
 
-StateVariableInfo = NamedTuple(
-    "StateVariableInfo",
-    [
-        ("name", str),
-        ("send_events", bool),
-        ("type_info", StateVariableTypeInfo),
-        ("xml", ET.Element),
-    ],
-)
+
+class ServiceInfo(NamedTuple):
+    """Service info."""
+
+    service_id: str
+    service_type: str
+    control_url: str
+    event_sub_url: str
+    scpd_url: str
+    xml: ET.Element
+
+
+class ActionArgumentInfo(NamedTuple):
+    """Action argument info."""
+
+    name: str
+    direction: str
+    state_variable_name: str
+    xml: ET.Element
+
+
+class ActionInfo(NamedTuple):
+    """Action info."""
+
+    name: str
+    arguments: List[ActionArgumentInfo]
+    xml: ET.Element
+
+
+class StateVariableTypeInfo(NamedTuple):
+    """State variable type info."""
+
+    data_type: str
+    data_type_mapping: Mapping[str, Callable]
+    default_value: Optional[str]
+    allowed_value_range: Mapping[str, Optional[str]]
+    allowed_values: Optional[List[str]]
+    xml: ET.Element
+
+
+class StateVariableInfo(NamedTuple):
+    """State variable info."""
+
+    name: str
+    send_events: bool
+    type_info: StateVariableTypeInfo
+    xml: ET.Element
+
 
 # Headers
 SsdpHeaders = MutableMapping[str, Any]

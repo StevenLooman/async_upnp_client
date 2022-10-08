@@ -208,6 +208,11 @@ class UpnpDevice:
         return self.device_info.manufacturer
 
     @property
+    def manufacturer_url(self) -> Optional[str]:
+        """Get the manufacturer URL of this device."""
+        return self.device_info.manufacturer_url
+
+    @property
     def model_description(self) -> Optional[str]:
         """Get the model description of this device."""
         return self.device_info.model_description
@@ -223,6 +228,11 @@ class UpnpDevice:
         return self.device_info.model_number
 
     @property
+    def model_url(self) -> Optional[str]:
+        """Get the model URL of this device."""
+        return self.device_info.model_url
+
+    @property
     def serial_number(self) -> Optional[str]:
         """Get the serial number of this device."""
         return self.device_info.serial_number
@@ -231,6 +241,16 @@ class UpnpDevice:
     def udn(self) -> str:
         """Get UDN of this device."""
         return self.device_info.udn
+
+    @property
+    def upc(self) -> Optional[str]:
+        """Get UPC of this device."""
+        return self.device_info.upc
+
+    @property
+    def presentation_url(self) -> Optional[str]:
+        """Get presentationURL of this device."""
+        return self.device_info.presentation_url
 
     @property
     def device_url(self) -> str:
