@@ -117,7 +117,7 @@ def build_ssdp_search_packet(
     request_line = "M-SEARCH * HTTP/1.1"
     headers = {
         "HOST": f"{get_host_port_string(ssdp_target)}",
-        "MAN": '"ssdp:discover"',
+        "MAN": SSDP_DISCOVER,
         "MX": f"{ssdp_mx}",
         "ST": f"{ssdp_st}",
     }
