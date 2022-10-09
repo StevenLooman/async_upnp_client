@@ -1,53 +1,131 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.profiles.igd module."""
 
+import asyncio
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 from ipaddress import IPv4Address
-from typing import List, NamedTuple, Optional, Sequence
+from typing import List, NamedTuple, Optional, Sequence, Union
 
-from async_upnp_client.client import UpnpAction
+from async_upnp_client.client import UpnpAction, UpnpDevice
+from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.profiles.profile import UpnpProfileDevice
+
+TIMESTAMP = "timestamp"
+BYTES_RECEIVED = "bytes_received"
+BYTES_SENT = "bytes_sent"
+PACKETS_RECEIVED = "packets_received"
+PACKETS_SENT = "packets_sent"
+KIBIBYTES_PER_SEC_RECEIVED = "kibytes_sec_received"
+KIBIBYTES_PER_SEC_SENT = "kibytes_sec_sent"
+PACKETS_SEC_RECEIVED = "packets_sec_received"
+PACKETS_SEC_SENT = "packets_sec_sent"
+STATUS_INFO = "status_info"
+EXTERNAL_IP_ADDRESS = "external_ip_address"
 
 _LOGGER = logging.getLogger(__name__)
 
 
-CommonLinkProperties = NamedTuple(
-    "CommonLinkProperties",
-    [
-        ("wan_access_type", str),
-        ("layer1_upstream_max_bit_rate", int),
-        ("layer1_downstream_max_bit_rate", int),
-        ("physical_link_status", str),
-    ],
-)
+class CommonLinkProperties(NamedTuple):
+    """Common link properties."""
 
-ConnectionTypeInfo = NamedTuple(
-    "ConnectionTypeInfo", [("connection_type", str), ("possible_connection_types", str)]
-)
+    wan_access_type: str
+    layer1_upstream_max_bit_rate: int
+    layer1_downstream_max_bit_rate: int
+    physical_link_status: str
 
-StatusInfo = NamedTuple(
-    "StatusInfo",
-    [("connection_status", str), ("last_connection_error", str), ("uptime", int)],
-)
 
-NatRsipStatusInfo = NamedTuple(
-    "NatRsipStatusInfo", [("nat_enabled", bool), ("rsip_available", bool)]
-)
+class ConnectionTypeInfo(NamedTuple):
+    """Connection type info."""
 
-PortMappingEntry = NamedTuple(
-    "PortMappingEntry",
-    [
-        ("remote_host", Optional[IPv4Address]),
-        ("external_port", int),
-        ("protocol", str),
-        ("internal_port", int),
-        ("internal_client", IPv4Address),
-        ("enabled", bool),
-        ("description", str),
-        ("lease_duration", Optional[timedelta]),
-    ],
-)
+    connection_type: str
+    possible_connection_types: str
+
+
+class StatusInfo(NamedTuple):
+    """Status info."""
+
+    connection_status: str
+    last_connection_error: str
+    uptime: int
+
+
+class NatRsipStatusInfo(NamedTuple):
+    """NAT RSIP status info."""
+
+    nat_enabled: bool
+    rsip_available: bool
+
+
+class PortMappingEntry(NamedTuple):
+    """Port mapping entry."""
+
+    remote_host: Optional[IPv4Address]
+    external_port: int
+    protocol: str
+    internal_port: int
+    internal_client: IPv4Address
+    enabled: bool
+    description: str
+    lease_duration: Optional[timedelta]
+
+
+class TrafficCounterState(NamedTuple):
+    """Traffic state."""
+
+    timestamp: datetime
+    bytes_received: Union[None, Exception, int]
+    bytes_sent: Union[None, Exception, int]
+    packets_received: Union[None, Exception, int]
+    packets_sent: Union[None, Exception, int]
+
+
+class IgdState(NamedTuple):
+    """IGD state."""
+
+    timestamp: datetime
+    bytes_received: Union[None, Exception, int]
+    bytes_sent: Union[None, Exception, int]
+    packets_received: Union[None, Exception, int]
+    packets_sent: Union[None, Exception, int]
+    status_info: Union[None, Exception, StatusInfo]
+    external_ip_address: Union[str, Exception, None]
+
+    # Derived values.
+    kibibytes_per_sec_received: Union[None, float]
+    kibibytes_per_sec_sent: Union[None, float]
+    packets_per_sec_received: Union[None, float]
+    packets_per_sec_sent: Union[None, float]
+
+
+def _derive_value_per_second(
+    value_name: str,
+    current_timestamp: datetime,
+    current_value: Union[None, Exception, int],
+    last_timestamp: Union[None, Exception, datetime],
+    last_value: Union[None, Exception, int],
+) -> Union[None, float]:
+    """Calculate average based on current and last value."""
+    if (
+        last_timestamp is None
+        or isinstance(current_value, Exception)
+        or current_value is None
+        or isinstance(last_value, Exception)
+        or last_value is None
+    ):
+        return None
+
+    assert isinstance(last_timestamp, datetime)
+    assert isinstance(last_value, int)
+    if last_value > current_value:
+        # Value has overflowed, don't try to calculate anything.
+        return None
+
+    delta_time = current_timestamp - last_timestamp
+    delta_value: Union[int, float] = current_value - last_value
+    if value_name in (BYTES_RECEIVED, BYTES_SENT):
+        delta_value = delta_value / 1024  # 1KB
+    return delta_value / delta_time.total_seconds()
 
 
 class IgdDevice(UpnpProfileDevice):
@@ -74,6 +152,20 @@ class IgdDevice(UpnpProfileDevice):
             "urn:schemas-upnp-org:service:Layer3Forwarding:1",
         },
     }
+
+    def __init__(
+        self, device: UpnpDevice, event_handler: Optional[UpnpEventHandler]
+    ) -> None:
+        """Initialize."""
+        super().__init__(device, event_handler)
+
+        self._last_traffic_state = TrafficCounterState(
+            timestamp=datetime.now(),
+            bytes_received=None,
+            bytes_sent=None,
+            packets_received=None,
+            packets_sent=None,
+        )
 
     def _any_action(
         self, service_names: Sequence[str], action_name: str
@@ -477,3 +569,86 @@ class IgdDevice(UpnpProfileDevice):
             return
 
         await action.async_call(NewDefaultConnectionService=service)
+
+    async def async_get_traffic_and_status_data(
+        self,
+    ) -> IgdState:
+        """
+        Get all traffic data at once, including derived data.
+
+        Data:
+        * total bytes received
+        * total bytes sent
+        * total packets received
+        * total packets sent
+        * bytes per second received (derived from last update)
+        * bytes per second sent (derived from last update)
+        * packets per second received (derived from last update)
+        * packets per second sent (derived from last update)
+        """
+        timestamp = datetime.now()
+        values = await asyncio.gather(
+            self.async_get_total_bytes_received(),
+            self.async_get_total_bytes_sent(),
+            self.async_get_total_packets_received(),
+            self.async_get_total_packets_sent(),
+            self.async_get_status_info(),
+            self.async_get_external_ip_address(),
+            return_exceptions=True,
+        )
+
+        kibibytes_per_sec_received = _derive_value_per_second(
+            BYTES_RECEIVED,
+            timestamp,
+            values[0],
+            self._last_traffic_state.timestamp,
+            self._last_traffic_state.bytes_received,
+        )
+        kibibytes_per_sec_sent = _derive_value_per_second(
+            BYTES_SENT,
+            timestamp,
+            values[1],
+            self._last_traffic_state.timestamp,
+            self._last_traffic_state.bytes_sent,
+        )
+        packets_per_sec_received = _derive_value_per_second(
+            PACKETS_RECEIVED,
+            timestamp,
+            values[2],
+            self._last_traffic_state.timestamp,
+            self._last_traffic_state.packets_received,
+        )
+        packets_per_sec_sent = _derive_value_per_second(
+            PACKETS_SENT,
+            timestamp,
+            values[3],
+            self._last_traffic_state.timestamp,
+            self._last_traffic_state.packets_sent,
+        )
+
+        self._last_traffic_state = TrafficCounterState(
+            timestamp=timestamp,
+            bytes_received=values[0],
+            bytes_sent=values[1],
+            packets_received=values[2],
+            packets_sent=values[3],
+        )
+
+        non_exceptions = [value for value in values if not isinstance(value, Exception)]
+        if not non_exceptions:
+            # Raise any exception to indicate something was very wrong.
+            raise values[0]
+
+        return IgdState(
+            timestamp=timestamp,
+            bytes_received=values[0],
+            bytes_sent=values[1],
+            packets_received=values[2],
+            packets_sent=values[3],
+            kibibytes_per_sec_received=kibibytes_per_sec_received,
+            kibibytes_per_sec_sent=kibibytes_per_sec_sent,
+            packets_per_sec_received=packets_per_sec_received,
+            packets_per_sec_sent=packets_per_sec_sent,
+            status_info=values[4],
+            external_ip_address=values[5],
+        )
