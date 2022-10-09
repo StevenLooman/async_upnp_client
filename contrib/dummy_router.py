@@ -136,11 +136,15 @@ class WanConnectionDevice(UpnpServerDevice):
         device_type="urn:schemas-upnp-org:device:WANConnectionDevice:1",
         friendly_name="Dummy Router WAN Connection Device",
         manufacturer="Steven",
+        manufacturer_url=None,
         model_name="DummyRouter v1",
+        model_url=None,
         udn="uuid:51e00c19-c8f3-4b28-9ef1-7f562f204c82",
+        upc=None,
         model_description="Dummy Router IGD",
         model_number="v0.0.1",
         serial_number="0000001",
+        presentation_url=None,
         url="/device.xml",
         icons=[],
         xml=ET.Element("server_device"),
@@ -280,11 +284,15 @@ class WanDevice(UpnpServerDevice):
         device_type="urn:schemas-upnp-org:device:WANDevice:1",
         friendly_name="Dummy Router WAN Device",
         manufacturer="Steven",
+        manufacturer_url=None,
         model_name="DummyRouter v1",
+        model_url=None,
         udn="uuid:51e00c19-c8f3-4b28-9ef1-7f562f204c81",
+        upc=None,
         model_description="Dummy Router IGD",
         model_number="v0.0.1",
         serial_number="0000001",
+        presentation_url=None,
         url="/device.xml",
         icons=[],
         xml=ET.Element("server_device"),
@@ -322,11 +330,15 @@ class IgdDevice(UpnpServerDevice):
         device_type="urn:schemas-upnp-org:device:InternetGatewayDevice:1",
         friendly_name="Dummy Router",
         manufacturer="Steven",
+        manufacturer_url=None,
         model_name="DummyRouter v1",
+        model_url=None,
         udn="uuid:51e00c19-c8f3-4b28-9ef1-7f562f204c80",
+        upc=None,
         model_description="Dummy Router IGD",
         model_number="v0.0.1",
         serial_number="0000001",
+        presentation_url=None,
         url="/device.xml",
         icons=[],
         xml=ET.Element("server_device"),
@@ -344,7 +356,7 @@ class IgdDevice(UpnpServerDevice):
 
 async def async_main() -> None:
     """Main."""
-    server = UpnpServer(SOURCE, HTTP_PORT, IgdDevice)
+    server = UpnpServer(IgdDevice, SOURCE, http_port=HTTP_PORT)
     await server.async_start()
 
     try:

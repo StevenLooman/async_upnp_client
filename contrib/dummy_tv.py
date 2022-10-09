@@ -418,11 +418,15 @@ class MediaRendererDevice(UpnpServerDevice):
         device_type="urn:schemas-upnp-org:device:MediaRenderer:1",
         friendly_name="Dummy TV",
         manufacturer="Steven",
+        manufacturer_url=None,
         model_name="DummyTV v1",
+        model_url=None,
         udn="uuid:ea2181c0-c677-4a09-80e6-f9e69a951284",
+        upc=None,
         model_description="Dummy TV DMR",
         model_number="v0.0.1",
         serial_number="0000001",
+        presentation_url=None,
         url="/device.xml",
         icons=[],
         xml=ET.Element("server_device"),
@@ -440,7 +444,7 @@ class MediaRendererDevice(UpnpServerDevice):
 
 async def async_main() -> None:
     """Main."""
-    server = UpnpServer(SOURCE, HTTP_PORT, MediaRendererDevice)
+    server = UpnpServer(MediaRendererDevice, SOURCE, http_port=HTTP_PORT)
     await server.async_start()
 
     try:

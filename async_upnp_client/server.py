@@ -880,7 +880,7 @@ class UpnpServer:
         self,
         server_device: Type[UpnpServerDevice],
         source: AddressTupleVXType,
-        target: Optional[AddressTupleVXType],
+        target: Optional[AddressTupleVXType] = None,
         http_port: Optional[int] = None,
         options: Optional[Dict[str, Any]] = None,
     ) -> None:
