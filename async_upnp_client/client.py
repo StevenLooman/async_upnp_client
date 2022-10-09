@@ -779,6 +779,8 @@ T = TypeVar("T")  # pylint: disable=invalid-name
 class UpnpStateVariable(Generic[T]):
     """Representation of a State Variable."""
 
+    # pylint: disable=too-many-instance-attributes
+
     UPNP_VALUE_ERROR = object()
 
     def __init__(

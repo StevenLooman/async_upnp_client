@@ -26,8 +26,6 @@ from .conftest import RESPONSE_MAP, UpnpTestRequester, read_file
 class TestUpnpStateVariable:
     """Tests for UpnpStateVariable."""
 
-    # pylint: disable=no-self-use
-
     @pytest.mark.asyncio
     async def test_init(self) -> None:
         """Test initialization of a UpnpDevice."""
@@ -314,8 +312,6 @@ class TestUpnpStateVariable:
 class TestUpnpAction:
     """Tests for UpnpAction."""
 
-    # pylint: disable=no-self-use
-
     @pytest.mark.asyncio
     async def test_init(self) -> None:
         """Test Initializing a UpnpAction."""
@@ -551,8 +547,6 @@ class TestUpnpAction:
 
 class TestUpnpService:
     """Tests for UpnpService."""
-
-    # pylint: disable=no-self-use
 
     @pytest.mark.asyncio
     async def test_init(self) -> None:

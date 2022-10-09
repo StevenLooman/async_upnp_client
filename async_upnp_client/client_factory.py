@@ -107,7 +107,6 @@ class UpnpFactory:
         self, device_desc_el: ET.Element, description_url: str
     ) -> DeviceInfo:
         """Parse device description XML."""
-        # pylint: disable=no-self-use
         icons = []
         for icon_el in device_desc_el.iterfind("./device:iconList/device:icon", NS):
             icon_url = icon_el.findtext("./device:url", "", NS)
@@ -171,7 +170,6 @@ class UpnpFactory:
 
     def _parse_service_el(self, service_description_el: ET.Element) -> ServiceInfo:
         """Parse service description XML."""
-        # pylint: disable=no-self-use
         return ServiceInfo(
             service_id=service_description_el.findtext("device:serviceId", "", NS),
             service_type=service_description_el.findtext("device:serviceType", "", NS),
@@ -211,8 +209,6 @@ class UpnpFactory:
         self, state_variable_el: ET.Element
     ) -> StateVariableInfo:
         """Parse XML for state variable."""
-        # pylint: disable=no-self-use
-
         # send events
         send_events = False
         if "sendEvents" in state_variable_el.attrib:
@@ -350,8 +346,6 @@ class UpnpFactory:
 
     def _parse_action_el(self, action_el: ET.Element) -> ActionInfo:
         """Parse XML for action."""
-        # pylint: disable=no-self-use
-
         # build arguments
         args: List[ActionArgumentInfo] = []
         for argument_el in action_el.findall(

@@ -251,7 +251,6 @@ class SsdpProtocol(DatagramProtocol):
 
     def error_received(self, exc: Exception) -> None:
         """Handle an error."""
-        # pylint: disable=no-self-use
         _LOGGER.error("Received error: %s, transport: %s", exc, self.transport)
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
