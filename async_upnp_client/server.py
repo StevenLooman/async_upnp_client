@@ -67,6 +67,12 @@ NAMESPACES = {
     "s": "http://schemas.xmlsoap.org/soap/envelope/",
     "es": "http://schemas.xmlsoap.org/soap/encoding/",
 }
+SSDP_SEARCH_RESPONDER_OPTIONS = "ssdp_search_responder_options"
+SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE = (
+    "ssdp_search_responder_always_rootdevice"
+)
+SSDP_ADVERTISEMENT_ANNOUNCER_OPTIONS = "ssdp_advertisement_announcer_options"
+
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
@@ -240,10 +246,12 @@ class SsdpSearchResponder:
         device: UpnpServerDevice,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
+        options: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Init the ssdp search responder class."""
         self.device = device
         self.source, self.target = determine_source_target(source, target)
+        self.options = options or {}
         self._transport: Optional[DatagramTransport] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
@@ -256,6 +264,7 @@ class SsdpSearchResponder:
         headers: CaseInsensitiveDict,
     ) -> None:
         """Handle data."""
+        # pylint: disable=too-many-branches
         assert self._transport
 
         if request_line != "M-SEARCH * HTTP/1.1" or headers.get("MAN") != SSDP_DISCOVER:
@@ -294,6 +303,9 @@ class SsdpSearchResponder:
         elif matched_services := self._matched_services_by_type(search_target):
             for service in matched_services:
                 await self._async_send_responses_service(remote_addr, service)
+
+        if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
+            await self._async_send_response_rootdevice(remote_addr)
 
     def _matched_devices_by_uuid(self, search_target: str) -> List[UpnpDevice]:
         """Get matched devices by UDN."""
@@ -473,12 +485,14 @@ class SsdpAdvertisementAnnouncer:
         device: UpnpServerDevice,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
+        options: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Init the ssdp search responder class."""
         self.device = device
         self.source, self.target = determine_source_target(source, target)
-        self._transport: Optional[DatagramTransport] = None
+        self.options = options or {}
 
+        self._transport: Optional[DatagramTransport] = None
         self._advertisements = _build_advertisements(device)
         self._advertisement_index = 0
 
@@ -868,11 +882,14 @@ class UpnpServer:
         source: AddressTupleVXType,
         target: Optional[AddressTupleVXType],
         http_port: Optional[int] = None,
+        options: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize."""
+        # pylint: disable=too-many-arguments
         self.source, self.target = determine_source_target(source, target)
         self.http_port = http_port
         self.server_device = server_device
+        self.options = options or {}
 
         self.base_uri: Optional[str] = None
         self._device: Optional[UpnpServerDevice] = None
@@ -941,10 +958,16 @@ class UpnpServer:
         )
         assert self._device
         self._search_responder = SsdpSearchResponder(
-            self._device, self.source, self.target
+            self._device,
+            self.source,
+            self.target,
+            self.options.get(SSDP_SEARCH_RESPONDER_OPTIONS),
         )
         self._advertisement_announcer = SsdpAdvertisementAnnouncer(
-            self._device, self.source, self.target
+            self._device,
+            self.source,
+            self.target,
+            self.options.get(SSDP_ADVERTISEMENT_ANNOUNCER_OPTIONS),
         )
 
         await self._search_responder.async_start()
