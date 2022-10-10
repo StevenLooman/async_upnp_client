@@ -1,3 +1,49 @@
+async_upnp_client 0.32.0 (2022-10-10)
+=====================================
+
+Features
+--------
+
+- Add ability to build a upnp server.
+
+  This creates a complete upnp server, including a SSDP search responder and regular SSDP advertisement broadcasting. See the scripts ``contrib/dummy_router.py`` or ``contrib/dummy_tv.py`` for examples. (#143)
+- Add options to UpnpServer + option to always respond with root device.
+
+  The option is to ensure that Windows (11) always sees the device in the Network view in the Explorer. (#145)
+- Provide a single method to retrieve commonly updated data. This contains:
+  * traffic counters:
+     * bytes_received
+     * bytes_sent
+     * packets_received
+     * packets_sent
+  * status_info:
+     * connection_status
+     * last_connection_error
+     * uptime
+  * external_ip_address
+  * derived traffic counters:
+     * kibibytes_per_sec_received (since last call)
+     * kibibytes_per_sec_sent (since last call)
+     * packets_per_sec_received (since last call)
+     * packets_per_sec_sent (since last call)
+
+  Also let IgdDevice calculate derived traffic counters (value per second). (#146)
+
+
+Bugfixes
+--------
+
+- * `DmrDevice.async_wait_for_can_play` will poll for changes to the `CurrentTransportActions` state variable, instead of just waiting for events.
+  * `DmrDevice._fetch_headers` will perform a GET with a Range for the first byte, to minimise unnecessary network traffic. (@chishm) (#142)
+- Breaking change: ``ST`` stands for search target, not service type. (#144)
+
+
+Misc
+----
+
+- dev_deps
+
+
 async_upnp_client 0.31.2 (2022-06-19)
 =====================================
 
