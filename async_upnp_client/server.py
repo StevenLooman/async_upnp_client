@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """UPnP Server."""
+
+# pylint: disable=too-many-lines
+
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
@@ -480,6 +483,8 @@ def _build_advertisements(root_device: UpnpServerDevice) -> List[CaseInsensitive
 class SsdpAdvertisementAnnouncer:
     """SSDP Advertisement announcer."""
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
         device: UpnpServerDevice,
@@ -495,6 +500,7 @@ class SsdpAdvertisementAnnouncer:
         self._transport: Optional[DatagramTransport] = None
         self._advertisements = _build_advertisements(device)
         self._advertisement_index = 0
+        self._cancel_announce: Optional[asyncio.TimerHandle] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -528,6 +534,9 @@ class SsdpAdvertisementAnnouncer:
 
         _LOGGER.debug("Stop advertisements announcer")
 
+        if self._cancel_announce is not None:
+            self._cancel_announce.cancel()
+
         self._send_byebye()
         self._transport.close()
 
@@ -557,7 +566,7 @@ class SsdpAdvertisementAnnouncer:
 
         # Reschedule self.
         loop = asyncio.get_event_loop()
-        loop.call_later(30, self._announce_next)
+        self._cancel_announce = loop.call_later(30, self._announce_next)
 
     def _send_byebye(self) -> None:
         """Send ssdp:byebye."""
