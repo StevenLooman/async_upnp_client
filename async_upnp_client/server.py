@@ -2,6 +2,7 @@
 """UPnP Server."""
 import asyncio
 import logging
+import socket
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from functools import partial, wraps
@@ -526,7 +527,12 @@ class SsdpAdvertisementAnnouncer:
         """Stop listening for advertisements."""
         assert self._transport
 
-        _LOGGER.debug("Stop advertisements announcer")
+        sock: Optional[socket.socket] = self._transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Stop advertisements announcer, transport: %s, socket: %s",
+            self._transport,
+            sock,
+        )
 
         self._send_byebye()
         self._transport.close()
