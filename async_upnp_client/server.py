@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
 """UPnP Server."""
+
+# pylint: disable=too-many-lines
+
 import asyncio
 import logging
 import socket
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
+from datetime import timedelta
 from functools import partial, wraps
 from typing import (
     Any,
@@ -336,10 +340,11 @@ class SsdpSearchResponder:
         """Start."""
         _LOGGER.debug("Start listening for search requests")
 
-        # Construct a socket for use with this pairs of endpoints.
-        sock, _sock_source, sock_target = get_ssdp_socket(self.source, self.target)
-        _LOGGER.debug("Binding to address: %s", sock_target)
-        sock.bind(sock_target)
+        # Construct a socket for use with this pair of endpoints.
+        sock, _source, target = get_ssdp_socket(self.source, self.target)
+        address = target
+        _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+        sock.bind(address)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
@@ -481,6 +486,8 @@ def _build_advertisements(root_device: UpnpServerDevice) -> List[CaseInsensitive
 class SsdpAdvertisementAnnouncer:
     """SSDP Advertisement announcer."""
 
+    ANNOUNCE_INTERVAL = timedelta(seconds=30)
+
     def __init__(
         self,
         device: UpnpServerDevice,
@@ -506,9 +513,7 @@ class SsdpAdvertisementAnnouncer:
         _LOGGER.debug("Start advertisements announcer")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, _sock_source, sock_target = get_ssdp_socket(self.source, self.target)
-        _LOGGER.debug("Binding to address: %s", sock_target)
-        sock.bind(sock_target)
+        sock, _source, _target = get_ssdp_socket(self.source, self.target)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
@@ -559,7 +564,10 @@ class SsdpAdvertisementAnnouncer:
 
         # Reschedule self.
         loop = asyncio.get_event_loop()
-        loop.call_later(30, self._announce_next)
+        loop.call_later(
+            SsdpAdvertisementAnnouncer.ANNOUNCE_INTERVAL.total_seconds(),
+            self._announce_next,
+        )
 
     def _send_byebye(self) -> None:
         """Send ssdp:byebye."""
@@ -949,7 +957,7 @@ class UpnpServer:
         # Launch TCP handler.
         is_ipv6 = ":" in self.source[0]
         host = f"{self.source[0]}%{self.source[3]}" if is_ipv6 else self.source[0]  # type: ignore
-        self._site = TCPSite(runner, host, self.http_port)
+        self._site = TCPSite(runner, host, self.http_port, reuse_address=True)
         await self._site.start()
 
         assert self._device

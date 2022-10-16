@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-import sys
+import socket
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport, DatagramTransport
 from typing import Awaitable, Callable, Optional
@@ -72,7 +72,8 @@ class SsdpAdvertisementListener:
             await self.on_update(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
-        _LOGGER.debug("On connect, transport: %s", transport)
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
 
     async def async_start(self) -> None:
@@ -80,9 +81,9 @@ class SsdpAdvertisementListener:
         _LOGGER.debug("Start listening for advertisements")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, source, target = get_ssdp_socket(self.source, self.target)
-        address = source if sys.platform == "win32" else target
-        _LOGGER.debug("Binding to address: %s", address)
+        sock, _source, target = get_ssdp_socket(self.source, self.target)
+        address = target
+        _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
         sock.bind(address)
 
         # Create protocol and send discovery packet.

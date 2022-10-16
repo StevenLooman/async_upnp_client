@@ -94,7 +94,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         await self.async_callback(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
-        _LOGGER.debug("On connect, transport: %s", transport)
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
         if self.async_connect_callback:
             await self.async_connect_callback()
@@ -111,12 +112,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         """Start the listener."""
         _LOGGER.debug("Start listening for search responses")
 
-        # We use the standard target in the data of the announce since
-        # many implementations will ignore the request otherwise
-        sock, source, _target = get_ssdp_socket(self.source, self.target)
-
-        _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, source)
-        sock.bind(source)
+        sock, _source, _target = get_ssdp_socket(self.source, self.target)
 
         if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self.target)
