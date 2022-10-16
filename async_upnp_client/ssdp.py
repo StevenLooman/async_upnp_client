@@ -225,7 +225,11 @@ class SsdpProtocol(DatagramProtocol):
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
-        _LOGGER.debug("Connection made, transport: %s", transport)
+        _LOGGER.debug(
+            "Connection made, transport: %s, socket: %s",
+            transport,
+            transport.get_extra_info("socket"),
+        )
         self.transport = cast(DatagramTransport, transport)
 
         if self.on_connect:
@@ -259,11 +263,16 @@ class SsdpProtocol(DatagramProtocol):
 
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
-        _LOGGER.debug("Sending SSDP packet, transport: %s", self.transport)
+        assert self.transport is not None
+        sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Sending SSDP packet, transport: %s, socket: %s",
+            self.transport,
+            sock,
+        )
         _LOGGER_TRAFFIC_SSDP.debug(
             "Sending SSDP packet, target: %s, data: %s", target, packet
         )
-        assert self.transport is not None
         self.transport.sendto(packet, target)
 
 

@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import socket
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
@@ -53,10 +54,18 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self, override_target: Optional[AddressTupleVXType] = None
     ) -> None:
         """Start an SSDP search."""
+        assert self._transport is not None
+        sock: Optional[socket.socket] = self._transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Sending SEARCH packet, transport: %s, socket: %s, override_target: %s",
+            self._transport,
+            sock,
+            override_target,
+        )
+
         assert self._target_host is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(self.target, self.timeout, self.search_target)
 
-        assert self._transport is not None
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
         target = override_target or self.target
         protocol.send_ssdp_packet(packet, target)
@@ -106,7 +115,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         # many implementations will ignore the request otherwise
         sock, source, _target = get_ssdp_socket(self.source, self.target)
 
-        _LOGGER.debug("Binding to address: %s", source)
+        _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, source)
         sock.bind(source)
 
         if not self.target_ip.is_multicast:
