@@ -904,7 +904,7 @@ class UpnpServer:
         await self._async_start_ssdp()
 
     def _create_device(self) -> None:
-        """."""
+        """Create device."""
         requester = NopRequester()
         is_ipv6 = ":" in self.source[0]
         self.base_uri = (

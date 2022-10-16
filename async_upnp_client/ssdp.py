@@ -142,7 +142,7 @@ def udn_from_headers(
 ) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
     usn = headers.get("usn", "")
-    if usn and usn.startswith("uuid:"):
+    if usn and usn.lower().startswith("uuid:"):
         parts = str(usn).split("::")
         return parts[0]
 
