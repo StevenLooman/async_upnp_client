@@ -10,8 +10,8 @@
 
 import asyncio
 import logging
-import time
 import xml.etree.ElementTree as ET
+from time import time
 from typing import Dict, Mapping, Sequence, Type
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
@@ -152,11 +152,13 @@ class WanConnectionDevice(UpnpServerDevice):
     EMBEDDED_DEVICES: Sequence[Type[UpnpServerDevice]] = []
     SERVICES = [WANIPConnectionService]
 
-    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
+    def __init__(self, requester: UpnpRequester, base_uri: str, boot_id: int, config_id: int) -> None:
         """Initialize."""
         super().__init__(
             requester=requester,
             base_uri=base_uri,
+            boot_id=boot_id,
+            config_id=config_id,
         )
 
 
@@ -211,12 +213,12 @@ class WANCommonInterfaceConfigService(UpnpServerService):
 
     def _update_bytes(self, state_var_name: str) -> None:
         """Update bytes state variable."""
-        new_bytes = int(time.time() * 1000) % self.MAX_COUNTER
+        new_bytes = int(time() * 1000) % self.MAX_COUNTER
         self.state_variable(state_var_name).value = new_bytes
 
     def _update_packets(self, state_var_name: str) -> None:
         """Update state variable values."""
-        new_packets = int(time.time()) % self.MAX_COUNTER
+        new_packets = int(time()) % self.MAX_COUNTER
         self.state_variable(state_var_name).value = new_packets
         self.state_variable(state_var_name).value = new_packets
 
@@ -300,11 +302,13 @@ class WanDevice(UpnpServerDevice):
     EMBEDDED_DEVICES = [WanConnectionDevice]
     SERVICES = [WANCommonInterfaceConfigService]
 
-    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
+    def __init__(self, requester: UpnpRequester, base_uri: str, boot_id: int, config_id: int) -> None:
         """Initialize."""
         super().__init__(
             requester=requester,
             base_uri=base_uri,
+            boot_id=boot_id,
+            config_id=config_id,
         )
 
 
@@ -346,17 +350,21 @@ class IgdDevice(UpnpServerDevice):
     EMBEDDED_DEVICES = [WanDevice]
     SERVICES = [Layer3ForwardingService]
 
-    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
+    def __init__(self, requester: UpnpRequester, base_uri: str, boot_id: int, config_id: int) -> None:
         """Initialize."""
         super().__init__(
             requester=requester,
             base_uri=base_uri,
+            boot_id=boot_id,
+            config_id=config_id,
         )
 
 
 async def async_main() -> None:
     """Main."""
-    server = UpnpServer(IgdDevice, SOURCE, http_port=HTTP_PORT)
+    boot_id = int(time())
+    config_id = 1
+    server = UpnpServer(IgdDevice, SOURCE, http_port=HTTP_PORT, boot_id=boot_id, config_id=config_id)
     await server.async_start()
 
     try:

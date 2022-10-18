@@ -84,7 +84,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
             return
 
         _LOGGER.debug(
-            "Received search response, USN: %s, location: %s",
+            "Received search response, _remote_addr: %s, USN: %s, location: %s",
+            headers.get("_remote_addr", ""),
             headers.get("USN", "<no USN>"),
             headers.get("location", ""),
         )
@@ -113,6 +114,10 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         _LOGGER.debug("Start listening for search responses")
 
         sock, _source, _target = get_ssdp_socket(self.source, self.target)
+        # if sys.platform.startswith("win32"):
+        #     address = ('', self.target[1])
+        #     _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+        #     sock.bind(address)
 
         if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self.target)

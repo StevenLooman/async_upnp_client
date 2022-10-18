@@ -266,9 +266,10 @@ class SsdpProtocol(DatagramProtocol):
         assert self.transport is not None
         sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
         _LOGGER.debug(
-            "Sending SSDP packet, transport: %s, socket: %s",
+            "Sending SSDP packet, transport: %s, socket: %s, target: %s",
             self.transport,
             sock,
+            target,
         )
         _LOGGER_TRAFFIC_SSDP.debug(
             "Sending SSDP packet, target: %s, data: %s", target, packet
@@ -340,8 +341,14 @@ def get_ssdp_socket(
     _LOGGER.debug("Creating socket, source: %s, target: %s", source_info, target_info)
 
     # create socket
-    sock = socket.socket(source_info[0], source_info[1], source_info[2])
+    sock = socket.socket(source_info[0], source_info[1])
+
+    # set options
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+    except AttributeError:
+        pass
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # multicast

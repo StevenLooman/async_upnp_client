@@ -53,7 +53,8 @@ class SsdpAdvertisementListener:
             return
 
         _LOGGER.debug(
-            "Received advertisement, USN: %s, location: %s",
+            "Received advertisement, _remote_addr: %s, USN: %s, location: %s",
+            headers.get("_remote_addr", ""),
             headers.get("USN", "<no USN>"),
             headers.get("location", ""),
         )
@@ -81,8 +82,10 @@ class SsdpAdvertisementListener:
         _LOGGER.debug("Start listening for advertisements")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, _source, target = get_ssdp_socket(self.source, self.target)
-        address = target
+        sock, _source, _target = get_ssdp_socket(self.source, self.target)
+
+        # Bind to address.
+        address = ("", self.target[1])
         _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
         sock.bind(address)
 

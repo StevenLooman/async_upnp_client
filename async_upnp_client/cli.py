@@ -38,7 +38,7 @@ parser.add_argument("--debug-traffic", action="store_true", help="Show network t
 parser.add_argument(
     "--pprint", action="store_true", help="Pretty-print (indent) JSON output"
 )
-parser.add_argument("--timeout", type=int, help="Timeout for connection", default=5)
+parser.add_argument("--timeout", type=int, help="Timeout for connection", default=4)
 parser.add_argument(
     "--strict", action="store_true", help="Be strict about invalid data received"
 )
