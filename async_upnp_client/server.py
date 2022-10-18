@@ -23,6 +23,7 @@ from typing import (
     Union,
     cast,
 )
+from urllib.parse import urlparse
 
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
 from aiohttp.web import (
@@ -241,6 +242,7 @@ class UpnpServerDevice(UpnpDevice):
             embedded_devices=embedded_devices,
         )
         self.base_uri = base_uri
+        self.host = urlparse(base_uri).hostname
 
 
 class SsdpSearchResponder:
@@ -406,8 +408,9 @@ class SsdpSearchResponder:
         assert self._transport
 
         response_headers = {
-            "CACHE-CONTROL": "max-age=150",
-            "SERVER": "async-upnp-client/1.0 UPnP/1.0 DummyServer/1.0",
+            "HOST": f"{self.device.host}",
+            "CACHE-CONTROL": "max-age=1800",
+            "SERVER": "async-upnp-client/1.0 UPnP/1.0 Server/1.0",
             "ST": service_type,
             "USN": unique_service_name,
             "EXT": "",
@@ -440,7 +443,9 @@ def _build_advertisements(root_device: UpnpServerDevice) -> List[CaseInsensitive
 
     base_headers = {
         "NTS": "ssdp:alive",
-        "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
+        "HOST": f"{root_device.host}",
+        "CACHE-CONTROL": "max-age=1800",
+        "SERVER": "async-upnp-client/1.0 UPnP/2.0 Server/1.0",
         "BOOTID.UPNP.ORG": "1",
         "CONFIGID.UPNP.ORG": "1",
         "LOCATION": f"{root_device.base_uri}{root_device.device_url}",
@@ -576,7 +581,9 @@ class SsdpAdvertisementAnnouncer:
         start_line = "NOTIFY * HTTP/1.1"
         headers = {
             "NTS": "ssdp:byebye",
-            "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
+            "HOST": f"{self.device.host}",
+            "CACHE-CONTROL": "max-age=1800",
+            "SERVER": "async-upnp-client/1.0 UPnP/2.0 Server/1.0",
             # "BOOTID.UPNP.ORG": "1",
             # "CONFIGID.UPNP.ORG": "1",
             "NT": "upnp:rootdevice",
