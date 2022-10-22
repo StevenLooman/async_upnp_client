@@ -4,6 +4,7 @@
 import asyncio
 import logging
 import socket
+import sys
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
@@ -114,10 +115,10 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         _LOGGER.debug("Start listening for search responses")
 
         sock, _source, _target = get_ssdp_socket(self.source, self.target)
-        # if sys.platform.startswith("win32"):
-        #     address = ('', self.target[1])
-        #     _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
-        #     sock.bind(address)
+        if sys.platform.startswith("win32"):
+            address = self.source
+            _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+            sock.bind(address)
 
         if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self.target)

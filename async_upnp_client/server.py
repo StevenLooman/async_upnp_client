@@ -6,6 +6,7 @@
 import asyncio
 import logging
 import socket
+import sys
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from datetime import datetime, timedelta
@@ -37,6 +38,7 @@ from aiohttp.web import (
     TCPSite,
 )
 
+from async_upnp_client import __version__ as version
 from async_upnp_client.client import (
     UpnpAction,
     UpnpDevice,
@@ -77,7 +79,7 @@ NAMESPACES = {
     "s": "http://schemas.xmlsoap.org/soap/envelope/",
     "es": "http://schemas.xmlsoap.org/soap/encoding/",
 }
-HEADER_SERVER = "async-upnp-client/1.0 UPnP/2.0 Server/1.0"
+HEADER_SERVER = f"async-upnp-client/{version} UPnP/2.0 Server/1.0"
 HEADER_CACHE_CONTROL = "max-age=1800"
 SSDP_SEARCH_RESPONDER_OPTIONS = "ssdp_search_responder_options"
 SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE = (
@@ -492,7 +494,7 @@ def _build_advertisements(
         "NTS": "ssdp:alive",
         "HOST": host,
         "CACHE-CONTROL": HEADER_CACHE_CONTROL,
-        "SERVER": "async-upnp-client/1.0 UPnP/2.0 Server/1.0",
+        "SERVER": HEADER_SERVER,
         "BOOTID.UPNP.ORG": str(root_device.boot_id),
         "CONFIGID.UPNP.ORG": str(root_device.config_id),
         "LOCATION": f"{root_device.base_uri}{root_device.device_url}",
@@ -566,10 +568,10 @@ class SsdpAdvertisementAnnouncer:
 
         # Construct a socket for use with this pairs of endpoints.
         sock, _source, _target = get_ssdp_socket(self.source, self.target)
-        # if sys.platform.startswith("win32"):
-        #     address = ('', self.target[1])
-        #     _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
-        #     sock.bind(address)
+        if sys.platform.startswith("win32"):
+            address = self.source
+            _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+            sock.bind(address)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
