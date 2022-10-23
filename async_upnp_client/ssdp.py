@@ -308,6 +308,35 @@ def determine_source_target(
     return cast(AddressTupleVXType, source), cast(AddressTupleVXType, target)
 
 
+def fix_ipv6_address_scope_id(
+    address: Optional[AddressTupleVXType],
+) -> Optional[AddressTupleVXType]:
+    """Fix scope_id for an IPv6 address, if needed."""
+    if address is None or is_ipv4_address(address):
+        return address
+
+    ip_str = address[0]
+    if "%" not in ip_str:
+        # Nothing to fix.
+        return address
+
+    address = cast(AddressTupleV6Type, address)
+    idx = ip_str.index("%")
+    try:
+        ip_scope_id = int(ip_str[idx + 1 :])
+    except ValueError:
+        pass
+    scope_id = address[3]
+    new_scope_id = ip_scope_id if not scope_id and ip_scope_id else address[3]
+    new_ip = ip_str[:idx]
+    return (
+        new_ip,
+        address[1],
+        address[2],
+        new_scope_id,
+    )
+
+
 def ip_port_from_address_tuple(
     address_tuple: AddressTupleVXType,
 ) -> Tuple[IPvXAddress, int]:
