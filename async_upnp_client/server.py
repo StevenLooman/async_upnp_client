@@ -540,6 +540,8 @@ def _build_advertisements(
 class SsdpAdvertisementAnnouncer:
     """SSDP Advertisement announcer."""
 
+    # pylint: disable=too-many-instance-attributes
+
     ANNOUNCE_INTERVAL = timedelta(seconds=30)
 
     def __init__(
@@ -557,6 +559,7 @@ class SsdpAdvertisementAnnouncer:
         self._transport: Optional[DatagramTransport] = None
         self._advertisements = _build_advertisements(self.target, device)
         self._advertisement_index = 0
+        self._cancel_announce: Optional[asyncio.TimerHandle] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -583,7 +586,7 @@ class SsdpAdvertisementAnnouncer:
             sock=sock,
         )
 
-        # Reschedule self.
+        # Announce and reschedule self.
         self._announce_next()
 
     async def async_stop(self) -> None:
@@ -597,32 +600,39 @@ class SsdpAdvertisementAnnouncer:
             sock,
         )
 
+        if self._cancel_announce is not None:
+            self._cancel_announce.cancel()
+
         self._send_byebye()
         self._transport.close()
 
     def _announce_next(self) -> None:
         """Announce next advertisement."""
+        _LOGGER.debug("Announcing")
         assert self._transport
 
-        start_line = "NOTIFY * HTTP/1.1"
-        headers = self._advertisements[self._advertisement_index]
-        self._advertisement_index = (self._advertisement_index + 1) % len(
-            self._advertisements
-        )
-
-        packet = build_ssdp_packet(start_line, headers)
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
-        _LOGGER.debug(
-            "Sending advertisement, NTS: %s, NT: %s, USN: %s",
-            headers["NTS"],
-            headers["NT"],
-            headers["USN"],
-        )
-        protocol.send_ssdp_packet(packet, self.target)
+        # Protocol can be None when it is not yet initialized.
+        if protocol:
+            start_line = "NOTIFY * HTTP/1.1"
+            headers = self._advertisements[self._advertisement_index]
+            self._advertisement_index = (self._advertisement_index + 1) % len(
+                self._advertisements
+            )
+
+            packet = build_ssdp_packet(start_line, headers)
+
+            _LOGGER.debug(
+                "Sending advertisement, NTS: %s, NT: %s, USN: %s",
+                headers["NTS"],
+                headers["NT"],
+                headers["USN"],
+            )
+            protocol.send_ssdp_packet(packet, self.target)
 
         # Reschedule self.
         loop = asyncio.get_event_loop()
-        loop.call_later(
+        self._cancel_announce = loop.call_later(
             SsdpAdvertisementAnnouncer.ANNOUNCE_INTERVAL.total_seconds(),
             self._announce_next,
         )
