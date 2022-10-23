@@ -225,7 +225,11 @@ class SsdpProtocol(DatagramProtocol):
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
-        _LOGGER.debug("Connection made, transport: %s", transport)
+        _LOGGER.debug(
+            "Connection made, transport: %s, socket: %s",
+            transport,
+            transport.get_extra_info("socket"),
+        )
         self.transport = cast(DatagramTransport, transport)
 
         if self.on_connect:
@@ -259,11 +263,17 @@ class SsdpProtocol(DatagramProtocol):
 
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
-        _LOGGER.debug("Sending SSDP packet, transport: %s", self.transport)
+        assert self.transport is not None
+        sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Sending SSDP packet, transport: %s, socket: %s, target: %s",
+            self.transport,
+            sock,
+            target,
+        )
         _LOGGER_TRAFFIC_SSDP.debug(
             "Sending SSDP packet, target: %s, data: %s", target, packet
         )
-        assert self.transport is not None
         self.transport.sendto(packet, target)
 
 
@@ -296,6 +306,35 @@ def determine_source_target(
         raise UpnpError("Source and target do not match protocol")
 
     return cast(AddressTupleVXType, source), cast(AddressTupleVXType, target)
+
+
+def fix_ipv6_address_scope_id(
+    address: Optional[AddressTupleVXType],
+) -> Optional[AddressTupleVXType]:
+    """Fix scope_id for an IPv6 address, if needed."""
+    if address is None or is_ipv4_address(address):
+        return address
+
+    ip_str = address[0]
+    if "%" not in ip_str:
+        # Nothing to fix.
+        return address
+
+    address = cast(AddressTupleV6Type, address)
+    idx = ip_str.index("%")
+    try:
+        ip_scope_id = int(ip_str[idx + 1 :])
+    except ValueError:
+        pass
+    scope_id = address[3]
+    new_scope_id = ip_scope_id if not scope_id and ip_scope_id else address[3]
+    new_ip = ip_str[:idx]
+    return (
+        new_ip,
+        address[1],
+        address[2],
+        new_scope_id,
+    )
 
 
 def ip_port_from_address_tuple(
@@ -331,8 +370,14 @@ def get_ssdp_socket(
     _LOGGER.debug("Creating socket, source: %s, target: %s", source_info, target_info)
 
     # create socket
-    sock = socket.socket(source_info[0], source_info[1], source_info[2])
+    sock = socket.socket(source_info[0], source_info[1])
+
+    # set options
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+    except AttributeError:
+        pass
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
     # multicast

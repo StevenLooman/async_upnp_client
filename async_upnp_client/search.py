@@ -3,6 +3,8 @@
 
 import asyncio
 import logging
+import socket
+import sys
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
@@ -53,10 +55,18 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self, override_target: Optional[AddressTupleVXType] = None
     ) -> None:
         """Start an SSDP search."""
+        assert self._transport is not None
+        sock: Optional[socket.socket] = self._transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Sending SEARCH packet, transport: %s, socket: %s, override_target: %s",
+            self._transport,
+            sock,
+            override_target,
+        )
+
         assert self._target_host is not None, "Call async_start() first"
         packet = build_ssdp_search_packet(self.target, self.timeout, self.search_target)
 
-        assert self._transport is not None
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
         target = override_target or self.target
         protocol.send_ssdp_packet(packet, target)
@@ -75,7 +85,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
             return
 
         _LOGGER.debug(
-            "Received search response, USN: %s, location: %s",
+            "Received search response, _remote_addr: %s, USN: %s, location: %s",
+            headers.get("_remote_addr", ""),
             headers.get("USN", "<no USN>"),
             headers.get("location", ""),
         )
@@ -85,7 +96,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         await self.async_callback(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
-        _LOGGER.debug("On connect, transport: %s", transport)
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
         if self.async_connect_callback:
             await self.async_connect_callback()
@@ -102,12 +114,11 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         """Start the listener."""
         _LOGGER.debug("Start listening for search responses")
 
-        # We use the standard target in the data of the announce since
-        # many implementations will ignore the request otherwise
-        sock, source, _target = get_ssdp_socket(self.source, self.target)
-
-        _LOGGER.debug("Binding to address: %s", source)
-        sock.bind(source)
+        sock, _source, _target = get_ssdp_socket(self.source, self.target)
+        if sys.platform.startswith("win32"):
+            address = self.source
+            _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+            sock.bind(address)
 
         if not self.target_ip.is_multicast:
             self._target_host = get_host_string(self.target)

@@ -15,6 +15,7 @@ from async_upnp_client.ssdp import (
     SsdpProtocol,
     build_ssdp_search_packet,
     decode_ssdp_packet,
+    fix_ipv6_address_scope_id,
     get_ssdp_socket,
     is_ipv4_address,
     is_ipv6_address,
@@ -269,3 +270,12 @@ def test_is_ipv6_address() -> None:
     """Test is_ipv6_address()."""
     assert is_ipv6_address(("fe80::1", 12345, 0, 6))
     assert not is_ipv6_address(("192.168.1.1", 12345))
+
+
+def test_fix_ipv6_address_scope_id() -> None:
+    """Test fix_ipv6_address_scope_id."""
+    assert fix_ipv6_address_scope_id(("fe80::1", 0, 0, 4)) == ("fe80::1", 0, 0, 4)
+    assert fix_ipv6_address_scope_id(("fe80::1%4", 0, 0, 4)) == ("fe80::1", 0, 0, 4)
+    assert fix_ipv6_address_scope_id(("fe80::1%4", 0, 0, 0)) == ("fe80::1", 0, 0, 4)
+    assert fix_ipv6_address_scope_id(None) is None
+    assert fix_ipv6_address_scope_id(("192.168.1.1", 0)) == ("192.168.1.1", 0)

@@ -11,6 +11,7 @@
 import asyncio
 import logging
 import xml.etree.ElementTree as ET
+from time import time
 from typing import Dict, Sequence, Type
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
@@ -434,17 +435,21 @@ class MediaRendererDevice(UpnpServerDevice):
     EMBEDDED_DEVICES: Sequence[Type[UpnpServerDevice]] = []
     SERVICES = [RenderingControlService, AVTransportService, ConnectionManagerService]
 
-    def __init__(self, requester: UpnpRequester, base_uri: str) -> None:
+    def __init__(self, requester: UpnpRequester, base_uri: str, boot_id: int, config_id: int) -> None:
         """Initialize."""
         super().__init__(
             requester=requester,
             base_uri=base_uri,
+            boot_id=boot_id,
+            config_id=config_id,
         )
 
 
 async def async_main() -> None:
     """Main."""
-    server = UpnpServer(MediaRendererDevice, SOURCE, http_port=HTTP_PORT)
+    boot_id = int(time())
+    config_id = 1
+    server = UpnpServer(MediaRendererDevice, SOURCE, http_port=HTTP_PORT, boot_id=boot_id, config_id=config_id)
     await server.async_start()
 
     try:

@@ -5,9 +5,13 @@
 
 import asyncio
 import logging
+import socket
+import sys
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
+from datetime import datetime, timedelta
 from functools import partial, wraps
+from time import mktime
 from typing import (
     Any,
     Callable,
@@ -21,6 +25,8 @@ from typing import (
     Union,
     cast,
 )
+from urllib.parse import urlparse
+from wsgiref.handlers import format_date_time
 
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
 from aiohttp.web import (
@@ -32,6 +38,7 @@ from aiohttp.web import (
     TCPSite,
 )
 
+from async_upnp_client import __version__ as version
 from async_upnp_client.client import (
     UpnpAction,
     UpnpDevice,
@@ -56,6 +63,7 @@ from async_upnp_client.exceptions import (
     UpnpValueError,
 )
 from async_upnp_client.ssdp import (
+    _LOGGER_TRAFFIC_SSDP,
     SSDP_DISCOVER,
     SSDP_ST_ALL,
     SSDP_ST_ROOTDEVICE,
@@ -63,6 +71,7 @@ from async_upnp_client.ssdp import (
     build_ssdp_packet,
     determine_source_target,
     get_ssdp_socket,
+    is_ipv6_address,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
 
@@ -70,11 +79,15 @@ NAMESPACES = {
     "s": "http://schemas.xmlsoap.org/soap/envelope/",
     "es": "http://schemas.xmlsoap.org/soap/encoding/",
 }
+HEADER_SERVER = f"async-upnp-client/{version} UPnP/2.0 Server/1.0"
+HEADER_CACHE_CONTROL = "max-age=1800"
 SSDP_SEARCH_RESPONDER_OPTIONS = "ssdp_search_responder_options"
 SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE = (
     "ssdp_search_responder_always_rootdevice"
 )
+SSDP_SEARCH_RESPONDER_OPTION_HEADERS = "search_headers"
 SSDP_ADVERTISEMENT_ANNOUNCER_OPTIONS = "ssdp_advertisement_announcer_options"
+SSDP_ADVERTISEMENT_ANNOUNCER_OPTION_HEADERS = "advertisement_headers"
 
 _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
@@ -225,11 +238,18 @@ class UpnpServerDevice(UpnpDevice):
         self,
         requester: UpnpRequester,
         base_uri: str,
+        boot_id: int = 1,
+        config_id: int = 1,
     ) -> None:
         """Initialize."""
         services = [service_type(requester=requester) for service_type in self.SERVICES]
         embedded_devices = [
-            device_type(requester=requester, base_uri=base_uri)
+            device_type(
+                requester=requester,
+                base_uri=base_uri,
+                boot_id=boot_id,
+                config_id=config_id,
+            )
             for device_type in self.EMBEDDED_DEVICES
         ]
         super().__init__(
@@ -239,6 +259,9 @@ class UpnpServerDevice(UpnpDevice):
             embedded_devices=embedded_devices,
         )
         self.base_uri = base_uri
+        self.host = urlparse(base_uri).hostname
+        self.boot_id = boot_id
+        self.config_id = config_id
 
 
 class SsdpSearchResponder:
@@ -255,7 +278,9 @@ class SsdpSearchResponder:
         self.device = device
         self.source, self.target = determine_source_target(source, target)
         self.options = options or {}
+
         self._transport: Optional[DatagramTransport] = None
+        self._response_socket: Optional[socket.socket] = None
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -338,10 +363,18 @@ class SsdpSearchResponder:
         """Start."""
         _LOGGER.debug("Start listening for search requests")
 
-        # Construct a socket for use with this pairs of endpoints.
-        sock, _sock_source, sock_target = get_ssdp_socket(self.source, self.target)
-        _LOGGER.debug("Binding to address: %s", sock_target)
-        sock.bind(sock_target)
+        # Create response socket.
+        self._response_socket, _source, _target = get_ssdp_socket(
+            self.source, self.target
+        )
+
+        # Construct a socket for use with this pair of endpoints.
+        sock, _source, _target = get_ssdp_socket(self.source, self.target)
+
+        # Bind to address.
+        address = ("", self.target[1])
+        _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+        sock.bind(address)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
@@ -400,29 +433,46 @@ class SsdpSearchResponder:
         unique_service_name: str,
     ) -> None:
         """Send a response."""
-        assert self._transport
+        assert self._response_socket
 
+        now = datetime.now()
+        timestamp = mktime(now.timetuple())
+        date = format_date_time(timestamp)
         response_headers = {
-            "CACHE-CONTROL": "max-age=150",
-            "SERVER": "async-upnp-client/1.0 UPnP/1.0 DummyServer/1.0",
+            "CACHE-CONTROL": HEADER_CACHE_CONTROL,
+            "DATE": date,
+            "SERVER": HEADER_SERVER,
             "ST": service_type,
             "USN": unique_service_name,
             "EXT": "",
             "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
+            "BOOTID.UPNP.ORG": str(self.device.boot_id),
+            "CONFIGID.UPNP.ORG": str(self.device.config_id),
         }
 
         response_line = "HTTP/1.1 200 OK"
-        protocol = cast(SsdpProtocol, self._transport.get_protocol())
         packet = build_ssdp_packet(response_line, response_headers)
         _LOGGER.debug(
             "Sending search response, ST: %s, USN: %s, ",
             response_headers["ST"],
             response_headers["USN"],
         )
-        protocol.send_ssdp_packet(packet, remote_addr)
+        _LOGGER.debug(
+            "Sending SSDP packet, transport: %s, socket: %s, target: %s",
+            None,
+            self._response_socket,
+            remote_addr,
+        )
+        _LOGGER_TRAFFIC_SSDP.debug(
+            "Sending SSDP packet, target: %s, data: %s", remote_addr, packet
+        )
+        self._response_socket.sendto(packet, remote_addr)
 
 
-def _build_advertisements(root_device: UpnpServerDevice) -> List[CaseInsensitiveDict]:
+def _build_advertisements(
+    target: AddressTupleVXType,
+    root_device: UpnpServerDevice,
+) -> List[CaseInsensitiveDict]:
     """Build advertisements to be sent for a UpnpDevice."""
     # 3 + 2d + k (d: embedded device, k: service)
     # global:      ST: upnp:rootdevice
@@ -435,11 +485,18 @@ def _build_advertisements(root_device: UpnpServerDevice) -> List[CaseInsensitive
     #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
     advertisements: List[CaseInsensitiveDict] = []
 
+    host = (
+        f"[{target[0]}]:{target[1]}"
+        if is_ipv6_address(target)
+        else f"{target[0]}:{target[1]}"
+    )
     base_headers = {
         "NTS": "ssdp:alive",
-        "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
-        "BOOTID.UPNP.ORG": "1",
-        "CONFIGID.UPNP.ORG": "1",
+        "HOST": host,
+        "CACHE-CONTROL": HEADER_CACHE_CONTROL,
+        "SERVER": HEADER_SERVER,
+        "BOOTID.UPNP.ORG": str(root_device.boot_id),
+        "CONFIGID.UPNP.ORG": str(root_device.config_id),
         "LOCATION": f"{root_device.base_uri}{root_device.device_url}",
     }
 
@@ -485,6 +542,8 @@ class SsdpAdvertisementAnnouncer:
 
     # pylint: disable=too-many-instance-attributes
 
+    ANNOUNCE_INTERVAL = timedelta(seconds=30)
+
     def __init__(
         self,
         device: UpnpServerDevice,
@@ -498,7 +557,7 @@ class SsdpAdvertisementAnnouncer:
         self.options = options or {}
 
         self._transport: Optional[DatagramTransport] = None
-        self._advertisements = _build_advertisements(device)
+        self._advertisements = _build_advertisements(self.target, device)
         self._advertisement_index = 0
         self._cancel_announce: Optional[asyncio.TimerHandle] = None
 
@@ -511,9 +570,11 @@ class SsdpAdvertisementAnnouncer:
         _LOGGER.debug("Start advertisements announcer")
 
         # Construct a socket for use with this pairs of endpoints.
-        sock, _sock_source, sock_target = get_ssdp_socket(self.source, self.target)
-        _LOGGER.debug("Binding to address: %s", sock_target)
-        sock.bind(sock_target)
+        sock, _source, _target = get_ssdp_socket(self.source, self.target)
+        if sys.platform.startswith("win32"):
+            address = self.source
+            _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
+            sock.bind(address)
 
         # Create protocol and send discovery packet.
         loop = asyncio.get_event_loop()
@@ -532,7 +593,12 @@ class SsdpAdvertisementAnnouncer:
         """Stop listening for advertisements."""
         assert self._transport
 
-        _LOGGER.debug("Stop advertisements announcer")
+        sock: Optional[socket.socket] = self._transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Stop advertisements announcer, transport: %s, socket: %s",
+            self._transport,
+            sock,
+        )
 
         if self._cancel_announce is not None:
             self._cancel_announce.cancel()
@@ -566,18 +632,28 @@ class SsdpAdvertisementAnnouncer:
 
         # Reschedule self.
         loop = asyncio.get_event_loop()
-        self._cancel_announce = loop.call_later(30, self._announce_next)
+        self._cancel_announce = loop.call_later(
+            SsdpAdvertisementAnnouncer.ANNOUNCE_INTERVAL.total_seconds(),
+            self._announce_next,
+        )
 
     def _send_byebye(self) -> None:
         """Send ssdp:byebye."""
         assert self._transport
 
         start_line = "NOTIFY * HTTP/1.1"
+        host = (
+            f"[{self.target[0]}]:{self.target[1]}"
+            if is_ipv6_address(self.target)
+            else f"{self.target[0]}:{self.target[1]}"
+        )
         headers = {
             "NTS": "ssdp:byebye",
-            "SERVER": "async-upnp-client/1.0 UPnP/2.0 DummyServer/1.0",
-            # "BOOTID.UPNP.ORG": "1",
-            # "CONFIGID.UPNP.ORG": "1",
+            "HOST": host,
+            "CACHE-CONTROL": HEADER_CACHE_CONTROL,
+            "SERVER": HEADER_SERVER,
+            "BOOTID.UPNP.ORG": str(self.device.boot_id),
+            "CONFIGID.UPNP.ORG": str(self.device.config_id),
             "NT": "upnp:rootdevice",
             "USN": f"{self.device.udn}::upnp:rootdevice",
             "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
@@ -895,13 +971,17 @@ class UpnpServer:
         source: AddressTupleVXType,
         target: Optional[AddressTupleVXType] = None,
         http_port: Optional[int] = None,
+        boot_id: int = 1,
+        config_id: int = 1,
         options: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
+        self.server_device = server_device
         self.source, self.target = determine_source_target(source, target)
         self.http_port = http_port
-        self.server_device = server_device
+        self.boot_id = boot_id
+        self.config_id = config_id
         self.options = options or {}
 
         self.base_uri: Optional[str] = None
@@ -925,7 +1005,9 @@ class UpnpServer:
             if is_ipv6
             else f"http://{self.source[0]}:{self.http_port}"
         )
-        self._device = self.server_device(requester, self.base_uri)
+        self._device = self.server_device(
+            requester, self.base_uri, self.boot_id, self.config_id
+        )
 
     async def _async_start_http_server(self) -> None:
         """Start http server."""
@@ -956,7 +1038,7 @@ class UpnpServer:
         # Launch TCP handler.
         is_ipv6 = ":" in self.source[0]
         host = f"{self.source[0]}%{self.source[3]}" if is_ipv6 else self.source[0]  # type: ignore
-        self._site = TCPSite(runner, host, self.http_port)
+        self._site = TCPSite(runner, host, self.http_port, reuse_address=True)
         await self._site.start()
 
         assert self._device
@@ -972,15 +1054,15 @@ class UpnpServer:
         assert self._device
         self._search_responder = SsdpSearchResponder(
             self._device,
-            self.source,
-            self.target,
-            self.options.get(SSDP_SEARCH_RESPONDER_OPTIONS),
+            source=self.source,
+            target=self.target,
+            options=self.options.get(SSDP_SEARCH_RESPONDER_OPTIONS),
         )
         self._advertisement_announcer = SsdpAdvertisementAnnouncer(
             self._device,
-            self.source,
-            self.target,
-            self.options.get(SSDP_ADVERTISEMENT_ANNOUNCER_OPTIONS),
+            source=self.source,
+            target=self.target,
+            options=self.options.get(SSDP_ADVERTISEMENT_ANNOUNCER_OPTIONS),
         )
 
         await self._search_responder.async_start()
