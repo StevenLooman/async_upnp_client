@@ -1,1 +1,0 @@
-Fix a race condition in `server.SsdpAdvertisementAnnouncer` regarding protocol initialization.

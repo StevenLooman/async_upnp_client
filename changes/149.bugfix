@@ -1,1 +1,0 @@
-Fixes with regard to binding socket(s) for SSDP on macOS. Includes changes/improvements for Linux and Windows as well.

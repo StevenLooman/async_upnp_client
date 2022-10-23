@@ -1,3 +1,15 @@
+async_upnp_client 0.32.1 (2022-10-23)
+=====================================
+
+Bugfixes
+--------
+
+- Be more tolerant about extracting UDN from USN. Before, it was expecting the literal `uuid:`. Now it is case insensitive. (more_tolerant_udn_from_usn_parsing)
+- Several SSDP related fixes for UPnPServer. (ssdp_fixes)
+- Fix a race condition in `server.SsdpAdvertisementAnnouncer` regarding protocol initialization. (#148)
+- Fixes with regard to binding socket(s) for SSDP on macOS. Includes changes/improvements for Linux and Windows as well. (#149)
+
+
 async_upnp_client 0.32.0 (2022-10-10)
 =====================================
 

@@ -1,1 +1,0 @@
-Be more tolerant about extracting UDN from USN. Before, it was expecting the literal `uuid:`. Now it is case insensitive.
