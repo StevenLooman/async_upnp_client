@@ -220,8 +220,11 @@ def ip_version_from_location(location: str) -> Optional[int]:
     """Get the ip version for a location."""
     with suppress(ValueError):
         hostname = urlparse(location).hostname
-        assert hostname
+        if not hostname:
+            return None
+
         return ip_address(hostname).version
+
     return None
 
 

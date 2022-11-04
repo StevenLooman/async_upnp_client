@@ -1,0 +1,1 @@
+Hostname was always expected to be a valid value when determining IP version.
