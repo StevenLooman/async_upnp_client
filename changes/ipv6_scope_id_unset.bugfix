@@ -1,1 +1,0 @@
-Require scope_id to be set for source and target when creating a ssdp socket.

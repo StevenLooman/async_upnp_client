@@ -1,3 +1,19 @@
+async_upnp_client 0.32.2 (2022-11-05)
+=====================================
+
+Bugfixes
+--------
+
+- Hostname was always expected to be a valid value when determining IP version. (hostname_unset_fix)
+- Require scope_id to be set for source and target when creating a ssdp socket. (ipv6_scope_id_unset)
+
+
+Misc
+----
+
+- #150
+
+
 async_upnp_client 0.32.1 (2022-10-23)
 =====================================
 
