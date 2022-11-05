@@ -255,11 +255,23 @@ class SsdpProtocol(DatagramProtocol):
 
     def error_received(self, exc: Exception) -> None:
         """Handle an error."""
-        _LOGGER.error("Received error: %s, transport: %s", exc, self.transport)
+        sock: Optional[socket.socket] = (
+            self.transport.get_extra_info("socket") if self.transport else None
+        )
+        _LOGGER.error(
+            "Received error: %s, transport: %s, socket: %s", exc, self.transport, sock
+        )
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
-        _LOGGER.debug("Lost connection, error: %s, transport: %s", exc, self.transport)
+        assert self.transport
+        sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+        _LOGGER.debug(
+            "Lost connection, error: %s, transport: %s, socket: %s",
+            exc,
+            self.transport,
+            sock,
+        )
 
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
@@ -356,6 +368,17 @@ def get_ssdp_socket(
     target: AddressTupleVXType,
 ) -> Tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
     """Create a socket to listen on."""
+    # Ensure a proper IPv6 source/target.
+    if is_ipv6_address(source):
+        source = cast(AddressTupleV6Type, source)
+        if not source[3]:
+            raise UpnpError(f"Source missing scope_id, source: {source}")
+
+    if is_ipv6_address(target):
+        target = cast(AddressTupleV6Type, target)
+        if not target[3]:
+            raise UpnpError(f"Target missing scope_id, target: {target}")
+
     target_ip, target_port = ip_port_from_address_tuple(target)
     target_info = socket.getaddrinfo(
         str(target_ip),
