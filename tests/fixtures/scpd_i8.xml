@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<scpd xmlns="urn:schemas-upnp-org:service-1-0">
+   <specVersion>
+      <major>1</major>
+      <minor>0</minor>
+   </specVersion>
+   <actionList>
+      <action>
+        <name>X_BigIntegers</name>
+        <argumentList>
+          <argument>
+            <name>SignedEight</name>
+            <direction>in</direction>
+            <relatedStateVariable>A_ARG_TYPE_I</relatedStateVariable>
+          </argument>
+          <argument>
+            <name>UnsignedEight</name>
+            <direction>in</direction>
+            <relatedStateVariable>A_ARG_TYPE_UI</relatedStateVariable>
+          </argument>
+        </argumentList>
+      </action>
+   </actionList>
+   <serviceStateTable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_I</name>
+         <dataType>i8</dataType>
+      </stateVariable>
+      <stateVariable sendEvents="no">
+         <name>A_ARG_TYPE_UI</name>
+         <dataType>ui8</dataType>
+      </stateVariable>
+   </serviceStateTable>
+</scpd>
