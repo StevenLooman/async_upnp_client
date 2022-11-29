@@ -163,11 +163,11 @@ class DlnaDmrEventContentHandler(ContentHandler):
 class DlnaDmrEventErrorHandler(ErrorHandler):
     """Error handler which ignores errors."""
 
-    def error(self, exception: Exception) -> None:
+    def error(self, exception: BaseException) -> None:  # type: ignore
         """Handle error."""
         _LOGGER.debug("Error during parsing: %s", exception)
 
-    def fatalError(self, exception: Exception) -> None:
+    def fatalError(self, exception: BaseException) -> None:  # type: ignore
         """Handle error."""
         _LOGGER.debug("Fatal error during parsing: %s", exception)
 
