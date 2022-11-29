@@ -308,6 +308,20 @@ class TestUpnpStateVariable:
         state_var = service.state_variable("LastChange")
         assert state_var.send_events is True
 
+    @pytest.mark.asyncio
+    async def test_big_ints(self) -> None:
+        """Test state variable types i8 and ui8."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dms:1234/ContentDirectory_1.xml")] = (
+            200,
+            {},
+            read_file("scpd_i8.xml"),
+        )
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dms:1234/device.xml")
+        assert device is not None
+
 
 class TestUpnpAction:
     """Tests for UpnpAction."""
