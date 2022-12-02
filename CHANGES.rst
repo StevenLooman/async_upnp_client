@@ -1,3 +1,19 @@
+async_upnp_client 0.32.3 (2022-12-02)
+=====================================
+
+Bugfixes
+--------
+
+- Add support for i8 and ui8 types of UPnP descriptor variables. This fixes
+  parsing of Gerbera's `A_ARG_TYPE_PosSecond` state variable. (@chishm) (int8)
+
+
+Misc
+----
+
+- dev_deps: Stricter pinning of development dependencies.
+
+
 async_upnp_client 0.32.2 (2022-11-05)
 =====================================
 

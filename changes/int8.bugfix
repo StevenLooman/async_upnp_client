@@ -1,2 +1,0 @@
-Add support for i8 and ui8 types of UPnP descriptor variables. This fixes
-parsing of Gerbera's `A_ARG_TYPE_PosSecond` state variable. (@chishm)
