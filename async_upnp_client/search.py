@@ -33,17 +33,25 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
     def __init__(
         self,
-        async_callback: Callable[[CaseInsensitiveDict], Awaitable],
+        async_callback: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
+        callback: Optional[Callable[[CaseInsensitiveDict], None]] = None,
         loop: Optional[AbstractEventLoop] = None,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         timeout: int = SSDP_MX,
         search_target: str = SSDP_ST_ALL,
         async_connect_callback: Optional[Callable[[], Awaitable]] = None,
+        connect_callback: Optional[Callable[[], None]] = None,
     ) -> None:
         """Init the ssdp listener class."""
+        assert (
+            callback is not None or async_callback is not None
+        ), "Provide at least one callback"
+
         self.async_callback = async_callback
+        self.callback = callback
         self.async_connect_callback = async_connect_callback
+        self.connect_callback = connect_callback
         self.search_target = search_target
         self.source, self.target = determine_source_target(source, target)
         self.timeout = timeout
@@ -93,7 +101,10 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
-        await self.async_callback(headers)
+        if self.async_callback is not None:
+            await self.async_callback(headers)
+        if self.callback is not None:
+            self.callback(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         sock: Optional[socket.socket] = transport.get_extra_info("socket")
@@ -101,6 +112,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self._transport = transport
         if self.async_connect_callback:
             await self.async_connect_callback()
+        if self.connect_callback:
+            self.connect_callback()
 
     @property
     def target_ip(self) -> IPvXAddress:
@@ -129,7 +142,9 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
-                loop, on_connect=self._async_on_connect, on_data=self._async_on_data
+                loop,
+                async_on_connect=self._async_on_connect,
+                async_on_data=self._async_on_data,
             ),
             sock=sock,
         )

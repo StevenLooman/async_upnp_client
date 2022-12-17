@@ -27,7 +27,7 @@ async def test_receive_ssdp_alive() -> None:
     on_byebye = AsyncMock()
     on_update = AsyncMock()
     listener = SsdpAdvertisementListener(
-        on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
+        async_on_alive=on_alive, async_on_byebye=on_byebye, async_on_update=on_update
     )
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:alive"
@@ -46,7 +46,7 @@ async def test_receive_ssdp_byebye() -> None:
     on_byebye = AsyncMock()
     on_update = AsyncMock()
     listener = SsdpAdvertisementListener(
-        on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
+        async_on_alive=on_alive, async_on_byebye=on_byebye, async_on_update=on_update
     )
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:byebye"
@@ -65,7 +65,7 @@ async def test_receive_ssdp_update() -> None:
     on_byebye = AsyncMock()
     on_update = AsyncMock()
     listener = SsdpAdvertisementListener(
-        on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
+        async_on_alive=on_alive, async_on_byebye=on_byebye, async_on_update=on_update
     )
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
     headers["NTS"] = "ssdp:update"
@@ -84,7 +84,7 @@ async def test_receive_ssdp_search_response() -> None:
     on_byebye = AsyncMock()
     on_update = AsyncMock()
     listener = SsdpAdvertisementListener(
-        on_alive=on_alive, on_byebye=on_byebye, on_update=on_update
+        async_on_alive=on_alive, async_on_byebye=on_byebye, async_on_update=on_update
     )
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
     await listener._async_on_data(SEARCH_REQUEST_LINE, headers)

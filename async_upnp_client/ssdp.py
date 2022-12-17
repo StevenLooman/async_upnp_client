@@ -208,17 +208,17 @@ class SsdpProtocol(DatagramProtocol):
     def __init__(
         self,
         loop: AbstractEventLoop,
-        on_connect: Optional[
+        async_on_connect: Optional[
             Callable[[DatagramTransport], Coroutine[Any, Any, None]]
         ] = None,
-        on_data: Optional[
+        async_on_data: Optional[
             Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]]
         ] = None,
     ) -> None:
         """Initialize."""
         self.loop = loop
-        self.on_connect = on_connect
-        self.on_data = on_data
+        self.async_on_connect = async_on_connect
+        self.async_on_data = async_on_data
 
         self.on_con_lost = loop.create_future()
         self.transport: Optional[DatagramTransport] = None
@@ -232,8 +232,8 @@ class SsdpProtocol(DatagramProtocol):
         )
         self.transport = cast(DatagramTransport, transport)
 
-        if self.on_connect:
-            callback = self.on_connect(self.transport)
+        if self.async_on_connect:
+            callback = self.async_on_connect(self.transport)
             self.loop.create_task(callback)
 
     def datagram_received(self, data: bytes, addr: AddressTupleVXType) -> None:
@@ -241,7 +241,7 @@ class SsdpProtocol(DatagramProtocol):
         _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
         assert self.transport
 
-        if self.on_data and is_valid_ssdp_packet(data):
+        if self.async_on_data and is_valid_ssdp_packet(data):
             sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
             local_addr = sock.getsockname() if sock is not None else None
             try:
@@ -250,7 +250,7 @@ class SsdpProtocol(DatagramProtocol):
                 _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
                 return
 
-            callback = self.on_data(request_line, headers)
+            callback = self.async_on_data(request_line, headers)
             self.loop.create_task(callback)
 
     def error_received(self, exc: Exception) -> None:

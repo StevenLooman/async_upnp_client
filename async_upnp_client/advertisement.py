@@ -23,17 +23,34 @@ _LOGGER = logging.getLogger(__name__)
 class SsdpAdvertisementListener:
     """SSDP Advertisement listener."""
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
-        on_alive: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
-        on_byebye: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
-        on_update: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
+        async_on_alive: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
+        async_on_byebye: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
+        async_on_update: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
+        on_alive: Optional[Callable[[CaseInsensitiveDict], None]] = None,
+        on_byebye: Optional[Callable[[CaseInsensitiveDict], None]] = None,
+        on_update: Optional[Callable[[CaseInsensitiveDict], None]] = None,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
+        assert (
+            async_on_alive
+            or async_on_byebye
+            or async_on_update
+            or on_alive
+            or on_byebye
+            or on_update
+        ), "Provide at least one callback"
+
+        self.async_on_alive = async_on_alive
+        self.async_on_byebye = async_on_byebye
+        self.async_on_update = async_on_update
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
@@ -61,16 +78,21 @@ class SsdpAdvertisementListener:
 
         headers["_source"] = SsdpSource.ADVERTISEMENT
         notification_sub_type = headers["NTS"]
-        if notification_sub_type == NotificationSubType.SSDP_ALIVE and self.on_alive:
-            await self.on_alive(headers)
-        elif (
-            notification_sub_type == NotificationSubType.SSDP_BYEBYE and self.on_byebye
-        ):
-            await self.on_byebye(headers)
-        elif (
-            notification_sub_type == NotificationSubType.SSDP_UPDATE and self.on_update
-        ):
-            await self.on_update(headers)
+        if notification_sub_type == NotificationSubType.SSDP_ALIVE:
+            if self.async_on_alive:
+                await self.async_on_alive(headers)
+            if self.on_alive:
+                self.on_alive(headers)
+        elif notification_sub_type == NotificationSubType.SSDP_BYEBYE:
+            if self.async_on_byebye:
+                await self.async_on_byebye(headers)
+            if self.on_byebye:
+                self.on_byebye(headers)
+        elif notification_sub_type == NotificationSubType.SSDP_UPDATE:
+            if self.async_on_update:
+                await self.async_on_update(headers)
+            if self.on_update:
+                self.on_update(headers)
 
     async def _async_on_connect(self, transport: DatagramTransport) -> None:
         sock: Optional[socket.socket] = transport.get_extra_info("socket")
@@ -93,8 +115,8 @@ class SsdpAdvertisementListener:
         await self._loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 self._loop,
-                on_connect=self._async_on_connect,
-                on_data=self._async_on_data,
+                async_on_connect=self._async_on_connect,
+                async_on_data=self._async_on_data,
             ),
             sock=sock,
         )

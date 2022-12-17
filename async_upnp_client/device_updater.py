@@ -33,9 +33,9 @@ class DeviceUpdater:
         self._device = device
         self._factory = factory
         self._listener = SsdpAdvertisementListener(
-            on_alive=self._on_alive,
-            on_byebye=self._on_byebye,
-            on_update=self._on_update,
+            async_on_alive=self._on_alive,
+            async_on_byebye=self._on_byebye,
+            async_on_update=self._on_update,
             source=source,
         )
 

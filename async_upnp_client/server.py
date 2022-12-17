@@ -381,8 +381,8 @@ class SsdpSearchResponder:
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 loop,
-                on_connect=self._async_on_connect,
-                on_data=self._async_on_data,
+                async_on_connect=self._async_on_connect,
+                async_on_data=self._async_on_data,
             ),
             sock=sock,
         )
@@ -581,7 +581,7 @@ class SsdpAdvertisementAnnouncer:
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 loop,
-                on_connect=self._async_on_connect,
+                async_on_connect=self._async_on_connect,
             ),
             sock=sock,
         )
