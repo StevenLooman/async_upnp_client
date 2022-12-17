@@ -1,0 +1,1 @@
+Change comma splitting code in the DLNA module to better handle misbehaving clients.
