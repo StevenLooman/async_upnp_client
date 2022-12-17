@@ -213,6 +213,16 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     service.notify_changed_state_variables(changes_0)
 
 
+def split_commas(input_: str) -> List[str]:
+    """
+    Split a string into a list of comma separated values.
+
+    Strip whitespace and omit the empty string.
+    """
+    stripped = (item.strip() for item in input_.split(","))
+    return [item for item in stripped if item]
+
+
 class ConnectionManagerMixin(UpnpProfileDevice):
     """Mix-in to support ConnectionManager actions and state variables."""
 
@@ -246,8 +256,8 @@ class ConnectionManagerMixin(UpnpProfileDevice):
 
         protocol_info = await action.async_call()
         return {
-            "source": protocol_info["Source"].split(","),
-            "sink": protocol_info["Sink"].split(","),
+            "source": split_commas(protocol_info["Source"]),
+            "sink": split_commas(protocol_info["Sink"]),
         }
 
     @property
@@ -257,7 +267,7 @@ class ConnectionManagerMixin(UpnpProfileDevice):
         if state_var is None or not state_var.value:
             return []
 
-        return [info.strip() for info in state_var.value.split(",")]
+        return split_commas(state_var.value)
 
     @property
     def sink_protocol_info(self) -> List[str]:
@@ -266,7 +276,7 @@ class ConnectionManagerMixin(UpnpProfileDevice):
         if state_var is None or not state_var.value:
             return []
 
-        return [info.strip() for info in state_var.value.split(",")]
+        return split_commas(state_var.value)
 
     # endregion
 
@@ -419,8 +429,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         state_var = self._state_variable("AVT", "CurrentTransportActions")
         if not state_var:
             return []
-        transport_actions = (state_var.value or "").split(",")
-        return [a.lower().strip() for a in transport_actions]
+        transport_actions = split_commas(state_var.value or "")
+        return [a.lower() for a in transport_actions]
 
     def _can_transport_action(self, action: str) -> bool:
         return (
@@ -596,7 +606,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             _LOGGER.debug("Got no value for PresetNameList")
             return []
 
-        return [name.strip() for name in value.split(",")]
+        return split_commas(value)
 
     async def async_select_preset(self, preset_name: str) -> None:
         """Send SelectPreset command."""
@@ -1342,7 +1352,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if state_var is None or state_var.value is None:
             return []
 
-        return [capability.strip() for capability in state_var.value.split(",")]
+        return split_commas(state_var.value)
 
     @property
     def sort_capabilities(self) -> List[str]:
@@ -1351,7 +1361,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if state_var is None or state_var.value is None:
             return []
 
-        return [capability.strip() for capability in state_var.value.split(",")]
+        return split_commas(state_var.value)
 
     @property
     def system_update_id(self) -> Optional[int]:
@@ -1385,7 +1395,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
             return None
 
         # Convert list of containerID,updateID,containerID,updateID pairs to dict
-        id_list = state_var.value.split(",")
+        id_list = split_commas(state_var.value)
         return {id_list[i]: int(id_list[i + 1]) for i in range(0, len(id_list), 2)}
 
     class BrowseResult(NamedTuple):

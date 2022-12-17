@@ -16,6 +16,7 @@ from async_upnp_client.profiles.dlna import (
     DmrDevice,
     _parse_last_change_event,
     dlna_handle_notify_last_change,
+    split_commas,
 )
 
 from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester, read_file
@@ -98,6 +99,36 @@ def test_parse_last_change_event_invalid_xml() -> None:
     assert _parse_last_change_event(data) == {
         "0": {"TransportState": "PAUSED_PLAYBACK"}
     }
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    (
+        ("", []),
+        (",", []),
+        (", ,", []),
+        (
+            "http-get:*:audio/mp3:*,http-get:*:audio/mp4:*,http-get:*:audio/x-m4a:*",
+            [
+                "http-get:*:audio/mp3:*",
+                "http-get:*:audio/mp4:*",
+                "http-get:*:audio/x-m4a:*",
+            ],
+        ),
+        (
+            "http-get:*:audio/mp3:*,http-get:*:audio/mp4:*,http-get:*:audio/x-m4a:*,",
+            [
+                "http-get:*:audio/mp3:*",
+                "http-get:*:audio/mp4:*",
+                "http-get:*:audio/x-m4a:*",
+            ],
+        ),
+    ),
+)
+def test_split_commas(value: str, expected: List[str]) -> None:
+    """Test splitting comma separated value lists."""
+    actual = split_commas(value)
+    assert actual == expected
 
 
 @pytest.mark.asyncio
