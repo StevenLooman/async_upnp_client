@@ -59,10 +59,13 @@ class DescriptionCache:
         if location is None:
             return True, None
 
-        if location not in self._cache_dict:
+        description = self._cache_dict.get(location, _UNDEF)
+        if description is _UNDEF:
             return False, None
 
-        description = self._cache_dict[location]
+        if isinstance(description, asyncio.Event):
+            return False, None
+
         return True, cast(Optional[Mapping[str, Any]], description)
 
     async def async_get_description_dict(

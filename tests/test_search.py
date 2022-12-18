@@ -28,7 +28,7 @@ async def test_receive_search_response() -> None:
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    listener._on_data(SEARCH_REQUEST_LINE, headers)
 
     callback.assert_called_with(headers)
 
@@ -60,6 +60,6 @@ async def test_receive_ssdp_alive_advertisement() -> None:
     callback = AsyncMock()
     listener = SsdpSearchListener(async_callback=callback)
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
-    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    listener._on_data(ADVERTISEMENT_REQUEST_LINE, headers)
 
     callback.assert_not_called()

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.ssdp_listener module."""
 
+import asyncio
 import logging
 import re
 from asyncio.events import AbstractEventLoop
 from contextlib import suppress
 from datetime import datetime, timedelta
 from ipaddress import ip_address
-from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Set, Tuple
+from typing import Any, Callable, Coroutine, Dict, Mapping, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -462,7 +463,9 @@ class SsdpListener:
     def __init__(
         self,
         async_callback: Optional[
-            Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], Awaitable]
+            Callable[
+                [SsdpDevice, DeviceOrServiceType, SsdpSource], Coroutine[Any, Any, None]
+            ]
         ] = None,
         callback: Optional[
             Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], None]
@@ -480,7 +483,7 @@ class SsdpListener:
         self.async_callback = async_callback
         self.callback = callback
         self.source, self.target = determine_source_target(source, target)
-        self.loop = loop
+        self.loop = loop or asyncio.get_event_loop()
         self.search_timeout = search_timeout
         self._device_tracker = device_tracker or SsdpDeviceTracker()
         self._advertisement_listener: Optional[SsdpAdvertisementListener] = None
@@ -489,9 +492,9 @@ class SsdpListener:
     async def async_start(self) -> None:
         """Start search listener/advertisement listener."""
         self._advertisement_listener = SsdpAdvertisementListener(
-            async_on_alive=self._async_on_alive,
-            async_on_update=self._async_on_update,
-            async_on_byebye=self._async_on_byebye,
+            on_alive=self._on_alive,
+            on_update=self._on_update,
+            on_byebye=self._on_byebye,
             source=self.source,
             target=self.target,
             loop=self.loop,
@@ -499,7 +502,7 @@ class SsdpListener:
         await self._advertisement_listener.async_start()
 
         self._search_listener = SsdpSearchListener(
-            async_callback=self._async_on_search,
+            callback=self._on_search,
             loop=self.loop,
             source=self.source,
             target=self.target,
@@ -522,7 +525,7 @@ class SsdpListener:
         assert self._search_listener is not None, "Call async_start() first"
         self._search_listener.async_search(override_target)
 
-    async def _async_on_search(self, headers: CaseInsensitiveDict) -> None:
+    def _on_search(self, headers: CaseInsensitiveDict) -> None:
         """Search callback."""
         (
             propagate,
@@ -534,13 +537,14 @@ class SsdpListener:
         if propagate and ssdp_device and device_or_service_type:
             assert ssdp_source is not None
             if self.async_callback:
-                await self.async_callback(
+                coro = self.async_callback(
                     ssdp_device, device_or_service_type, ssdp_source
                 )
+                self.loop.create_task(coro)
             if self.callback:
                 self.callback(ssdp_device, device_or_service_type, ssdp_source)
 
-    async def _async_on_alive(self, headers: CaseInsensitiveDict) -> None:
+    def _on_alive(self, headers: CaseInsensitiveDict) -> None:
         """On alive."""
         (
             propagate,
@@ -550,15 +554,16 @@ class SsdpListener:
 
         if propagate and ssdp_device and device_or_service_type:
             if self.async_callback:
-                await self.async_callback(
+                coro = self.async_callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
                 )
+                self.loop.create_task(coro)
             if self.callback:
                 self.callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
                 )
 
-    async def _async_on_byebye(self, headers: CaseInsensitiveDict) -> None:
+    def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
         """On byebye."""
         (
             propagate,
@@ -568,15 +573,16 @@ class SsdpListener:
 
         if propagate and ssdp_device and device_or_service_type:
             if self.async_callback:
-                await self.async_callback(
+                coro = self.async_callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
                 )
+                self.loop.create_task(coro)
             if self.callback:
                 self.callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
                 )
 
-    async def _async_on_update(self, headers: CaseInsensitiveDict) -> None:
+    def _on_update(self, headers: CaseInsensitiveDict) -> None:
         """On update."""
         (
             propagate,
@@ -586,9 +592,10 @@ class SsdpListener:
 
         if propagate and ssdp_device and device_or_service_type:
             if self.async_callback:
-                await self.async_callback(
+                coro = self.async_callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
                 )
+                self.loop.create_task(coro)
             if self.callback:
                 self.callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
