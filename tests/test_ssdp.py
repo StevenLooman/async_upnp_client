@@ -163,11 +163,11 @@ async def test_ssdp_protocol_handles_broken_headers() -> None:
     addr = ("addr", 123)
     loop = asyncio.get_event_loop()
 
-    on_data_mock = AsyncMock()
-    protocol = SsdpProtocol(loop, async_on_data=on_data_mock)
+    async_on_data_mock = AsyncMock()
+    protocol = SsdpProtocol(loop, async_on_data=async_on_data_mock)
     protocol.transport = MagicMock()
     protocol.datagram_received(msg, addr)
-    on_data_mock.assert_not_awaited()
+    async_on_data_mock.assert_not_awaited()
 
 
 def test_decode_ssdp_packet_v6() -> None:
