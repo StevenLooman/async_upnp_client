@@ -103,10 +103,10 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
-        if self.async_callback is not None:
+        if self.async_callback:
             coro = self.async_callback(headers)
             self.loop.create_task(coro)
-        if self.callback is not None:
+        if self.callback:
             self.callback(headers)
 
     def _on_connect(self, transport: DatagramTransport) -> None:
