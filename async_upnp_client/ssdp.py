@@ -225,7 +225,6 @@ class SsdpProtocol(DatagramProtocol):
         self.async_on_data = async_on_data
         self.on_data = on_data
 
-        self.on_con_lost = loop.create_future()
         self.transport: Optional[DatagramTransport] = None
 
     def connection_made(self, transport: BaseTransport) -> None:
