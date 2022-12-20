@@ -282,11 +282,11 @@ class SsdpSearchResponder:
         self._transport: Optional[DatagramTransport] = None
         self._response_socket: Optional[socket.socket] = None
 
-    async def _async_on_connect(self, transport: DatagramTransport) -> None:
+    def _on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
         self._transport = transport
 
-    async def _async_on_data(
+    def _on_data(
         self,
         request_line: str,
         headers: CaseInsensitiveDict,
@@ -313,27 +313,27 @@ class SsdpSearchResponder:
             #              USN: uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:ver
             # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
             #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
-            await self._async_send_response_rootdevice(remote_addr)
+            self._send_response_rootdevice(remote_addr)
             for device in self.device.all_devices:
-                await self._async_send_responses_device_udn(remote_addr, device)
+                self._send_responses_device_udn(remote_addr, device)
             for device in self.device.all_devices:
-                await self._async_send_responses_device_type(remote_addr, device)
+                self._send_responses_device_type(remote_addr, device)
             for service in self.device.all_services:
-                await self._async_send_responses_service(remote_addr, service)
+                self._send_responses_service(remote_addr, service)
         elif search_target == SSDP_ST_ROOTDEVICE:
-            await self._async_send_response_rootdevice(remote_addr)
+            self._send_response_rootdevice(remote_addr)
         elif matched_devices := self._matched_devices_by_uuid(search_target):
             for device in matched_devices:
-                await self._async_send_responses_device_udn(remote_addr, device)
+                self._send_responses_device_udn(remote_addr, device)
         elif matched_devices := self._matched_devices_by_type(search_target):
             for device in matched_devices:
-                await self._async_send_responses_device_type(remote_addr, device)
+                self._send_responses_device_type(remote_addr, device)
         elif matched_services := self._matched_services_by_type(search_target):
             for service in matched_services:
-                await self._async_send_responses_service(remote_addr, service)
+                self._send_responses_service(remote_addr, service)
 
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
-            await self._async_send_response_rootdevice(remote_addr)
+            self._send_response_rootdevice(remote_addr)
 
     def _matched_devices_by_uuid(self, search_target: str) -> List[UpnpDevice]:
         """Get matched devices by UDN."""
@@ -381,8 +381,8 @@ class SsdpSearchResponder:
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 loop,
-                async_on_connect=self._async_on_connect,
-                async_on_data=self._async_on_data,
+                on_connect=self._on_connect,
+                on_data=self._on_data,
             ),
             sock=sock,
         )
@@ -394,39 +394,37 @@ class SsdpSearchResponder:
         _LOGGER.debug("Stop listening for SEARCH requests")
         self._transport.close()
 
-    async def _async_send_response_rootdevice(
-        self, remote_addr: AddressTupleVXType
-    ) -> None:
+    def _send_response_rootdevice(self, remote_addr: AddressTupleVXType) -> None:
         """Send root device response."""
-        await self._async_send_response(
+        self._async_send_response(
             remote_addr, "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
         )
 
-    async def _async_send_responses_device_udn(
+    def _send_responses_device_udn(
         self, remote_addr: AddressTupleVXType, device: UpnpDevice
     ) -> None:
         """Send device responses for UDN."""
-        await self._async_send_response(remote_addr, device.udn, f"{self.device.udn}")
+        self._async_send_response(remote_addr, device.udn, f"{self.device.udn}")
 
-    async def _async_send_responses_device_type(
+    def _send_responses_device_type(
         self, remote_addr: AddressTupleVXType, device: UpnpDevice
     ) -> None:
         """Send device responses for device type."""
-        await self._async_send_response(
+        self._async_send_response(
             remote_addr, device.device_type, f"{self.device.udn}::{device.device_type}"
         )
 
-    async def _async_send_responses_service(
+    def _send_responses_service(
         self, remote_addr: AddressTupleVXType, service: UpnpService
     ) -> None:
         """Send service responses."""
-        await self._async_send_response(
+        self._async_send_response(
             remote_addr,
             service.service_type,
             f"{self.device.udn}::{service.service_type}",
         )
 
-    async def _async_send_response(
+    def _async_send_response(
         self,
         remote_addr: AddressTupleVXType,
         service_type: str,
@@ -550,18 +548,21 @@ class SsdpAdvertisementAnnouncer:
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         options: Optional[Dict[str, Any]] = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
         """Init the ssdp search responder class."""
+        # pylint: disable=too-many-arguments
         self.device = device
         self.source, self.target = determine_source_target(source, target)
         self.options = options or {}
+        self.loop = loop or asyncio.get_event_loop()
 
         self._transport: Optional[DatagramTransport] = None
         self._advertisements = _build_advertisements(self.target, device)
         self._advertisement_index = 0
         self._cancel_announce: Optional[asyncio.TimerHandle] = None
 
-    async def _async_on_connect(self, transport: DatagramTransport) -> None:
+    def _on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
         self._transport = transport
 
@@ -581,7 +582,7 @@ class SsdpAdvertisementAnnouncer:
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 loop,
-                async_on_connect=self._async_on_connect,
+                on_connect=self._on_connect,
             ),
             sock=sock,
         )
@@ -631,8 +632,7 @@ class SsdpAdvertisementAnnouncer:
             protocol.send_ssdp_packet(packet, self.target)
 
         # Reschedule self.
-        loop = asyncio.get_event_loop()
-        self._cancel_announce = loop.call_later(
+        self._cancel_announce = self.loop.call_later(
             SsdpAdvertisementAnnouncer.ANNOUNCE_INTERVAL.total_seconds(),
             self._announce_next,
         )
