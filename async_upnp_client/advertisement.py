@@ -6,7 +6,7 @@ import logging
 import socket
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport, DatagramTransport
-from typing import Awaitable, Callable, Optional
+from typing import Any, Callable, Coroutine, Optional
 
 from async_upnp_client.const import AddressTupleVXType, NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
@@ -23,27 +23,48 @@ _LOGGER = logging.getLogger(__name__)
 class SsdpAdvertisementListener:
     """SSDP Advertisement listener."""
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
-        on_alive: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
-        on_byebye: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
-        on_update: Optional[Callable[[CaseInsensitiveDict], Awaitable]] = None,
+        async_on_alive: Optional[
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
+        ] = None,
+        async_on_byebye: Optional[
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
+        ] = None,
+        async_on_update: Optional[
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
+        ] = None,
+        on_alive: Optional[Callable[[CaseInsensitiveDict], None]] = None,
+        on_byebye: Optional[Callable[[CaseInsensitiveDict], None]] = None,
+        on_update: Optional[Callable[[CaseInsensitiveDict], None]] = None,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
+        assert (
+            async_on_alive
+            or async_on_byebye
+            or async_on_update
+            or on_alive
+            or on_byebye
+            or on_update
+        ), "Provide at least one callback"
+
+        self.async_on_alive = async_on_alive
+        self.async_on_byebye = async_on_byebye
+        self.async_on_update = async_on_update
         self.on_alive = on_alive
         self.on_byebye = on_byebye
         self.on_update = on_update
         self.source, self.target = determine_source_target(source, target)
-        self._loop: AbstractEventLoop = loop or asyncio.get_event_loop()
+        self.loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[BaseTransport] = None
 
-    async def _async_on_data(
-        self, request_line: str, headers: CaseInsensitiveDict
-    ) -> None:
+    def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.
@@ -61,18 +82,26 @@ class SsdpAdvertisementListener:
 
         headers["_source"] = SsdpSource.ADVERTISEMENT
         notification_sub_type = headers["NTS"]
-        if notification_sub_type == NotificationSubType.SSDP_ALIVE and self.on_alive:
-            await self.on_alive(headers)
-        elif (
-            notification_sub_type == NotificationSubType.SSDP_BYEBYE and self.on_byebye
-        ):
-            await self.on_byebye(headers)
-        elif (
-            notification_sub_type == NotificationSubType.SSDP_UPDATE and self.on_update
-        ):
-            await self.on_update(headers)
+        if notification_sub_type == NotificationSubType.SSDP_ALIVE:
+            if self.async_on_alive:
+                coro = self.async_on_alive(headers)
+                self.loop.create_task(coro)
+            if self.on_alive:
+                self.on_alive(headers)
+        elif notification_sub_type == NotificationSubType.SSDP_BYEBYE:
+            if self.async_on_byebye:
+                coro = self.async_on_byebye(headers)
+                self.loop.create_task(coro)
+            if self.on_byebye:
+                self.on_byebye(headers)
+        elif notification_sub_type == NotificationSubType.SSDP_UPDATE:
+            if self.async_on_update:
+                coro = self.async_on_update(headers)
+                self.loop.create_task(coro)
+            if self.on_update:
+                self.on_update(headers)
 
-    async def _async_on_connect(self, transport: DatagramTransport) -> None:
+    def _on_connect(self, transport: DatagramTransport) -> None:
         sock: Optional[socket.socket] = transport.get_extra_info("socket")
         _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
@@ -90,11 +119,11 @@ class SsdpAdvertisementListener:
         sock.bind(address)
 
         # Create protocol and send discovery packet.
-        await self._loop.create_datagram_endpoint(
+        await self.loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
-                self._loop,
-                on_connect=self._async_on_connect,
-                on_data=self._async_on_data,
+                self.loop,
+                on_connect=self._on_connect,
+                on_data=self._on_data,
             ),
             sock=sock,
         )

@@ -25,24 +25,24 @@ from .common import (
 async def test_receive_search_response() -> None:
     """Test handling a ssdp search response."""
     # pylint: disable=protected-access
-    callback = AsyncMock()
-    listener = SsdpSearchListener(async_callback=callback)
+    async_callback = AsyncMock()
+    listener = SsdpSearchListener(async_callback=async_callback)
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    await listener._async_on_data(SEARCH_REQUEST_LINE, headers)
+    listener._on_data(SEARCH_REQUEST_LINE, headers)
 
-    callback.assert_called_with(headers)
+    async_callback.assert_called_with(headers)
 
 
 def test_create_ssdp_listener_with_alternate_target() -> None:
     """Create a SsdpSearchListener on an alternate target."""
-    callback = AsyncMock()
-    connect_callback = AsyncMock()
+    async_callback = AsyncMock()
+    async_connect_callback = AsyncMock()
 
     yeelight_target = (SSDP_IP_V4, 1982)
     yeelight_service_type = "wifi_bulb"
     listener = SsdpSearchListener(
-        async_callback=callback,
-        async_connect_callback=connect_callback,
+        async_callback=async_callback,
+        async_connect_callback=async_connect_callback,
         search_target=yeelight_service_type,
         target=yeelight_target,
     )
@@ -50,16 +50,16 @@ def test_create_ssdp_listener_with_alternate_target() -> None:
     assert listener.source == ("0.0.0.0", 0)
     assert listener.target == yeelight_target
     assert listener.search_target == yeelight_service_type
-    assert listener.async_callback == callback
-    assert listener.async_connect_callback == connect_callback
+    assert listener.async_callback == async_callback
+    assert listener.async_connect_callback == async_connect_callback
 
 
 @pytest.mark.asyncio
 async def test_receive_ssdp_alive_advertisement() -> None:
     """Test handling a ssdp alive advertisement, which is ignored."""
-    callback = AsyncMock()
-    listener = SsdpSearchListener(async_callback=callback)
+    async_callback = AsyncMock()
+    listener = SsdpSearchListener(async_callback=async_callback)
     headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
-    await listener._async_on_data(ADVERTISEMENT_REQUEST_LINE, headers)
+    listener._on_data(ADVERTISEMENT_REQUEST_LINE, headers)
 
-    callback.assert_not_called()
+    async_callback.assert_not_called()

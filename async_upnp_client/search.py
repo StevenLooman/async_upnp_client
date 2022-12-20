@@ -8,7 +8,7 @@ import sys
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
-from typing import Awaitable, Callable, Optional, cast
+from typing import Any, Callable, Coroutine, Optional, cast
 
 from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
@@ -33,21 +33,33 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
     def __init__(
         self,
-        async_callback: Callable[[CaseInsensitiveDict], Awaitable],
+        async_callback: Optional[
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
+        ] = None,
+        callback: Optional[Callable[[CaseInsensitiveDict], None]] = None,
         loop: Optional[AbstractEventLoop] = None,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         timeout: int = SSDP_MX,
         search_target: str = SSDP_ST_ALL,
-        async_connect_callback: Optional[Callable[[], Awaitable]] = None,
+        async_connect_callback: Optional[
+            Callable[[], Coroutine[Any, Any, None]]
+        ] = None,
+        connect_callback: Optional[Callable[[], None]] = None,
     ) -> None:
         """Init the ssdp listener class."""
+        assert (
+            callback is not None or async_callback is not None
+        ), "Provide at least one callback"
+
         self.async_callback = async_callback
+        self.callback = callback
         self.async_connect_callback = async_connect_callback
+        self.connect_callback = connect_callback
         self.search_target = search_target
         self.source, self.target = determine_source_target(source, target)
         self.timeout = timeout
-        self.loop = loop
+        self.loop = loop or asyncio.get_event_loop()
         self._target_host: Optional[str] = None
         self._transport: Optional[DatagramTransport] = None
 
@@ -71,9 +83,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         target = override_target or self.target
         protocol.send_ssdp_packet(packet, target)
 
-    async def _async_on_data(
-        self, request_line: str, headers: CaseInsensitiveDict
-    ) -> None:
+    def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
         if headers.get("MAN") == SSDP_DISCOVER:
             # Ignore discover packets.
@@ -93,14 +103,21 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
-        await self.async_callback(headers)
+        if self.async_callback:
+            coro = self.async_callback(headers)
+            self.loop.create_task(coro)
+        if self.callback:
+            self.callback(headers)
 
-    async def _async_on_connect(self, transport: DatagramTransport) -> None:
+    def _on_connect(self, transport: DatagramTransport) -> None:
         sock: Optional[socket.socket] = transport.get_extra_info("socket")
         _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
         if self.async_connect_callback:
-            await self.async_connect_callback()
+            coro = self.async_connect_callback()
+            self.loop.create_task(coro)
+        if self.connect_callback:
+            self.connect_callback()
 
     @property
     def target_ip(self) -> IPvXAddress:
@@ -125,11 +142,12 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         else:
             self._target_host = ""
 
-        loop = self.loop or asyncio.get_event_loop()
-
+        loop = self.loop
         await loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
-                loop, on_connect=self._async_on_connect, on_data=self._async_on_data
+                loop,
+                on_connect=self._on_connect,
+                on_data=self._on_data,
             ),
             sock=sock,
         )
@@ -141,7 +159,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
 
 async def async_search(
-    async_callback: Callable[[CaseInsensitiveDict], Awaitable],
+    async_callback: Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]],
     timeout: int = SSDP_MX,
     search_target: str = SSDP_ST_ALL,
     source: Optional[AddressTupleVXType] = None,
@@ -159,7 +177,7 @@ async def async_search(
         listener.async_search()
 
     listener = SsdpSearchListener(
-        async_callback,
+        async_callback=async_callback,
         loop=loop_,
         source=source,
         target=target,

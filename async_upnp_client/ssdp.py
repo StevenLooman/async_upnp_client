@@ -208,19 +208,23 @@ class SsdpProtocol(DatagramProtocol):
     def __init__(
         self,
         loop: AbstractEventLoop,
-        on_connect: Optional[
+        async_on_connect: Optional[
             Callable[[DatagramTransport], Coroutine[Any, Any, None]]
         ] = None,
-        on_data: Optional[
+        on_connect: Optional[Callable[[DatagramTransport], None]] = None,
+        async_on_data: Optional[
             Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]]
         ] = None,
+        on_data: Optional[Callable[[str, CaseInsensitiveDict], None]] = None,
     ) -> None:
         """Initialize."""
+        # pylint: disable=too-many-arguments
         self.loop = loop
+        self.async_on_connect = async_on_connect
         self.on_connect = on_connect
+        self.async_on_data = async_on_data
         self.on_data = on_data
 
-        self.on_con_lost = loop.create_future()
         self.transport: Optional[DatagramTransport] = None
 
     def connection_made(self, transport: BaseTransport) -> None:
@@ -232,16 +236,18 @@ class SsdpProtocol(DatagramProtocol):
         )
         self.transport = cast(DatagramTransport, transport)
 
+        if self.async_on_connect:
+            coro = self.async_on_connect(self.transport)
+            self.loop.create_task(coro)
         if self.on_connect:
-            callback = self.on_connect(self.transport)
-            self.loop.create_task(callback)
+            self.on_connect(self.transport)
 
     def datagram_received(self, data: bytes, addr: AddressTupleVXType) -> None:
         """Handle a discovery-response."""
         _LOGGER_TRAFFIC_SSDP.debug("Received packet from %s: %s", addr, data)
         assert self.transport
 
-        if self.on_data and is_valid_ssdp_packet(data):
+        if is_valid_ssdp_packet(data):
             sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
             local_addr = sock.getsockname() if sock is not None else None
             try:
@@ -250,8 +256,11 @@ class SsdpProtocol(DatagramProtocol):
                 _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
                 return
 
-            callback = self.on_data(request_line, headers)
-            self.loop.create_task(callback)
+            if self.async_on_data:
+                coro = self.async_on_data(request_line, headers)
+                self.loop.create_task(coro)
+            if self.on_data:
+                self.on_data(request_line, headers)
 
     def error_received(self, exc: Exception) -> None:
         """Handle an error."""
@@ -275,7 +284,7 @@ class SsdpProtocol(DatagramProtocol):
 
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
-        assert self.transport is not None
+        assert self.transport
         sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
         _LOGGER.debug(
             "Sending SSDP packet, transport: %s, socket: %s, target: %s",

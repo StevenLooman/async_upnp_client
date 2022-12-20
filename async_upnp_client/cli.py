@@ -398,9 +398,9 @@ async def advertisements(advertisement_args: Any) -> None:
         )
 
     listener = SsdpAdvertisementListener(
-        on_alive=on_notify,
-        on_byebye=on_notify,
-        on_update=on_notify,
+        async_on_alive=on_notify,
+        async_on_byebye=on_notify,
+        async_on_update=on_notify,
         source=source,
         target=target,
     )

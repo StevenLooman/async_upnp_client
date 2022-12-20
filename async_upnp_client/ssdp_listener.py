@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.ssdp_listener module."""
 
+import asyncio
 import logging
 import re
-from asyncio import Lock
 from asyncio.events import AbstractEventLoop
-from contextlib import AbstractAsyncContextManager, suppress
+from contextlib import suppress
 from datetime import datetime, timedelta
 from ipaddress import ip_address
-from types import TracebackType
-from typing import Any, Awaitable, Callable, Dict, Mapping, Optional, Set, Tuple, Type
+from typing import Any, Callable, Coroutine, Dict, Mapping, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -256,36 +255,17 @@ def location_changed(ssdp_device: SsdpDevice, headers: CaseInsensitiveDict) -> b
     )
 
 
-class SsdpDeviceTracker(AbstractAsyncContextManager):
+class SsdpDeviceTracker:
     """
     Device tracker.
 
     Tracks `SsdpDevices` seen by the `SsdpListener`. Can be shared between `SsdpListeners`.
-
-    This uses a `asyncio.Lock` to prevent simulatinous device updates when the `SsdpDeviceTracker`
-    is shared between `SsdpListeners` (e.g., for simultaneous IPv4 and IPv6 handling
-    on the same network.)
     """
 
     def __init__(self) -> None:
         """Initialize."""
         self.devices: dict[UniqueDeviceName, SsdpDevice] = {}
         self.next_valid_to: Optional[datetime] = None
-        self._lock = Lock()
-
-    async def __aenter__(self) -> "SsdpDeviceTracker":
-        """Acquire the lock."""
-        await self._lock.acquire()
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> None:
-        """Release the lock."""
-        self._lock.release()
 
     def see_search(
         self, headers: CaseInsensitiveDict
@@ -293,8 +273,6 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         bool, Optional[SsdpDevice], Optional[DeviceOrServiceType], Optional[SsdpSource]
     ]:
         """See a device through a search."""
-        assert self._lock.locked(), "Lock first"
-
         if not valid_search_headers(headers):
             _LOGGER.debug("Received invalid search headers: %s", headers)
             return False, None, None, None
@@ -339,8 +317,6 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         self, headers: CaseInsensitiveDict
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """See a device through an advertisement."""
-        assert self._lock.locked(), "Lock first"
-
         if not valid_advertisement_headers(headers):
             _LOGGER.debug("Received invalid advertisement headers: %s", headers)
             return False, None, None
@@ -424,8 +400,6 @@ class SsdpDeviceTracker(AbstractAsyncContextManager):
         self, headers: CaseInsensitiveDict
     ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
         """Remove a device through an advertisement."""
-        assert self._lock.locked(), "Lock first"
-
         if not valid_byebye_headers(headers):
             return False, None, None
 
@@ -488,9 +462,14 @@ class SsdpListener:
 
     def __init__(
         self,
-        async_callback: Callable[
-            [SsdpDevice, DeviceOrServiceType, SsdpSource], Awaitable
-        ],
+        async_callback: Optional[
+            Callable[
+                [SsdpDevice, DeviceOrServiceType, SsdpSource], Coroutine[Any, Any, None]
+            ]
+        ] = None,
+        callback: Optional[
+            Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], None]
+        ] = None,
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
@@ -499,9 +478,12 @@ class SsdpListener:
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
+        assert callback or async_callback, "Provide at least one callback"
+
         self.async_callback = async_callback
+        self.callback = callback
         self.source, self.target = determine_source_target(source, target)
-        self.loop = loop
+        self.loop = loop or asyncio.get_event_loop()
         self.search_timeout = search_timeout
         self._device_tracker = device_tracker or SsdpDeviceTracker()
         self._advertisement_listener: Optional[SsdpAdvertisementListener] = None
@@ -520,7 +502,7 @@ class SsdpListener:
         await self._advertisement_listener.async_start()
 
         self._search_listener = SsdpSearchListener(
-            self._on_search,
+            callback=self._on_search,
             loop=self.loop,
             source=self.source,
             target=self.target,
@@ -543,61 +525,79 @@ class SsdpListener:
         assert self._search_listener is not None, "Call async_start() first"
         self._search_listener.async_search(override_target)
 
-    async def _on_search(self, headers: CaseInsensitiveDict) -> None:
+    def _on_search(self, headers: CaseInsensitiveDict) -> None:
         """Search callback."""
-        async with self._device_tracker:
-            (
-                propagate,
-                ssdp_device,
-                device_or_service_type,
-                ssdp_source,
-            ) = self._device_tracker.see_search(headers)
+        (
+            propagate,
+            ssdp_device,
+            device_or_service_type,
+            ssdp_source,
+        ) = self._device_tracker.see_search(headers)
 
-            if propagate and ssdp_device and device_or_service_type:
-                assert ssdp_source is not None
-                await self.async_callback(
+        if propagate and ssdp_device and device_or_service_type:
+            assert ssdp_source is not None
+            if self.async_callback:
+                coro = self.async_callback(
                     ssdp_device, device_or_service_type, ssdp_source
                 )
+                self.loop.create_task(coro)
+            if self.callback:
+                self.callback(ssdp_device, device_or_service_type, ssdp_source)
 
-    async def _on_alive(self, headers: CaseInsensitiveDict) -> None:
+    def _on_alive(self, headers: CaseInsensitiveDict) -> None:
         """On alive."""
-        async with self._device_tracker:
-            (
-                propagate,
-                ssdp_device,
-                device_or_service_type,
-            ) = self._device_tracker.see_advertisement(headers)
+        (
+            propagate,
+            ssdp_device,
+            device_or_service_type,
+        ) = self._device_tracker.see_advertisement(headers)
 
-            if propagate and ssdp_device and device_or_service_type:
-                await self.async_callback(
+        if propagate and ssdp_device and device_or_service_type:
+            if self.async_callback:
+                coro = self.async_callback(
+                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
+                )
+                self.loop.create_task(coro)
+            if self.callback:
+                self.callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
                 )
 
-    async def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
+    def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
         """On byebye."""
-        async with self._device_tracker:
-            (
-                propagate,
-                ssdp_device,
-                device_or_service_type,
-            ) = self._device_tracker.unsee_advertisement(headers)
+        (
+            propagate,
+            ssdp_device,
+            device_or_service_type,
+        ) = self._device_tracker.unsee_advertisement(headers)
 
-            if propagate and ssdp_device and device_or_service_type:
-                await self.async_callback(
+        if propagate and ssdp_device and device_or_service_type:
+            if self.async_callback:
+                coro = self.async_callback(
+                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
+                )
+                self.loop.create_task(coro)
+            if self.callback:
+                self.callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
                 )
 
-    async def _on_update(self, headers: CaseInsensitiveDict) -> None:
+    def _on_update(self, headers: CaseInsensitiveDict) -> None:
         """On update."""
-        async with self._device_tracker:
-            (
-                propagate,
-                ssdp_device,
-                device_or_service_type,
-            ) = self._device_tracker.see_advertisement(headers)
+        (
+            propagate,
+            ssdp_device,
+            device_or_service_type,
+        ) = self._device_tracker.see_advertisement(headers)
 
-            if propagate and ssdp_device and device_or_service_type:
-                await self.async_callback(
+        if propagate and ssdp_device and device_or_service_type:
+            if self.async_callback:
+                coro = self.async_callback(
+                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
+                )
+                self.loop.create_task(coro)
+            if self.callback:
+                self.callback(
                     ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
                 )
 

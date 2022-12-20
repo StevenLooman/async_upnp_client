@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-from typing import Any, Mapping, Optional, Union, cast
+from typing import Any, Mapping, Optional, Tuple, Union, cast
 
 import aiohttp
 import defusedxml.ElementTree as DET
@@ -52,12 +52,29 @@ class DescriptionCache:
             _LOGGER.exception("Failed to fetch description from: %s", location)
         return None
 
+    def peek_description_dict(
+        self, location: Optional[str]
+    ) -> Tuple[bool, Optional[Mapping[str, Any]]]:
+        """Peek a description as dict, only try the cache."""
+        if location is None:
+            return True, None
+
+        description = self._cache_dict.get(location, _UNDEF)
+        if description is _UNDEF:
+            return False, None
+
+        if isinstance(description, asyncio.Event):
+            return False, None
+
+        return True, cast(Optional[Mapping[str, Any]], description)
+
     async def async_get_description_dict(
         self, location: Optional[str]
     ) -> Optional[Mapping[str, Any]]:
         """Get a description as dict, either from cache or download it."""
         if location is None:
             return None
+
         cache_dict_or_evt = self._cache_dict.get(location, _UNDEF)
         if isinstance(cache_dict_or_evt, asyncio.Event):
             await cache_dict_or_evt.wait()

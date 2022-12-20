@@ -33,9 +33,9 @@ class DeviceUpdater:
         self._device = device
         self._factory = factory
         self._listener = SsdpAdvertisementListener(
-            on_alive=self._on_alive,
-            on_byebye=self._on_byebye,
-            on_update=self._on_update,
+            async_on_alive=self._async_on_alive,
+            async_on_byebye=self._async_on_byebye,
+            async_on_update=self._async_on_update,
             source=source,
         )
 
@@ -49,7 +49,7 @@ class DeviceUpdater:
         _LOGGER.debug("Stop listening for notifications.")
         await self._listener.async_stop()
 
-    async def _on_alive(self, headers: CaseInsensitiveDict) -> None:
+    async def _async_on_alive(self, headers: CaseInsensitiveDict) -> None:
         """Handle on alive."""
         # Ensure for root devices only.
         if headers.get("nt") != "upnp:rootdevice":
@@ -62,12 +62,12 @@ class DeviceUpdater:
         _LOGGER.debug("Handling alive: %s", headers)
         await self._async_handle_alive_update(headers)
 
-    async def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
+    async def _async_on_byebye(self, headers: CaseInsensitiveDict) -> None:
         """Handle on byebye."""
         _LOGGER.debug("Handling on_byebye: %s", headers)
         self._device.available = False
 
-    async def _on_update(self, headers: CaseInsensitiveDict) -> None:
+    async def _async_on_update(self, headers: CaseInsensitiveDict) -> None:
         """Handle on update."""
         # Ensure for root devices only.
         if headers.get("nt") != "upnp:rootdevice":
