@@ -396,7 +396,7 @@ class SsdpSearchResponder:
 
     def _send_response_rootdevice(self, remote_addr: AddressTupleVXType) -> None:
         """Send root device response."""
-        self._async_send_response(
+        self._send_response(
             remote_addr, "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
         )
 
@@ -404,13 +404,13 @@ class SsdpSearchResponder:
         self, remote_addr: AddressTupleVXType, device: UpnpDevice
     ) -> None:
         """Send device responses for UDN."""
-        self._async_send_response(remote_addr, device.udn, f"{self.device.udn}")
+        self._send_response(remote_addr, device.udn, f"{self.device.udn}")
 
     def _send_responses_device_type(
         self, remote_addr: AddressTupleVXType, device: UpnpDevice
     ) -> None:
         """Send device responses for device type."""
-        self._async_send_response(
+        self._send_response(
             remote_addr, device.device_type, f"{self.device.udn}::{device.device_type}"
         )
 
@@ -418,13 +418,13 @@ class SsdpSearchResponder:
         self, remote_addr: AddressTupleVXType, service: UpnpService
     ) -> None:
         """Send service responses."""
-        self._async_send_response(
+        self._send_response(
             remote_addr,
             service.service_type,
             f"{self.device.udn}::{service.service_type}",
         )
 
-    def _async_send_response(
+    def _send_response(
         self,
         remote_addr: AddressTupleVXType,
         service_type: str,
