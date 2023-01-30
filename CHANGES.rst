@@ -1,3 +1,12 @@
+async_upnp_client 0.33.1 (2023-01-30)
+=====================================
+
+Bugfixes
+--------
+
+- Don't crash on empty LOCATION header in SSDP message. (#154)
+
+
 async_upnp_client 0.33.0 (2022-12-20)
 =====================================
 

@@ -1,1 +1,0 @@
-Don't crash on empty LOCATION header in SSDP message.
