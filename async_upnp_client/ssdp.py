@@ -194,9 +194,10 @@ def decode_ssdp_packet(
         extra["_udn"] = udn
 
     # adjust some headers
-    if "location" in parsed_headers:
-        extra["_location_original"] = parsed_headers["location"]
-        extra["location"] = get_adjusted_url(parsed_headers["location"], remote_addr)
+    location = parsed_headers.get("location", "")
+    if location.strip():
+        extra["_location_original"] = location
+        extra["location"] = get_adjusted_url(location, remote_addr)
 
     headers = CaseInsensitiveDict(parsed_headers, **extra)
     return request_line, headers

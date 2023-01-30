@@ -156,6 +156,26 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
     }
 
 
+def test_decode_ssdp_packet_empty_location() -> None:
+    """Test SSDP response decoding with an empty location."""
+    msg = (
+        b"HTTP/1.1 200 OK\r\n"
+        b"LOCATION: \r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
+    )
+    _, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
+
+    assert headers == {
+        "cache-control": "max-age = 1800",
+        "location": "",
+        "_host": "remote_addr",
+        "_port": 12345,
+        "_local_addr": ("local_addr", 1900),
+        "_remote_addr": ("remote_addr", 12345),
+        "_timestamp": ANY,
+    }
+
+
 @pytest.mark.asyncio
 async def test_ssdp_protocol_handles_broken_headers() -> None:
     """Test SsdpProtocol is able to handle broken headers."""
