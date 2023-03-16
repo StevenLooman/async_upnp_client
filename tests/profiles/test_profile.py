@@ -141,7 +141,7 @@ class TestUpnpProfileDevice:
         timeout = await profile.async_subscribe_services(auto_resubscribe=False)
         assert timeout is not None
         # Timeout incorporates time tolerance, and is minimal renewal time
-        assert timedelta(seconds=(149 - 60)) <= timeout <= timedelta(seconds=(151 - 60))
+        assert timedelta(seconds=149 - 60) <= timeout <= timedelta(seconds=151 - 60)
 
         assert set(profile._subscriptions.keys()) == {
             "uuid:dummy-avt1",
@@ -163,7 +163,7 @@ class TestUpnpProfileDevice:
         # Check subscriptions again, now timeouts should have changed
         timeout = await profile.async_subscribe_services(auto_resubscribe=False)
         assert timeout is not None
-        assert timedelta(seconds=(89 - 60)) <= timeout <= timedelta(seconds=(91 - 60))
+        assert timedelta(seconds=89 - 60) <= timeout <= timedelta(seconds=91 - 60)
         assert set(profile._subscriptions.keys()) == {
             "uuid:dummy-avt1",
             "uuid:dummy-cm1",
