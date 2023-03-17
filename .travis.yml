@@ -22,7 +22,7 @@ jobs:
       env: TOXENV=typing
     - python: "3.11"
       env: TOXENV=black
-install: pip install -U tox
+install: pip install -U tox setuptools
 script: tox
 services:
   - docker
