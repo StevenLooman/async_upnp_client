@@ -33,7 +33,8 @@ async def test_receive_search_response() -> None:
     async_callback.assert_called_with(headers)
 
 
-def test_create_ssdp_listener_with_alternate_target() -> None:
+@pytest.mark.asyncio
+async def test_create_ssdp_listener_with_alternate_target() -> None:
     """Create a SsdpSearchListener on an alternate target."""
     async_callback = AsyncMock()
     async_connect_callback = AsyncMock()
