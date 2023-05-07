@@ -344,7 +344,7 @@ async def test_see_search_then_update() -> None:
 
 
 @pytest.mark.asyncio
-async def test_see_search_then_byebyee() -> None:
+async def test_see_search_then_byebye() -> None:
     """Test seeing a device through a search, then a ssdp:byebye-advertisement."""
     # pylint: disable=protected-access
     async_callback = AsyncMock()
@@ -375,6 +375,56 @@ async def test_see_search_then_byebyee() -> None:
         SsdpSource.ADVERTISEMENT_BYEBYE,
     )
     assert UDN not in listener.devices
+
+    await listener.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_see_search_then_byebye_then_alive() -> None:
+    """Test seeing a device by search, then ssdp:byebye, then ssdp:alive."""
+    # pylint: disable=protected-access
+    async_callback = AsyncMock()
+    listener = SsdpListener(async_callback=async_callback)
+    await listener.async_start()
+
+    # See device for the first time through search.
+    async_callback.reset_mock()
+    headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
+    await see_search(listener, SEARCH_REQUEST_LINE, headers)
+    async_callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.SEARCH_CHANGED,
+    )
+    assert UDN in listener.devices
+    assert listener.devices[UDN].location is not None
+
+    # See device for the second time through byebye-advertisement,
+    # triggering byebye-callback and device removed.
+    async_callback.reset_mock()
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    headers["NTS"] = NotificationSubType.SSDP_BYEBYE
+    headers["LOCATION"] = ""
+    await see_advertisement(listener, ADVERTISEMENT_REQUEST_LINE, headers)
+    async_callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_BYEBYE,
+    )
+    assert UDN not in listener.devices
+
+    # See device for the second time through alive-advertisement, not triggering callback.
+    async_callback.reset_mock()
+    headers = CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
+    headers["NTS"] = NotificationSubType.SSDP_ALIVE
+    await see_advertisement(listener, ADVERTISEMENT_REQUEST_LINE, headers)
+    async_callback.assert_awaited_once_with(
+        ANY,
+        "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
+        SsdpSource.ADVERTISEMENT_ALIVE,
+    )
+    assert UDN in listener.devices
+    assert listener.devices[UDN].location is not None
 
     await listener.async_stop()
 

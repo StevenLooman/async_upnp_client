@@ -11,6 +11,7 @@ import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from datetime import datetime, timedelta
 from functools import partial, wraps
+from itertools import cycle
 from time import mktime
 from typing import (
     Any,
@@ -53,6 +54,7 @@ from async_upnp_client.const import (
     ActionInfo,
     AddressTupleVXType,
     DeviceInfo,
+    NotificationSubType,
     ServiceInfo,
     StateVariableInfo,
     StateVariableTypeInfo,
@@ -470,6 +472,7 @@ class SsdpSearchResponder:
 def _build_advertisements(
     target: AddressTupleVXType,
     root_device: UpnpServerDevice,
+    nts: NotificationSubType = NotificationSubType.SSDP_ALIVE,
 ) -> List[CaseInsensitiveDict]:
     """Build advertisements to be sent for a UpnpDevice."""
     # 3 + 2d + k (d: embedded device, k: service)
@@ -489,7 +492,7 @@ def _build_advertisements(
         else f"{target[0]}:{target[1]}"
     )
     base_headers = {
-        "NTS": "ssdp:alive",
+        "NTS": nts,
         "HOST": host,
         "CACHE-CONTROL": HEADER_CACHE_CONTROL,
         "SERVER": HEADER_SERVER,
@@ -558,8 +561,8 @@ class SsdpAdvertisementAnnouncer:
         self.loop = loop or asyncio.get_event_loop()
 
         self._transport: Optional[DatagramTransport] = None
-        self._advertisements = _build_advertisements(self.target, device)
-        self._advertisement_index = 0
+        advertisements = _build_advertisements(self.target, device)
+        self._advertisements = cycle(advertisements)
         self._cancel_announce: Optional[asyncio.TimerHandle] = None
 
     def _on_connect(self, transport: DatagramTransport) -> None:
@@ -604,7 +607,7 @@ class SsdpAdvertisementAnnouncer:
         if self._cancel_announce is not None:
             self._cancel_announce.cancel()
 
-        self._send_byebye()
+        self._send_byebyes()
         self._transport.close()
 
     def _announce_next(self) -> None:
@@ -616,11 +619,7 @@ class SsdpAdvertisementAnnouncer:
         # Protocol can be None when it is not yet initialized.
         if protocol:
             start_line = "NOTIFY * HTTP/1.1"
-            headers = self._advertisements[self._advertisement_index]
-            self._advertisement_index = (self._advertisement_index + 1) % len(
-                self._advertisements
-            )
-
+            headers = next(self._advertisements)
             packet = build_ssdp_packet(start_line, headers)
 
             _LOGGER.debug(
@@ -637,36 +636,24 @@ class SsdpAdvertisementAnnouncer:
             self._announce_next,
         )
 
-    def _send_byebye(self) -> None:
+    def _send_byebyes(self) -> None:
         """Send ssdp:byebye."""
         assert self._transport
 
         start_line = "NOTIFY * HTTP/1.1"
-        host = (
-            f"[{self.target[0]}]:{self.target[1]}"
-            if is_ipv6_address(self.target)
-            else f"{self.target[0]}:{self.target[1]}"
+        advertisements = _build_advertisements(
+            self.target, self.device, NotificationSubType.SSDP_BYEBYE
         )
-        headers = {
-            "NTS": "ssdp:byebye",
-            "HOST": host,
-            "CACHE-CONTROL": HEADER_CACHE_CONTROL,
-            "SERVER": HEADER_SERVER,
-            "BOOTID.UPNP.ORG": str(self.device.boot_id),
-            "CONFIGID.UPNP.ORG": str(self.device.config_id),
-            "NT": "upnp:rootdevice",
-            "USN": f"{self.device.udn}::upnp:rootdevice",
-            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
-        }
-        packet = build_ssdp_packet(start_line, headers)
-        protocol = cast(SsdpProtocol, self._transport.get_protocol())
-        _LOGGER.debug(
-            "Sending advertisement, NTS: %s, NT: %s, USN: %s",
-            headers["NTS"],
-            headers["NT"],
-            headers["USN"],
-        )
-        protocol.send_ssdp_packet(packet, self.target)
+        for headers in advertisements:
+            packet = build_ssdp_packet(start_line, headers)
+            protocol = cast(SsdpProtocol, self._transport.get_protocol())
+            _LOGGER.debug(
+                "Sending advertisement, NTS: %s, NT: %s, USN: %s",
+                headers["NTS"],
+                headers["NT"],
+                headers["USN"],
+            )
+            protocol.send_ssdp_packet(packet, self.target)
 
 
 class UpnpXmlSerializer:
