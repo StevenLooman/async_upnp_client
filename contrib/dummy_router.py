@@ -360,21 +360,29 @@ class IgdDevice(UpnpServerDevice):
         )
 
 
-async def async_main() -> None:
+async def async_main(server: UpnpServer) -> None:
     """Main."""
-    boot_id = int(time())
-    config_id = 1
-    server = UpnpServer(IgdDevice, SOURCE, http_port=HTTP_PORT, boot_id=boot_id, config_id=config_id)
     await server.async_start()
 
-    try:
-        while True:
-            await asyncio.sleep(3600)
-    except KeyboardInterrupt:
-        pass
+    while True:
+        await asyncio.sleep(3600)
 
+
+async def async_stop(server: UpnpServer) -> None:
     await server.async_stop()
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete()
 
 
 if __name__ == "__main__":
-    asyncio.run(async_main())
+    boot_id = int(time())
+    config_id = 1
+    server = UpnpServer(IgdDevice, SOURCE, http_port=HTTP_PORT, boot_id=boot_id, config_id=config_id)
+
+    try:
+        asyncio.run(async_main(server))
+    except KeyboardInterrupt:
+        print(KeyboardInterrupt)
+
+    asyncio.run(server.async_stop())
