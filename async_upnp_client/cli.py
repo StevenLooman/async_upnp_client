@@ -347,7 +347,7 @@ def source_target(
 
     if source is not None and target is not None and ":" in target:
         if "%" in target:
-            idx = source.index("%")
+            idx = target.index("%")
             target_ip, scope_id = target[:idx], int(target[idx + 1 :])
         else:
             target_ip, scope_id = target, 0
