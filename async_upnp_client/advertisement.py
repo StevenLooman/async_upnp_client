@@ -74,8 +74,10 @@ class SsdpAdvertisementListener:
             return
 
         _LOGGER.debug(
-            "Received advertisement, _remote_addr: %s, USN: %s, location: %s",
+            "Received advertisement, _remote_addr: %s, NT: %s, NTS: %s, USN: %s, location: %s",
             headers.get("_remote_addr", ""),
+            headers.get("NT", "<no NT>"),
+            headers.get("NTS", "<no NTS>"),
             headers.get("USN", "<no USN>"),
             headers.get("location", ""),
         )
