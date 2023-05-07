@@ -78,6 +78,10 @@ class TrafficCounterState(NamedTuple):
     bytes_sent: Union[None, Exception, int]
     packets_received: Union[None, Exception, int]
     packets_sent: Union[None, Exception, int]
+    bytes_received_original: Union[None, Exception, int]
+    bytes_sent_original: Union[None, Exception, int]
+    packets_received_original: Union[None, Exception, int]
+    packets_sent_original: Union[None, Exception, int]
 
 
 class IgdState(NamedTuple):
@@ -165,7 +169,15 @@ class IgdDevice(UpnpProfileDevice):
             bytes_sent=None,
             packets_received=None,
             packets_sent=None,
+            bytes_received_original=None,
+            bytes_sent_original=None,
+            packets_received_original=None,
+            packets_sent_original=None,
         )
+        self._offset_bytes_received = 0
+        self._offset_bytes_sent = 0
+        self._offset_packets_received = 0
+        self._offset_packets_sent = 0
 
     def _any_action(
         self, service_names: Sequence[str], action_name: str
@@ -184,7 +196,14 @@ class IgdDevice(UpnpProfileDevice):
 
         result = await action.async_call()
         total_bytes_received: Optional[int] = result.get("NewTotalBytesReceived")
-        return total_bytes_received
+
+        if total_bytes_received is None:
+            return None
+
+        if total_bytes_received < 0:
+            self._offset_bytes_received = 2**31
+
+        return total_bytes_received + self._offset_bytes_received
 
     async def async_get_total_bytes_sent(self) -> Optional[int]:
         """Get total bytes sent."""
@@ -194,7 +213,14 @@ class IgdDevice(UpnpProfileDevice):
 
         result = await action.async_call()
         total_bytes_sent: Optional[int] = result.get("NewTotalBytesSent")
-        return total_bytes_sent
+
+        if total_bytes_sent is None:
+            return None
+
+        if total_bytes_sent < 0:
+            self._offset_bytes_sent = 2**31
+
+        return total_bytes_sent + self._offset_bytes_sent
 
     async def async_get_total_packets_received(self) -> Optional[int]:
         """Get total packets received."""
@@ -204,7 +230,14 @@ class IgdDevice(UpnpProfileDevice):
 
         result = await action.async_call()
         total_packets_received: Optional[int] = result.get("NewTotalPacketsReceived")
-        return total_packets_received
+
+        if total_packets_received is None:
+            return None
+
+        if total_packets_received < 0:
+            self._offset_packets_received = 2**31
+
+        return total_packets_received + self._offset_packets_received
 
     async def async_get_total_packets_sent(self) -> Optional[int]:
         """Get total packets sent."""
@@ -214,7 +247,14 @@ class IgdDevice(UpnpProfileDevice):
 
         result = await action.async_call()
         total_packets_sent: Optional[int] = result.get("NewTotalPacketsSent")
-        return total_packets_sent
+
+        if total_packets_sent is None:
+            return None
+
+        if total_packets_sent < 0:
+            self._offset_packets_sent = 2**31
+
+        return total_packets_sent + self._offset_packets_sent
 
     async def async_get_enabled_for_internet(self) -> Optional[bool]:
         """Get internet access enabled state."""
@@ -632,6 +672,10 @@ class IgdDevice(UpnpProfileDevice):
             bytes_sent=values[1],
             packets_received=values[2],
             packets_sent=values[3],
+            bytes_received_original=values[0],
+            bytes_sent_original=values[1],
+            packets_received_original=values[2],
+            packets_sent_original=values[3],
         )
 
         non_exceptions = [value for value in values if not isinstance(value, Exception)]
