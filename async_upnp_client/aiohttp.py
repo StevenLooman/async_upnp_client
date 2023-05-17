@@ -72,6 +72,7 @@ class AiohttpRequester(UpnpRequester):
             **(headers or {}),
         }
 
+        _LOGGER.debug("Sending request: %s %s", method, url)
         _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
             method,
@@ -165,7 +166,7 @@ class AiohttpSessionRequester(UpnpRequester):
             try:
                 return await self._async_http_request(method, url, headers, body)
             except aiohttp.ClientConnectionError as err:
-                _LOGGER.debug("%r during request; retrying", err)
+                _LOGGER.debug("%r during request %s %s; retrying", err, method, url)
         try:
             return await self._async_http_request(method, url, headers, body)
         except aiohttp.ClientConnectionError as err:
@@ -186,6 +187,7 @@ class AiohttpSessionRequester(UpnpRequester):
             **(headers or {}),
         }
 
+        _LOGGER.debug("Sending request: %s %s", method, url)
         _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
             method,
