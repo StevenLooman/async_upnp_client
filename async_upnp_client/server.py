@@ -42,6 +42,7 @@ from aiohttp.web import (
 
 from async_upnp_client import __version__ as version
 from async_upnp_client.client import (
+    EventSubscriber,
     UpnpAction,
     UpnpDevice,
     UpnpError,
@@ -55,6 +56,8 @@ from async_upnp_client.const import (
     ActionInfo,
     AddressTupleVXType,
     DeviceInfo,
+    EventableStateVariableTypeInfo,
+    EventModerator,
     NotificationSubType,
     ServiceInfo,
     StateVariableInfo,
@@ -138,9 +141,15 @@ class UpnpServerService(UpnpService):
         if existing is not None:
             raise UpnpError(f"StateVariable with the same name exists: {name}")
 
+        if isinstance(type_info, EventableStateVariableTypeInfo):
+            event_moderator = EventModerator(type_info)
+        else:
+            event_moderator = None
+
         state_var_info = StateVariableInfo(
             name,
             send_events=False,
+            event_moderator=event_moderator,
             type_info=type_info,
             xml=ET.Element("stateVariable"),
         )
@@ -978,9 +987,58 @@ async def action_handler(service: UpnpServerService, request: Request) -> Respon
     return _create_action_response(service, action_name, call_result)
 
 
-async def subscribe_handler(_service: UpnpServerService, _request: Request) -> Response:
+async def subscribe_handler(service: UpnpServerService, request: Request) -> Response:
     """SUBSCRIBE handler."""
-    return Response(status=404)
+    callback_url = request.headers.get("CALLBACK", None)
+    timeout = request.headers.get("TIMEOUT", None)
+    sid = request.headers.get("SID", None)
+
+    timeout_val = None
+    if timeout is not None:
+        try:
+            timeout_val = int(timeout.lower().replace("second-", ""))
+        except ValueError:
+            return Response(status=400)
+
+    subscriber = None
+    if sid:
+        subscriber = service.get_subscriber(sid)
+        if subscriber:
+            subscriber.timeout = timeout_val
+    else:
+        if callback_url:
+            # callback url is specified as <http://...>
+            # remove the outside <>
+            callback_url = callback_url[1:-1]
+            subscriber = EventSubscriber(callback_url, timeout_val)
+
+    if not subscriber:
+        return Response(status=404)
+
+    headers = {
+        "DATE": format_date_time(mktime(datetime.now().timetuple())),
+        "SERVER": HEADER_SERVER,
+        "SID": subscriber.uuid,
+        "TIMEOUT": str(subscriber.timeout),
+    }
+    resp = Response(status=200, headers=headers)
+    if sid is None:
+        # this is an initial subscription.  Need to send state-vars
+        # AFTER response completion
+        await resp.prepare(request)
+        await resp.write_eof()
+        await service.async_send_events(subscriber)
+        service.add_subscriber(subscriber)
+    return resp
+
+
+async def unsubscribe_handler(service: UpnpServerService, request: Request) -> Response:
+    """UNSUBSCRIBE handler."""
+    sid = request.headers.get("SID", None)
+    if sid:
+        if service.del_subscriber(sid):
+            return Response(status=200)
+    return Response(status=412)
 
 
 async def to_xml(
@@ -1063,6 +1121,11 @@ class UpnpServer:
                 "SUBSCRIBE",
                 service.SERVICE_DEFINITION.event_sub_url,
                 partial(subscribe_handler, service),
+            )
+            app.router.add_route(
+                "UNSUBSCRIBE",
+                service.SERVICE_DEFINITION.event_sub_url,
+                partial(unsubscribe_handler, service),
             )
 
         if self._device.ROUTES:

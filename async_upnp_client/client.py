@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.client module."""
 
+# pylint: disable=too-many-lines
+
+import asyncio
 import logging
 import urllib.parse
 from abc import ABC
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import (
     Any,
     Callable,
@@ -16,9 +19,11 @@ from typing import (
     Tuple,
     TypeVar,
 )
+from uuid import uuid4
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
+import aiohttp
 import defusedxml.ElementTree as DET
 import voluptuous as vol
 
@@ -28,6 +33,7 @@ from async_upnp_client.const import (
     ActionInfo,
     DeviceIcon,
     DeviceInfo,
+    EventModerator,
     ServiceInfo,
     StateVariableInfo,
 )
@@ -45,6 +51,56 @@ _LOGGER = logging.getLogger(__name__)
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
+
+
+class EventSubscriber:
+    """Represent a service subscriber."""
+
+    DEFAULT_TIMEOUT = 3600
+
+    def __init__(self, callback_url: str, timeout: Optional[int]) -> None:
+        """Initialize."""
+        self._url = callback_url
+        self._uuid = str(uuid4())
+        self._event_key = 0
+        self._expires = datetime.now()
+        self.timeout = timeout
+
+    @property
+    def url(self) -> str:
+        """Return callback URL."""
+        return self._url
+
+    @property
+    def uuid(self) -> str:
+        """Return subscriber uuid."""
+        return self._uuid
+
+    @property
+    def timeout(self) -> Optional[int]:
+        """Return timeout in seconds."""
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, timeout: Optional[int]) -> None:
+        """Set timeout before unsubscribe."""
+        if timeout is None:
+            timeout = self.DEFAULT_TIMEOUT
+        self._timeout = timeout
+        self._expires = datetime.now() + timedelta(seconds=timeout)
+
+    @property
+    def expiration(self) -> datetime:
+        """Return expiration time of subscription."""
+        return self._expires
+
+    def get_next_seq(self) -> int:
+        """Return the next sequence number for an event."""
+        res = self._event_key
+        self._event_key += 1
+        if self._event_key > 0xFFFF_FFFF:
+            self._event_key = 1
+        return res
 
 
 class UpnpRequester(ABC):
@@ -316,6 +372,7 @@ class UpnpService:
 
         self.on_event: Optional[EventCallbackType] = None
         self._device: Optional[UpnpDevice] = None
+        self._subscribers: List[EventSubscriber] = []
 
         # bind state variables to ourselves
         for state_var in state_variables:
@@ -420,6 +477,64 @@ class UpnpService:
 
         result = await action.async_call(**kwargs)
         return result
+
+    def add_subscriber(self, subscriber: EventSubscriber) -> None:
+        """Add or update a subscriber."""
+        self._subscribers.append(subscriber)
+
+    def del_subscriber(self, sid: str) -> bool:
+        """Delete a subscriber."""
+        subscriber = self.get_subscriber(sid)
+        if subscriber:
+            self._subscribers.remove(subscriber)
+            return True
+        return False
+
+    def get_subscriber(self, sid: str) -> Optional[EventSubscriber]:
+        """Get matching subscriber (if any)."""
+        for subscriber in self._subscribers:
+            if subscriber.uuid == sid:
+                return subscriber
+        return None
+
+    async def async_send_events(
+        self, subscriber: Optional[EventSubscriber] = None
+    ) -> None:
+        """Send event updates to any subscribers."""
+        if not subscriber:
+            now = datetime.now()
+            self._subscribers = [
+                _sub for _sub in self._subscribers if now < _sub.expiration
+            ]
+            subscribers = self._subscribers
+            if not self._subscribers:
+                return
+        else:
+            subscribers = [subscriber]
+        event_el = ET.Element("e:propertyset")
+        event_el.set("xmlns:e", "urn:schemas-upnp-org:event-1-0")
+        for state_var in self.state_variables.values():
+            if not state_var.event_moderator:
+                continue
+            prop_el = ET.SubElement(event_el, "e:property")
+            ET.SubElement(prop_el, state_var.name).text = str(state_var.value)
+        message = b'<?xml version="1.0"?>\n' + ET.tostring(event_el, encoding="utf-8")
+
+        headers = {
+            "CONTENT-TYPE": 'text/xml; charset="utf-8"',
+            "NT": "upnp:event",
+            "NTS": "upnp:propchange",
+        }
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for sub in subscribers:
+                hdr = headers.copy()
+                hdr["SID"] = sub.uuid
+                hdr["SEQ"] = str(sub.get_next_seq())
+                tasks.append(
+                    session.request("NOTIFY", sub.url, headers=hdr, data=message)
+                )
+            await asyncio.gather(*tasks)
 
     def notify_changed_state_variables(self, changes: Mapping[str, str]) -> None:
         """Do callback on UpnpStateVariable.value changes."""
@@ -868,7 +983,12 @@ class UpnpStateVariable(Generic[T]):
     def send_events(self) -> bool:
         """Check if this UpnpStatevariable send events."""
         send_events = self._state_variable_info.send_events
-        return send_events
+        return bool(send_events)
+
+    @property
+    def event_moderator(self) -> Optional[EventModerator]:
+        """Check if this UpnpStatevariable send events."""
+        return self._state_variable_info.event_moderator
 
     @property
     def name(self) -> str:
@@ -916,7 +1036,19 @@ class UpnpStateVariable(Generic[T]):
         """Set value, python typed."""
         self.validate_value(value)
         self._value = value
+        last_update = self._updated_at or datetime.fromtimestamp(0, timezone.utc)
         self._updated_at = datetime.now(timezone.utc)
+        if (
+            self.event_moderator
+            and self.service
+            and self.event_moderator.ready_to_send(
+                (self._updated_at - last_update).total_seconds()
+            )
+        ):
+            service = self.service
+            asyncio.create_task(
+                service.async_send_events()  # pylint: disable=no-member
+            )
 
     @property
     def value_unchecked(self) -> Optional[T]:
