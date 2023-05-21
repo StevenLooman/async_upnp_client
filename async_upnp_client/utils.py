@@ -18,6 +18,8 @@ from voluptuous import Invalid
 EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
 
+_SENTINEL = object()
+
 
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
@@ -26,6 +28,10 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Initialize."""
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
         self._case_map: Dict[str, Any] = {k.lower(): k for k in self._data}
+
+    def case_map(self) -> Dict[str, str]:
+        """Get the case map."""
+        return self._case_map
 
     def as_dict(self) -> Dict[str, Any]:
         """Return the underlying dict without iterating."""
@@ -37,8 +43,9 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def get_lower(self, lower_key: str) -> Any:
         """Get a lower case key."""
-        if lower_key in self._case_map:
-            return self._data[self._case_map[lower_key]]
+        data_key = self._case_map.get(lower_key, _SENTINEL)
+        if data_key is not _SENTINEL:
+            return self._data[data_key]
         return None
 
     def replace(self, new_data: abcMapping) -> None:
