@@ -182,7 +182,11 @@ def same_headers_differ(
     """Compare headers present in both to see if anything interesting has changed."""
     current_headers_dict = current_headers.as_dict()
     for lower_header, header in current_headers.case_map().items():
-        if len(lower_header) and lower_header[0] == "_" or lower_header in IGNORED_HEADERS:
+        if (
+            len(lower_header)
+            and lower_header[0] == "_"
+            or lower_header in IGNORED_HEADERS
+        ):
             continue
         new_value = new_headers.get_lower(lower_header)
         current_value = current_headers_dict[header]
