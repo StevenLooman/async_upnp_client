@@ -180,13 +180,14 @@ def same_headers_differ(
     current_headers: CaseInsensitiveDict, new_headers: CaseInsensitiveDict
 ) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
-    for header, current_value in current_headers.as_dict().items():
-        if header.startswith("_"):
+    current_headers_dict = current_headers.as_dict()
+    for lower_header, header in current_headers.case_map().items():
+        if len(lower_header) and lower_header[0] == "_":
             continue
-        lower_header = header.lower()
         if lower_header in IGNORED_HEADERS:
             continue
         new_value = new_headers.get_lower(lower_header)
+        current_value = current_headers_dict[header]
         if new_value is not None and current_value != new_value:
             _LOGGER.debug(
                 "Header %s changed from %s to %s", header, current_value, new_value
