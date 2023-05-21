@@ -613,6 +613,7 @@ class UpnpAction:
     async def async_call(self, **kwargs: Any) -> Mapping[str, Any]:
         """Call an action with arguments."""
         # do request
+        _LOGGER.debug("Calling action: %s, args: %s", self.name, kwargs)
         url, headers, body = self.create_request(**kwargs)
         (
             status_code,
@@ -631,6 +632,7 @@ class UpnpAction:
                 _parse_fault(xml, status_code, response_headers)
 
             # Couldn't parse body for fault details, raise generic response error
+            _LOGGER.debug("Error calling action, no information")
             raise UpnpResponseError(
                 status=status_code,
                 headers=response_headers,
@@ -641,6 +643,12 @@ class UpnpAction:
         # parse body
         response_args = self.parse_response(
             self.service.service_type, response_headers, response_body
+        )
+        _LOGGER.debug(
+            "Called action: %s, args: %s, response_args: %s",
+            self.name,
+            kwargs,
+            response_args,
         )
         return response_args
 
@@ -755,6 +763,10 @@ def _parse_fault(
     else:
         error_code = None
     error_desc = fault.findtext(".//control:errorDescription", None, NS)
+
+    _LOGGER.debug(
+        "Error calling action, error code: %s, error desc: %s", error_code, error_desc
+    )
 
     if status_code is not None:
         raise UpnpActionResponseError(

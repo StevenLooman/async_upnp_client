@@ -72,7 +72,6 @@ class AiohttpRequester(UpnpRequester):
             **(headers or {}),
         }
 
-        _LOGGER.debug("Sending request: %s %s", method, url)
         _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
             method,
@@ -187,7 +186,6 @@ class AiohttpSessionRequester(UpnpRequester):
             **(headers or {}),
         }
 
-        _LOGGER.debug("Sending request: %s %s", method, url)
         _LOGGER_TRAFFIC_UPNP.debug(
             "Sending request:\n%s %s\n%s\n%s\n",
             method,
