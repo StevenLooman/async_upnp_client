@@ -192,9 +192,7 @@ def same_headers_differ(
             lower_header != "" and lower_header[0] == "_"
         ) or lower_header in IGNORED_HEADERS:
             continue
-        new_header: Union[str, object] = new_headers_case_map.get(
-            lower_header, _SENTINEL
-        )
+        new_header = new_headers_case_map.get(lower_header, _SENTINEL)  # type: ignore[index]
         if new_header is not _SENTINEL:
             current_value = current_headers_dict[current_header]
             new_value = new_headers_dict[new_header]
