@@ -25,6 +25,7 @@ from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_headers
 from async_upnp_client.utils import CaseInsensitiveDict
 
+_SENTINEL = object()
 _LOGGER = logging.getLogger(__name__)
 CACHE_CONTROL_RE = re.compile(r"max-age\s*=\s*(\d+)", re.IGNORECASE)
 DEFAULT_MAX_AGE = timedelta(seconds=900)
@@ -181,20 +182,30 @@ def same_headers_differ(
 ) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
     current_headers_dict = current_headers.as_dict()
-    for lower_header, header in current_headers.case_map().items():
+    new_headers_dict = new_headers.as_dict()
+
+    new_headers_case_map = new_headers.case_map()
+    current_headers_case_map = current_headers.case_map()
+
+    for lower_header, current_header in current_headers_case_map.items():
         if (
             len(lower_header)
             and lower_header[0] == "_"
             or lower_header in IGNORED_HEADERS
         ):
             continue
-        new_value = new_headers.get_lower(lower_header)
-        current_value = current_headers_dict[header]
-        if new_value is not None and current_value != new_value:
-            _LOGGER.debug(
-                "Header %s changed from %s to %s", header, current_value, new_value
-            )
-            return True
+        new_header = new_headers_case_map.get(lower_header, _SENTINEL)
+        if new_header is not _SENTINEL:
+            current_value = current_headers_dict[current_header]
+            new_value = new_headers_dict[new_header]
+            if current_value != new_value:
+                _LOGGER.debug(
+                    "Header %s changed from %s to %s",
+                    current_header,
+                    current_value,
+                    new_value,
+                )
+                return True
     return False
 
 
