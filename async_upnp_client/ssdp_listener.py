@@ -184,6 +184,10 @@ def same_headers_differ(
     current_headers_dict = current_headers.as_dict()
     new_headers_dict = new_headers.as_dict()
 
+    if current_headers_dict == new_headers_dict:
+        # Most common case, nothing changed.
+        return False
+
     new_headers_case_map = new_headers.case_map()
     current_headers_case_map = current_headers.case_map()
 
@@ -204,6 +208,7 @@ def same_headers_differ(
                     new_value,
                 )
                 return True
+            
     return False
 
 
