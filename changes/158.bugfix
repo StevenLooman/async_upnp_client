@@ -1,1 +1,0 @@
-Now properly send ssdp:byebye when server is stopped.

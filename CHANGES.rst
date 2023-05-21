@@ -1,3 +1,30 @@
+async_upnp_client 0.33.2 (2023-05-21)
+=====================================
+
+Features
+--------
+
+- Handle negative values for the bytes/traffic counters in IGDs.
+
+  Some IGDs implement the counters as i4 (4 byte integer) instead of
+  ui4 (unsigned 4 byte integer). This change tries to work around this by applying
+  an offset of `2**31`. To access the original value, use the variables with a
+  `_original` suffix. (#157)
+
+
+Bugfixes
+--------
+
+- Now properly send ssdp:byebye when server is stopped. (#158)
+- Fix indexing bug in cli parsing scope_id in IPv6 target (@senarvi) (#159)
+
+
+Misc
+----
+
+- #160, #163, #164, #165
+
+
 async_upnp_client 0.33.1 (2023-01-30)
 =====================================
 
