@@ -8,7 +8,7 @@ from asyncio.events import AbstractEventLoop
 from contextlib import suppress
 from datetime import datetime, timedelta
 from ipaddress import ip_address
-from typing import Any, Callable, Coroutine, Dict, Mapping, Optional, Set, Tuple, Union
+from typing import Any, Callable, Coroutine, Dict, Mapping, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
