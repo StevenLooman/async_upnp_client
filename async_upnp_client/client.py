@@ -23,9 +23,9 @@ from uuid import uuid4
 from xml.etree import ElementTree as ET
 from xml.sax.saxutils import escape
 
-import aiohttp
 import defusedxml.ElementTree as DET
 import voluptuous as vol
+from aiohttp import ClientSession
 
 from async_upnp_client.const import (
     NS,
@@ -525,7 +525,7 @@ class UpnpService:
             "NT": "upnp:event",
             "NTS": "upnp:propchange",
         }
-        async with aiohttp.ClientSession() as session:
+        async with ClientSession() as session:
             tasks = []
             for sub in subscribers:
                 hdr = headers.copy()
