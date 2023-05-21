@@ -18,6 +18,9 @@ _LOGGER = logging.getLogger(__name__)
 _UNDEF = object()
 
 
+DescriptionType = Optional[Mapping[str, Any]]
+
+
 def _description_xml_to_dict(description_xml: str) -> Optional[Mapping[str, str]]:
     """Convert description (XML) to dict."""
     try:
@@ -39,9 +42,7 @@ class DescriptionCache:
     def __init__(self, requester: UpnpRequester):
         """Initialize."""
         self._requester = requester
-        self._cache_dict: dict[
-            str, Union[asyncio.Event, Optional[Mapping[str, Any]]]
-        ] = {}
+        self._cache_dict: dict[str, Union[asyncio.Event, DescriptionType]] = {}
 
     async def async_get_description_xml(self, location: str) -> Optional[str]:
         """Get a description as XML, either from cache or download it."""
@@ -54,7 +55,7 @@ class DescriptionCache:
 
     def peek_description_dict(
         self, location: Optional[str]
-    ) -> Tuple[bool, Optional[Mapping[str, Any]]]:
+    ) -> Tuple[bool, DescriptionType]:
         """Peek a description as dict, only try the cache."""
         if location is None:
             return True, None
@@ -66,11 +67,11 @@ class DescriptionCache:
         if isinstance(description, asyncio.Event):
             return False, None
 
-        return True, cast(Optional[Mapping[str, Any]], description)
+        return True, cast(DescriptionType, description)
 
     async def async_get_description_dict(
         self, location: Optional[str]
-    ) -> Optional[Mapping[str, Any]]:
+    ) -> DescriptionType:
         """Get a description as dict, either from cache or download it."""
         if location is None:
             return None
@@ -93,7 +94,7 @@ class DescriptionCache:
                     self._cache_dict[location] = None
             evt.set()
 
-        return cast(Optional[Mapping[str, Any]], self._cache_dict[location])
+        return cast(DescriptionType, self._cache_dict[location])
 
     def uncache_description(self, location: str) -> None:
         """Uncache a description."""
