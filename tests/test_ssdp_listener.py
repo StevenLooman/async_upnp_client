@@ -670,7 +670,19 @@ async def test_combined_headers() -> None:
     }
     assert combined["original"] == "2"
     assert combined["bootid.upnp.org"] == "2"
+    assert "_source" not in combined
 
+    headers = CaseInsensitiveDict(
+        {
+            **ADVERTISEMENT_HEADERS_DEFAULT,
+            "BooTID.UPNP.ORG": "2",
+            "st": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
+        }
+    )
+    headers["NTS"] = NotificationSubType.SSDP_ALIVE
+    await see_advertisement(listener, ADVERTISEMENT_REQUEST_LINE, headers)
+    combined = device.combined_headers(dst)
+    assert combined["st"] == "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2"
     await listener.async_stop()
 
 

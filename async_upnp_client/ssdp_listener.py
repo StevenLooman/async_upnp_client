@@ -156,15 +156,20 @@ class SsdpDevice:
         device_or_service_type: DeviceOrServiceType,
     ) -> CaseInsensitiveDict:
         """Get headers from search and advertisement for a given device- or service type."""
-        if device_or_service_type in self.search_headers:
-            headers = {**self.search_headers[device_or_service_type].as_dict()}
+        search_headers = self.search_headers.get(device_or_service_type)
+        advertisement_headers = self.advertisement_headers.get(device_or_service_type)
+        if search_headers and advertisement_headers:
+            header_dict = CaseInsensitiveDict(
+                search_headers.as_dict(), **advertisement_headers.as_dict()
+            )
+        elif search_headers:
+            header_dict = CaseInsensitiveDict(search_headers.as_dict())
+        elif advertisement_headers:
+            header_dict = CaseInsensitiveDict(advertisement_headers.as_dict())
         else:
-            headers = {}
-        if device_or_service_type in self.advertisement_headers:
-            headers.update(self.advertisement_headers[device_or_service_type].as_dict())
-        if "_source" in headers:
-            del headers["_source"]
-        return CaseInsensitiveDict(headers)
+            return CaseInsensitiveDict()
+        del header_dict["_source"]
+        return header_dict
 
     @property
     def all_combined_headers(self) -> Mapping[DeviceOrServiceType, CaseInsensitiveDict]:
