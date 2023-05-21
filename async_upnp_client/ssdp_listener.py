@@ -189,7 +189,7 @@ def same_headers_differ(
 
     for lower_header, current_header in current_headers_case_map.items():
         if (
-            len(lower_header) and lower_header[0] == "_"
+            lower_header != "" and lower_header[0] == "_"
         ) or lower_header in IGNORED_HEADERS:
             continue
         new_header = new_headers_case_map.get(lower_header, _SENTINEL)
@@ -204,7 +204,7 @@ def same_headers_differ(
                     new_value,
                 )
                 return True
-            
+
     return False
 
 
