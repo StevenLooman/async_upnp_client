@@ -166,6 +166,10 @@ class StateVariableTypeInfo(NamedTuple):
     xml: ET.Element
 
 
+class TemplateStateVariableTypeInfo(StateVariableTypeInfo):
+    """Eventable State variable type info."""
+
+
 class StateVariableInfo(NamedTuple):
     """State variable info."""
 
