@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.const module."""
 
+from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
@@ -155,7 +156,8 @@ class ActionInfo(NamedTuple):
     xml: ET.Element
 
 
-class StateVariableTypeInfo(NamedTuple):
+@dataclass(frozen=True)
+class StateVariableTypeInfo:
     """State variable type info."""
 
     data_type: str
@@ -166,39 +168,18 @@ class StateVariableTypeInfo(NamedTuple):
     xml: ET.Element
 
 
-class EventableStateVariableTypeInfo(NamedTuple):
+@dataclass(frozen=True)
+class EventableStateVariableTypeInfo(StateVariableTypeInfo):
     """Eventable State variable type info."""
 
-    data_type: str
-    data_type_mapping: Mapping[str, Callable]
-    default_value: Optional[str]
-    allowed_value_range: Mapping[str, Optional[str]]
-    allowed_values: Optional[List[str]]
     max_rate: Optional[float]
-    xml: ET.Element
 
 
-class EventModerator:
-    """Moderate event rate."""
-
-    # pylint: disable=too-few-public-methods
-
-    def __init__(self, type_info: EventableStateVariableTypeInfo) -> None:
-        """Initialize."""
-        self._max_rate = type_info.max_rate
-
-    def ready_to_send(self, delta: float) -> bool:
-        """Determine if it is an appropriate time to send an event update."""
-        if self._max_rate is None or delta > self._max_rate:
-            return True
-        return False
-
-
-class StateVariableInfo(NamedTuple):
+@dataclass(frozen=True)
+class StateVariableInfo:
     """State variable info."""
 
     name: str
-    event_moderator: Optional[EventModerator]
     send_events: bool
     type_info: StateVariableTypeInfo
     xml: ET.Element

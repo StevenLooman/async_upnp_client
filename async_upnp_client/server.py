@@ -46,18 +46,19 @@ from async_upnp_client.client import (
     UpnpAction,
     UpnpDevice,
     UpnpError,
+    UpnpEventableStateVariable,
     UpnpRequester,
     UpnpService,
     UpnpStateVariable,
 )
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import (
+    STATE_VARIABLE_TYPE_MAPPING,
     ActionArgumentInfo,
     ActionInfo,
     AddressTupleVXType,
     DeviceInfo,
     EventableStateVariableTypeInfo,
-    EventModerator,
     NotificationSubType,
     ServiceInfo,
     StateVariableInfo,
@@ -141,23 +142,25 @@ class UpnpServerService(UpnpService):
         if existing is not None:
             raise UpnpError(f"StateVariable with the same name exists: {name}")
 
-        if isinstance(type_info, EventableStateVariableTypeInfo):
-            event_moderator = EventModerator(type_info)
-        else:
-            event_moderator = None
-
         state_var_info = StateVariableInfo(
             name,
             send_events=False,
-            event_moderator=event_moderator,
             type_info=type_info,
             xml=ET.Element("stateVariable"),
         )
+
         # pylint: disable=protected-access
-        state_var: UpnpStateVariable = UpnpStateVariable(
-            state_var_info,
-            UpnpFactory(self.requester)._state_variable_create_schema(type_info),
-        )
+        state_var: UpnpStateVariable
+        if isinstance(type_info, EventableStateVariableTypeInfo):
+            state_var = UpnpEventableStateVariable(
+                state_var_info,
+                UpnpFactory(self.requester)._state_variable_create_schema(type_info),
+            )
+        else:
+            state_var = UpnpStateVariable(
+                state_var_info,
+                UpnpFactory(self.requester)._state_variable_create_schema(type_info),
+            )
         state_var.service = self
         if type_info.default_value is not None:
             state_var.upnp_value = type_info.default_value
@@ -1050,6 +1053,47 @@ async def to_xml(
     encoding = "utf-8"
     thing_xml = ET.tostring(thing_el, encoding=encoding)
     return Response(content_type="text/xml", charset=encoding, body=thing_xml)
+
+
+def create_state_var(
+    data_type: str,
+    *,
+    allowed: Optional[List[str]] = None,
+    allowed_range: Optional[Mapping[str, Optional[str]]] = None,
+    default: Optional[str] = None,
+) -> StateVariableTypeInfo:
+    """Create state variables."""
+    return StateVariableTypeInfo(
+        data_type=data_type,
+        data_type_mapping=STATE_VARIABLE_TYPE_MAPPING[data_type],
+        default_value=default,
+        allowed_value_range=allowed_range or {},
+        allowed_values=allowed,
+        xml=ET.Element("server_stateVariable"),
+    )
+
+
+def create_event_var(
+    data_type: str,
+    *,
+    allowed: Optional[List[str]] = None,
+    allowed_range: Optional[Mapping[str, Optional[str]]] = None,
+    default: Optional[str] = None,
+    max_rate: Optional[float] = None,
+) -> StateVariableTypeInfo:
+    """Create event variables."""
+    return cast(
+        StateVariableTypeInfo,
+        EventableStateVariableTypeInfo(
+            data_type=data_type,
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING[data_type],
+            default_value=default,
+            allowed_value_range=allowed_range or {},
+            allowed_values=allowed,
+            max_rate=max_rate,
+            xml=ET.Element("server_stateVariable"),
+        ),
+    )
 
 
 class UpnpServer:

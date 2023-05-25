@@ -13,7 +13,6 @@ from typing import (
     Dict,
     Optional,
     Tuple,
-    cast,
 )
 
 import aiohttp
@@ -23,39 +22,17 @@ import pytest_asyncio
 import async_upnp_client.client
 import async_upnp_client.server
 from async_upnp_client.client import UpnpStateVariable
-from async_upnp_client.const import (
-    STATE_VARIABLE_TYPE_MAPPING,
-    DeviceInfo,
-    EventableStateVariableTypeInfo,
-    ServiceInfo,
-    StateVariableTypeInfo,
-)
+from async_upnp_client.const import DeviceInfo, ServiceInfo
 from async_upnp_client.server import (
     UpnpServer,
     UpnpServerDevice,
     UpnpServerService,
     callable_action,
+    create_event_var,
+    create_state_var,
 )
 
 from .conftest import read_file
-
-
-def create_state_var(
-    data_type: str, default: Any = None, eventable: bool = False
-) -> StateVariableTypeInfo:
-    """Create state variables."""
-    args = {
-        "data_type": data_type,
-        "data_type_mapping": STATE_VARIABLE_TYPE_MAPPING[data_type],
-        "default_value": default,
-        "allowed_value_range": {},
-        "allowed_values": None,
-        "xml": ET.Element("server_stateVariable"),
-    }
-    if eventable:
-        args["max_rate"] = None
-        return cast(StateVariableTypeInfo, EventableStateVariableTypeInfo(**args))
-    return StateVariableTypeInfo(**args)
 
 
 class ServerServiceTest(UpnpServerService):
@@ -72,7 +49,7 @@ class ServerServiceTest(UpnpServerService):
 
     STATE_VARIABLE_DEFINITIONS = {
         "TestVariable_str": create_state_var("string"),
-        "EventableTextVariable_ui4": create_state_var("ui4", default=0, eventable=True),
+        "EventableTextVariable_ui4": create_event_var("ui4", default="0"),
         "A_ARG_TYPE_In_Var1_str": create_state_var("string"),
         "A_ARG_TYPE_In_Var2_ui4": create_state_var("ui4"),
     }

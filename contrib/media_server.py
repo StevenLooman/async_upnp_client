@@ -23,7 +23,13 @@ from async_upnp_client.const import (
     EventableStateVariableTypeInfo,
 )
 
-from async_upnp_client.server import UpnpServer, UpnpServerDevice, UpnpServerService, callable_action
+from async_upnp_client.server import (
+    UpnpServer,
+    UpnpServerDevice,
+    UpnpServerService,
+    callable_action,
+    create_state_var,
+    create_event_var)
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_mediaserver")
@@ -47,127 +53,30 @@ class ContentDirectoryService(UpnpServerService):
     )
 
     STATE_VARIABLE_DEFINITIONS = {
-        "SearchCapabilities": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value="",
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "SortCapabilities": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value="",
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "SystemUpdateID": EventableStateVariableTypeInfo(
-            data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=0,
-            allowed_value_range={},
-            allowed_values=None,
-            max_rate=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "FeatureList": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value="""<?xml version="1.0" encoding="UTF-8"?>
+        "SearchCapabilities": create_state_var("string"),
+        "SortCapabilities": create_state_var("string"),
+        "SystemUpdateID": create_event_var("ui4", max_rate=0.2),
+        "FeatureList": create_state_var("string",
+            default="""<?xml version="1.0" encoding="UTF-8"?>
 <Features
  xmlns="urn:schemas-upnp-org:av:avs"
  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
  xsi:schemaLocation="
  urn:schemas-upnp-org:av:avs
  http://www.upnp.org/schemas/av/avs-v1-20060531.xsd">
-</Features>""",
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "A_ARG_TYPE_BrowseFlag": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=["BrowseMetadata", "BrowseDirectChildren"],
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "A_ARG_TYPE_Filter": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "A_ARG_TYPE_ObjectID": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-        ),
-        "A_ARG_TYPE_Count": StateVariableTypeInfo(
-            data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-        ),
-        "A_ARG_TYPE_Index": StateVariableTypeInfo(
-            data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-        ),
-        "A_ARG_TYPE_SortCriteria": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
+</Features>"""),
+        "A_ARG_TYPE_BrowseFlag": create_state_var("string",
+            allowed=["BrowseMetadata", "BrowseDirectChildren"]),
+        "A_ARG_TYPE_Filter": create_state_var("string"),
+        "A_ARG_TYPE_ObjectID": create_state_var("string"),
+        "A_ARG_TYPE_Count": create_state_var("ui4"),
+        "A_ARG_TYPE_Index": create_state_var("ui4"),
+        "A_ARG_TYPE_SortCriteria": create_state_var("string"),
         ###
-        "A_ARG_TYPE_Result": StateVariableTypeInfo(
-            data_type="string",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "A_ARG_TYPE_UpdateID": StateVariableTypeInfo(
-            data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-            ),
-        "A_ARG_TYPE_Count_NumberReturned": StateVariableTypeInfo(
-            data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-        ),
-        "A_ARG_TYPE_Count_TotalMatches": StateVariableTypeInfo(
-            data_type="ui4",
-            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
-            default_value=None,
-            allowed_value_range={},
-            allowed_values=None,
-            xml=ET.Element("server_stateVariable"),
-        ),
+        "A_ARG_TYPE_Result": create_state_var("string"),
+        "A_ARG_TYPE_UpdateID": create_state_var("ui4"),
+        "A_ARG_TYPE_Count_NumberReturned": create_state_var("ui4"),
+        "A_ARG_TYPE_Count_TotalMatches": create_state_var("ui4"),
     }
 
     @callable_action(

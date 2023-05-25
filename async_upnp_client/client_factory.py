@@ -266,7 +266,6 @@ class UpnpFactory:
         return StateVariableInfo(
             name=name,
             send_events=send_events,
-            event_moderator=None,
             type_info=type_info,
             xml=state_variable_el,
         )

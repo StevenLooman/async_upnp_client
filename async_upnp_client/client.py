@@ -18,6 +18,7 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
+    cast,
 )
 from uuid import uuid4
 from xml.etree import ElementTree as ET
@@ -33,7 +34,7 @@ from async_upnp_client.const import (
     ActionInfo,
     DeviceIcon,
     DeviceInfo,
-    EventModerator,
+    EventableStateVariableTypeInfo,
     ServiceInfo,
     StateVariableInfo,
 )
@@ -514,7 +515,7 @@ class UpnpService:
         event_el = ET.Element("e:propertyset")
         event_el.set("xmlns:e", "urn:schemas-upnp-org:event-1-0")
         for state_var in self.state_variables.values():
-            if not state_var.event_moderator:
+            if not isinstance(state_var, UpnpEventableStateVariable):
                 continue
             prop_el = ET.SubElement(event_el, "e:property")
             ET.SubElement(prop_el, state_var.name).text = str(state_var.value)
@@ -986,11 +987,6 @@ class UpnpStateVariable(Generic[T]):
         return bool(send_events)
 
     @property
-    def event_moderator(self) -> Optional[EventModerator]:
-        """Check if this UpnpStatevariable send events."""
-        return self._state_variable_info.event_moderator
-
-    @property
     def name(self) -> str:
         """Name of the UpnpStatevariable."""
         name: str = self._state_variable_info.name
@@ -1036,19 +1032,7 @@ class UpnpStateVariable(Generic[T]):
         """Set value, python typed."""
         self.validate_value(value)
         self._value = value
-        last_update = self._updated_at or datetime.fromtimestamp(0, timezone.utc)
         self._updated_at = datetime.now(timezone.utc)
-        if (
-            self.event_moderator
-            and self.service
-            and self.event_moderator.ready_to_send(
-                (self._updated_at - last_update).total_seconds()
-            )
-        ):
-            service = self.service
-            asyncio.create_task(
-                service.async_send_events()  # pylint: disable=no-member
-            )
 
     @property
     def value_unchecked(self) -> Optional[T]:
@@ -1102,3 +1086,59 @@ class UpnpStateVariable(Generic[T]):
     def __repr__(self) -> str:
         """To repr."""
         return f"<UpnpStateVariable({self.name}: {self.data_type} = {self.value!r})>"
+
+
+class UpnpEventableStateVariable(UpnpStateVariable):
+    """Representation of an eventable State Variable."""
+
+    def __init__(
+        self, state_variable_info: StateVariableInfo, schema: vol.Schema
+    ) -> None:
+        """Initialize."""
+        super().__init__(state_variable_info, schema)
+        self._last_sent = datetime.fromtimestamp(0, timezone.utc)
+        self._defered_event: Optional[asyncio.TimerHandle] = None
+        self._sent_event = asyncio.Event()
+
+    @property
+    def max_rate(self) -> float:
+        """Return max event rate."""
+        type_info = cast(
+            EventableStateVariableTypeInfo, self._state_variable_info.type_info
+        )
+        return type_info.max_rate or 0.0
+
+    @property
+    def value(self) -> Optional[T]:
+        """Get the value, python typed."""
+        if self._value is UpnpStateVariable.UPNP_VALUE_ERROR:
+            return None
+
+        return self._value
+
+    @value.setter
+    def value(self, value: Any) -> None:
+        """Set value, python typed."""
+        self.validate_value(value)
+        if self._value == value:
+            return
+        self._value = value
+        self._updated_at = datetime.now(timezone.utc)
+        if not self.service or self._defered_event:
+            return
+        assert self._updated_at
+        next_update = self._last_sent + timedelta(seconds=self.max_rate)
+        if self._updated_at >= next_update:
+            asyncio.create_task(self.trigger_event())
+        else:
+            loop = asyncio.get_running_loop()
+            self._defered_event = loop.call_at(
+                next_update.timestamp(), self.trigger_event
+            )
+
+    async def trigger_event(self) -> None:
+        """Update any waiting subscribers."""
+        self._last_sent = datetime.now(timezone.utc)
+        service = self.service
+        self._sent_event.set()
+        asyncio.create_task(service.async_send_events())  # pylint: disable=no-member
