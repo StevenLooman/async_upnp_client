@@ -344,10 +344,10 @@ class SsdpSearchResponder:
                 self._send_responses_device_udn(remote_addr, device)
         elif matched_devices := self._matched_devices_by_type(search_target):
             for device in matched_devices:
-                self._send_responses_device_type(remote_addr, device)
+                self._send_responses_device_type(remote_addr, device, headers["st"])
         elif matched_services := self._matched_services_by_type(search_target):
             for service in matched_services:
-                self._send_responses_service(remote_addr, service)
+                self._send_responses_service(remote_addr, service, headers["st"])
 
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
             self._send_response_rootdevice(remote_addr)
@@ -360,12 +360,28 @@ class SsdpSearchResponder:
             if device.udn.lower() == search_target
         ]
 
+    @staticmethod
+    def _match_type_versions(type_ver: str, search_target: str) -> bool:
+        """Determine if any service/device type up to the max version matches search_target."""
+        # As per 1.3.2 of the UPnP Device Architecture spec, all device service types
+        # must respond to and be backwards-compatible with older versions of the same type
+        try:
+            base, max_ver = type_ver.lower().rsplit(":", 1)
+            max_ver_i = int(max_ver)
+            for ver in range(max_ver_i + 1):
+                if f"{base}:{ver}" == search_target:
+                    return True
+        except ValueError:
+            if type_ver.lower() == search_target:
+                return True
+        return False
+
     def _matched_devices_by_type(self, search_target: str) -> List[UpnpDevice]:
         """Get matched devices by device type."""
         return [
             device
             for device in self.device.all_devices
-            if device.device_type.lower() == search_target
+            if self._match_type_versions(device.device_type, search_target)
         ]
 
     def _matched_services_by_type(self, search_target: str) -> List[UpnpService]:
@@ -373,7 +389,7 @@ class SsdpSearchResponder:
         return [
             service
             for service in self.device.all_services
-            if service.service_type.lower() == search_target
+            if self._match_type_versions(service.service_type, search_target)
         ]
 
     async def async_start(self) -> None:
@@ -424,20 +440,28 @@ class SsdpSearchResponder:
         self._send_response(remote_addr, device.udn, f"{self.device.udn}")
 
     def _send_responses_device_type(
-        self, remote_addr: AddressTupleVXType, device: UpnpDevice
+        self,
+        remote_addr: AddressTupleVXType,
+        device: UpnpDevice,
+        device_type: Optional[str] = None,
     ) -> None:
         """Send device responses for device type."""
         self._send_response(
-            remote_addr, device.device_type, f"{self.device.udn}::{device.device_type}"
+            remote_addr,
+            device_type or device.device_type,
+            f"{self.device.udn}::{device.device_type}",
         )
 
     def _send_responses_service(
-        self, remote_addr: AddressTupleVXType, service: UpnpService
+        self,
+        remote_addr: AddressTupleVXType,
+        service: UpnpService,
+        service_type: Optional[str] = None,
     ) -> None:
         """Send service responses."""
         self._send_response(
             remote_addr,
-            service.service_type,
+            service_type or service.service_type,
             f"{self.device.udn}::{service.service_type}",
         )
 
