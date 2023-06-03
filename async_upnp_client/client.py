@@ -30,7 +30,6 @@ from async_upnp_client.const import (
     DeviceInfo,
     ServiceInfo,
     StateVariableInfo,
-    TemplateStateVariableTypeInfo,
 )
 from async_upnp_client.exceptions import (
     UpnpActionError,
@@ -407,10 +406,6 @@ class UpnpService:
     def action(self, name: str) -> "UpnpAction":
         """Get UPnpAction by name."""
         return self.actions[name]
-
-    def template_var(self, name: str, value: Any) -> "UpnpStateVariable":
-        """Return a unique copy of a template variable."""
-        return self.state_variable(name).uniqueify(value)
 
     async def async_call_action(
         self, action: "UpnpAction", **kwargs: Any
@@ -882,13 +877,6 @@ class UpnpStateVariable(Generic[T]):
         return name
 
     @property
-    def is_template(self) -> bool:
-        """Check if state variable is a template."""
-        return isinstance(
-            self._state_variable_info.type_info, TemplateStateVariableTypeInfo
-        )
-
-    @property
     def data_type(self) -> str:
         """UPNP data type of UpnpStateVariable."""
         return self._state_variable_info.type_info.data_type
@@ -955,16 +943,6 @@ class UpnpStateVariable(Generic[T]):
             _LOGGER.debug('Error setting upnp_value "%s", error: %s', upnp_value, err)
             self._value = UpnpStateVariable.UPNP_VALUE_ERROR
 
-    def uniqueify(self, value: Any) -> "UpnpStateVariable":
-        """Create unique copy of template variable."""
-        assert self.is_template
-        self.validate_value(value)
-        unique_var: UpnpStateVariable = UpnpStateVariable(
-            self._state_variable_info, self._schema
-        )
-        unique_var.value = value
-        return unique_var
-
     def coerce_python(self, upnp_value: str) -> Any:
         """Coerce value from UPNP to python."""
         coercer = self.data_type_mapping["in"]
@@ -992,3 +970,7 @@ class UpnpStateVariable(Generic[T]):
     def __repr__(self) -> str:
         """To repr."""
         return f"<UpnpStateVariable({self.name}: {self.data_type} = {self.value!r})>"
+
+
+class UpnpTemplateStateVariable(UpnpStateVariable):
+    """Template State Variable."""
