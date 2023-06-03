@@ -36,6 +36,7 @@ from aiohttp.web import (
     HTTPBadRequest,
     Request,
     Response,
+    RouteDef,
     TCPSite,
 )
 
@@ -235,6 +236,7 @@ class UpnpServerDevice(UpnpDevice):
     DEVICE_DEFINITION: DeviceInfo
     EMBEDDED_DEVICES: Sequence[Type["UpnpServerDevice"]]
     SERVICES: Sequence[Type[UpnpServerService]]
+    ROUTES: Optional[Sequence[RouteDef]] = None
 
     def __init__(
         self,
@@ -1030,6 +1032,9 @@ class UpnpServer:
                 service.SERVICE_DEFINITION.event_sub_url,
                 partial(subscribe_handler, service),
             )
+
+        if self._device.ROUTES:
+            app.router.add_routes(self._device.ROUTES)
 
         # Create AppRunner.
         runner = AppRunner(app, access_log=_LOGGER_TRAFFIC_UPNP)
