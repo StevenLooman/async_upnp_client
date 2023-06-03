@@ -344,10 +344,10 @@ class SsdpSearchResponder:
                 self._send_responses_device_udn(remote_addr, device)
         elif matched_devices := self._matched_devices_by_type(search_target):
             for device in matched_devices:
-                self._send_responses_device_type(remote_addr, device, headers["st"])
+                self._send_responses_device_type(remote_addr, device, search_target)
         elif matched_services := self._matched_services_by_type(search_target):
             for service in matched_services:
-                self._send_responses_service(remote_addr, service, headers["st"])
+                self._send_responses_service(remote_addr, service, search_target)
 
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
             self._send_response_rootdevice(remote_addr)
