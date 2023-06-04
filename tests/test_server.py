@@ -19,6 +19,7 @@ import aiohttp
 import pytest
 import pytest_asyncio
 
+import async_upnp_client.aiohttp
 import async_upnp_client.client
 import async_upnp_client.server
 from async_upnp_client.client import UpnpStateVariable
@@ -206,7 +207,7 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
         async_upnp_client.server, "get_ssdp_socket", get_ssdp_socket_mock
     )
     monkeypatch.setattr(
-        async_upnp_client.client, "ClientSession", callback.ClientSession
+        async_upnp_client.aiohttp, "ClientSession", callback.ClientSession
     )
     server = UpnpServer(
         ServerDeviceTest, ("127.0.0.1", 0), http_port=80, boot_id=1, config_id=1

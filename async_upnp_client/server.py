@@ -9,7 +9,7 @@ import socket
 import sys
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import partial, wraps
 from itertools import cycle
 from time import mktime
@@ -27,9 +27,11 @@ from typing import (
     cast,
 )
 from urllib.parse import urlparse
+from uuid import uuid4
 from wsgiref.handlers import format_date_time
 
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
+import voluptuous as vol
 from aiohttp.web import (
     Application,
     AppRunner,
@@ -41,12 +43,12 @@ from aiohttp.web import (
 )
 
 from async_upnp_client import __version__ as version
+from async_upnp_client.aiohttp import AiohttpRequester
 from async_upnp_client.client import (
-    EventSubscriber,
+    T,
     UpnpAction,
     UpnpDevice,
     UpnpError,
-    UpnpEventableStateVariable,
     UpnpRequester,
     UpnpService,
     UpnpStateVariable,
@@ -107,6 +109,118 @@ class NopRequester(UpnpRequester):  # pylint: disable=too-few-public-methods
     """NopRequester, does nothing."""
 
 
+class EventSubscriber:
+    """Represent a service subscriber."""
+
+    DEFAULT_TIMEOUT = 3600
+
+    def __init__(self, callback_url: str, timeout: Optional[int]) -> None:
+        """Initialize."""
+        self._url = callback_url
+        self._uuid = str(uuid4())
+        self._event_key = 0
+        self._expires = datetime.now()
+        self.timeout = timeout
+
+    @property
+    def url(self) -> str:
+        """Return callback URL."""
+        return self._url
+
+    @property
+    def uuid(self) -> str:
+        """Return subscriber uuid."""
+        return self._uuid
+
+    @property
+    def timeout(self) -> Optional[int]:
+        """Return timeout in seconds."""
+        return self._timeout
+
+    @timeout.setter
+    def timeout(self, timeout: Optional[int]) -> None:
+        """Set timeout before unsubscribe."""
+        if timeout is None:
+            timeout = self.DEFAULT_TIMEOUT
+        self._timeout = timeout
+        self._expires = datetime.now() + timedelta(seconds=timeout)
+
+    @property
+    def expiration(self) -> datetime:
+        """Return expiration time of subscription."""
+        return self._expires
+
+    def get_next_seq(self) -> int:
+        """Return the next sequence number for an event."""
+        res = self._event_key
+        self._event_key += 1
+        if self._event_key > 0xFFFF_FFFF:
+            self._event_key = 1
+        return res
+
+
+class UpnpEventableStateVariable(UpnpStateVariable):
+    """Representation of an eventable State Variable."""
+
+    def __init__(
+        self, state_variable_info: StateVariableInfo, schema: vol.Schema
+    ) -> None:
+        """Initialize."""
+        super().__init__(state_variable_info, schema)
+        self._last_sent = datetime.fromtimestamp(0, timezone.utc)
+        self._defered_event: Optional[asyncio.TimerHandle] = None
+        self._sent_event = asyncio.Event()
+
+    @property
+    def event_triggered(self) -> asyncio.Event:
+        """Return event object for trigger completion."""
+        return self._sent_event
+
+    @property
+    def max_rate(self) -> float:
+        """Return max event rate."""
+        type_info = cast(
+            EventableStateVariableTypeInfo, self._state_variable_info.type_info
+        )
+        return type_info.max_rate or 0.0
+
+    @property
+    def value(self) -> Optional[T]:
+        """Get the value, python typed."""
+        if self._value is UpnpStateVariable.UPNP_VALUE_ERROR:
+            return None
+
+        return self._value
+
+    @value.setter
+    def value(self, value: Any) -> None:
+        """Set value, python typed."""
+        self.validate_value(value)
+        if self._value == value:
+            return
+        self._value = value
+        self._updated_at = datetime.now(timezone.utc)
+        if not self.service or self._defered_event:
+            return
+        assert self._updated_at
+        next_update = self._last_sent + timedelta(seconds=self.max_rate)
+        if self._updated_at >= next_update:
+            asyncio.create_task(self.trigger_event())
+        else:
+            loop = asyncio.get_running_loop()
+            self._defered_event = loop.call_at(
+                next_update.timestamp(), self.trigger_event
+            )
+
+    async def trigger_event(self) -> None:
+        """Update any waiting subscribers."""
+        self._last_sent = datetime.now(timezone.utc)
+        service = self.service
+        assert isinstance(service, UpnpServerService)
+        self._sent_event.set()
+        asyncio.create_task(service.async_send_events())  # pylint: disable=no-member
+
+
 class UpnpServerAction(UpnpAction):
     """Representation of an Action."""
 
@@ -128,6 +242,7 @@ class UpnpServerService(UpnpService):
 
         self._init_state_variables()
         self._init_actions()
+        self._subscribers: List[EventSubscriber] = []
 
     def _init_state_variables(self) -> None:
         """Initialize state variables from STATE_VARIABLE_DEFINITIONS."""
@@ -240,6 +355,67 @@ class UpnpServerService(UpnpService):
         action = cast(UpnpServerAction, self.actions[action_name])
         action.validate_arguments(**kwargs)
         return await action.async_handle(**kwargs)
+
+    def add_subscriber(self, subscriber: EventSubscriber) -> None:
+        """Add or update a subscriber."""
+        self._subscribers.append(subscriber)
+
+    def del_subscriber(self, sid: str) -> bool:
+        """Delete a subscriber."""
+        subscriber = self.get_subscriber(sid)
+        if subscriber:
+            self._subscribers.remove(subscriber)
+            return True
+        return False
+
+    def get_subscriber(self, sid: str) -> Optional[EventSubscriber]:
+        """Get matching subscriber (if any)."""
+        for subscriber in self._subscribers:
+            if subscriber.uuid == sid:
+                return subscriber
+        return None
+
+    async def async_send_events(
+        self, subscriber: Optional[EventSubscriber] = None
+    ) -> None:
+        """Send event updates to any subscribers."""
+        if not subscriber:
+            now = datetime.now()
+            self._subscribers = [
+                _sub for _sub in self._subscribers if now < _sub.expiration
+            ]
+            subscribers = self._subscribers
+            if not self._subscribers:
+                return
+        else:
+            subscribers = [subscriber]
+        event_el = ET.Element("e:propertyset")
+        event_el.set("xmlns:e", "urn:schemas-upnp-org:event-1-0")
+        for state_var in self.state_variables.values():
+            if not isinstance(state_var, UpnpEventableStateVariable):
+                continue
+            prop_el = ET.SubElement(event_el, "e:property")
+            ET.SubElement(prop_el, state_var.name).text = str(state_var.value)
+        message = (
+            '<?xml version="1.0"?>\n' + ET.tostring(event_el, encoding="utf-8").decode()
+        )
+
+        headers = {
+            "CONTENT-TYPE": 'text/xml; charset="utf-8"',
+            "NT": "upnp:event",
+            "NTS": "upnp:propchange",
+        }
+        tasks = []
+        for sub in subscribers:
+            hdr = headers.copy()
+            hdr["SID"] = sub.uuid
+            hdr["SEQ"] = str(sub.get_next_seq())
+            tasks.append(
+                self.requester.async_http_request(
+                    "NOTIFY", sub.url, headers=hdr, body=message
+                )
+            )
+        await asyncio.gather(*tasks)
 
 
 class UpnpServerDevice(UpnpDevice):
@@ -1134,7 +1310,7 @@ class UpnpServer:
 
     def _create_device(self) -> None:
         """Create device."""
-        requester = NopRequester()
+        requester = AiohttpRequester()
         is_ipv6 = ":" in self.source[0]
         self.base_uri = (
             f"http://[{self.source[0]}]:{self.http_port}"

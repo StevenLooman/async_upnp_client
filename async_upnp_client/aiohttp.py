@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 import aiohttp
 import aiohttp.web
 import async_timeout
+from aiohttp import ClientSession
 
 from async_upnp_client.client import UpnpRequester
 from async_upnp_client.const import AddressTupleVXType, IPvXAddress
@@ -84,7 +85,7 @@ class AiohttpRequester(UpnpRequester):
 
         try:
             async with async_timeout.timeout(self._timeout):
-                async with aiohttp.ClientSession() as session:
+                async with ClientSession() as session:
                     async with session.request(
                         method, url, headers=req_headers, data=body
                     ) as response:
@@ -138,7 +139,7 @@ class AiohttpSessionRequester(UpnpRequester):
 
     def __init__(
         self,
-        session: aiohttp.ClientSession,
+        session: ClientSession,
         with_sleep: bool = False,
         timeout: int = 5,
         http_headers: Optional[Mapping[str, str]] = None,
