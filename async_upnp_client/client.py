@@ -1101,6 +1101,11 @@ class UpnpEventableStateVariable(UpnpStateVariable):
         self._sent_event = asyncio.Event()
 
     @property
+    def event_triggered(self) -> asyncio.Event:
+        """Return event object for trigger completion."""
+        return self._sent_event
+
+    @property
     def max_rate(self) -> float:
         """Return max event rate."""
         type_info = cast(
