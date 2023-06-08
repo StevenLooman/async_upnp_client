@@ -970,7 +970,3 @@ class UpnpStateVariable(Generic[T]):
     def __repr__(self) -> str:
         """To repr."""
         return f"<UpnpStateVariable({self.name}: {self.data_type} = {self.value!r})>"
-
-
-class UpnpTemplateStateVariable(UpnpStateVariable):
-    """Template State Variable."""

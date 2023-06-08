@@ -48,11 +48,9 @@ from async_upnp_client.client import (
     UpnpRequester,
     UpnpService,
     UpnpStateVariable,
-    UpnpTemplateStateVariable,
 )
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import (
-    STATE_VARIABLE_TYPE_MAPPING,
     ActionArgumentInfo,
     ActionInfo,
     AddressTupleVXType,
@@ -61,7 +59,6 @@ from async_upnp_client.const import (
     ServiceInfo,
     StateVariableInfo,
     StateVariableTypeInfo,
-    TemplateStateVariableTypeInfo,
 )
 from async_upnp_client.exceptions import (
     UpnpActionError,
@@ -148,17 +145,10 @@ class UpnpServerService(UpnpService):
             xml=ET.Element("stateVariable"),
         )
         # pylint: disable=protected-access
-        state_var: UpnpStateVariable
-        if isinstance(type_info, TemplateStateVariableTypeInfo):
-            state_var = UpnpTemplateStateVariable(
-                state_var_info,
-                UpnpFactory(self.requester)._state_variable_create_schema(type_info),
-            )
-        else:
-            state_var = UpnpStateVariable(
-                state_var_info,
-                UpnpFactory(self.requester)._state_variable_create_schema(type_info),
-            )
+        state_var: UpnpStateVariable = UpnpStateVariable(
+            state_var_info,
+            UpnpFactory(self.requester)._state_variable_create_schema(type_info),
+        )
         state_var.service = self
         if type_info.default_value is not None:
             state_var.upnp_value = type_info.default_value
@@ -903,7 +893,6 @@ def _create_action_response(
             ET.SubElement(response_el, key).text = value.upnp_value
         else:
             template_var = out_state_vars[key]
-            assert isinstance(template_var, UpnpTemplateStateVariable)
             template_var.validate_value(value)
             ET.SubElement(response_el, key).text = template_var.coerce_upnp(value)
     return Response(
@@ -979,24 +968,6 @@ async def to_xml(
     encoding = "utf-8"
     thing_xml = ET.tostring(thing_el, encoding=encoding)
     return Response(content_type="text/xml", charset=encoding, body=thing_xml)
-
-
-def create_template_var(
-    data_type: str,
-    *,
-    allowed: Optional[List[str]] = None,
-    allowed_range: Optional[Mapping[str, Optional[str]]] = None,
-    default: Optional[str] = None,
-) -> StateVariableTypeInfo:
-    """Create template state variables."""
-    return TemplateStateVariableTypeInfo(
-        data_type=data_type,
-        data_type_mapping=STATE_VARIABLE_TYPE_MAPPING[data_type],
-        default_value=default,
-        allowed_value_range=allowed_range or {},
-        allowed_values=allowed,
-        xml=ET.Element("server_stateVariable"),
-    )
 
 
 class UpnpServer:
