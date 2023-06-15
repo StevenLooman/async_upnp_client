@@ -893,7 +893,7 @@ async def _parse_action_body(
 
 
 def _create_action_response(
-    service: UpnpServerService, action_name: str, result: Dict[str, UpnpStateVariable]
+    service: UpnpServerService, action_name: str, result: Dict[str, Any]
 ) -> Response:
     """Create action call response."""
     envelope_el = ET.Element(
@@ -908,9 +908,17 @@ def _create_action_response(
     response_el = ET.SubElement(
         body_el, f"st:{action_name}Response", attrib={"xmlns:st": service.service_type}
     )
+    out_state_vars = {
+        var.name: var.related_state_variable
+        for var in service.actions[action_name].out_arguments()
+    }
     for key, value in result.items():
-        ET.SubElement(response_el, key).text = value.upnp_value
-
+        if isinstance(value, UpnpStateVariable):
+            ET.SubElement(response_el, key).text = value.upnp_value
+        else:
+            template_var = out_state_vars[key]
+            template_var.validate_value(value)
+            ET.SubElement(response_el, key).text = template_var.coerce_upnp(value)
     return Response(
         content_type="text/xml",
         charset="utf-8",
