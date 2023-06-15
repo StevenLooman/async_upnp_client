@@ -13,6 +13,7 @@ import logging
 import xml.etree.ElementTree as ET
 from time import time
 from typing import Dict, Mapping, Sequence, Type
+from datetime import datetime
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -99,16 +100,21 @@ class ContentDirectoryService(UpnpServerService):
     async def browse(self, BrowseFlag: str, Filter: str, ObjectID: str, StartingIndex: int,
                      RequestedCount: int, SortCriteria: str) -> Dict[str, UpnpStateVariable]:
         """Browse media."""
-        self.state_variable("A_ARG_TYPE_Result").value = "Some Value"
-        self.state_variable("A_ARG_TYPE_Count_NumberReturned").value = 1
-        self.state_variable("A_ARG_TYPE_Count_TotalMatches").value = 2
-        self.state_variable("A_ARG_TYPE_UpdateID").value = 3
+        root =  ET.Element("DIDL-Lite", {
+             'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
+             'xmlns:upnp': 'urn:schemas-upnp-org:metadata-1-0/upnp/',
+             'DIDL-Lite': 'urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/'})
+        child = ET.Element('item', {'id': f'100', 'restricted': '0'})
+        ET.SubElement(child, 'dc:title').text = "Item 1"
+        ET.SubElement(child, 'dc:date').text = datetime.now().isoformat()
+
+        root.append(child)
+        xml = ET.tostring(root).decode()
         return {
-            "Result": self.state_variable("A_ARG_TYPE_Result"),
-            "NumberReturned": self.state_variable("A_ARG_TYPE_Count_NumberReturned"),
-            "TotalMatches": self.state_variable("A_ARG_TYPE_Count_TotalMatches"),
-            "UpdateID": self.state_variable("A_ARG_TYPE_UpdateID"),
-        }
+            "Result": xml,
+            "NumberReturned": 1,
+            "TotalMatches": 2,
+            }
 
     @callable_action(
         name="GetSearchCapabilities",
