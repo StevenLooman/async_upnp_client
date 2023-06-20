@@ -186,20 +186,15 @@ class UpnpEventableStateVariable(UpnpStateVariable):
 
     @property
     def value(self) -> Optional[T]:
-        """Get the value, python typed."""
-        if self._value is UpnpStateVariable.UPNP_VALUE_ERROR:
-            return None
-
-        return self._value
+        """Get Python value for this argument."""
+        return super().value
 
     @value.setter
     def value(self, value: Any) -> None:
         """Set value, python typed."""
-        self.validate_value(value)
         if self._value == value:
             return
-        self._value = value
-        self._updated_at = datetime.now(timezone.utc)
+        super(UpnpEventableStateVariable, self.__class__).value.__set__(self, value)  # type: ignore
         if not self.service or self._defered_event:
             return
         assert self._updated_at
