@@ -8,9 +8,14 @@ from ipaddress import ip_address
 from typing import Dict, Mapping, Optional, Tuple
 from urllib.parse import urlparse
 
-import aiohttp
 import aiohttp.web
 import async_timeout
+from aiohttp import (
+    ClientConnectionError,
+    ClientError,
+    ClientResponseError,
+    ClientSession,
+)
 
 from async_upnp_client.client import UpnpRequester
 from async_upnp_client.const import AddressTupleVXType, IPvXAddress
@@ -84,7 +89,7 @@ class AiohttpRequester(UpnpRequester):
 
         try:
             async with async_timeout.timeout(self._timeout):
-                async with aiohttp.ClientSession() as session:
+                async with ClientSession() as session:
                     async with session.request(
                         method, url, headers=req_headers, data=body
                     ) as response:
@@ -109,9 +114,9 @@ class AiohttpRequester(UpnpRequester):
                         resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError(repr(err)) from err
-        except aiohttp.ClientConnectionError as err:
+        except ClientConnectionError as err:
             raise UpnpConnectionError(repr(err)) from err
-        except aiohttp.ClientResponseError as err:
+        except ClientResponseError as err:
             raise UpnpClientResponseError(
                 request_info=err.request_info,
                 history=err.history,
@@ -119,7 +124,7 @@ class AiohttpRequester(UpnpRequester):
                 message=err.message,
                 headers=err.headers,
             ) from err
-        except aiohttp.ClientError as err:
+        except ClientError as err:
             raise UpnpCommunicationError(repr(err)) from err
         except UnicodeDecodeError as err:
             raise UpnpCommunicationError(repr(err)) from err
@@ -138,7 +143,7 @@ class AiohttpSessionRequester(UpnpRequester):
 
     def __init__(
         self,
-        session: aiohttp.ClientSession,
+        session: ClientSession,
         with_sleep: bool = False,
         timeout: int = 5,
         http_headers: Optional[Mapping[str, str]] = None,
@@ -164,11 +169,11 @@ class AiohttpSessionRequester(UpnpRequester):
         for _ in range(2):
             try:
                 return await self._async_http_request(method, url, headers, body)
-            except aiohttp.ClientConnectionError as err:
+            except ClientConnectionError as err:
                 _LOGGER.debug("%r during request %s %s; retrying", err, method, url)
         try:
             return await self._async_http_request(method, url, headers, body)
-        except aiohttp.ClientConnectionError as err:
+        except ClientConnectionError as err:
             raise UpnpConnectionError(repr(err)) from err
 
     async def _async_http_request(
@@ -222,9 +227,9 @@ class AiohttpSessionRequester(UpnpRequester):
                     resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError(repr(err)) from err
-        except aiohttp.ClientConnectionError:
+        except ClientConnectionError:
             raise
-        except aiohttp.ClientResponseError as err:
+        except ClientResponseError as err:
             raise UpnpClientResponseError(
                 request_info=err.request_info,
                 history=err.history,
@@ -232,7 +237,7 @@ class AiohttpSessionRequester(UpnpRequester):
                 message=err.message,
                 headers=err.headers,
             ) from err
-        except aiohttp.ClientError as err:
+        except ClientError as err:
             raise UpnpCommunicationError(repr(err)) from err
         except UnicodeDecodeError as err:
             raise UpnpCommunicationError(repr(err)) from err

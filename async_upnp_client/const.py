@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.const module."""
 
+from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
@@ -155,7 +156,8 @@ class ActionInfo(NamedTuple):
     xml: ET.Element
 
 
-class StateVariableTypeInfo(NamedTuple):
+@dataclass(frozen=True)
+class StateVariableTypeInfo:
     """State variable type info."""
 
     data_type: str
@@ -166,7 +168,15 @@ class StateVariableTypeInfo(NamedTuple):
     xml: ET.Element
 
 
-class StateVariableInfo(NamedTuple):
+@dataclass(frozen=True)
+class EventableStateVariableTypeInfo(StateVariableTypeInfo):
+    """Eventable State variable type info."""
+
+    max_rate: Optional[float]
+
+
+@dataclass(frozen=True)
+class StateVariableInfo:
     """State variable info."""
 
     name: str
