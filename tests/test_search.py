@@ -1,11 +1,7 @@
 """Unit tests for search."""
 # pylint: disable=protected-access
 
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    # For python 3.6/3.7
-    from mock import AsyncMock  # type: ignore
+from unittest.mock import AsyncMock
 
 import pytest
 

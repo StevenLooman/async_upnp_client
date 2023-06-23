@@ -1,12 +1,6 @@
 """Unit tests for ssdp."""
 import asyncio
-from unittest.mock import ANY, MagicMock
-
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    # For python 3.6/3.7
-    from mock import AsyncMock  # type: ignore
+from unittest.mock import ANY, AsyncMock, MagicMock
 
 import pytest
 

@@ -3,13 +3,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from typing import AsyncGenerator
-from unittest.mock import ANY, Mock, patch
-
-try:
-    from unittest.mock import AsyncMock
-except ImportError:
-    # For python 3.6/3.7
-    from mock import AsyncMock  # type: ignore
+from unittest.mock import ANY, AsyncMock, Mock, patch
 
 import pytest
 
