@@ -1,3 +1,19 @@
+async_upnp_client 0.34.0 (2023-06-25)
+=====================================
+
+Features
+--------
+
+- Support server event subscription (@PhracturedBlue) (#162)
+- UpnpServer supports returning plain values from server Actions (@PhracturedBlue)
+
+  Note that the values are still coerced by its related UpnpStateVariable. (#166)
+- Server supports deferred SSDP responses via MX header (@PhracturedBlue) (#168)
+- Support backwards compatible service/device types (@PhracturedBlue) (#169)
+- Enable servers to define custom routes (@PhracturedBlue) (#170)
+- Drop Python 3.7 support. (#171)
+
+
 async_upnp_client 0.33.2 (2023-05-21)
 =====================================
 
