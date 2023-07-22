@@ -68,6 +68,7 @@ def get_host_port_string(addr: AddressTupleVXType) -> str:
     return f"{host}:{addr[1]}"
 
 
+@lru_cache(maxsize=256)
 def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     """Adjust a url with correction for link local scope."""
     if len(addr) < 4:
