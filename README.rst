@@ -101,7 +101,7 @@ Steps for releasing:
 
 - Switch to development: ``git checkout development``
 - Do a pull: ``git pull``
-- Run towncrier: ``towncrier build``
+- Run towncrier: ``towncrier build --version <version>``
 - Commit towncrier results: ``git commit -m "Towncrier"``
 - Run bump2version: ``bump2version --tag major/minor/patch``
    - Note that this creates a new commit + tag.
