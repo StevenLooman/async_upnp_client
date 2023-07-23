@@ -1,3 +1,14 @@
+async_upnp_client 0.34.1 (2023-07-23)
+=====================================
+
+Features
+--------
+
+- Add an lru to get_adjusted_url (@bdraco)
+
+  This function gets called every time we decode an SSDP packet and its usually the same data over and over (#172)
+
+
 async_upnp_client 0.34.0 (2023-06-25)
 =====================================
 
