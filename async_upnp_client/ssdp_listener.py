@@ -41,9 +41,9 @@ IGNORED_HEADERS = {
 def valid_search_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this search is usable."""
     # pylint: disable=invalid-name
-    udn = headers.get("_udn")  # type: Optional[str]
-    st = headers.get("st")  # type: Optional[str]
-    location = headers.get("location", "")  # type: str
+    udn = headers.get_lower("_udn")  # type: Optional[str]
+    st = headers.get_lower("st")  # type: Optional[str]
+    location = headers.get_lower("location", "")  # type: str
     return bool(
         udn
         and st
@@ -60,10 +60,10 @@ def valid_search_headers(headers: CaseInsensitiveDict) -> bool:
 def valid_advertisement_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement is usable for connecting to a device."""
     # pylint: disable=invalid-name
-    udn = headers.get("_udn")  # type: Optional[str]
-    nt = headers.get("nt")  # type: Optional[str]
-    nts = headers.get("nts")  # type: Optional[str]
-    location = headers.get("location", "")  # type: str
+    udn = headers.get_lower("_udn")  # type: Optional[str]
+    nt = headers.get_lower("nt")  # type: Optional[str]
+    nts = headers.get_lower("nts")  # type: Optional[str]
+    location = headers.get_lower("location", "")  # type: str
     return bool(
         udn
         and nt
@@ -81,15 +81,15 @@ def valid_advertisement_headers(headers: CaseInsensitiveDict) -> bool:
 def valid_byebye_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement has required headers for byebye."""
     # pylint: disable=invalid-name
-    udn = headers.get("_udn")  # type: Optional[str]
-    nt = headers.get("nt")  # type: Optional[str]
-    nts = headers.get("nts")  # type: Optional[str]
+    udn = headers.get_lower("_udn")  # type: Optional[str]
+    nt = headers.get_lower("nt")  # type: Optional[str]
+    nts = headers.get_lower("nts")  # type: Optional[str]
     return bool(udn and nt and nts)
 
 
 def extract_valid_to(headers: CaseInsensitiveDict) -> datetime:
     """Extract/create valid to."""
-    cache_control = headers.get("cache-control", "")
+    cache_control = headers.get_lower("cache-control", "")
     match = CACHE_CONTROL_RE.search(cache_control)
     if match:
         max_age = int(match[1])
@@ -247,7 +247,7 @@ def ip_version_from_location(location: str) -> Optional[int]:
 
 def location_changed(ssdp_device: SsdpDevice, headers: CaseInsensitiveDict) -> bool:
     """Test if location changed for device."""
-    new_location = headers.get("location", "")
+    new_location = headers.get_lower("location", "")
     if not new_location:
         return False
 

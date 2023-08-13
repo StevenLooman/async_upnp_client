@@ -66,24 +66,26 @@ class SsdpAdvertisementListener:
 
     def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
-        if headers.get("MAN") == SSDP_DISCOVER:
+        if headers.get_lower("man") == SSDP_DISCOVER:
             # Ignore discover packets.
             return
-        if "NTS" not in headers:
+
+        notification_sub_type = headers.get_lower("nts")
+        if notification_sub_type is None:
             _LOGGER.debug("Got non-advertisement packet: %s, %s", request_line, headers)
             return
 
-        _LOGGER.debug(
-            "Received advertisement, _remote_addr: %s, NT: %s, NTS: %s, USN: %s, location: %s",
-            headers.get("_remote_addr", ""),
-            headers.get("NT", "<no NT>"),
-            headers.get("NTS", "<no NTS>"),
-            headers.get("USN", "<no USN>"),
-            headers.get("location", ""),
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "Received advertisement, _remote_addr: %s, NT: %s, NTS: %s, USN: %s, location: %s",
+                headers.get_lower("_remote_addr", ""),
+                headers.get_lower("nt", "<no NT>"),
+                headers.get_lower("nts", "<no NTS>"),
+                headers.get_lower("usn", "<no USN>"),
+                headers.get_lower("location", ""),
+            )
 
         headers["_source"] = SsdpSource.ADVERTISEMENT
-        notification_sub_type = headers["NTS"]
         if notification_sub_type == NotificationSubType.SSDP_ALIVE:
             if self.async_on_alive:
                 coro = self.async_on_alive(headers)
