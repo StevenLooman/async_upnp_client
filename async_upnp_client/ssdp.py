@@ -228,6 +228,7 @@ class SsdpProtocol(DatagramProtocol):
         self.on_data = on_data
 
         self.transport: Optional[DatagramTransport] = None
+        self.local_addr: Optional[AddressTupleVXType] = None
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
@@ -237,6 +238,8 @@ class SsdpProtocol(DatagramProtocol):
             transport.get_extra_info("socket"),
         )
         self.transport = cast(DatagramTransport, transport)
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        self.local_addr = sock.getsockname() if sock is not None else None
 
         if self.async_on_connect:
             coro = self.async_on_connect(self.transport)
@@ -250,10 +253,8 @@ class SsdpProtocol(DatagramProtocol):
         assert self.transport
 
         if is_valid_ssdp_packet(data):
-            sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
-            local_addr = sock.getsockname() if sock is not None else None
             try:
-                request_line, headers = decode_ssdp_packet(data, local_addr, addr)
+                request_line, headers = decode_ssdp_packet(data, self.local_addr, addr)
             except InvalidHeader as exc:
                 _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
                 return
