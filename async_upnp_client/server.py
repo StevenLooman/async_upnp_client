@@ -492,10 +492,10 @@ class SsdpSearchResponder:
         _LOGGER.debug("Received M-SEARCH from: %s, headers: %s", remote_addr, headers)
 
         loop = asyncio.get_running_loop()
-        mx = headers.get_lower("mx")
-        if mx is not None:
+        mx_header = headers.get_lower("mx")
+        if mx_header is not None:
             try:
-                delay = int(mx)
+                delay = int(mx_header)
                 _LOGGER.debug("Deferring response for %d seconds", delay)
             except ValueError:
                 delay = 0
