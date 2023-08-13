@@ -96,7 +96,7 @@ def extract_valid_to(headers: CaseInsensitiveDict) -> datetime:
         uncache_after = timedelta(seconds=max_age)
     else:
         uncache_after = DEFAULT_MAX_AGE
-    timestamp: datetime = headers["_timestamp"]
+    timestamp: datetime = headers.get_lower("_timestamp")
     return timestamp + uncache_after
 
 
@@ -295,14 +295,14 @@ class SsdpDeviceTracker:
             _LOGGER.debug("Received invalid search headers: %s", headers)
             return False, None, None, None
 
-        udn = headers["_udn"]
+        udn = headers.get_lower("_udn")
         is_new_device = udn not in self.devices
 
         ssdp_device, new_location = self._see_device(headers)
         if not ssdp_device:
             return False, None, None, None
 
-        search_target: SearchTarget = headers["ST"]
+        search_target: SearchTarget = headers.get_lower("st")
         is_new_service = (
             search_target not in ssdp_device.advertisement_headers
             and search_target not in ssdp_device.search_headers
@@ -339,14 +339,14 @@ class SsdpDeviceTracker:
             _LOGGER.debug("Received invalid advertisement headers: %s", headers)
             return False, None, None
 
-        udn = headers["_udn"]
+        udn = headers.get_lower("_udn")
         is_new_device = udn not in self.devices
 
         ssdp_device, new_location = self._see_device(headers)
         if not ssdp_device:
             return False, None, None
 
-        notification_type: NotificationType = headers["NT"]
+        notification_type: NotificationType = headers.get_lower("nt")
         is_new_service = (
             notification_type not in ssdp_device.advertisement_headers
             and notification_type not in ssdp_device.search_headers
@@ -356,7 +356,7 @@ class SsdpDeviceTracker:
                 "See new service: %s, type: %s", ssdp_device, notification_type
             )
 
-        notification_sub_type: NotificationSubType = headers["NTS"]
+        notification_sub_type: NotificationSubType = headers.get_lower("nts")
         propagate = (
             notification_sub_type == NotificationSubType.SSDP_UPDATE
             or is_new_device
@@ -407,8 +407,8 @@ class SsdpDeviceTracker:
         new_location = location_changed(ssdp_device, headers)
 
         # Update device.
-        ssdp_device.add_location(headers["location"], valid_to)
-        ssdp_device.last_seen = headers["_timestamp"]
+        ssdp_device.add_location(headers.get_lower("location"), valid_to)
+        ssdp_device.last_seen = headers.get_lower("_timestamp")
         if not self.next_valid_to or self.next_valid_to > ssdp_device.valid_to:
             self.next_valid_to = ssdp_device.valid_to
 
@@ -433,7 +433,7 @@ class SsdpDeviceTracker:
         del self.devices[udn]
 
         # Update device before propagating it
-        notification_type: NotificationType = headers["NT"]
+        notification_type: NotificationType = headers.get_lower("nt")
         if notification_type in ssdp_device.advertisement_headers:
             ssdp_device.advertisement_headers[notification_type].replace(headers)
         else:
