@@ -482,16 +482,20 @@ class SsdpSearchResponder:
         # pylint: disable=too-many-branches
         assert self._transport
 
-        if request_line != "M-SEARCH * HTTP/1.1" or headers.get("MAN") != SSDP_DISCOVER:
+        if (
+            request_line != "M-SEARCH * HTTP/1.1"
+            or headers.get_lower("man") != SSDP_DISCOVER
+        ):
             return
 
-        remote_addr = headers["_remote_addr"]
+        remote_addr = headers.get_lower("_remote_addr")
         _LOGGER.debug("Received M-SEARCH from: %s, headers: %s", remote_addr, headers)
 
         loop = asyncio.get_running_loop()
-        if "MX" in headers:
+        mx_header = headers.get_lower("mx")
+        if mx_header is not None:
             try:
-                delay = int(headers["MX"])
+                delay = int(mx_header)
                 _LOGGER.debug("Deferring response for %d seconds", delay)
             except ValueError:
                 delay = 0
@@ -501,8 +505,9 @@ class SsdpSearchResponder:
 
     def _deferred_on_data(self, headers: CaseInsensitiveDict) -> None:
         # Determine how we should respond, page 1.3.2 of UPnP-arch-DeviceArchitecture-v2.0.
-        remote_addr = headers["_remote_addr"]
-        search_target = headers["st"].lower()
+        remote_addr = headers.get_lower("_remote_addr")
+        st_header: str = headers.get_lower("st", "")
+        search_target = st_header.lower()
         if search_target == SSDP_ST_ALL:
             # 3 + 2d + k (d: embedded device, k: service)
             # global:      ST: upnp:rootdevice
