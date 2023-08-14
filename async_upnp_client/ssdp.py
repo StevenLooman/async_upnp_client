@@ -228,15 +228,18 @@ class SsdpProtocol(DatagramProtocol):
         self.on_data = on_data
 
         self.transport: Optional[DatagramTransport] = None
+        self.local_addr: Optional[AddressTupleVXType] = None
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
+        self.transport = cast(DatagramTransport, transport)
+        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        self.local_addr = sock.getsockname() if sock is not None else None
         _LOGGER.debug(
             "Connection made, transport: %s, socket: %s",
             transport,
-            transport.get_extra_info("socket"),
+            sock,
         )
-        self.transport = cast(DatagramTransport, transport)
 
         if self.async_on_connect:
             coro = self.async_on_connect(self.transport)
@@ -250,10 +253,8 @@ class SsdpProtocol(DatagramProtocol):
         assert self.transport
 
         if is_valid_ssdp_packet(data):
-            sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
-            local_addr = sock.getsockname() if sock is not None else None
             try:
-                request_line, headers = decode_ssdp_packet(data, local_addr, addr)
+                request_line, headers = decode_ssdp_packet(data, self.local_addr, addr)
             except InvalidHeader as exc:
                 _LOGGER.debug("Ignoring received packet with invalid headers: %s", exc)
                 return
@@ -275,6 +276,8 @@ class SsdpProtocol(DatagramProtocol):
 
     def connection_lost(self, exc: Optional[Exception]) -> None:
         """Handle connection lost."""
+        if not _LOGGER.isEnabledFor(logging.DEBUG):
+            return
         assert self.transport
         sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
         _LOGGER.debug(
@@ -287,16 +290,18 @@ class SsdpProtocol(DatagramProtocol):
     def send_ssdp_packet(self, packet: bytes, target: AddressTupleVXType) -> None:
         """Send a SSDP packet."""
         assert self.transport
-        sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
-        _LOGGER.debug(
-            "Sending SSDP packet, transport: %s, socket: %s, target: %s",
-            self.transport,
-            sock,
-            target,
-        )
-        _LOGGER_TRAFFIC_SSDP.debug(
-            "Sending SSDP packet, target: %s, data: %s", target, packet
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+            _LOGGER.debug(
+                "Sending SSDP packet, transport: %s, socket: %s, target: %s",
+                self.transport,
+                sock,
+                target,
+            )
+        if _LOGGER_TRAFFIC_SSDP.isEnabledFor(logging.DEBUG):
+            _LOGGER_TRAFFIC_SSDP.debug(
+                "Sending SSDP packet, target: %s, data: %s", target, packet
+            )
         self.transport.sendto(packet, target)
 
 
