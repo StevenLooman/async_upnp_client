@@ -23,7 +23,7 @@ from async_upnp_client.const import (
 )
 from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_headers
-from async_upnp_client.utils import CaseInsensitiveDict
+from async_upnp_client.utils import CaseInsensitiveDict, CaseInsensitiveDictCopy
 
 _SENTINEL = object()
 _LOGGER = logging.getLogger(__name__)
@@ -159,13 +159,11 @@ class SsdpDevice:
         search_headers = self.search_headers.get(device_or_service_type)
         advertisement_headers = self.advertisement_headers.get(device_or_service_type)
         if search_headers and advertisement_headers:
-            header_dict = CaseInsensitiveDict(
-                search_headers.as_dict(), **advertisement_headers.as_dict()
-            )
+            header_dict = search_headers.combine(advertisement_headers)
         elif search_headers:
-            header_dict = CaseInsensitiveDict(search_headers.as_dict())
+            header_dict = search_headers.copy()
         elif advertisement_headers:
-            header_dict = CaseInsensitiveDict(advertisement_headers.as_dict())
+            header_dict = advertisement_headers.copy()
         else:
             return CaseInsensitiveDict()
         del header_dict["_source"]

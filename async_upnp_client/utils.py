@@ -38,6 +38,27 @@ class CaseInsensitiveDict(abcMutableMapping):
             for k in self._data
         }
 
+    def copy(self) -> "CaseInsensitiveDict":
+        """Copy a CaseInsensitiveDict.
+
+        Returns a copy of CaseInsensitiveDict.
+        """
+        _copy = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
+        _copy._data = self._data.copy()
+        _copy._case_map = self._case_map.copy()
+        return _copy
+
+    def combine(self, other: "CaseInsensitiveDict") -> "CaseInsensitiveDict":
+        """Combine a CaseInsensitiveDict with another CaseInsensitiveDict.
+
+        Returns a brand new CaseInsensitiveDict that is the combination
+        of the two CaseInsensitiveDicts.
+        """
+        _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
+        _combined._data = {**self._data.copy(), **other._data.copy()}
+        _combined._case_map = {**self._case_map.copy(), **other._case_map.copy()}
+        return _combined
+
     def case_map(self) -> Dict[str, str]:
         """Get the case map."""
         return self._case_map
