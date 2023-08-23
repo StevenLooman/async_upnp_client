@@ -33,8 +33,8 @@ class CaseInsensitiveDict(abcMutableMapping):
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
         self._case_map = {
             k
-            if type(k) is lowerstr
-            else lowerstr(k.lower()): k  # pylint: disable=unidiomatic-typecheck
+            if type(k) is lowerstr # pylint: disable=unidiomatic-typecheck
+            else lowerstr(k.lower()): k  
             for k in self._data
         }
 
@@ -65,8 +65,8 @@ class CaseInsensitiveDict(abcMutableMapping):
             self._data = {**new_data}
         self._case_map = {
             k
-            if type(k) is lowerstr
-            else lowerstr(k.lower()): k  # pylint: disable=unidiomatic-typecheck
+            if type(k) is lowerstr # pylint: disable=unidiomatic-typecheck
+            else lowerstr(k.lower()): k  
             for k in self._data
         }
 
