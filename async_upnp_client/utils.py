@@ -34,7 +34,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         self._case_map = {
             k
             if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
-            else lowerstr(k.lower()): k
+            else k.lower(): k
             for k in self._data
         }
 
@@ -61,14 +61,15 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Replace the underlying dict."""
         if isinstance(new_data, CaseInsensitiveDict):
             self._data = new_data.as_dict().copy()
+            self._case_map = new_data.case_map().copy()
         else:
             self._data = {**new_data}
-        self._case_map = {
-            k
-            if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
-            else lowerstr(k.lower()): k
-            for k in self._data
-        }
+            self._case_map = {
+                k
+                if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
+                else k.lower(): k
+                for k in self._data
+            }
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
