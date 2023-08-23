@@ -23,7 +23,7 @@ from async_upnp_client.const import (
 )
 from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_headers
-from async_upnp_client.utils import CaseInsensitiveDict, CaseInsensitiveDictCopy
+from async_upnp_client.utils import CaseInsensitiveDict
 
 _SENTINEL = object()
 _LOGGER = logging.getLogger(__name__)
