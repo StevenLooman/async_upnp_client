@@ -43,6 +43,7 @@ class CaseInsensitiveDict(abcMutableMapping):
 
         Returns a copy of CaseInsensitiveDict.
         """
+        # pylint: disable=protected-access
         _copy = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
         _copy._data = self._data.copy()
         _copy._case_map = self._case_map.copy()
@@ -54,6 +55,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         Returns a brand new CaseInsensitiveDict that is the combination
         of the two CaseInsensitiveDicts.
         """
+        # pylint: disable=protected-access
         _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
         _combined._data = {**self._data.copy(), **other._data.copy()}
         _combined._case_map = {**self._case_map.copy(), **other._case_map.copy()}
