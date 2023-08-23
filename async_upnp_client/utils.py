@@ -31,7 +31,7 @@ class CaseInsensitiveDict(abcMutableMapping):
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
-        self._case_map: Dict[str, Any]  = {
+        self._case_map: Dict[str, Any] = {
             k
             if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
             else k.lower(): k
