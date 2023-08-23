@@ -21,7 +21,7 @@ EXTERNAL_PORT = 80
 _SENTINEL = object()
 
 
-class lowerstr(str):
+class lowerstr(str):  # pylint: disable=invalid-name
     """A prelowered string."""
 
 
@@ -31,8 +31,11 @@ class CaseInsensitiveDict(abcMutableMapping):
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
-        self._case_map: Dict[str, Any] = {
-            k if type(k) is lowerstr else lowerstr(k.lower()): k for k in self._data
+        self._case_map = {
+            k
+            if type(k) is lowerstr
+            else lowerstr(k.lower()): k  # pylint: disable=unidiomatic-typecheck
+            for k in self._data
         }
 
     def case_map(self) -> Dict[str, str]:
@@ -61,7 +64,10 @@ class CaseInsensitiveDict(abcMutableMapping):
         else:
             self._data = {**new_data}
         self._case_map = {
-            k if type(k) is lowerstr else lowerstr(k.lower()): k for k in self._data
+            k
+            if type(k) is lowerstr
+            else lowerstr(k.lower()): k  # pylint: disable=unidiomatic-typecheck
+            for k in self._data
         }
 
     def __setitem__(self, key: str, value: Any) -> None:
