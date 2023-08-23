@@ -24,7 +24,7 @@ from async_upnp_client.const import (
     UniqueDeviceName,
 )
 from async_upnp_client.exceptions import UpnpError
-from async_upnp_client.utils import CaseInsensitiveDict
+from async_upnp_client.utils import CaseInsensitiveDict, lowerstr
 
 SSDP_PORT = 1900
 SSDP_IP_V4 = "239.255.255.250"
@@ -176,6 +176,16 @@ def _cached_header_parse(
     return parsed_headers, request_line, udn
 
 
+LOWER__TIMESTAMP = lowerstr("_timestamp")
+LOWER__HOST = lowerstr("_host")
+LOWER__PORT = lowerstr("_port")
+LOWER__LOCAL_ADDR = lowerstr("_local_addr")
+LOWER__REMOTE_ADDR = lowerstr("_remote_addr")
+LOWER__UDN = lowerstr("_udn")
+LOWER__LOCATION_ORIGINAL = lowerstr("_location_original")
+LOWER_LOCATION = lowerstr("location")
+
+
 def decode_ssdp_packet(
     data: bytes,
     local_addr: Optional[AddressTupleVXType],
@@ -185,20 +195,20 @@ def decode_ssdp_packet(
     parsed_headers, request_line, udn = _cached_header_parse(data)
     # own data
     extra: dict[str, Any] = {
-        "_timestamp": datetime.now(),
-        "_host": get_host_string(remote_addr),
-        "_port": remote_addr[1],
-        "_local_addr": local_addr,
-        "_remote_addr": remote_addr,
+        LOWER__TIMESTAMP: datetime.now(),
+        LOWER__HOST: get_host_string(remote_addr),
+        LOWER__PORT: remote_addr[1],
+        LOWER__LOCAL_ADDR: local_addr,
+        LOWER__REMOTE_ADDR: remote_addr,
     }
     if udn:
-        extra["_udn"] = udn
+        extra[LOWER__UDN] = udn
 
     # adjust some headers
     location = parsed_headers.get("location", "")
     if location.strip():
-        extra["_location_original"] = location
-        extra["location"] = get_adjusted_url(location, remote_addr)
+        extra[LOWER__LOCATION_ORIGINAL] = location
+        extra[LOWER_LOCATION] = get_adjusted_url(location, remote_addr)
 
     headers = CaseInsensitiveDict(parsed_headers, **extra)
     return request_line, headers
