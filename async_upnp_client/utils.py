@@ -21,13 +21,45 @@ EXTERNAL_PORT = 80
 _SENTINEL = object()
 
 
+class lowerstr(str):  # pylint: disable=invalid-name
+    """A prelowered string."""
+
+
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
-        self._case_map: Dict[str, Any] = {k.lower(): k for k in self._data}
+        self._case_map: Dict[str, Any] = {
+            k
+            if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
+            else k.lower(): k
+            for k in self._data
+        }
+
+    def copy(self) -> "CaseInsensitiveDict":
+        """Copy a CaseInsensitiveDict.
+
+        Returns a copy of CaseInsensitiveDict.
+        """
+        # pylint: disable=protected-access
+        _copy = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
+        _copy._data = self._data.copy()
+        _copy._case_map = self._case_map.copy()
+        return _copy
+
+    def combine(self, other: "CaseInsensitiveDict") -> "CaseInsensitiveDict":
+        """Combine a CaseInsensitiveDict with another CaseInsensitiveDict.
+
+        Returns a brand new CaseInsensitiveDict that is the combination
+        of the two CaseInsensitiveDicts.
+        """
+        # pylint: disable=protected-access
+        _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
+        _combined._data = {**self._data.copy(), **other._data.copy()}
+        _combined._case_map = {**self._case_map.copy(), **other._case_map.copy()}
+        return _combined
 
     def case_map(self) -> Dict[str, str]:
         """Get the case map."""
@@ -52,9 +84,15 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Replace the underlying dict."""
         if isinstance(new_data, CaseInsensitiveDict):
             self._data = new_data.as_dict().copy()
+            self._case_map = new_data.case_map().copy()
         else:
             self._data = {**new_data}
-        self._case_map = {k.lower(): k for k in self._data}
+            self._case_map = {
+                k
+                if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
+                else k.lower(): k
+                for k in self._data
+            }
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
