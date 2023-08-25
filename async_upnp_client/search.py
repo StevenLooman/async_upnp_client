@@ -88,8 +88,8 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         """Handle data."""
         if headers.get_lower("man") == SSDP_DISCOVER:
             if request_line.upper().startswith("M-SEARCH * "):
-                dt: datetime = headers["_timestamp"]
-                self.last_discovery = dt
+                _timestamp: datetime = headers["_timestamp"]
+                self.last_discovery = _timestamp
             # Ignore discover packets.
             return
 
