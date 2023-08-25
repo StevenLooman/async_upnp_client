@@ -28,6 +28,8 @@ class lowerstr(str):  # pylint: disable=invalid-name
 class CaseInsensitiveDict(abcMutableMapping):
     """Case insensitive dict."""
 
+    __slots__ = ("_data", "_case_map")
+
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
         self._data: Dict[str, Any] = {**(data or {}), **kwargs}
