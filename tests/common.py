@@ -36,3 +36,5 @@ SEARCH_HEADERS_DEFAULT = CaseInsensitiveDict(
         "_udn": "uuid:...",
     }
 )
+
+DISCOVERY_REQUEST_LINE = "M-SEARCH * HTTP/1.1"

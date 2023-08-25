@@ -15,6 +15,9 @@ from async_upnp_client.ssdp_listener import (
     SsdpListener,
     same_headers_differ,
 )
+from async_upnp_client.ssdp import (
+    SSDP_DISCOVER,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 from .common import (
@@ -22,6 +25,7 @@ from .common import (
     ADVERTISEMENT_REQUEST_LINE,
     SEARCH_HEADERS_DEFAULT,
     SEARCH_REQUEST_LINE,
+    DISCOVERY_REQUEST_LINE,
 )
 
 UDN = ADVERTISEMENT_HEADERS_DEFAULT["_udn"]
@@ -718,3 +722,63 @@ async def test_see_search_device_ipv4_and_ipv6() -> None:
     )
 
     assert listener.devices[SEARCH_HEADERS_DEFAULT["_udn"]].locations
+
+
+@pytest.mark.asyncio
+async def test_last_discovery_timestamp() -> None:
+    """Test last discovery timestamp."""
+    # pylint: disable=protected-access
+    async_callback = AsyncMock()
+    listener = SsdpListener(async_callback=async_callback)
+    await listener.async_start()
+    assert listener.last_discovery_timestamp is None
+
+    async_callback.reset_mock()
+    now = datetime.now()
+    await see_search(
+        listener,
+        DISCOVERY_REQUEST_LINE,
+        CaseInsensitiveDict(
+            {
+                "_timestamp": now,
+                "man": SSDP_DISCOVER,
+            }
+        ),
+    )
+    assert listener.last_discovery_timestamp == now
+    now2 = datetime.now()
+    await see_advertisement(
+        listener,
+        DISCOVERY_REQUEST_LINE,
+        CaseInsensitiveDict(
+            {
+                "_timestamp": now2,
+                "man": SSDP_DISCOVER,
+            }
+        ),
+    )
+    assert listener.last_discovery_timestamp == now2
+    now3 = datetime.now()
+    await see_advertisement(
+        listener,
+        DISCOVERY_REQUEST_LINE,
+        CaseInsensitiveDict(
+            {
+                "_timestamp": now3,
+                "man": SSDP_DISCOVER,
+            }
+        ),
+    )
+    assert listener.last_discovery_timestamp == now3
+    now4 = datetime.now()
+    await see_search(
+        listener,
+        DISCOVERY_REQUEST_LINE,
+        CaseInsensitiveDict(
+            {
+                "_timestamp": now4,
+                "man": SSDP_DISCOVER,
+            }
+        ),
+    )
+    assert listener.last_discovery_timestamp == now4
