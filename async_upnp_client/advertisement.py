@@ -65,7 +65,9 @@ class SsdpAdvertisementListener:
         self._transport: Optional[BaseTransport] = None
         self.last_discovery: Optional[datetime] = None
 
-    def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
+    def _on_data(  # pylint: disable=too-many-branches
+        self, request_line: str, headers: CaseInsensitiveDict
+    ) -> None:
         """Handle data."""
         if headers.get_lower("man") == SSDP_DISCOVER:
             if request_line.upper().startswith("M-SEARCH * "):
