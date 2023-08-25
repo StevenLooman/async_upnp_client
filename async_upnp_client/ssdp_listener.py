@@ -514,8 +514,13 @@ class SsdpListener:
         to know if discovery happened recently so callers
         can avoid multiple discoveries in a short time window.
         """
-        advertisement_last = self._advertisement_listener.last_discovery
-        search_last = self._search_listener.last_discovery
+        advertisement_listener = self._advertisement_listener
+        search_listener = self._search_listener
+        if not advertisement_listener or not search_listener:
+            # not started yet
+            return None
+        advertisement_last = advertisement_listener.last_discovery
+        search_last = search_listener.last_discovery
         if search_last is None:
             return advertisement_last
         if advertisement_last is None:
