@@ -142,9 +142,10 @@ class SsdpDevice:
         self.purge_locations()
         return set(self._locations.keys())
 
-    def purge_locations(self) -> None:
+    def purge_locations(self, now: Optional[datetime] = None) -> None:
         """Purge locations which are no longer valid/timed out."""
-        now = datetime.now()
+        if not now:
+            now = datetime.now()
         to_remove = [
             location for location, valid_to in self._locations.items() if now > valid_to
         ]
@@ -465,7 +466,7 @@ class SsdpDeviceTracker:
                 to_remove.append(usn)
             elif not self.next_valid_to or device.valid_to < self.next_valid_to:
                 self.next_valid_to = device.valid_to
-                device.purge_locations()
+                device.purge_locations(now)
         for usn in to_remove:
             _LOGGER.debug("Purging device, USN: %s", usn)
             del self.devices[usn]
