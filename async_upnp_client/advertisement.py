@@ -7,7 +7,7 @@ import socket
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport, DatagramTransport
 from typing import Any, Callable, Coroutine, Optional
-
+from datetime import datetime
 from async_upnp_client.const import AddressTupleVXType, NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
@@ -63,10 +63,14 @@ class SsdpAdvertisementListener:
         self.source, self.target = determine_source_target(source, target)
         self.loop: AbstractEventLoop = loop or asyncio.get_event_loop()
         self._transport: Optional[BaseTransport] = None
+        self.last_discovery: Optional[datetime] = None
 
     def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
         if headers.get_lower("man") == SSDP_DISCOVER:
+            if request_line.upper().startswith("M-SEARCH * "):
+                dt: datetime = headers["_timestamp"]
+                self.last_discovery = dt
             # Ignore discover packets.
             return
 

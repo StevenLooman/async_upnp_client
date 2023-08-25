@@ -9,7 +9,7 @@ from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
 from typing import Any, Callable, Coroutine, Optional, cast
-
+from datetime import datetime
 from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
     SSDP_DISCOVER,
@@ -62,6 +62,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         self.loop = loop or asyncio.get_event_loop()
         self._target_host: Optional[str] = None
         self._transport: Optional[DatagramTransport] = None
+        self.last_discovery: Optional[datetime] = None
 
     def async_search(
         self, override_target: Optional[AddressTupleVXType] = None
@@ -85,23 +86,28 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
     def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
-        if headers.get("MAN") == SSDP_DISCOVER:
+        if headers.get_lower("man") == SSDP_DISCOVER:
+            if request_line.upper().startswith("M-SEARCH * "):
+                dt: datetime = headers["_timestamp"]
+                self.last_discovery = dt
             # Ignore discover packets.
             return
-        if "NTS" in headers:
+
+        if headers.get_lower("nts"):
             _LOGGER.debug(
                 "Got non-search response packet: %s, %s", request_line, headers
             )
             return
 
-        _LOGGER.debug(
-            "Received search response, _remote_addr: %s, USN: %s, location: %s",
-            headers.get("_remote_addr", ""),
-            headers.get("USN", "<no USN>"),
-            headers.get("location", ""),
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "Received search response, _remote_addr: %s, USN: %s, location: %s",
+                headers.get_lower("_remote_addr", ""),
+                headers.get_lower("usn", "<no USN>"),
+                headers.get_lower("location", ""),
+            )
         headers["_source"] = SsdpSource.SEARCH
-        if self._target_host and self._target_host != headers["_host"]:
+        if self._target_host and self._target_host != headers.get_lower("_host"):
             return
         if self.async_callback:
             coro = self.async_callback(headers)

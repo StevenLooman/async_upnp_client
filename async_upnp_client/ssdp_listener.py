@@ -505,6 +505,23 @@ class SsdpListener:
         self._advertisement_listener: Optional[SsdpAdvertisementListener] = None
         self._search_listener: Optional[SsdpSearchListener] = None
 
+    @property
+    def last_discovery_timestamp(self) -> Optional[datetime]:
+        """Return the timestamp of the last discovery.
+
+        This is the timestamp of the last M-SEARCH *
+        that was seen on the network. This is useful
+        to know if discovery happened recently so callers
+        can avoid multiple discoveries in a short time window.
+        """
+        advertisement_last = self._advertisement_listener.last_discovery
+        search_last = self._search_listener.last_discovery
+        if search_last is None:
+            return advertisement_last
+        if advertisement_last is None:
+            return search_last
+        return advertisement_last if advertisement_last > search_last else search_last
+
     async def async_start(self) -> None:
         """Start search listener/advertisement listener."""
         self._advertisement_listener = SsdpAdvertisementListener(
