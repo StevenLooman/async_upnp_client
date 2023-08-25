@@ -10,22 +10,20 @@ import pytest
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import NotificationSubType, SsdpSource
 from async_upnp_client.search import SsdpSearchListener
+from async_upnp_client.ssdp import SSDP_DISCOVER
 from async_upnp_client.ssdp_listener import (
     SsdpDevice,
     SsdpListener,
     same_headers_differ,
-)
-from async_upnp_client.ssdp import (
-    SSDP_DISCOVER,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
 
 from .common import (
     ADVERTISEMENT_HEADERS_DEFAULT,
     ADVERTISEMENT_REQUEST_LINE,
+    DISCOVERY_REQUEST_LINE,
     SEARCH_HEADERS_DEFAULT,
     SEARCH_REQUEST_LINE,
-    DISCOVERY_REQUEST_LINE,
 )
 
 UDN = ADVERTISEMENT_HEADERS_DEFAULT["_udn"]
