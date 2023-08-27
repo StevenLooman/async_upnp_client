@@ -475,9 +475,10 @@ async def test_purge_devices_2() -> None:
     async_callback.reset_mock()
     udn2 = "uuid:device_2"
     with patch("async_upnp_client.ssdp_listener.datetime") as datetime_mock:
-        datetime_mock.now.return_value = SEARCH_HEADERS_DEFAULT[
+        new_timestamp = SEARCH_HEADERS_DEFAULT[
             "_timestamp"
         ] + timedelta(hours=1)
+        datetime_mock.now.return_value = new_timestamp
         device_2_headers = CaseInsensitiveDict(
             {
                 **SEARCH_HEADERS_DEFAULT,
@@ -485,6 +486,7 @@ async def test_purge_devices_2() -> None:
                 + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
                 "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
                 "_udn": udn2,
+                "_timestamp": new_timestamp,
             }
         )
         await see_search(listener, SEARCH_REQUEST_LINE, device_2_headers)
