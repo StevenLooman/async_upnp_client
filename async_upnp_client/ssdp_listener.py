@@ -8,7 +8,17 @@ from asyncio.events import AbstractEventLoop
 from contextlib import suppress
 from datetime import datetime, timedelta
 from ipaddress import ip_address
-from typing import Any, Callable, Coroutine, Dict, Mapping, Optional, Set, Tuple
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Mapping,
+    Optional,
+    Set,
+    Tuple,
+    KeysView,
+)
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -137,10 +147,9 @@ class SsdpDevice:
         return None
 
     @property
-    def locations(self) -> Set[str]:
+    def locations(self) -> KeysView[str]:
         """Get all know locations of the device."""
-        self.purge_locations()
-        return set(self._locations.keys())
+        return self._locations.keys()
 
     def purge_locations(self, now: Optional[datetime] = None) -> None:
         """Purge locations which are no longer valid/timed out."""
@@ -384,7 +393,8 @@ class SsdpDeviceTracker:
     ) -> Tuple[Optional[SsdpDevice], bool]:
         """See a device through a search or advertisement."""
         # Purge any old devices.
-        self.purge_devices()
+        now = headers.get_lower("_timestamp")
+        self.purge_devices(now)
 
         udn = udn_from_headers(headers)
         if not udn:
@@ -407,7 +417,7 @@ class SsdpDeviceTracker:
 
         # Update device.
         ssdp_device.add_location(headers.get_lower("location"), valid_to)
-        ssdp_device.last_seen = headers.get_lower("_timestamp")
+        ssdp_device.last_seen = now
         if not self.next_valid_to or self.next_valid_to > ssdp_device.valid_to:
             self.next_valid_to = ssdp_device.valid_to
 
