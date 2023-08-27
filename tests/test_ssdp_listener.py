@@ -475,9 +475,7 @@ async def test_purge_devices_2() -> None:
     async_callback.reset_mock()
     udn2 = "uuid:device_2"
     with patch("async_upnp_client.ssdp_listener.datetime") as datetime_mock:
-        new_timestamp = SEARCH_HEADERS_DEFAULT[
-            "_timestamp"
-        ] + timedelta(hours=1)
+        new_timestamp = SEARCH_HEADERS_DEFAULT["_timestamp"] + timedelta(hours=1)
         device_2_headers = CaseInsensitiveDict(
             {
                 **SEARCH_HEADERS_DEFAULT,
