@@ -1,3 +1,32 @@
+async_upnp_client 0.35.0 (2023-08-27)
+=====================================
+
+Features
+--------
+
+- Reduce string conversion in CaseInsensitiveDict lookups (@bdraco)
+
+  `get` was previously provided by the parent class which
+  had to raise KeyError for missing values. Since try/except
+  is only cheap for the non-exception case the performance
+  was not good when the key was missing.
+
+  Similar to python/cpython#106665
+  but in the HA case we call this even more frequently. (#173)
+- Avoid looking up the local address each packet (@bdraco)
+
+  The local addr will never change, we can set it when we
+  set the transport. (#174)
+- Avoid lower-casing already lowercased string (@bdraco)
+
+  Use the upstr concept (in our case lowerstr) from multidict
+  https://aiohttp-kxepal-test.readthedocs.io/en/latest/multidict.html#upstr (#175)
+- Reduce memory footprint of CaseInsensitiveDict (@bdraco) (#177)
+- Avoid fetching time many times to purge devices (@bdraco)
+
+  Calling SsdpDevice.locations is now a KeysView and no longer has the side effect of purging stale locations. We now use the _timestamp that was injected into the headers to avoid fetching time again. (#178)
+
+
 async_upnp_client 0.34.1 (2023-07-23)
 =====================================
 
