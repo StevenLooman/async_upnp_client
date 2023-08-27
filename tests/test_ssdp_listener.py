@@ -478,7 +478,6 @@ async def test_purge_devices_2() -> None:
         new_timestamp = SEARCH_HEADERS_DEFAULT[
             "_timestamp"
         ] + timedelta(hours=1)
-        datetime_mock.now.return_value = new_timestamp
         device_2_headers = CaseInsensitiveDict(
             {
                 **SEARCH_HEADERS_DEFAULT,
