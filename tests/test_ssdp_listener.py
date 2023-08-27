@@ -478,8 +478,7 @@ async def test_purge_devices_2() -> None:
     device_2_headers = CaseInsensitiveDict(
         {
             **SEARCH_HEADERS_DEFAULT,
-            "USN": udn2
-            + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
+            "USN": udn2 + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
             "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
             "_udn": udn2,
             "_timestamp": new_timestamp,
