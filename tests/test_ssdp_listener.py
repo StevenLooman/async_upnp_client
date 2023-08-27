@@ -474,19 +474,18 @@ async def test_purge_devices_2() -> None:
     # See anotherdevice through search.
     async_callback.reset_mock()
     udn2 = "uuid:device_2"
-    with patch("async_upnp_client.ssdp_listener.datetime") as datetime_mock:
-        new_timestamp = SEARCH_HEADERS_DEFAULT["_timestamp"] + timedelta(hours=1)
-        device_2_headers = CaseInsensitiveDict(
-            {
-                **SEARCH_HEADERS_DEFAULT,
-                "USN": udn2
-                + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
-                "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
-                "_udn": udn2,
-                "_timestamp": new_timestamp,
-            }
-        )
-        await see_search(listener, SEARCH_REQUEST_LINE, device_2_headers)
+    new_timestamp = SEARCH_HEADERS_DEFAULT["_timestamp"] + timedelta(hours=1)
+    device_2_headers = CaseInsensitiveDict(
+        {
+            **SEARCH_HEADERS_DEFAULT,
+            "USN": udn2
+            + "::urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
+            "ST": "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
+            "_udn": udn2,
+            "_timestamp": new_timestamp,
+        }
+    )
+    await see_search(listener, SEARCH_REQUEST_LINE, device_2_headers)
     async_callback.assert_awaited_once_with(
         ANY,
         "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:2",
