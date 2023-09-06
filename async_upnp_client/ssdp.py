@@ -9,16 +9,16 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Any, Callable, Coroutine, Optional, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, Optional, Tuple, Union, cast
 from urllib.parse import urlsplit, urlunsplit
-from typing import TYPE_CHECKING
+
 from aiohttp.http_exceptions import InvalidHeader
 from aiohttp.http_parser import HeadersParser
 from multidict import CIMultiDictProxy
 
 from async_upnp_client.const import (
-    AddressTupleV6Type,
     AddressTupleV4Type,
+    AddressTupleV6Type,
     AddressTupleVXType,
     IPvXAddress,
     SsdpHeaders,
@@ -224,7 +224,7 @@ def decode_ssdp_packet(
         if TYPE_CHECKING:
             remote_addr = cast(AddressTupleV6Type, remote_addr)
         addr, port, flow, scope = remote_addr
-        remote_addr_without_port = addr, 0, flow, scope
+        remote_addr_without_port: AddressTupleVXType = addr, 0, flow, scope
     else:
         if TYPE_CHECKING:
             remote_addr = cast(AddressTupleV4Type, remote_addr)
