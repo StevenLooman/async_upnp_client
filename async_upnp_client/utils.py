@@ -71,6 +71,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         Returns a brand new CaseInsensitiveDict that is the combination
         of the CaseInsensitiveDict and dict where all the keys are lowerstr.
         """
+        # pylint: disable=protected-access
         _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
         _combined._data = {**self._data, **lower_dict}  # type: ignore[arg-type]
         _combined._case_map = {**self._case_map, **{k: k for k in lower_dict}}
