@@ -719,7 +719,7 @@ def _build_advertisements(
         else f"{target[0]}:{target[1]}"
     )
     base_headers = {
-        "NTS": nts,
+        "NTS": nts.value,
         "HOST": host,
         "CACHE-CONTROL": HEADER_CACHE_CONTROL,
         "SERVER": HEADER_SERVER,
