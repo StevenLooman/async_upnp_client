@@ -231,15 +231,13 @@ def decode_ssdp_packet(
         addr, port = remote_addr
         remote_addr_without_port = remote_addr[0], 0
     request_line, headers = _cached_decode_ssdp_packet(data, remote_addr_without_port)
-    return request_line, headers.combine(
-        CaseInsensitiveDict(
-            {
-                LOWER__TIMESTAMP: datetime.now(),
-                LOWER__REMOTE_ADDR: remote_addr,
-                LOWER__PORT: port,
-                LOWER__LOCAL_ADDR: local_addr,
-            }
-        )
+    return request_line, headers.combine_lower_dict(
+        {
+            LOWER__TIMESTAMP: datetime.now(),
+            LOWER__REMOTE_ADDR: remote_addr,
+            LOWER__PORT: port,
+            LOWER__LOCAL_ADDR: local_addr,
+        }
     )
 
 
