@@ -64,7 +64,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         return _combined
 
     def combine_lower_dict(self, lower_dict: dict[lowerstr, Any]) -> None:
-        """ "Combine a CaseInsensitiveDict with a dict where all the keys are lowerstr.
+        """Combine a CaseInsensitiveDict with a dict where all the keys are lowerstr.
 
         Returns a brand new CaseInsensitiveDict that is the combination
         of the CaseInsensitiveDict and dict where all the keys are lowerstr.
