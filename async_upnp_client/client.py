@@ -621,7 +621,9 @@ class UpnpAction:
             response_body,
         ) = await self.service.requester.async_http_request("POST", url, headers, body)
         if not isinstance(response_body, str):
-            raise UpnpError("Did not receive a body")
+            raise UpnpError(
+                f"Did not receive a body when calling action: {self.name}, args: {kwargs}"
+            )
 
         if status_code != 200:
             try:
@@ -629,14 +631,21 @@ class UpnpAction:
             except ET.ParseError:
                 pass
             else:
-                _parse_fault(xml, status_code, response_headers)
+                _parse_fault(self, xml, status_code, response_headers)
 
             # Couldn't parse body for fault details, raise generic response error
-            _LOGGER.debug("Error calling action, no information")
+            _LOGGER.debug(
+                "Error calling action, no information, action: %s, args: %s",
+                self.name,
+                kwargs,
+            )
             raise UpnpResponseError(
                 status=status_code,
                 headers=response_headers,
-                message=f"Error during async_call(), status: {status_code}, "
+                message=f"Error during async_call(), "
+                f"action: {self.name}, "
+                f"args: {kwargs}, "
+                f"status: {status_code}, "
                 f"body: {response_body}",
             )
 
@@ -703,7 +712,7 @@ class UpnpAction:
 
         # Check if a SOAP fault occurred. It should have been caught earlier, by
         # the device sending an HTTP 500 status, but not all devices do.
-        _parse_fault(xml)
+        _parse_fault(self, xml)
 
         try:
             return self._parse_response_args(service_type, xml)
@@ -748,6 +757,7 @@ class UpnpAction:
 
 
 def _parse_fault(
+    action: UpnpAction,
     xml: ET.Element,
     status_code: Optional[int] = None,
     response_headers: Optional[Mapping] = None,
@@ -763,9 +773,11 @@ def _parse_fault(
     else:
         error_code = None
     error_desc = fault.findtext(".//control:errorDescription", None, NS)
-
     _LOGGER.debug(
-        "Error calling action, error code: %s, error desc: %s", error_code, error_desc
+        "Error calling action: %s, error code: %s, error desc: %s",
+        action.name,
+        error_code,
+        error_desc,
     )
 
     if status_code is not None:
@@ -774,14 +786,18 @@ def _parse_fault(
             error_desc=error_desc,
             status=status_code,
             headers=response_headers,
-            message=f"Error during async_call(), status: {status_code},"
-            f" upnp error: {error_code} ({error_desc})",
+            message=f"Error during async_call(), "
+            f"action: {action.name}, "
+            f"status: {status_code}, "
+            f"upnp error: {error_code} ({error_desc})",
         )
 
     raise UpnpActionError(
         error_code=error_code,
         error_desc=error_desc,
-        message=f"Error during async_call(), upnp error: {error_code} ({error_desc})",
+        message=f"Error during async_call(), "
+        f"action: {action.name}, "
+        f"upnp error: {error_code} ({error_desc})",
     )
 
 
