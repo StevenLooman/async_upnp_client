@@ -63,7 +63,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         _combined._case_map = {**self._case_map, **other._case_map}
         return _combined
 
-    def combine_lower_dict(self, lower_dict: dict[lowerstr, Any]) -> None:
+    def combine_lower_dict(self, lower_dict: dict[lowerstr, Any]) -> "CaseInsensitiveDict":
         """Combine a CaseInsensitiveDict with a dict where all the keys are lowerstr.
 
         Returns a brand new CaseInsensitiveDict that is the combination
@@ -71,7 +71,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         """
         # pylint: disable=protected-access
         _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
-        _combined._data = {**self._data, **lower_dict}
+        _combined._data = {**self._data, **lower_dict} # type: ignore[arg-type]
         _combined._case_map = {**self._case_map, **{k: k for k in lower_dict}}
         return _combined
 
