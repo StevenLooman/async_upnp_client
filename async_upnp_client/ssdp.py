@@ -142,11 +142,9 @@ def udn_from_headers(
     headers: Union[CIMultiDictProxy, CaseInsensitiveDict]
 ) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
-    usn = headers.get("usn", "")
+    usn: str = headers.get("usn", "")
     if usn and usn.lower().startswith("uuid:"):
-        parts = str(usn).split("::")
-        return parts[0]
-
+        return usn.partition("::")[0]
     return None
 
 
