@@ -9,7 +9,17 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -197,7 +207,7 @@ def _cached_decode_ssdp_packet(
     """Cache decoding SSDP packets."""
     parsed_headers, request_line, udn = _cached_header_parse(data)
     # own data
-    extra: dict[str, Any] = {LOWER__HOST: get_host_string(remote_addr_without_port)}
+    extra: Dict[str, Any] = {LOWER__HOST: get_host_string(remote_addr_without_port)}
     if udn:
         extra[LOWER__UDN] = udn
 
