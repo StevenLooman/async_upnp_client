@@ -7,17 +7,9 @@ import re
 from asyncio.events import AbstractEventLoop
 from contextlib import suppress
 from datetime import datetime, timedelta
+from functools import lru_cache
 from ipaddress import ip_address
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Dict,
-    Mapping,
-    Optional,
-    Tuple,
-    KeysView,
-)
+from typing import Any, Callable, Coroutine, Dict, KeysView, Mapping, Optional, Tuple
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -96,15 +88,19 @@ def valid_byebye_headers(headers: CaseInsensitiveDict) -> bool:
     return bool(udn and nt and nts)
 
 
-def extract_valid_to(headers: CaseInsensitiveDict) -> datetime:
-    """Extract/create valid to."""
-    cache_control = headers.get_lower("cache-control", "")
+@lru_cache(maxsize=128)
+def extract_uncache_after(cache_control: str) -> timedelta:
+    """Get uncache after from cache control header."""
     match = CACHE_CONTROL_RE.search(cache_control)
     if match:
         max_age = int(match[1])
-        uncache_after = timedelta(seconds=max_age)
-    else:
-        uncache_after = DEFAULT_MAX_AGE
+        return timedelta(seconds=max_age)
+    return DEFAULT_MAX_AGE
+
+
+def extract_valid_to(headers: CaseInsensitiveDict) -> datetime:
+    """Extract/create valid to."""
+    uncache_after = extract_uncache_after(headers.get_lower("cache-control", ""))
     timestamp: datetime = headers.get_lower("_timestamp")
     return timestamp + uncache_after
 
