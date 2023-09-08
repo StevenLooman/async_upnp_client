@@ -9,7 +9,17 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import Any, Callable, Coroutine, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -17,6 +27,7 @@ from aiohttp.http_parser import HeadersParser
 from multidict import CIMultiDictProxy
 
 from async_upnp_client.const import (
+    AddressTupleV4Type,
     AddressTupleV6Type,
     AddressTupleVXType,
     IPvXAddress,
@@ -53,7 +64,8 @@ _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 def get_host_string(addr: AddressTupleVXType) -> str:
     """Construct host string from address tuple."""
     if len(addr) == 4:
-        addr = cast(AddressTupleV6Type, addr)
+        if TYPE_CHECKING:
+            addr = cast(AddressTupleV6Type, addr)
         if addr[3]:
             return f"{addr[0]}%{addr[3]}"
 
@@ -74,7 +86,8 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     if len(addr) < 4:
         return url
 
-    addr = cast(AddressTupleV6Type, addr)
+    if TYPE_CHECKING:
+        addr = cast(AddressTupleV6Type, addr)
 
     if not addr[3]:
         return url
@@ -150,7 +163,7 @@ def udn_from_headers(
     return None
 
 
-@lru_cache(maxsize=256)
+@lru_cache(maxsize=128)
 def _cached_header_parse(
     data: bytes,
 ) -> Tuple[CIMultiDictProxy[str], str, Optional[UniqueDeviceName]]:
@@ -186,21 +199,15 @@ LOWER__LOCATION_ORIGINAL = lowerstr("_location_original")
 LOWER_LOCATION = lowerstr("location")
 
 
-def decode_ssdp_packet(
+@lru_cache(maxsize=512)
+def _cached_decode_ssdp_packet(
     data: bytes,
-    local_addr: Optional[AddressTupleVXType],
-    remote_addr: AddressTupleVXType,
+    remote_addr_without_port: AddressTupleVXType,
 ) -> Tuple[str, CaseInsensitiveDict]:
-    """Decode a message."""
+    """Cache decoding SSDP packets."""
     parsed_headers, request_line, udn = _cached_header_parse(data)
     # own data
-    extra: dict[str, Any] = {
-        LOWER__TIMESTAMP: datetime.now(),
-        LOWER__HOST: get_host_string(remote_addr),
-        LOWER__PORT: remote_addr[1],
-        LOWER__LOCAL_ADDR: local_addr,
-        LOWER__REMOTE_ADDR: remote_addr,
-    }
+    extra: Dict[str, Any] = {LOWER__HOST: get_host_string(remote_addr_without_port)}
     if udn:
         extra[LOWER__UDN] = udn
 
@@ -208,10 +215,40 @@ def decode_ssdp_packet(
     location = parsed_headers.get("location", "")
     if location.strip():
         extra[LOWER__LOCATION_ORIGINAL] = location
-        extra[LOWER_LOCATION] = get_adjusted_url(location, remote_addr)
+        extra[LOWER_LOCATION] = get_adjusted_url(location, remote_addr_without_port)
 
     headers = CaseInsensitiveDict(parsed_headers, **extra)
     return request_line, headers
+
+
+def decode_ssdp_packet(
+    data: bytes,
+    local_addr: Optional[AddressTupleVXType],
+    remote_addr: AddressTupleVXType,
+) -> Tuple[str, CaseInsensitiveDict]:
+    """Decode a message."""
+    # We want to use remote_addr_without_port as the cache
+    # key since nothing in _cached_decode_ssdp_packet cares
+    # about the port
+    if len(remote_addr) == 4:
+        if TYPE_CHECKING:
+            remote_addr = cast(AddressTupleV6Type, remote_addr)
+        addr, port, flow, scope = remote_addr
+        remote_addr_without_port: AddressTupleVXType = addr, 0, flow, scope
+    else:
+        if TYPE_CHECKING:
+            remote_addr = cast(AddressTupleV4Type, remote_addr)
+        addr, port = remote_addr
+        remote_addr_without_port = remote_addr[0], 0
+    request_line, headers = _cached_decode_ssdp_packet(data, remote_addr_without_port)
+    return request_line, headers.combine_lower_dict(
+        {
+            LOWER__TIMESTAMP: datetime.now(),
+            LOWER__REMOTE_ADDR: remote_addr,
+            LOWER__PORT: port,
+            LOWER__LOCAL_ADDR: local_addr,
+        }
+    )
 
 
 class SsdpProtocol(DatagramProtocol):

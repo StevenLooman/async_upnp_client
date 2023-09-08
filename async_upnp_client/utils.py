@@ -59,8 +59,22 @@ class CaseInsensitiveDict(abcMutableMapping):
         """
         # pylint: disable=protected-access
         _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
-        _combined._data = {**self._data.copy(), **other._data.copy()}
-        _combined._case_map = {**self._case_map.copy(), **other._case_map.copy()}
+        _combined._data = {**self._data, **other._data}
+        _combined._case_map = {**self._case_map, **other._case_map}
+        return _combined
+
+    def combine_lower_dict(
+        self, lower_dict: Dict[lowerstr, Any]
+    ) -> "CaseInsensitiveDict":
+        """Combine a CaseInsensitiveDict with a dict where all the keys are lowerstr.
+
+        Returns a brand new CaseInsensitiveDict that is the combination
+        of the CaseInsensitiveDict and dict where all the keys are lowerstr.
+        """
+        # pylint: disable=protected-access
+        _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
+        _combined._data = {**self._data, **lower_dict}  # type: ignore[arg-type]
+        _combined._case_map = {**self._case_map, **{k: k for k in lower_dict}}
         return _combined
 
     def case_map(self) -> Dict[str, str]:
