@@ -85,21 +85,22 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
 
     def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
-        if headers.get("MAN") == SSDP_DISCOVER:
+        if headers.get_lower("man") == SSDP_DISCOVER:
             # Ignore discover packets.
             return
-        if "NTS" in headers:
+        if headers.get_lower("nts"):
             _LOGGER.debug(
                 "Got non-search response packet: %s, %s", request_line, headers
             )
             return
 
-        _LOGGER.debug(
-            "Received search response, _remote_addr: %s, USN: %s, location: %s",
-            headers.get("_remote_addr", ""),
-            headers.get("USN", "<no USN>"),
-            headers.get("location", ""),
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "Received search response, _remote_addr: %s, USN: %s, location: %s",
+                headers.get_lower("_remote_addr", ""),
+                headers.get_lower("usn", "<no USN>"),
+                headers.get_lower("location", ""),
+            )
         headers["_source"] = SsdpSource.SEARCH
         if self._target_host and self._target_host != headers["_host"]:
             return
