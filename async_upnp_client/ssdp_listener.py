@@ -9,7 +9,17 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from functools import lru_cache
 from ipaddress import ip_address
-from typing import Any, Callable, Coroutine, Dict, KeysView, Mapping, Optional, Tuple
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    KeysView,
+    Mapping,
+    Optional,
+    Tuple,
+)
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -160,19 +170,43 @@ class SsdpDevice:
         self,
         device_or_service_type: DeviceOrServiceType,
     ) -> CaseInsensitiveDict:
-        """Get headers from search and advertisement for a given device- or service type."""
-        search_headers = self.search_headers.get(device_or_service_type)
-        advertisement_headers = self.advertisement_headers.get(device_or_service_type)
-        if search_headers and advertisement_headers:
+        """Get headers from search and advertisement for a given device- or service type.
+
+        If there are both search and advertisement headers,
+        the search headers are combined with the advertisement headers and a new
+        CaseInsensitiveDict is returned.
+
+        If there are only search headers, the search headers are returned.
+
+        If there are only advertisement headers, the advertisement headers are returned.
+
+        If there are no headers, an empty CaseInsensitiveDict is returned.
+
+        Callers should be aware that the returned CaseInsensitiveDict may be a view
+        into the internal data structures of this class. If the caller modifies the
+        returned CaseInsensitiveDict, the internal data structures will be modified
+        as well.
+        """
+        search_headers = self.search_headers.get(device_or_service_type, _SENTINEL)
+        advertisement_headers = self.advertisement_headers.get(
+            device_or_service_type, _SENTINEL
+        )
+        if search_headers is not _SENTINEL and advertisement_headers is not _SENTINEL:
+            if TYPE_CHECKING:
+                assert isinstance(search_headers, CaseInsensitiveDict)
+                assert isinstance(advertisement_headers, CaseInsensitiveDict)
             header_dict = search_headers.combine(advertisement_headers)
-        elif search_headers:
-            header_dict = search_headers.copy()
-        elif advertisement_headers:
-            header_dict = advertisement_headers.copy()
-        else:
-            return CaseInsensitiveDict()
-        del header_dict["_source"]
-        return header_dict
+            del header_dict["_source"]
+            return header_dict
+        if search_headers is not _SENTINEL:
+            if TYPE_CHECKING:
+                assert isinstance(search_headers, CaseInsensitiveDict)
+            return search_headers
+        if advertisement_headers is not _SENTINEL:
+            if TYPE_CHECKING:
+                assert isinstance(advertisement_headers, CaseInsensitiveDict)
+            return advertisement_headers
+        return CaseInsensitiveDict()
 
     @property
     def all_combined_headers(self) -> Mapping[DeviceOrServiceType, CaseInsensitiveDict]:
@@ -191,7 +225,6 @@ def same_headers_differ(
     """Compare headers present in both to see if anything interesting has changed."""
     current_headers_dict = current_headers.as_dict()
     new_headers_dict = new_headers.as_dict()
-
     new_headers_case_map = new_headers.case_map()
     current_headers_case_map = current_headers.case_map()
 
@@ -201,6 +234,7 @@ def same_headers_differ(
         ) or lower_header in IGNORED_HEADERS:
             continue
         new_header = new_headers_case_map.get(lower_header, _SENTINEL)
+
         if new_header is not _SENTINEL:
             current_value = current_headers_dict[current_header]
             new_value = new_headers_dict[new_header]  # type: ignore[index]
@@ -220,9 +254,11 @@ def headers_differ_from_existing_advertisement(
     ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: CaseInsensitiveDict
 ) -> bool:
     """Compare against existing advertisement headers to see if anything interesting has changed."""
-    if dst not in ssdp_device.advertisement_headers:
+    headers_old = ssdp_device.advertisement_headers.get(dst, _SENTINEL)
+    if headers_old is _SENTINEL:
         return False
-    headers_old = ssdp_device.advertisement_headers[dst]
+    if TYPE_CHECKING:
+        assert isinstance(headers_old, CaseInsensitiveDict)
     return same_headers_differ(headers_old, headers)
 
 
@@ -230,9 +266,11 @@ def headers_differ_from_existing_search(
     ssdp_device: SsdpDevice, dst: DeviceOrServiceType, headers: CaseInsensitiveDict
 ) -> bool:
     """Compare against existing search headers to see if anything interesting has changed."""
-    if dst not in ssdp_device.search_headers:
+    headers_old = ssdp_device.search_headers.get(dst, _SENTINEL)
+    if headers_old is _SENTINEL:
         return False
-    headers_old = ssdp_device.search_headers[dst]
+    if TYPE_CHECKING:
+        assert isinstance(headers_old, CaseInsensitiveDict)
     return same_headers_differ(headers_old, headers)
 
 
