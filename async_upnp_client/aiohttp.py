@@ -9,7 +9,6 @@ from typing import Dict, Mapping, Optional, Tuple
 from urllib.parse import urlparse
 
 import aiohttp.web
-import async_timeout
 from aiohttp import (
     ClientConnectionError,
     ClientError,
