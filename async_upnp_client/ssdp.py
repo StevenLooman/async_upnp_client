@@ -9,7 +9,17 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, Dict, Optional, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Optional,
+    Tuple,
+    cast,
+    Union,
+)
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -139,6 +149,15 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
             or data.startswith(b"HTTP/1.1 200 OK")
         )
     )
+
+
+# No longer used internally, but left for backwards compatibility
+def udn_from_headers(
+    headers: Union[CIMultiDictProxy, CaseInsensitiveDict]
+) -> Optional[UniqueDeviceName]:
+    """Get UDN from USN in headers."""
+    usn: str = headers.get("usn", "")
+    return udn_from_usn(usn)
 
 
 @lru_cache(maxsize=128)
