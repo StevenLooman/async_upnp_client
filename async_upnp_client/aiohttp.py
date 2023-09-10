@@ -77,26 +77,28 @@ class AiohttpRequester(UpnpRequester):
             **(headers or {}),
         }
 
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Sending request:\n%s %s\n%s\n%s\n",
-            method,
-            url,
-            "\n".join(
-                [key + ": " + value for key, value in (req_headers or {}).items()]
-            ),
-            body or "",
-        )
+        log_traffic = _LOGGER_TRAFFIC_UPNP.isEnabledFor(logging.DEBUG)
+        if log_traffic:  # pragma: no branch
+            _LOGGER_TRAFFIC_UPNP.debug(
+                "Sending request:\n%s %s\n%s\n%s\n",
+                method,
+                url,
+                "\n".join(
+                    [key + ": " + value for key, value in (req_headers or {}).items()]
+                ),
+                body or "",
+            )
 
         try:
-            async with async_timeout.timeout(self._timeout):
-                async with ClientSession() as session:
-                    async with session.request(
-                        method, url, headers=req_headers, data=body
-                    ) as response:
-                        status = response.status
-                        resp_headers: Mapping = response.headers or {}
-                        resp_body = await response.read()
+            async with ClientSession() as session:
+                async with session.request(
+                    method, url, headers=req_headers, data=body, timeout=self._timeout
+                ) as response:
+                    status = response.status
+                    resp_headers: Mapping = response.headers or {}
+                    resp_body = await response.read()
 
+                    if log_traffic:  # pragma: no branch
                         _LOGGER_TRAFFIC_UPNP.debug(
                             "Got response from %s %s:\n%s\n%s\n\n%s",
                             method,
@@ -111,7 +113,7 @@ class AiohttpRequester(UpnpRequester):
                             resp_body,
                         )
 
-                        resp_body_text = await response.text()
+                    resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError(repr(err)) from err
         except ClientConnectionError as err:
@@ -191,28 +193,30 @@ class AiohttpSessionRequester(UpnpRequester):
             **(headers or {}),
         }
 
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Sending request:\n%s %s\n%s\n%s\n",
-            method,
-            url,
-            "\n".join(
-                [key + ": " + value for key, value in (req_headers or {}).items()]
-            ),
-            body or "",
-        )
+        log_traffic = _LOGGER_TRAFFIC_UPNP.isEnabledFor(logging.DEBUG)
+        if log_traffic:  # pragma: no branch
+            _LOGGER_TRAFFIC_UPNP.debug(
+                "Sending request:\n%s %s\n%s\n%s\n",
+                method,
+                url,
+                "\n".join(
+                    [key + ": " + value for key, value in (req_headers or {}).items()]
+                ),
+                body or "",
+            )
 
         if self._with_sleep:
             await asyncio.sleep(0)
 
         try:
-            async with async_timeout.timeout(self._timeout):
-                async with self._session.request(
-                    method, url, headers=req_headers, data=body
-                ) as response:
-                    status = response.status
-                    resp_headers: Mapping = response.headers or {}
-                    resp_body = await response.read()
+            async with self._session.request(
+                method, url, headers=req_headers, data=body, timeout=self._timeout
+            ) as response:
+                status = response.status
+                resp_headers: Mapping = response.headers or {}
+                resp_body = await response.read()
 
+                if log_traffic:  # pragma: no branch
                     _LOGGER_TRAFFIC_UPNP.debug(
                         "Got response from %s %s:\n%s\n%s\n\n%s",
                         method,
@@ -224,7 +228,7 @@ class AiohttpSessionRequester(UpnpRequester):
                         resp_body,
                     )
 
-                    resp_body_text = await response.text()
+                resp_body_text = await response.text()
         except asyncio.TimeoutError as err:
             raise UpnpConnectionTimeoutError(repr(err)) from err
         except ClientConnectionError:
@@ -314,14 +318,16 @@ class AiohttpNotifyServer(UpnpNotifyServer):
     ) -> aiohttp.web.Response:
         """Handle incoming requests."""
         _LOGGER.debug("Received request: %s", request)
+        log_traffic = _LOGGER_TRAFFIC_UPNP.isEnabledFor(logging.DEBUG)
 
         headers = request.headers
         body = await request.text()
-        _LOGGER_TRAFFIC_UPNP.debug(
-            "Incoming request:\nNOTIFY\n%s\n\n%s",
-            "\n".join([key + ": " + value for key, value in headers.items()]),
-            body,
-        )
+        if log_traffic:
+            _LOGGER_TRAFFIC_UPNP.debug(
+                "Incoming request:\nNOTIFY\n%s\n\n%s",
+                "\n".join([key + ": " + value for key, value in headers.items()]),
+                body,
+            )
 
         if request.method != "NOTIFY":
             _LOGGER.debug("Not notify")
@@ -329,7 +335,8 @@ class AiohttpNotifyServer(UpnpNotifyServer):
 
         status = await self.event_handler.handle_notify(headers, body)
         _LOGGER.debug("NOTIFY response status: %s", status)
-        _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", status)
+        if log_traffic:
+            _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", status)
 
         return aiohttp.web.Response(status=status)
 
