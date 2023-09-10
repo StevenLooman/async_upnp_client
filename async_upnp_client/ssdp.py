@@ -9,17 +9,31 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import (TYPE_CHECKING, Any, Callable, Coroutine, Dict, Optional,
-                    Tuple, Union, cast)
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Coroutine,
+    Dict,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
 from aiohttp.http_parser import HeadersParser
 from multidict import CIMultiDictProxy
 
-from async_upnp_client.const import (AddressTupleV4Type, AddressTupleV6Type,
-                                     AddressTupleVXType, IPvXAddress,
-                                     SsdpHeaders, UniqueDeviceName)
+from async_upnp_client.const import (
+    AddressTupleV4Type,
+    AddressTupleV6Type,
+    AddressTupleVXType,
+    IPvXAddress,
+    SsdpHeaders,
+    UniqueDeviceName,
+)
 from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.utils import CaseInsensitiveDict, lowerstr
 
