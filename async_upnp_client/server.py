@@ -7,6 +7,7 @@ import asyncio
 import logging
 import socket
 import sys
+import time
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from datetime import datetime, timedelta, timezone
@@ -661,10 +662,7 @@ class SsdpSearchResponder:
     ) -> None:
         """Send a response."""
         assert self._response_socket
-
-        now = datetime.now()
-        timestamp = mktime(now.timetuple())
-        date = format_date_time(timestamp)
+        date = format_date_time(time.time())
         response_headers = {
             "CACHE-CONTROL": HEADER_CACHE_CONTROL,
             "DATE": date,
@@ -679,17 +677,18 @@ class SsdpSearchResponder:
 
         response_line = "HTTP/1.1 200 OK"
         packet = build_ssdp_packet(response_line, response_headers)
-        _LOGGER.debug(
-            "Sending search response, ST: %s, USN: %s, ",
-            response_headers["ST"],
-            response_headers["USN"],
-        )
-        _LOGGER.debug(
-            "Sending SSDP packet, transport: %s, socket: %s, target: %s",
-            None,
-            self._response_socket,
-            remote_addr,
-        )
+        if _LOGGER.isEnabledFor(logging.DEBUG):  # pragma: no branch
+            _LOGGER.debug(
+                "Sending search response, ST: %s, USN: %s, ",
+                service_type,
+                unique_service_name,
+            )
+            _LOGGER.debug(
+                "Sending SSDP packet, transport: %s, socket: %s, target: %s",
+                None,
+                self._response_socket,
+                remote_addr,
+            )
         _LOGGER_TRAFFIC_SSDP.debug(
             "Sending SSDP packet, target: %s, data: %s", remote_addr, packet
         )
