@@ -138,6 +138,7 @@ def build_ssdp_search_packet(
     return build_ssdp_packet(request_line, headers)
 
 
+@lru_cache(maxsize=128)
 def is_valid_ssdp_packet(data: bytes) -> bool:
     """Check if data is a valid and decodable packet."""
     return (
