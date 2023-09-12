@@ -707,7 +707,8 @@ class SsdpSearchResponder:
             "Sending SSDP packets, target: %s, data: %s", remote_addr, responses
         )
         assert self._response_socket, "Socket not initialized"
-        self._response_socket.sendto(responses, remote_addr)
+        for response in responses:
+            self._response_socket.sendto(response, remote_addr)
 
 
 def _build_advertisements(
