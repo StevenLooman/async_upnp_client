@@ -7,6 +7,8 @@ import asyncio
 import logging
 import socket
 import sys
+import time
+from random import randrange
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
 from datetime import datetime, timedelta, timezone
@@ -497,16 +499,30 @@ class SsdpSearchResponder:
             )
 
         mx_header = headers.get_lower("mx")
+        delay = 0
         if mx_header is not None:
             try:
-                delay = int(mx_header)
+                delay = min(5, int(mx_header))
                 if debug:  # pragma: no branch
                     _LOGGER.debug("Deferring response for %d seconds", delay)
             except ValueError:
-                delay = 0
-            self._loop.call_later(delay, self._deferred_on_data, headers)
-        else:
-            self._loop.call_soon(self._deferred_on_data, headers)
+                pass
+
+        if delay:
+            # The delay should be random between 0 and MX.
+            # We use between 0.100 and MX-0.250 seconds to avoid
+            # flooding the network with simultaneous responses.
+            #
+            # We do not set the upper limit to exactly MX seconds
+            # because it might take up to 0.250 seconds to send the
+            # response, and we want to avoid sending the response
+            # after the MX timeout.
+            self._loop.call_at(
+                self._loop.time() + randrange(100, (delay * 1000) - 250) / 1000,
+                self._deferred_on_data,
+                headers,
+            )
+        self._deferred_on_data(headers)
 
     def _deferred_on_data(self, headers: CaseInsensitiveDict) -> None:
         # Determine how we should respond, page 1.3.2 of UPnP-arch-DeviceArchitecture-v2.0.
