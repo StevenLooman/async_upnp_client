@@ -168,6 +168,18 @@ class UpnpDevice:
 
         return devices
 
+    def get_devices_matching_udn(self, udn: str) -> List["UpnpDevice"]:
+        """Get all devices matching udn."""
+        devices: List["UpnpDevice"] = []
+
+        if self.udn.lower() == udn:
+            devices.append(self)
+
+        for embedded_device in self.embedded_devices.values():
+            devices += embedded_device.get_devices_matching_udn(udn)
+
+        return devices
+
     @property
     def all_services(self) -> List["UpnpService"]:
         """Get all services, from self and embedded devices."""

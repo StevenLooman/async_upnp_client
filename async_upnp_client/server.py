@@ -514,6 +514,7 @@ class SsdpSearchResponder:
         remote_addr = headers.get_lower("_remote_addr")
         st_header: str = headers.get_lower("st", "")
         search_target = st_header.lower()
+        self_device = self.device
         if search_target == SSDP_ST_ALL:
             # 3 + 2d + k (d: embedded device, k: service)
             # global:      ST: upnp:rootdevice
@@ -525,15 +526,16 @@ class SsdpSearchResponder:
             # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
             #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
             self._send_response_rootdevice(remote_addr)
-            for device in self.device.all_devices:
+            all_devices = self_device.all_devices
+            for device in all_devices:
                 self._send_responses_device_udn(remote_addr, device)
-            for device in self.device.all_devices:
+            for device in all_devices:
                 self._send_responses_device_type(remote_addr, device)
-            for service in self.device.all_services:
+            for service in device.all_services:
                 self._send_responses_service(remote_addr, service)
         elif search_target == SSDP_ST_ROOTDEVICE:
             self._send_response_rootdevice(remote_addr)
-        elif matched_devices := self._matched_devices_by_uuid(search_target):
+        elif matched_devices := self_device.get_devices_matching_udn(search_target):
             for device in matched_devices:
                 self._send_responses_device_udn(remote_addr, device)
         elif matched_devices := self._matched_devices_by_type(search_target):
@@ -546,27 +548,20 @@ class SsdpSearchResponder:
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
             self._send_response_rootdevice(remote_addr)
 
-    def _matched_devices_by_uuid(self, search_target: str) -> List[UpnpDevice]:
-        """Get matched devices by UDN."""
-        return [
-            device
-            for device in self.device.all_devices
-            if device.udn.lower() == search_target
-        ]
-
     @staticmethod
     def _match_type_versions(type_ver: str, search_target: str) -> bool:
         """Determine if any service/device type up to the max version matches search_target."""
         # As per 1.3.2 of the UPnP Device Architecture spec, all device service types
         # must respond to and be backwards-compatible with older versions of the same type
+        type_ver_lower: str = type_ver.lower()
         try:
-            base, max_ver = type_ver.lower().rsplit(":", 1)
+            base, max_ver = type_ver_lower.rsplit(":", 1)
             max_ver_i = int(max_ver)
             for ver in range(max_ver_i + 1):
                 if f"{base}:{ver}" == search_target:
                     return True
         except ValueError:
-            if type_ver.lower() == search_target:
+            if type_ver_lower == search_target:
                 return True
         return False
 
