@@ -1,1 +1,1 @@
- Reduce overhead to get_lower on CaseInsensitiveDict (@bdraco)
+Reduce overhead to get_lower on CaseInsensitiveDict (@bdraco)

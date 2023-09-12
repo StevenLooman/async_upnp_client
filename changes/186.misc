@@ -1,1 +1,1 @@
- Avoid copy when calling replace on CaseInsensitiveDict (@bdraco)
+Avoid copy when calling replace on CaseInsensitiveDict (@bdraco)
