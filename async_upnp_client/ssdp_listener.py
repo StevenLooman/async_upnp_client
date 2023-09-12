@@ -33,7 +33,7 @@ from async_upnp_client.const import (
     UniqueDeviceName,
 )
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_headers
+from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_usn
 from async_upnp_client.utils import CaseInsensitiveDict
 
 _SENTINEL = object()
@@ -428,9 +428,7 @@ class SsdpDeviceTracker:
         # Purge any old devices.
         now = headers.get_lower("_timestamp")
         self.purge_devices(now)
-
-        udn = udn_from_headers(headers)
-        if not udn:
+        if not (usn := headers.get_lower("usn")) or not (udn := udn_from_usn(usn)):
             # Ignore broken devices.
             return None, False
 
@@ -462,39 +460,30 @@ class SsdpDeviceTracker:
         """Remove a device through an advertisement."""
         if not valid_byebye_headers(headers):
             return False, None, None
-
-        udn = udn_from_headers(headers)
-        if not udn:
-            # Ignore broken devices.
+        if (
+            not (usn := headers.get_lower("usn"))
+            or not (udn := udn_from_usn(usn))
+            or not (ssdp_device := self.devices.get(udn))
+        ):
+            # Ignore broken devices and devices we don't know about.
             return False, None, None
 
-        if udn not in self.devices:
-            return False, None, None
-
-        ssdp_device = self.devices[udn]
         del self.devices[udn]
-
         # Update device before propagating it
         notification_type: NotificationType = headers.get_lower("nt")
-        if notification_type in ssdp_device.advertisement_headers:
-            ssdp_device.advertisement_headers[notification_type].replace(headers)
+        advertisement_headers = ssdp_device.advertisement_headers
+        if notification_type in advertisement_headers:
+            advertisement_headers[notification_type].replace(headers)
         else:
-            ssdp_device.advertisement_headers[notification_type] = CaseInsensitiveDict(
-                headers
-            )
+            advertisement_headers[notification_type] = CaseInsensitiveDict(headers)
 
         propagate = True  # Always true, if this is the 2nd unsee then device is already deleted.
         return propagate, ssdp_device, notification_type
 
     def get_device(self, headers: CaseInsensitiveDict) -> Optional[SsdpDevice]:
         """Get a device from headers."""
-        if "usn" not in headers:
+        if not (usn := headers.get_lower("usn")) or not (udn := udn_from_usn(usn)):
             return None
-
-        udn = udn_from_headers(headers)
-        if not udn:
-            return None
-
         return self.devices.get(udn)
 
     def purge_devices(self, override_now: Optional[datetime] = None) -> None:

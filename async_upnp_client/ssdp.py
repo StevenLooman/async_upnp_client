@@ -152,12 +152,19 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
     )
 
 
+# No longer used internally, but left for backwards compatibility
 def udn_from_headers(
     headers: Union[CIMultiDictProxy, CaseInsensitiveDict]
 ) -> Optional[UniqueDeviceName]:
     """Get UDN from USN in headers."""
     usn: str = headers.get("usn", "")
-    if usn and usn.lower().startswith("uuid:"):
+    return udn_from_usn(usn)
+
+
+@lru_cache(maxsize=128)
+def udn_from_usn(usn: str) -> Optional[UniqueDeviceName]:
+    """Get UDN from USN in headers."""
+    if usn.lower().startswith("uuid:"):
         return usn.partition("::")[0]
     return None
 
@@ -183,7 +190,9 @@ def _cached_header_parse(
         lines.append(b"")
 
     parsed_headers, _ = HeadersParser().parse_headers(lines)
-    udn = udn_from_headers(parsed_headers)
+
+    usn = parsed_headers.get("usn")
+    udn = udn_from_usn(usn) if usn else None
 
     return parsed_headers, request_line, udn
 
