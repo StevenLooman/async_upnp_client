@@ -706,6 +706,7 @@ class SsdpSearchResponder:
         _LOGGER_TRAFFIC_SSDP.debug(
             "Sending SSDP packets, target: %s, data: %s", remote_addr, responses
         )
+        assert self._response_socket, "Socket not initialized"
         self._response_socket.sendto(responses, remote_addr)
 
 
