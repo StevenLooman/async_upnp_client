@@ -508,6 +508,10 @@ class SsdpSearchResponder:
             except ValueError:
                 pass
 
+        if not (responses := self._build_responses(headers)):
+            return
+
+        remote_addr = headers.get_lower("_remote_addr")
         if delay:
             # The delay should be random between 0 and MX.
             # We use between 0.100 and MX-0.250 seconds to avoid
@@ -519,17 +523,18 @@ class SsdpSearchResponder:
             # after the MX timeout.
             self._loop.call_at(
                 self._loop.time() + randrange(100, (delay * 1000) - 250) / 1000,
-                self._deferred_on_data,
-                headers,
+                self._send_responses,
+                remote_addr,
+                responses,
             )
-        self._deferred_on_data(headers)
+        self._send_responses(remote_addr, responses)
 
-    def _deferred_on_data(self, headers: CaseInsensitiveDict) -> None:
+    def _build_responses(self, headers: CaseInsensitiveDict) -> List[bytes]:
         # Determine how we should respond, page 1.3.2 of UPnP-arch-DeviceArchitecture-v2.0.
-        remote_addr = headers.get_lower("_remote_addr")
         st_header: str = headers.get_lower("st", "")
         search_target = st_header.lower()
-        self_device = self.device
+        responses: List[bytes] = []
+
         if search_target == SSDP_ST_ALL:
             # 3 + 2d + k (d: embedded device, k: service)
             # global:      ST: upnp:rootdevice
@@ -540,28 +545,39 @@ class SsdpSearchResponder:
             #              USN: uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:ver
             # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
             #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
-            self._send_response_rootdevice(remote_addr)
-            all_devices = self_device.all_devices
-            for device in all_devices:
-                self._send_responses_device_udn(remote_addr, device)
-            for device in all_devices:
-                self._send_responses_device_type(remote_addr, device)
-            for service in device.all_services:
-                self._send_responses_service(remote_addr, service)
+            all_devices = self.device.all_devices
+            all_services = self.device.all_services
+            responses.append(self._build_response_rootdevice())
+            responses.extend(
+                self._build_responses_device_udn(device) for device in all_devices
+            )
+            responses.extend(
+                self._build_responses_device_type(device) for device in all_devices
+            )
+            responses.extend(
+                self._build_responses_service(service) for service in all_services
+            )
         elif search_target == SSDP_ST_ROOTDEVICE:
-            self._send_response_rootdevice(remote_addr)
-        elif matched_devices := self_device.get_devices_matching_udn(search_target):
-            for device in matched_devices:
-                self._send_responses_device_udn(remote_addr, device)
+            responses.append(self._build_response_rootdevice())
+        elif matched_devices := self.device.get_devices_matching_udn(search_target):
+            responses.extend(
+                self._build_responses_device_udn(device) for device in matched_devices
+            )
         elif matched_devices := self._matched_devices_by_type(search_target):
-            for device in matched_devices:
-                self._send_responses_device_type(remote_addr, device, search_target)
+            responses.extend(
+                self._build_responses_device_type(device, search_target)
+                for device in matched_devices
+            )
         elif matched_services := self._matched_services_by_type(search_target):
-            for service in matched_services:
-                self._send_responses_service(remote_addr, service, search_target)
+            responses.extend(
+                self._build_responses_service(service, search_target)
+                for service in matched_services
+            )
 
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
-            self._send_response_rootdevice(remote_addr)
+            responses.append(self._build_response_rootdevice())
+
+        return responses
 
     @staticmethod
     def _match_type_versions(type_ver: str, search_target: str) -> bool:
@@ -631,73 +647,56 @@ class SsdpSearchResponder:
         _LOGGER.debug("Stop listening for SEARCH requests")
         self._transport.close()
 
-    def _send_response_rootdevice(self, remote_addr: AddressTupleVXType) -> None:
+    def _build_response_rootdevice(self) -> bytes:
         """Send root device response."""
-        self._send_response(
-            remote_addr, "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
-        )
+        return self._build_response("upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice")
 
-    def _send_responses_device_udn(
-        self, remote_addr: AddressTupleVXType, device: UpnpDevice
-    ) -> None:
+    def _build_responses_device_udn(self, device: UpnpDevice) -> bytes:
         """Send device responses for UDN."""
-        self._send_response(remote_addr, device.udn, f"{self.device.udn}")
+        return self._build_response(device.udn, f"{self.device.udn}")
 
-    def _send_responses_device_type(
-        self,
-        remote_addr: AddressTupleVXType,
-        device: UpnpDevice,
-        device_type: Optional[str] = None,
-    ) -> None:
+    def _build_responses_device_type(
+        self, device: UpnpDevice, device_type: Optional[str] = None
+    ) -> bytes:
         """Send device responses for device type."""
-        self._send_response(
-            remote_addr,
+        return self._build_response(
             device_type or device.device_type,
             f"{self.device.udn}::{device.device_type}",
         )
 
-    def _send_responses_service(
-        self,
-        remote_addr: AddressTupleVXType,
-        service: UpnpService,
-        service_type: Optional[str] = None,
-    ) -> None:
+    def _build_responses_service(
+        self, service: UpnpService, service_type: Optional[str] = None
+    ) -> bytes:
         """Send service responses."""
-        self._send_response(
-            remote_addr,
+        return self._build_response(
             service_type or service.service_type,
             f"{self.device.udn}::{service.service_type}",
         )
 
-    def _send_response(
+    def _build_response(
         self,
-        remote_addr: AddressTupleVXType,
         service_type: str,
         unique_service_name: str,
-    ) -> None:
+    ) -> bytes:
         """Send a response."""
-        assert self._response_socket
-        date = format_date_time(time.time())
-        response_headers = {
-            "CACHE-CONTROL": HEADER_CACHE_CONTROL,
-            "DATE": date,
-            "SERVER": HEADER_SERVER,
-            "ST": service_type,
-            "USN": unique_service_name,
-            "EXT": "",
-            "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
-            "BOOTID.UPNP.ORG": str(self.device.boot_id),
-            "CONFIGID.UPNP.ORG": str(self.device.config_id),
-        }
+        return build_ssdp_packet(
+            "HTTP/1.1 200 OK",
+            {
+                "CACHE-CONTROL": HEADER_CACHE_CONTROL,
+                "DATE": format_date_time(time.time()),
+                "SERVER": HEADER_SERVER,
+                "ST": service_type,
+                "USN": unique_service_name,
+                "EXT": "",
+                "LOCATION": f"{self.device.base_uri}{self.device.device_url}",
+                "BOOTID.UPNP.ORG": str(self.device.boot_id),
+                "CONFIGID.UPNP.ORG": str(self.device.config_id),
+            },
+        )
 
-        response_line = "HTTP/1.1 200 OK"
-        packet = build_ssdp_packet(response_line, response_headers)
+    def _send_responses(self, remote_addr: str, responses: List[bytes]) -> None:
+        """Send responses."""
         if _LOGGER.isEnabledFor(logging.DEBUG):  # pragma: no branch
-            _LOGGER.debug(
-                "Sending search response, ST: %s, USN: %s, ",
-                service_type,
-                unique_service_name,
-            )
             _LOGGER.debug(
                 "Sending SSDP packet, transport: %s, socket: %s, target: %s",
                 None,
@@ -705,9 +704,11 @@ class SsdpSearchResponder:
                 remote_addr,
             )
         _LOGGER_TRAFFIC_SSDP.debug(
-            "Sending SSDP packet, target: %s, data: %s", remote_addr, packet
+            "Sending SSDP packets, target: %s, data: %s", remote_addr, responses
         )
-        self._response_socket.sendto(packet, remote_addr)
+        assert self._response_socket, "Socket not initialized"
+        for response in responses:
+            self._response_socket.sendto(response, remote_addr)
 
 
 def _build_advertisements(
