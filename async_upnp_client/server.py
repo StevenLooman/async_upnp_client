@@ -15,36 +15,75 @@ from functools import partial, wraps
 from itertools import cycle
 from random import randrange
 from time import mktime
-from typing import (Any, Callable, Dict, List, Mapping, Optional, Sequence,
-                    Tuple, Type, Union, cast)
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 from urllib.parse import urlparse
 from uuid import uuid4
 from wsgiref.handlers import format_date_time
 
 import defusedxml.ElementTree as DET  # pylint: disable=import-error
 import voluptuous as vol
-from aiohttp.web import (Application, AppRunner, HTTPBadRequest, Request,
-                         Response, RouteDef, TCPSite)
+from aiohttp.web import (
+    Application,
+    AppRunner,
+    HTTPBadRequest,
+    Request,
+    Response,
+    RouteDef,
+    TCPSite,
+)
 
 from async_upnp_client import __version__ as version
 from async_upnp_client.aiohttp import AiohttpRequester
-from async_upnp_client.client import (T, UpnpAction, UpnpDevice, UpnpError,
-                                      UpnpRequester, UpnpService,
-                                      UpnpStateVariable)
+from async_upnp_client.client import (
+    T,
+    UpnpAction,
+    UpnpDevice,
+    UpnpError,
+    UpnpRequester,
+    UpnpService,
+    UpnpStateVariable,
+)
 from async_upnp_client.client_factory import UpnpFactory
-from async_upnp_client.const import (STATE_VARIABLE_TYPE_MAPPING,
-                                     ActionArgumentInfo, ActionInfo,
-                                     AddressTupleVXType, DeviceInfo,
-                                     EventableStateVariableTypeInfo,
-                                     NotificationSubType, ServiceInfo,
-                                     StateVariableInfo, StateVariableTypeInfo)
-from async_upnp_client.exceptions import (UpnpActionError, UpnpActionErrorCode,
-                                          UpnpValueError)
-from async_upnp_client.ssdp import (_LOGGER_TRAFFIC_SSDP, SSDP_DISCOVER,
-                                    SSDP_ST_ALL, SSDP_ST_ROOTDEVICE,
-                                    SsdpProtocol, build_ssdp_packet,
-                                    determine_source_target, get_ssdp_socket,
-                                    is_ipv6_address)
+from async_upnp_client.const import (
+    STATE_VARIABLE_TYPE_MAPPING,
+    ActionArgumentInfo,
+    ActionInfo,
+    AddressTupleVXType,
+    DeviceInfo,
+    EventableStateVariableTypeInfo,
+    NotificationSubType,
+    ServiceInfo,
+    StateVariableInfo,
+    StateVariableTypeInfo,
+)
+from async_upnp_client.exceptions import (
+    UpnpActionError,
+    UpnpActionErrorCode,
+    UpnpValueError,
+)
+from async_upnp_client.ssdp import (
+    _LOGGER_TRAFFIC_SSDP,
+    SSDP_DISCOVER,
+    SSDP_ST_ALL,
+    SSDP_ST_ROOTDEVICE,
+    SsdpProtocol,
+    build_ssdp_packet,
+    determine_source_target,
+    get_ssdp_socket,
+    is_ipv6_address,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 NAMESPACES = {
