@@ -1,0 +1,1 @@
+Avoid scheduling callbacks when there are no responses to send (@bdraco)
