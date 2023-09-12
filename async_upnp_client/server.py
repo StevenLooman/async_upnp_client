@@ -649,17 +649,17 @@ class SsdpSearchResponder:
 
     def _build_response_rootdevice(self) -> bytes:
         """Send root device response."""
-        self._build_response("upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice")
+        return self._build_response("upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice")
 
     def _build_responses_device_udn(self, device: UpnpDevice) -> bytes:
         """Send device responses for UDN."""
-        self._build_response(device.udn, f"{self.device.udn}")
+        return self._build_response(device.udn, f"{self.device.udn}")
 
     def _build_responses_device_type(
         self, device: UpnpDevice, device_type: Optional[str] = None
     ) -> bytes:
         """Send device responses for device type."""
-        self._build_response(
+        return self._build_response(
             device_type or device.device_type,
             f"{self.device.udn}::{device.device_type}",
         )
@@ -668,7 +668,7 @@ class SsdpSearchResponder:
         self, service: UpnpService, service_type: Optional[str] = None
     ) -> bytes:
         """Send service responses."""
-        self._build_response(
+        return self._build_response(
             service_type or service.service_type,
             f"{self.device.udn}::{service.service_type}",
         )
