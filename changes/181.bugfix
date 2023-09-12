@@ -1,1 +1,0 @@
-Use the actual value of the NotificationSubType, instead of leaking the enum name (#179, @ikorb).

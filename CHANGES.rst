@@ -1,3 +1,24 @@
+async_upnp_client 0.35.1 (2023-09-12)
+=====================================
+
+Features
+--------
+
+- Server adds a random delay based on MX (@bdraco) (#195)
+
+
+Bugfixes
+--------
+
+- Use the actual value of the NotificationSubType, instead of leaking the enum name (#179, @ikorb). (#181)
+
+
+Misc
+----
+
+- #180, #182, #183, #184, #185, #186, #187, #188, #189, #190, #191, #192, #193, #194, #196
+
+
 async_upnp_client 0.35.0 (2023-08-27)
 =====================================
 
