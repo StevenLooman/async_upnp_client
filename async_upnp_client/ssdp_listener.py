@@ -354,21 +354,17 @@ class SsdpDeviceTracker:
         changed = (
             is_new_device
             or is_new_service
-            or headers_differ_from_existing_search(ssdp_device, search_target, headers)
-            or headers_differ_from_existing_advertisement(
-                ssdp_device, search_target, headers
-            )
             or new_location
+            or headers_differ_from_existing_search(ssdp_device, search_target, headers)
         )
         ssdp_source = SsdpSource.SEARCH_CHANGED if changed else SsdpSource.SEARCH_ALIVE
 
         # Update stored headers.
+        search_headers = ssdp_device.search_headers
         if search_target in ssdp_device.search_headers:
-            ssdp_device.search_headers[search_target].replace(headers)
-        elif isinstance(headers, CaseInsensitiveDict):
-            ssdp_device.search_headers[search_target] = headers
+            search_headers[search_target].replace(headers)
         else:
-            ssdp_device.search_headers[search_target] = CaseInsensitiveDict(headers)
+            search_headers[search_target] = headers
 
         return True, ssdp_device, search_target, ssdp_source
 
@@ -402,22 +398,18 @@ class SsdpDeviceTracker:
             notification_sub_type == NotificationSubType.SSDP_UPDATE
             or is_new_device
             or is_new_service
+            or new_location
             or headers_differ_from_existing_advertisement(
                 ssdp_device, notification_type, headers
             )
-            or headers_differ_from_existing_search(
-                ssdp_device, notification_type, headers
-            )
-            or new_location
         )
 
         # Update stored headers.
-        if notification_type in ssdp_device.advertisement_headers:
-            ssdp_device.advertisement_headers[notification_type].replace(headers)
+        advertisement_headers = ssdp_device.advertisement_headers
+        if notification_type in advertisement_headers:
+            advertisement_headers[notification_type].replace(headers)
         else:
-            ssdp_device.advertisement_headers[notification_type] = CaseInsensitiveDict(
-                headers
-            )
+            advertisement_headers[notification_type] = headers
 
         return propagate, ssdp_device, notification_type
 
