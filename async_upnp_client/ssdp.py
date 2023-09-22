@@ -120,7 +120,7 @@ def is_ipv6_address(addr: AddressTupleVXType) -> bool:
 
 def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:
     """Construct a SSDP packet."""
-    headers_str = "\r\n".join([f"{key}:{value}" for key, value in headers.items()])
+    headers_str = "\r\n".join([f"{key}: {value}" for key, value in headers.items()])
     return f"{status_line}\r\n{headers_str}\r\n\r\n".encode()
 
 
