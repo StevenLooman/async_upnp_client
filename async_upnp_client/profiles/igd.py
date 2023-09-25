@@ -625,6 +625,9 @@ class IgdDevice(UpnpProfileDevice):
         * bytes per second sent (derived from last update)
         * packets per second received (derived from last update)
         * packets per second sent (derived from last update)
+        * status info:
+          * connection status
+          * uptime
         """
         timestamp = datetime.now()
         values = await asyncio.gather(
