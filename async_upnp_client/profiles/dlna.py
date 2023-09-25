@@ -7,6 +7,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, IntFlag
+from functools import lru_cache
 from http import HTTPStatus
 from mimetypes import guess_type
 from time import monotonic as monotonic_timer
@@ -213,6 +214,7 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     service.notify_changed_state_variables(changes_0)
 
 
+@lru_cache(maxsize=128)
 def split_commas(input_: str) -> List[str]:
     """
     Split a string into a list of comma separated values.
