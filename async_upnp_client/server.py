@@ -649,7 +649,9 @@ class SsdpSearchResponder:
 
     def _build_response_rootdevice(self) -> bytes:
         """Send root device response."""
-        return self._build_response("upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice")
+        return self._build_response(
+            "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
+        )
 
     def _build_responses_device_udn(self, device: UpnpDevice) -> bytes:
         """Send device responses for UDN."""
