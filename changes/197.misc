@@ -1,3 +1,0 @@
-Only set propagate if headers for the source type have changed (@bdraco)
-
-The search headers were checked in the see_advertisement path and the advertisement headers were checked in the see_search path. This generated a lot of unexpected callbacks when nothing had actually changed in the respective headers.
