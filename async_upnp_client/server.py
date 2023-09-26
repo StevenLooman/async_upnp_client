@@ -1117,7 +1117,11 @@ def _create_action_response(
         for var in service.actions[action_name].out_arguments()
     }
     for key, value in result.items():
-        if isinstance(value, UpnpStateVariable):
+        if isinstance(value, UpnpStateVariable) and value.data_type_mapping["type"] == ET.Element:
+            coercer = value.data_type_mapping["out"]
+            coerced_value: ET.Element = coercer(value.value)
+            response_el.append(coerced_value)
+        elif isinstance(value, UpnpStateVariable):
             ET.SubElement(response_el, key).text = value.upnp_value
         else:
             template_var = out_state_vars[key]
