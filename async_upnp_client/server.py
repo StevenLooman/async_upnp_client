@@ -394,7 +394,7 @@ class UpnpServerService(UpnpService):
             prop_el = ET.SubElement(event_el, "e:property")
             ET.SubElement(prop_el, state_var.name).text = str(state_var.value)
         message = (
-            '<?xml version="1.0"?>\n' + ET.tostring(event_el, encoding="utf-8").decode()
+            '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(event_el, encoding="utf-8", xml_declaration=False).decode()
         )
 
         headers = {
@@ -1125,7 +1125,7 @@ def _create_action_response(
     return Response(
         content_type="text/xml",
         charset="utf-8",
-        body=ET.tostring(envelope_el, encoding="utf-8"),
+        body='<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(envelope_el, encoding="utf-8", xml_declaration=False).decode(),
     )
 
 
@@ -1162,7 +1162,7 @@ def _create_error_action_response(
         status=500,
         content_type="text/xml",
         charset="utf-8",
-        body=ET.tostring(envelope_el, encoding="utf-8"),
+        body='<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(envelope_el, encoding="utf-8", xml_declaration=False).decode(),
     )
 
 
@@ -1242,7 +1242,7 @@ async def to_xml(
     serializer = UpnpXmlSerializer()
     thing_el = serializer.to_xml(thing)
     encoding = "utf-8"
-    thing_xml = ET.tostring(thing_el, encoding=encoding)
+    thing_xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(thing_el, encoding=encoding, xml_declaration=False).decode()
     return Response(content_type="text/xml", charset=encoding, body=thing_xml)
 
 
