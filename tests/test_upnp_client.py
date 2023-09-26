@@ -228,7 +228,7 @@ class TestUpnpStateVariable:
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         state_var = service.state_variable("A_ARG_TYPE_Channel")
 
-        assert state_var.allowed_values == ["Master"]
+        assert state_var.allowed_values == {"Master"}
 
         # should be ok
         state_var.value = "Master"

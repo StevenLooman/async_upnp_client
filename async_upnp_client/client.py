@@ -11,6 +11,7 @@ from typing import (
     Generic,
     List,
     Mapping,
+    Set,
     Optional,
     Sequence,
     Tuple,
@@ -834,6 +835,20 @@ class UpnpStateVariable(Generic[T]):
         self._value: Optional[Any] = None  # None, T or UPNP_VALUE_ERROR
         self._updated_at: Optional[datetime] = None
 
+        type_info = state_variable_info.type_info
+        allowed_values = type_info.allowed_values or []
+        self._min_value: Optional[T] = None
+        self._max_value: Optional[T] = None
+        self._allowed_values = {
+            self.coerce_python(allowed_value) for allowed_value in allowed_values
+        }
+        max_ = type_info.allowed_value_range.get("max")
+        if max_ is not None:
+            self._max_value = self.coerce_python(max_)
+        min_ = type_info.allowed_value_range.get("min")
+        if min_ is not None:
+            self._min_value = self.coerce_python(min_)
+
     @property
     def service(self) -> UpnpService:
         """Get parent UpnpService."""
@@ -855,8 +870,7 @@ class UpnpStateVariable(Generic[T]):
     @property
     def data_type_mapping(self) -> Mapping[str, Callable]:
         """Get the data type (coercer) for this State Variable."""
-        type_info = self._state_variable_info.type_info
-        return type_info.data_type_mapping
+        return self._state_variable_info.type_info.data_type_mapping
 
     @property
     def data_type_python(self) -> Callable[[str], Any]:
@@ -866,43 +880,27 @@ class UpnpStateVariable(Generic[T]):
     @property
     def min_value(self) -> Optional[T]:
         """Min value for this UpnpStateVariable, if defined."""
-        type_info = self._state_variable_info.type_info
-        min_ = type_info.allowed_value_range.get("min")
-        if min_ is not None:
-            value: T = self.coerce_python(min_)
-            return value
-
-        return None
+        return self._min_value
 
     @property
     def max_value(self) -> Optional[T]:
         """Max value for this UpnpStateVariable, if defined."""
-        type_info = self._state_variable_info.type_info
-        max_ = type_info.allowed_value_range.get("max")
-        if max_ is not None:
-            value: T = self.coerce_python(max_)
-            return value
-
-        return None
+        return self._max_value
 
     @property
-    def allowed_values(self) -> List[T]:
-        """List with allowed values for this UpnpStateVariable, if defined."""
-        type_info = self._state_variable_info.type_info
-        allowed_values = type_info.allowed_values or []
-        return [self.coerce_python(allowed_value) for allowed_value in allowed_values]
+    def allowed_values(self) -> Set[T]:
+        """Set with allowed values for this UpnpStateVariable, if defined."""
+        return self._allowed_values
 
     @property
     def send_events(self) -> bool:
         """Check if this UpnpStatevariable send events."""
-        send_events = self._state_variable_info.send_events
-        return send_events
+        return self._state_variable_info.send_events
 
     @property
     def name(self) -> str:
         """Name of the UpnpStatevariable."""
-        name: str = self._state_variable_info.name
-        return name
+        return self._state_variable_info.name
 
     @property
     def data_type(self) -> str:
