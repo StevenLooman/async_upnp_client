@@ -1073,6 +1073,7 @@ async def _parse_action_body(
     try:
         _, action_name = soap_action.split("#")
         data = await request.text()
+        data = data.replace('"s:', '" s:').replace('"u:', '" u:')
         root_el: ET.Element = DET.fromstring(data)
         body_el = root_el.find("s:Body", NAMESPACES)
         assert body_el
