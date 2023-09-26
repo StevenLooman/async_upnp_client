@@ -229,6 +229,7 @@ class TestUpnpStateVariable:
         state_var = service.state_variable("A_ARG_TYPE_Channel")
 
         assert state_var.allowed_values == {"Master"}
+        assert state_var.normalized_allowed_values == {"master"}
 
         # should be ok
         state_var.value = "Master"

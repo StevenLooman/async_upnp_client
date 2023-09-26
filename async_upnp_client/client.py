@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.client module."""
 
+# pylint: disable=too-many-lines
+
 import logging
 import urllib.parse
 from abc import ABC
@@ -816,6 +818,8 @@ def _parse_fault(
 
 T = TypeVar("T")  # pylint: disable=invalid-name
 
+_UNDEFINED = object()
+
 
 class UpnpStateVariable(Generic[T]):
     """Representation of a State Variable."""
@@ -835,19 +839,12 @@ class UpnpStateVariable(Generic[T]):
         self._value: Optional[Any] = None  # None, T or UPNP_VALUE_ERROR
         self._updated_at: Optional[datetime] = None
 
-        type_info = state_variable_info.type_info
-        allowed_values = type_info.allowed_values or []
-        self._min_value: Optional[T] = None
-        self._max_value: Optional[T] = None
-        self._allowed_values = {
-            self.coerce_python(allowed_value) for allowed_value in allowed_values
-        }
-        max_ = type_info.allowed_value_range.get("max")
-        if max_ is not None:
-            self._max_value = self.coerce_python(max_)
-        min_ = type_info.allowed_value_range.get("min")
-        if min_ is not None:
-            self._min_value = self.coerce_python(min_)
+        # When py3.12 is the minimum version, we can switch
+        # these to be @cached_property
+        self._min_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
+        self._max_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
+        self._allowed_values: Set[T] = _UNDEFINED  # type: ignore[assignment]
+        self._normalized_allowed_values: Set[T] = _UNDEFINED  # type: ignore[assignment]
 
     @property
     def service(self) -> UpnpService:
@@ -880,17 +877,43 @@ class UpnpStateVariable(Generic[T]):
     @property
     def min_value(self) -> Optional[T]:
         """Min value for this UpnpStateVariable, if defined."""
+        if self._min_value is _UNDEFINED:
+            min_ = self._state_variable_info.type_info.allowed_value_range.get("min")
+            if min_ is not None:
+                self._min_value = self.coerce_python(min_)
+            else:
+                self._min_value = None
         return self._min_value
 
     @property
     def max_value(self) -> Optional[T]:
         """Max value for this UpnpStateVariable, if defined."""
+        if self._max_value is _UNDEFINED:
+            max_ = self._state_variable_info.type_info.allowed_value_range.get("max")
+            if max_ is not None:
+                self._max_value = self.coerce_python(max_)
+            else:
+                self._max_value = None
         return self._max_value
 
     @property
     def allowed_values(self) -> Set[T]:
         """Set with allowed values for this UpnpStateVariable, if defined."""
+        if self._allowed_values is _UNDEFINED:
+            allowed_values = self._state_variable_info.type_info.allowed_values or []
+            self._allowed_values = {
+                self.coerce_python(allowed_value) for allowed_value in allowed_values
+            }
         return self._allowed_values
+
+    @property
+    def normalized_allowed_values(self) -> Set[T]:
+        """Set with normalized allowed values for this UpnpStateVariable, if defined."""
+        if self._normalized_allowed_values is _UNDEFINED:
+            self._normalized_allowed_values = {
+                allowed_value.lower().strip() for allowed_value in self.allowed_values
+            }
+        return self._normalized_allowed_values
 
     @property
     def send_events(self) -> bool:
