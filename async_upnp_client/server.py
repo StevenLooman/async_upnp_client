@@ -394,7 +394,8 @@ class UpnpServerService(UpnpService):
             prop_el = ET.SubElement(event_el, "e:property")
             ET.SubElement(prop_el, state_var.name).text = str(state_var.value)
         message = (
-            '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(event_el, encoding="utf-8", xml_declaration=False).decode()
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            + ET.tostring(event_el, encoding="utf-8", xml_declaration=False).decode()
         )
 
         headers = {
@@ -649,7 +650,9 @@ class SsdpSearchResponder:
 
     def _build_response_rootdevice(self) -> bytes:
         """Send root device response."""
-        return self._build_response("upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice")
+        return self._build_response(
+            "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
+        )
 
     def _build_responses_device_udn(self, device: UpnpDevice) -> bytes:
         """Send device responses for UDN."""
@@ -1117,7 +1120,10 @@ def _create_action_response(
         for var in service.actions[action_name].out_arguments()
     }
     for key, value in result.items():
-        if isinstance(value, UpnpStateVariable) and value.data_type_mapping["type"] == ET.Element:
+        if (
+            isinstance(value, UpnpStateVariable)
+            and value.data_type_mapping["type"] == ET.Element
+        ):
             coercer = value.data_type_mapping["out"]
             coerced_value: ET.Element = coercer(value.value)
             response_el.append(coerced_value)
@@ -1130,7 +1136,10 @@ def _create_action_response(
     return Response(
         content_type="text/xml",
         charset="utf-8",
-        body='<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(envelope_el, encoding="utf-8", xml_declaration=False).decode(),
+        body=(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            + ET.tostring(envelope_el, encoding="utf-8", xml_declaration=False).decode()
+        ),
     )
 
 
@@ -1167,7 +1176,10 @@ def _create_error_action_response(
         status=500,
         content_type="text/xml",
         charset="utf-8",
-        body='<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(envelope_el, encoding="utf-8", xml_declaration=False).decode(),
+        body=(
+            '<?xml version="1.0" encoding="UTF-8"?>\n'
+            + ET.tostring(envelope_el, encoding="utf-8", xml_declaration=False).decode()
+        ),
     )
 
 
@@ -1247,7 +1259,10 @@ async def to_xml(
     serializer = UpnpXmlSerializer()
     thing_el = serializer.to_xml(thing)
     encoding = "utf-8"
-    thing_xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(thing_el, encoding=encoding, xml_declaration=False).decode()
+    thing_xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        + ET.tostring(thing_el, encoding=encoding, xml_declaration=False).decode()
+    )
     return Response(content_type="text/xml", charset=encoding, body=thing_xml)
 
 
