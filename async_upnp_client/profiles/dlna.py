@@ -7,6 +7,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum, IntEnum, IntFlag
+from functools import lru_cache
 from http import HTTPStatus
 from mimetypes import guess_type
 from time import monotonic as monotonic_timer
@@ -213,6 +214,7 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     service.notify_changed_state_variables(changes_0)
 
 
+@lru_cache(maxsize=128)
 def split_commas(input_: str) -> List[str]:
     """
     Split a string into a list of comma separated values.
@@ -221,6 +223,12 @@ def split_commas(input_: str) -> List[str]:
     """
     stripped = (item.strip() for item in input_.split(","))
     return [item for item in stripped if item]
+
+
+@lru_cache(maxsize=128)
+def _lower_split_commas(input_: str) -> Set[str]:
+    """Lowercase version of split_commas."""
+    return {a.lower() for a in split_commas(input_)}
 
 
 class ConnectionManagerMixin(UpnpProfileDevice):
@@ -425,18 +433,15 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return state_var.value is not None or state_var.updated_at is not None
 
     @property
-    def _current_transport_actions(self) -> List[str]:
+    def _current_transport_actions(self) -> Set[str]:
         state_var = self._state_variable("AVT", "CurrentTransportActions")
         if not state_var:
-            return []
-        transport_actions = split_commas(state_var.value or "")
-        return [a.lower() for a in transport_actions]
+            return set()
+        return _lower_split_commas(state_var.value or "")
 
     def _can_transport_action(self, action: str) -> bool:
-        return (
-            action in self._current_transport_actions
-            or not self._has_current_transport_actions
-        )
+        current_transport_actions = self._current_transport_actions
+        return not current_transport_actions or action in current_transport_actions
 
     def _supports(self, var_name: str) -> bool:
         return (
