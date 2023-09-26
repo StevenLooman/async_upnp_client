@@ -1080,7 +1080,7 @@ async def _parse_action_body(
     except Exception as exc:
         raise HTTPBadRequest(reason="InvalidSoap") from exc
 
-    if action_name not in service.actions:
+    if not any([a for a in service.actions if str(a) == action_name]): # action_name not in service.actions:
         raise HTTPBadRequest(reason="InvalidAction")
 
     kwargs: Dict[str, Any] = {}
