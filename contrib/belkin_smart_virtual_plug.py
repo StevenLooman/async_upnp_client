@@ -24,7 +24,7 @@ from async_upnp_client.const import (
 from async_upnp_client.server import UpnpServer, UpnpServerDevice, UpnpServerService, callable_action, \
     UpnpEventableStateVariable, EventSubscriber, create_state_var
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("emulated_device")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
