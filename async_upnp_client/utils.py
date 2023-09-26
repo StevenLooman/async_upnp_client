@@ -20,6 +20,46 @@ EXTERNAL_PORT = 80
 
 _SENTINEL = object()
 
+UTC = timezone(timedelta(hours=0))
+_UNCOMPILED_MATCHERS: Dict[str, Callable] = {
+    # date
+    r"\d{4}-\d{2}-\d{2}$": lambda value: datetime.strptime(value, "%Y-%m-%d").date(),
+    r"\d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(value, "%H:%M:%S").time(),
+    # datetime
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(
+        value, "%Y-%m-%dT%H:%M:%S"
+    ),
+    r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(
+        value, "%Y-%m-%d %H:%M:%S"
+    ),
+    # time.tz
+    r"\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda value: datetime.strptime(
+        value, "%H:%M:%S%z"
+    ).timetz(),
+    r"\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda value: datetime.strptime(
+        value, "%H:%M:%S %z"
+    ).timetz(),
+    # datetime.tz
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$": lambda value: datetime.strptime(
+        value, "%Y-%m-%dT%H:%M:%Sz"
+    ).replace(tzinfo=UTC),
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$": lambda value: datetime.strptime(
+        value, "%Y-%m-%dT%H:%M:%Sz"
+    ).replace(tzinfo=UTC),
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda value: datetime.strptime(
+        value, "%Y-%m-%dT%H:%M:%S%z"
+    ),
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda value: datetime.strptime(
+        value, "%Y-%m-%dT%H:%M:%S %z"
+    ),
+}
+
+COMPILED_MATCHERS: Dict[re.Pattern, Callable] = {
+    re.compile(matcher): parser for matcher, parser in _UNCOMPILED_MATCHERS.items()
+}
+
+TIME_RE = re.compile(r"(?P<sign>[-+])?(?P<h>\d+):(?P<m>\d+):(?P<s>\d+)\.?(?P<ms>\d+)?")
+
 
 class lowerstr(str):  # pylint: disable=invalid-name
     """A prelowered string."""
@@ -173,8 +213,7 @@ def time_to_str(time: timedelta) -> str:
 
 def str_to_time(string: str) -> Optional[timedelta]:
     """Convert a string to timedelta."""
-    regexp = r"(?P<sign>[-+])?(?P<h>\d+):(?P<m>\d+):(?P<s>\d+)\.?(?P<ms>\d+)?"
-    match = re.match(regexp, string)
+    match = TIME_RE.match(string)
     if not match:
         return None
 
@@ -214,43 +253,10 @@ def require_tzinfo(value: Any) -> Any:
 def parse_date_time(value: str) -> Any:
     """Parse a date/time/date_time value."""
     # fix up timezone part
-    utc = timezone(timedelta(hours=0))
     if value[-6] in ["+", "-"] and value[-3] == ":":
         value = value[:-3] + value[-2:]
-    matchers: Dict[str, Callable] = {
-        # date
-        r"\d{4}-\d{2}-\d{2}$": lambda s: datetime.strptime(value, "%Y-%m-%d").date(),
-        r"\d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(value, "%H:%M:%S").time(),
-        # datetime
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(
-            value, "%Y-%m-%dT%H:%M:%S"
-        ),
-        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$": lambda s: datetime.strptime(
-            value, "%Y-%m-%d %H:%M:%S"
-        ),
-        # time.tz
-        r"\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda s: datetime.strptime(
-            value, "%H:%M:%S%z"
-        ).timetz(),
-        r"\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda s: datetime.strptime(
-            value, "%H:%M:%S %z"
-        ).timetz(),
-        # datetime.tz
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$": lambda s: datetime.strptime(
-            value, "%Y-%m-%dT%H:%M:%Sz"
-        ).replace(tzinfo=utc),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$": lambda s: datetime.strptime(
-            value, "%Y-%m-%dT%H:%M:%Sz"
-        ).replace(tzinfo=utc),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda s: datetime.strptime(
-            value, "%Y-%m-%dT%H:%M:%S%z"
-        ),
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda s: datetime.strptime(
-            value, "%Y-%m-%dT%H:%M:%S %z"
-        ),
-    }
-    for pattern, parser in matchers.items():
-        if re.match(pattern, value):
+    for pattern, parser in COMPILED_MATCHERS.items():
+        if pattern.match(value):
             return parser(value)
     raise ValueError("Unknown date/time: " + value)
 
