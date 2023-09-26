@@ -844,7 +844,7 @@ class UpnpStateVariable(Generic[T]):
         self._min_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
         self._max_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
         self._allowed_values: Set[T] = _UNDEFINED  # type: ignore[assignment]
-        self._normalized_allowed_values: Set[T] = _UNDEFINED  # type: ignore[assignment]
+        self._normalized_allowed_values: Set[str] = _UNDEFINED  # type: ignore[assignment]
 
     @property
     def service(self) -> UpnpService:
