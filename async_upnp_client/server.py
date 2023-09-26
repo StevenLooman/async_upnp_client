@@ -256,7 +256,7 @@ class UpnpServerService(UpnpService):
 
         state_var_info = StateVariableInfo(
             name,
-            send_events=False,
+            send_events=isinstance(type_info, EventableStateVariableTypeInfo),
             type_info=type_info,
             xml=ET.Element("stateVariable"),
         )
