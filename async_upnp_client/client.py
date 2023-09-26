@@ -907,11 +907,12 @@ class UpnpStateVariable(Generic[T]):
         return self._allowed_values
 
     @property
-    def normalized_allowed_values(self) -> Set[T]:
+    def normalized_allowed_values(self) -> Set[str]:
         """Set with normalized allowed values for this UpnpStateVariable, if defined."""
         if self._normalized_allowed_values is _UNDEFINED:
             self._normalized_allowed_values = {
-                allowed_value.lower().strip() for allowed_value in self.allowed_values
+                str(allowed_value).lower().strip()
+                for allowed_value in self.allowed_values
             }
         return self._normalized_allowed_values
 
