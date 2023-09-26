@@ -734,9 +734,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         state_var = self._state_variable("AVT", "A_ARG_TYPE_SeekMode")
         if action is None or state_var is None:
             return False
-
-        seek_modes = [mode.lower().strip() for mode in state_var.allowed_values]
-        return mode.lower() in seek_modes
+        return mode.lower() in state_var.normalized_allowed_values
 
     @property
     def has_seek_abs_time(self) -> bool:
@@ -1035,9 +1033,9 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if state_var is None:
             return play_modes
 
-        for allowed_value in state_var.allowed_values:
+        for normalized_allowed_value in state_var.normalized_allowed_values:
             try:
-                mode = PlayMode[allowed_value.strip().upper()]
+                mode = PlayMode[normalized_allowed_value.upper()]
             except KeyError:
                 # Unknown mode, don't report it as valid
                 continue
