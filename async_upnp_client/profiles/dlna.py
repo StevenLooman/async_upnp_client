@@ -1030,7 +1030,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
         for normalized_allowed_value in state_var.normalized_allowed_values:
             try:
-                mode = PlayMode[normalized_allowed_value]
+                mode = PlayMode[normalized_allowed_value.upper()]
             except KeyError:
                 # Unknown mode, don't report it as valid
                 continue
