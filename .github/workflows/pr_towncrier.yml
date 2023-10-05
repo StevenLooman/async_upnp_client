@@ -1,0 +1,18 @@
+name: Pull Request requires towncrier file
+
+on:
+  - pull_request
+
+jobs:
+  pr_require_towncrier_file:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Ensure towncrier file exists
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          if [ ! -f changes/${PR_NUMBER}.{feature,bugfix,doc,removal,misc} ]; then
+            echo "Towncrier file for #${PR_NUMBER} not found. Please add a changes file to the `changes/` directory. See README.rst for more information."
+            exit 1
+          fi
