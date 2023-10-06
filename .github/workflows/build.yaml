@@ -22,6 +22,12 @@ jobs:
         python -m pip install tox tox-gh-actions
     - name: Test with tox
       run: tox
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage-py311.xml
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   markdown_lint:
     name: Markdown Lint
