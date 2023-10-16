@@ -341,7 +341,7 @@ class AiohttpNotifyServer(UpnpNotifyServer):
 
     @property
     def listen_ip(self) -> IPvXAddress:
-        """Get listenting IP Address."""
+        """Get listening IP Address."""
         return ip_address(self._source[0])
 
     @property
