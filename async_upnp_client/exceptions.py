@@ -117,7 +117,7 @@ class UpnpActionResponseError(UpnpActionError, UpnpResponseError):
     actual details in the response body as a SOAP Fault.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         *args: Any,
         status: int,
