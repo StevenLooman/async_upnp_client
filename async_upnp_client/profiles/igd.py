@@ -148,6 +148,7 @@ class IgdDevice(UpnpProfileDevice):
         },
         "WANIPC": {
             "urn:schemas-upnp-org:service:WANIPConnection:1",
+            "urn:schemas-upnp-org:service:WANIPConnection:2",
         },
         "WANCIC": {
             "urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1",
