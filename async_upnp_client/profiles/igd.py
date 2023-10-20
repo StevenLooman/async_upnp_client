@@ -187,6 +187,8 @@ class IgdDevice(UpnpProfileDevice):
             action = self._action(service_name, action_name)
             if action is not None:
                 return action
+
+        _LOGGER.debug("Could not find %s/%s", service_names, action_name)
         return None
 
     async def async_get_total_bytes_received(self) -> Optional[int]:
