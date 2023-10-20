@@ -1,3 +1,18 @@
+async_upnp_client 0.36.2 (2023-10-20)
+=====================================
+
+Bugfixes
+--------
+
+- Support service WANIPConnection:2 in IGD profile (#206)
+
+
+Misc
+----
+
+- #203, #205, #207
+
+
 async_upnp_client 0.36.1 (2023-09-26)
 =====================================
 
