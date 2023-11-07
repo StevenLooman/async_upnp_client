@@ -1,0 +1,1 @@
+No need to handle None values in IGD add_port_mapping/delete_port_mapping (#208, @JurgenR)

@@ -412,14 +412,14 @@ class IgdDevice(UpnpProfileDevice):
             return
 
         await action.async_call(
-            NewRemoteHost=remote_host.exploded if remote_host else "",
+            NewRemoteHost=remote_host.exploded,
             NewExternalPort=external_port,
             NewProtocol=protocol,
             NewInternalPort=internal_port,
             NewInternalClient=internal_client.exploded,
             NewEnabled=enabled,
             NewPortMappingDescription=description,
-            NewLeaseDuration=int(lease_duration.seconds) if lease_duration else 0,
+            NewLeaseDuration=int(lease_duration.seconds),
         )
 
     async def async_delete_port_mapping(
@@ -443,7 +443,7 @@ class IgdDevice(UpnpProfileDevice):
             return
 
         await action.async_call(
-            NewRemoteHost=remote_host.exploded if remote_host else "",
+            NewRemoteHost=remote_host.exploded,
             NewExternalPort=external_port,
             NewProtocol=protocol,
         )
