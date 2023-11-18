@@ -1,4 +1,4 @@
-name: Tox
+name: Build
 
 on:
   - push
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -23,9 +23,9 @@ jobs:
       run: tox
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v3
-      if: ${{ hashFiles('coverage-py311.xml') != '' }}
+      if: ${{ hashFiles('coverage-py312.xml') != '' }}
       with:
-        files: coverage-py311.xml
+        files: coverage-py312.xml
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
