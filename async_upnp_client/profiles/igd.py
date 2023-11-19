@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from ipaddress import IPv4Address
-from typing import List, NamedTuple, Optional, Sequence, Union
+from typing import List, NamedTuple, Optional, Sequence, Union, cast
 
 from async_upnp_client.client import UpnpAction, UpnpDevice
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -74,26 +74,26 @@ class TrafficCounterState(NamedTuple):
     """Traffic state."""
 
     timestamp: datetime
-    bytes_received: Union[None, Exception, int]
-    bytes_sent: Union[None, Exception, int]
-    packets_received: Union[None, Exception, int]
-    packets_sent: Union[None, Exception, int]
-    bytes_received_original: Union[None, Exception, int]
-    bytes_sent_original: Union[None, Exception, int]
-    packets_received_original: Union[None, Exception, int]
-    packets_sent_original: Union[None, Exception, int]
+    bytes_received: Union[None, BaseException, int]
+    bytes_sent: Union[None, BaseException, int]
+    packets_received: Union[None, BaseException, int]
+    packets_sent: Union[None, BaseException, int]
+    bytes_received_original: Union[None, BaseException, int]
+    bytes_sent_original: Union[None, BaseException, int]
+    packets_received_original: Union[None, BaseException, int]
+    packets_sent_original: Union[None, BaseException, int]
 
 
 class IgdState(NamedTuple):
     """IGD state."""
 
     timestamp: datetime
-    bytes_received: Union[None, Exception, int]
-    bytes_sent: Union[None, Exception, int]
-    packets_received: Union[None, Exception, int]
-    packets_sent: Union[None, Exception, int]
-    status_info: Union[None, Exception, StatusInfo]
-    external_ip_address: Union[str, Exception, None]
+    bytes_received: Union[None, BaseException, int]
+    bytes_sent: Union[None, BaseException, int]
+    packets_received: Union[None, BaseException, int]
+    packets_sent: Union[None, BaseException, int]
+    status_info: Union[None, BaseException, StatusInfo]
+    external_ip_address: Union[str, BaseException, None]
 
     # Derived values.
     kibibytes_per_sec_received: Union[None, float]
@@ -105,16 +105,16 @@ class IgdState(NamedTuple):
 def _derive_value_per_second(
     value_name: str,
     current_timestamp: datetime,
-    current_value: Union[None, Exception, int],
-    last_timestamp: Union[None, Exception, datetime],
-    last_value: Union[None, Exception, int],
+    current_value: Union[None, BaseException, int],
+    last_timestamp: Union[None, BaseException, datetime],
+    last_value: Union[None, BaseException, int],
 ) -> Union[None, float]:
     """Calculate average based on current and last value."""
     if (
         last_timestamp is None
-        or isinstance(current_value, Exception)
+        or isinstance(current_value, BaseException)
         or current_value is None
-        or isinstance(last_value, Exception)
+        or isinstance(last_value, BaseException)
         or last_value is None
     ):
         return None
@@ -684,10 +684,13 @@ class IgdDevice(UpnpProfileDevice):
             packets_sent_original=values[3],
         )
 
-        non_exceptions = [value for value in values if not isinstance(value, Exception)]
+        non_exceptions = [
+            value for value in values if not isinstance(value, BaseException)
+        ]
         if not non_exceptions:
             # Raise any exception to indicate something was very wrong.
-            raise values[0]
+            exc = cast(BaseException, values[0])
+            raise exc
 
         return IgdState(
             timestamp=timestamp,

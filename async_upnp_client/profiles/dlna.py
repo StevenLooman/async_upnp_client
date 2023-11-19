@@ -25,6 +25,7 @@ from typing import (
     Union,
 )
 from xml.sax.handler import ContentHandler, ErrorHandler
+from xml.sax.xmlreader import AttributesImpl
 
 from defusedxml.sax import parseString
 from didl_lite import didl_lite
@@ -129,15 +130,15 @@ class DlnaDmrEventContentHandler(ContentHandler):
         """Initialize."""
         super().__init__()
         self.changes: MutableMapping[str, MutableMapping[str, Any]] = {}
-        self._current_instance = None
+        self._current_instance: Optional[str] = None
 
-    def startElement(self, name: str, attrs: Mapping) -> None:
+    def startElement(self, name: str, attrs: AttributesImpl) -> None:
         """Handle startElement."""
         if "val" not in attrs:
             return
 
         if name == "InstanceID":
-            self._current_instance = attrs.get("val", "0")
+            self._current_instance = attrs.get("val", "0")  # type: ignore[no-untyped-call]
         else:
             current_instance = self._current_instance or "0"  # safety
 
@@ -145,7 +146,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
                 self.changes[current_instance] = {}
 
             # If channel is given, we're only interested in the Master channel.
-            if attrs.get("channel") not in (None, "Master"):
+            if attrs.get("channel") not in (None, "Master"):  # type: ignore[no-untyped-call]
                 return
 
             # Strip namespace prefix.
@@ -153,7 +154,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
                 index = name.find(":") + 1
                 name = name[index:]
 
-            self.changes[current_instance][name] = attrs.get("val")
+            self.changes[current_instance][name] = attrs.get("val")  # type: ignore[no-untyped-call]
 
     def endElement(self, name: str) -> None:
         """Handle endElement."""
