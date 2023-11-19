@@ -25,6 +25,7 @@ from typing import (
     Union,
 )
 from xml.sax.handler import ContentHandler, ErrorHandler
+from xml.sax.xmlreader import AttributesImpl
 
 from defusedxml.sax import parseString
 from didl_lite import didl_lite
@@ -129,9 +130,9 @@ class DlnaDmrEventContentHandler(ContentHandler):
         """Initialize."""
         super().__init__()
         self.changes: MutableMapping[str, MutableMapping[str, Any]] = {}
-        self._current_instance = None
+        self._current_instance: Optional[str] = None
 
-    def startElement(self, name: str, attrs: Mapping) -> None:
+    def startElement(self, name: str, attrs: AttributesImpl) -> None:
         """Handle startElement."""
         if "val" not in attrs:
             return

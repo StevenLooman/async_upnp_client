@@ -12,7 +12,7 @@ repos:
     - id: trailing-whitespace
       exclude: setup.cfg
   - repo: https://github.com/psf/black
-    rev: '23.9.1'
+    rev: '23.11.0'
     hooks:
       - id: black
         args:
@@ -37,11 +37,11 @@ repos:
           - pydocstyle~=6.3.0
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/PyCQA/pylint
-    rev: 'v3.0.1'
+    rev: 'v3.0.2'
     hooks:
       - id: pylint
         additional_dependencies:
-          - pytest~=7.4.2
+          - pytest~=7.4.3
           - voluptuous~=0.12.1
           - aiohttp~=3.9.0
           - python-didl-lite~=1.3.2
@@ -57,12 +57,12 @@ repos:
           - --profile=black
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.6.0'
+    rev: 'v1.7.0'
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
         additional_dependencies:
           - aiohttp~=3.9.0
-          - pytest~=7.4.2
+          - pytest~=7.4.3
           - pytest-asyncio~=0.21.1
         files: ^(async_upnp_client|tests)/.+\.py$
