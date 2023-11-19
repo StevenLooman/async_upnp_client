@@ -138,7 +138,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
             return
 
         if name == "InstanceID":
-            self._current_instance = attrs.get("val", "0")  # type: ignore[no-untyped-call]
+            self._current_instance = attrs.get("val", "0")
         else:
             current_instance = self._current_instance or "0"  # safety
 
@@ -146,7 +146,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
                 self.changes[current_instance] = {}
 
             # If channel is given, we're only interested in the Master channel.
-            if attrs.get("channel") not in (None, "Master"):  # type: ignore[no-untyped-call]
+            if attrs.get("channel") not in (None, "Master"):
                 return
 
             # Strip namespace prefix.
@@ -154,7 +154,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
                 index = name.find(":") + 1
                 name = name[index:]
 
-            self.changes[current_instance][name] = attrs.get("val")  # type: ignore[no-untyped-call]
+            self.changes[current_instance][name] = attrs.get("val")
 
     def endElement(self, name: str) -> None:
         """Handle endElement."""
