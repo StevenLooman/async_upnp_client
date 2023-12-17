@@ -1,3 +1,18 @@
+async_upnp_client 0.37.0 (2023-12-17)
+=====================================
+
+Bugfixes
+--------
+
+- No need to handle None values in IGD add_port_mapping/delete_port_mapping (#208, @JurgenR) (#209)
+
+
+Misc
+----
+
+- #204, #210, #211, #212, #213
+
+
 async_upnp_client 0.36.2 (2023-10-20)
 =====================================
 
