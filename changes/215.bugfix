@@ -1,0 +1,1 @@
+Prevent error when album_art_uri is `None` (@darrynlowe)
