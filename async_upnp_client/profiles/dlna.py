@@ -1195,9 +1195,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         for item in items:
             # Some players use Item.albumArtURI,
             # though not found in the UPnP-av-ConnectionManager-v1-Service spec.
-            if hasattr(item, "album_art_uri"):
-                if item.album_art_uri is not None:
-                    return absolute_url(device_url, item.album_art_uri)
+            if hasattr(item, "album_art_uri") and item.album_art_uri is not None:
+                return absolute_url(device_url, item.album_art_uri)
 
             for res in item.resources:
                 protocol_info = res.protocol_info or ""
