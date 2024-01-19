@@ -1,3 +1,12 @@
+async_upnp_client 0.38.1 (2024-01-19)
+=====================================
+
+Bugfixes
+--------
+
+- Prevent error when album_art_uri is `None` (@darrynlowe) (#215)
+
+
 async_upnp_client 0.38.0 (2023-12-17)
 =====================================
 
