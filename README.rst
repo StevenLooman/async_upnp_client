@@ -108,10 +108,8 @@ Steps for releasing:
 - Checkout tag: ``git checkout <version>``
 - Build: ``rm -rf build dist && python setup.py build sdist``
 - Upload using twine: ``twine upload dist/*``
-- Switch to master: ``git checkout master``
-- Merge tag to master: ``git merge <version>``
 - Switch to development: ``git checkout development``
-- Push to github: ``git push --all && git push --tags``
+- Push to github: ``git push && git push --tags``
 
 
 Profiling
