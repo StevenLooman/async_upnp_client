@@ -1,0 +1,1 @@
+Avoid calling lower to delete _source header for combined_headers (@bdraco)
