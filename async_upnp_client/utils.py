@@ -147,6 +147,11 @@ class CaseInsensitiveDict(abcMutableMapping):
                 for k in self._data
             }
 
+    def del_lower(self, lower_key: str) -> None:
+        """Delete a lower case key."""
+        del self._data[self._case_map[lower_key]]
+        del self._case_map[lower_key]
+
     def __setitem__(self, key: str, value: Any) -> None:
         """Set item."""
         lower_key = key.lower()
