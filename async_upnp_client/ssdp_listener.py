@@ -196,7 +196,7 @@ class SsdpDevice:
                 assert isinstance(search_headers, CaseInsensitiveDict)
                 assert isinstance(advertisement_headers, CaseInsensitiveDict)
             header_dict = search_headers.combine(advertisement_headers)
-            del header_dict["_source"]
+            header_dict.del_lower("_source")
             return header_dict
         if search_headers is not _SENTINEL:
             if TYPE_CHECKING:
