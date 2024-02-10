@@ -232,6 +232,13 @@ def _lower_split_commas(input_: str) -> Set[str]:
     return {a.lower() for a in split_commas(input_)}
 
 
+@lru_cache
+def _cached_from_xml_string(
+    xml: str,
+) -> List[Union[didl_lite.DidlObject, didl_lite.Descriptor]]:
+    return didl_lite.from_xml_string(xml, strict=False)
+
+
 class ConnectionManagerMixin(UpnpProfileDevice):
     """Mix-in to support ConnectionManager actions and state variables."""
 
@@ -1075,7 +1082,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             self._current_track_meta_data = None
             return
 
-        items = didl_lite.from_xml_string(xml, strict=False)
+        items = _cached_from_xml_string(xml, strict=False)
         if not items:
             self._current_track_meta_data = None
             return
@@ -1187,7 +1194,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if not xml or xml == "NOT_IMPLEMENTED":
             return None
 
-        items = didl_lite.from_xml_string(xml, strict=False)
+        items = _cached_from_xml_string(xml, strict=False)
         if not items:
             return None
 
@@ -1258,7 +1265,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             self._av_transport_uri_meta_data = None
             return
 
-        items = didl_lite.from_xml_string(xml, strict=False)
+        items = _cached_from_xml_string(xml, strict=False)
         if not items:
             self._av_transport_uri_meta_data = None
             return
