@@ -1082,7 +1082,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             self._current_track_meta_data = None
             return
 
-        items = _cached_from_xml_string(xml, strict=False)
+        items = _cached_from_xml_string(xml)
         if not items:
             self._current_track_meta_data = None
             return
@@ -1194,7 +1194,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if not xml or xml == "NOT_IMPLEMENTED":
             return None
 
-        items = _cached_from_xml_string(xml, strict=False)
+        items = _cached_from_xml_string(xml)
         if not items:
             return None
 
@@ -1265,7 +1265,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             self._av_transport_uri_meta_data = None
             return
 
-        items = _cached_from_xml_string(xml, strict=False)
+        items = _cached_from_xml_string(xml)
         if not items:
             self._av_transport_uri_meta_data = None
             return
