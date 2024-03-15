@@ -721,9 +721,16 @@ class UpnpAction:
         # pylint: disable=unused-argument
         try:
             xml = DET.fromstring(response_body.rstrip(" \t\r\n\0"))
-        except ET.ParseError as err:
-            _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
-            raise UpnpXmlParseError(err) from err
+        except ET.ParseError:
+            import re
+            try:
+                # remove extra unused declaration causing error
+                # e.g from xmlns:u0= to xmlns:u=
+                modified_response_body = re.sub(r'xmlns:u\d+=', 'xmlns:u=', response_body)
+                xml = DET.fromstring(modified_response_body.rstrip(" \t\r\n\0"))
+            except ET.ParseError as err:
+                _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
+                raise UpnpXmlParseError(err) from err
 
         # Check if a SOAP fault occurred. It should have been caught earlier, by
         # the device sending an HTTP 500 status, but not all devices do.
