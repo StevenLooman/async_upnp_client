@@ -1,77 +1,107 @@
 #!/usr/bin/env python3
+"""Example of adding and deleting a port mapping."""
+
+import asyncio
+import ipaddress
+import sys
+from datetime import timedelta
+from typing import cast
+
 from async_upnp_client.aiohttp import AiohttpRequester
-from async_upnp_client.event_handler import UpnpEventHandler
-from async_upnp_client.client import UpnpDevice
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.profiles.igd import IgdDevice
-from async_upnp_client.search import async_search
-from typing import Optional
-from async_upnp_client.ssdp import SSDP_ST_ROOTDEVICE
-from async_upnp_client.utils import get_local_ip
-from datetime import timedelta
-import asyncio
-import sys
-import ipaddress
+from async_upnp_client.utils import CaseInsensitiveDict, get_local_ip
+
+SOURCE = ("0.0.0.0", 0)
 
 
-async def build_device(search_target: str) -> UpnpDevice:
-    """Find and construct device."""
-    location: Optional[str] = None
-    async def callback(headers) -> None:
-        """Search callback."""
-        nonlocal location
-        location = headers['location']
-
+async def discover_igd_devices() -> set[CaseInsensitiveDict]:
+    """Discover IGD devices."""
     # Do the search, this blocks for timeout (4 seconds, default).
-    await async_search(callback, search_target=search_target)
-
-    if location:
-        requester = AiohttpRequester()
-        factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device(description_url=location)
-        return device
-
-async def async_add() -> None:
-    """Add port mapping."""
-    device = await build_device(search_target=SSDP_ST_ROOTDEVICE)
-    if not device:
+    discoveries = await IgdDevice.async_search(source=SOURCE)
+    if not discoveries:
         print("Could not find device")
         sys.exit(1)
-    igd_device = IgdDevice(device, UpnpEventHandler)
-    remote_host = ipaddress.ip_address(await igd_device.async_get_external_ip_address())
+
+    return discoveries
+
+
+async def build_igd_device(discovery: CaseInsensitiveDict) -> IgdDevice:
+    """Find and construct device."""
+    location = discovery["location"]
+    requester = AiohttpRequester()
+    factory = UpnpFactory(requester, non_strict=True)
+    device = await factory.async_create_device(description_url=location)
+    return IgdDevice(device, None)
+
+
+async def async_add_port_mapping(igd_device: IgdDevice) -> None:
+    """Add port mapping."""
+    external_ip_address = await igd_device.async_get_external_ip_address()
+    if not external_ip_address:
+        print("Could not get external IP address")
+        sys.exit(1)
+
+    remote_host = ipaddress.ip_address(external_ip_address)
+    remote_host_ipv4 = cast(ipaddress.IPv4Address, remote_host)
     local_ip = ipaddress.ip_address(get_local_ip())
+    local_ip_ipv4 = cast(ipaddress.IPv4Address, local_ip)
+    # Change `enabled` to False to disable port mapping.
+    # NB: This does not delete the port mapping.
+    enabled = True
+    mapping_name = "Bombsquad"
     await igd_device.async_add_port_mapping(
-        remote_host =remote_host,
+        remote_host=remote_host_ipv4,
+        external_port=43210,
+        internal_client=local_ip_ipv4,
+        internal_port=43210,
+        protocol="UDP",
+        enabled=enabled,
+        description=mapping_name,
+        lease_duration=timedelta(seconds=7200),
+    )  # Time in secs
+
+
+async def async_del_port_mapping(igd_device: IgdDevice) -> None:
+    """Delete port mapping."""
+    external_ip_address = await igd_device.async_get_external_ip_address()
+    if not external_ip_address:
+        print("Could not get external IP address")
+        sys.exit(1)
+
+    remote_host = ipaddress.ip_address(external_ip_address)
+    remote_host_ipv4 = cast(ipaddress.IPv4Address, remote_host)
+    await igd_device.async_delete_port_mapping(
+        remote_host=remote_host_ipv4,
         external_port=43210,
         protocol="UDP",
-        internal_port=43210,
-        internal_client=local_ip,
-        enabled=True, #  Change to False to disable port mapping(NB - This does not delete the port mapping)
-        description="Bombsquad", # Name of the port mapping
-        lease_duration=timedelta(seconds=7200),) # Time in secs
+    )
 
-async def async_del() -> None:
-    """Delete port mapping."""
-    
-    device = await build_device(search_target=SSDP_ST_ROOTDEVICE)
-    if not device:
-        print("Could not find device")
-        sys.exit(1)
-    igd_device = IgdDevice(device, UpnpEventHandler)
-    remote_host = ipaddress.ip_address(await igd_device.async_get_external_ip_address())
-    
-    await igd_device.async_delete_port_mapping(
-        remote_host =remote_host,
-        external_port=43210,
-        protocol="UDP",)
-    
+
+async def async_main() -> None:
+    """Async main."""
+    discoveries = await discover_igd_devices()
+    print(f"Discoveries: {discoveries}")
+    discovery = list(discoveries)[0]
+    print(f"Using device at location: {discovery['location']}")
+    igd_device = await build_igd_device(discovery)
+
+    print("Creating port mapping")
+    await async_add_port_mapping(igd_device)
+
+    await asyncio.sleep(60)
+
+    print("Deleting port mapping")
+    await async_del_port_mapping(igd_device)
+
 
 def main() -> None:
+    """Main."""
     try:
-        asyncio.run(async_add()) # Change to async_del() to delete port mapping
+        asyncio.run(async_main())
     except KeyboardInterrupt:
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
