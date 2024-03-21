@@ -63,6 +63,7 @@ STATE_VARIABLE_TYPE_MAPPING: Mapping[str, Mapping[str, Callable]] = {
     "float": {"type": float, "in": float, "out": str},
     "char": {"type": str, "in": str, "out": str},
     "string": {"type": str, "in": str, "out": str},
+    "xml": {"type": ET.Element, "in": ET.Element, "out": lambda tree: tree},
     "boolean": {
         "type": bool,
         "in": lambda s: s.lower() in ["1", "true", "yes"],

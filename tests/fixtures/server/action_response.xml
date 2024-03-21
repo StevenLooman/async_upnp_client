@@ -1,1 +1,2 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body><st:SetValuesResponse xmlns:st="urn:schemas-upnp-org:service:TestServerService:1"><TestVariable_str>foo</TestVariable_str><EventableTextVariable_ui4>0</EventableTextVariable_ui4></st:SetValuesResponse></s:Body></s:Envelope>
