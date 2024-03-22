@@ -564,13 +564,14 @@ class TestUpnpAction:
         """Test parsing response with invalid XML namespaces."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         device_url = "http://igd:1234/device.xml"
-        service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
+        service_type = "urn:schemas-upnp-org:service:WANIPConnection:1"
         test_action = "DeletePortMapping"
 
         # Test strict mode.
         factory = UpnpFactory(requester)
         device = await factory.async_create_device(device_url)
-        service = device.service(service_type)
+        service = device.find_service(service_type)
+        assert service is not None
         action = service.action(test_action)
 
         response = read_file("igd/action_WANPIPConnection_DeletePortMapping.xml")
@@ -582,8 +583,9 @@ class TestUpnpAction:
 
         # Test non-strict mode.
         factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device(link_service)
-        service = device.service(service_type)
+        device = await factory.async_create_device(device_url)
+        service = device.find_service(service_type)
+        assert service is not None
         action = service.action(test_action)
 
         try:
