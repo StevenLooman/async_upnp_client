@@ -12,6 +12,7 @@ from types import TracebackType
 from typing import (
     Any,
     Callable,
+    Dict,
     Generic,
     List,
     Mapping,
@@ -65,7 +66,7 @@ class DisableXmlNamespaces:
         def expat_parser_create(
             encoding: Optional[str] = None,
             namespace_separator: Optional[str] = None,
-            intern: Optional[dict[str, Any]] = None,
+            intern: Optional[Dict[str, Any]] = None,
         ) -> expat.XMLParserType:
             # pylint: disable=unused-argument
             return self._old_parser_create(encoding, None, intern)
