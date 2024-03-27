@@ -531,14 +531,14 @@ class TestUpnpAction:
 
     @pytest.mark.asyncio
     async def test_unknown_out_argument(self) -> None:
-        """Test calling an actino and handling an unknown out-argument."""
+        """Test calling an action and handling an unknown out-argument."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        link_service = "http://dlna_dmr:1234/device.xml"
+        device_url = "http://dlna_dmr:1234/device.xml"
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
         test_action = "GetVolume"
 
         factory = UpnpFactory(requester)
-        device = await factory.async_create_device(link_service)
+        device = await factory.async_create_device(device_url)
         service = device.service(service_type)
         action = service.action(test_action)
 
@@ -550,8 +550,42 @@ class TestUpnpAction:
             pass
 
         factory = UpnpFactory(requester, non_strict=True)
-        device = await factory.async_create_device(link_service)
+        device = await factory.async_create_device(device_url)
         service = device.service(service_type)
+        action = service.action(test_action)
+
+        try:
+            action.parse_response(service_type, {}, response)
+        except UpnpError:
+            assert False
+
+    @pytest.mark.asyncio
+    async def test_response_invalid_xml_namespaces(self) -> None:
+        """Test parsing response with invalid XML namespaces."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        device_url = "http://igd:1234/device.xml"
+        service_type = "urn:schemas-upnp-org:service:WANIPConnection:1"
+        test_action = "DeletePortMapping"
+
+        # Test strict mode.
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device(device_url)
+        service = device.find_service(service_type)
+        assert service is not None
+        action = service.action(test_action)
+
+        response = read_file("igd/action_WANPIPConnection_DeletePortMapping.xml")
+        try:
+            action.parse_response(service_type, {}, response)
+            assert False
+        except UpnpError:
+            pass
+
+        # Test non-strict mode.
+        factory = UpnpFactory(requester, non_strict=True)
+        device = await factory.async_create_device(device_url)
+        service = device.find_service(service_type)
+        assert service is not None
         action = service.action(test_action)
 
         try:

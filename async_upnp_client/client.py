@@ -3,13 +3,16 @@
 
 # pylint: disable=too-many-lines
 
+import io
 import logging
 import urllib.parse
 from abc import ABC
 from datetime import datetime, timezone
+from types import TracebackType
 from typing import (
     Any,
     Callable,
+    Dict,
     Generic,
     List,
     Mapping,
@@ -17,9 +20,11 @@ from typing import (
     Sequence,
     Set,
     Tuple,
+    Type,
     TypeVar,
 )
 from xml.etree import ElementTree as ET
+from xml.parsers import expat
 from xml.sax.saxutils import escape
 
 import defusedxml.ElementTree as DET
@@ -48,6 +53,34 @@ _LOGGER = logging.getLogger(__name__)
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
+
+
+class DisableXmlNamespaces:
+    """Context manager to disable XML namespace handling."""
+
+    def __enter__(self) -> None:
+        """Enter context manager."""
+        # pylint: disable=attribute-defined-outside-init
+        self._old_parser_create = expat.ParserCreate
+
+        def expat_parser_create(
+            encoding: Optional[str] = None,
+            namespace_separator: Optional[str] = None,
+            intern: Optional[Dict[str, Any]] = None,
+        ) -> expat.XMLParserType:
+            # pylint: disable=unused-argument
+            return self._old_parser_create(encoding, None, intern)
+
+        expat.ParserCreate = expat_parser_create
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        """Exit context manager."""
+        expat.ParserCreate = self._old_parser_create
 
 
 class UpnpRequester(ABC):
@@ -646,7 +679,7 @@ class UpnpAction:
             except ET.ParseError:
                 pass
             else:
-                _parse_fault(self, xml, status_code, response_headers)
+                self._parse_fault(xml, status_code, response_headers)
 
             # Couldn't parse body for fault details, raise generic response error
             _LOGGER.debug(
@@ -719,15 +752,34 @@ class UpnpAction:
     ) -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
+        stripped_response_body = response_body.rstrip(" \t\r\n\0")
         try:
-            xml = DET.fromstring(response_body.rstrip(" \t\r\n\0"))
+            xml = DET.fromstring(stripped_response_body)
         except ET.ParseError as err:
-            _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
-            raise UpnpXmlParseError(err) from err
+            if self._non_strict:
+                # Try again ignoring namespaces.
+                try:
+                    with DisableXmlNamespaces():
+                        parser = DET.XMLParser()
+
+                    source = io.StringIO(stripped_response_body)
+                    it = DET.iterparse(source, parser=parser)
+                    for _, el in it:
+                        _, _, el.tag = el.tag.rpartition(":")  # Strip namespace.
+                    it_root = it.root  # type: ET.Element
+                    xml = it_root
+                except ET.ParseError as err2:
+                    _LOGGER.debug(
+                        "Unable to parse XML: %s\nXML:\n%s", err2, response_body
+                    )
+                    raise UpnpXmlParseError(err2) from err2
+            else:
+                _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
+                raise UpnpXmlParseError(err) from err
 
         # Check if a SOAP fault occurred. It should have been caught earlier, by
         # the device sending an HTTP 500 status, but not all devices do.
-        _parse_fault(self, xml)
+        self._parse_fault(xml)
 
         try:
             return self._parse_response_args(service_type, xml)
@@ -744,9 +796,15 @@ class UpnpAction:
         response = xml.find(query, NS)
 
         # If no response was found, do a search ignoring namespaces when in non-strict mode.
-        if response is None and self._non_strict:
-            query = f".//{{*}}{self.name}Response"
-            response = xml.find(query, NS)
+        if self._non_strict:
+            if response is None:
+                query = f".//{{*}}{self.name}Response"
+                response = xml.find(query, NS)
+
+            # Perhaps namespaces were removed/ignored, try searching again.
+            if response is None:
+                query = ".//*Response"
+                response = xml.find(query)
 
         if response is None:
             xml_str = ET.tostring(xml, encoding="unicode")
@@ -770,50 +828,71 @@ class UpnpAction:
 
         return args
 
+    def _parse_fault(
+        self,
+        xml: ET.Element,
+        status_code: Optional[int] = None,
+        response_headers: Optional[Mapping] = None,
+    ) -> None:
+        """Parse SOAP fault and raise appropriate exception."""
+        # pylint: disable=too-many-branches
+        fault = xml.find(".//soap_envelope:Body/soap_envelope:Fault", NS)
+        if self._non_strict:
+            if fault is None:
+                fault = xml.find(".//{{*}}Body/{{*}}Fault", NS)
 
-def _parse_fault(
-    action: UpnpAction,
-    xml: ET.Element,
-    status_code: Optional[int] = None,
-    response_headers: Optional[Mapping] = None,
-) -> None:
-    """Parse SOAP fault and raise appropriate exception."""
-    fault = xml.find(".//soap_envelope:Body/soap_envelope:Fault", NS)
-    if not fault:
-        return
+            if fault is None:
+                fault = xml.find(".//{{*}}Body/{{*}}Fault")
 
-    error_code_str = fault.findtext(".//control:errorCode", None, NS)
-    if error_code_str:
-        error_code: Optional[int] = int(error_code_str)
-    else:
-        error_code = None
-    error_desc = fault.findtext(".//control:errorDescription", None, NS)
-    _LOGGER.debug(
-        "Error calling action: %s, error code: %s, error desc: %s",
-        action.name,
-        error_code,
-        error_desc,
-    )
+        if fault is None:
+            return
 
-    if status_code is not None:
-        raise UpnpActionResponseError(
-            error_code=error_code,
-            error_desc=error_desc,
-            status=status_code,
-            headers=response_headers,
-            message=f"Error during async_call(), "
-            f"action: {action.name}, "
-            f"status: {status_code}, "
-            f"upnp error: {error_code} ({error_desc})",
+        error_code_str = fault.findtext(".//control:errorCode", None, NS)
+        if self._non_strict:
+            if not error_code_str:
+                error_code_str = fault.findtext(".//{{*}}:errorCode", None, NS)
+
+            if not error_code_str:
+                error_code_str = fault.findtext(".//errorCode")
+
+        if error_code_str:
+            error_code: Optional[int] = int(error_code_str)
+        else:
+            error_code = None
+
+        error_desc = fault.findtext(".//control:errorDescription", None, NS)
+        if self._non_strict:
+            if not error_desc:
+                error_desc = fault.findtext(".//{{*}}:errorDescription", None, NS)
+
+            if not error_desc:
+                error_desc = fault.findtext(".//errorDescription")
+        _LOGGER.debug(
+            "Error calling action: %s, error code: %s, error desc: %s",
+            self.name,
+            error_code,
+            error_desc,
         )
 
-    raise UpnpActionError(
-        error_code=error_code,
-        error_desc=error_desc,
-        message=f"Error during async_call(), "
-        f"action: {action.name}, "
-        f"upnp error: {error_code} ({error_desc})",
-    )
+        if status_code is not None:
+            raise UpnpActionResponseError(
+                error_code=error_code,
+                error_desc=error_desc,
+                status=status_code,
+                headers=response_headers,
+                message=f"Error during async_call(), "
+                f"action: {self.name}, "
+                f"status: {status_code}, "
+                f"upnp error: {error_code} ({error_desc})",
+            )
+
+        raise UpnpActionError(
+            error_code=error_code,
+            error_desc=error_desc,
+            message=f"Error during async_call(), "
+            f"action: {self.name}, "
+            f"upnp error: {error_code} ({error_desc})",
+        )
 
 
 T = TypeVar("T")  # pylint: disable=invalid-name
