@@ -4,8 +4,9 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
+from enum import Enum
 from ipaddress import IPv4Address
-from typing import List, NamedTuple, Optional, Sequence, Union, cast
+from typing import AbstractSet, List, NamedTuple, Optional, Sequence, Union, cast
 
 from async_upnp_client.client import UpnpAction, UpnpDevice
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -93,13 +94,34 @@ class IgdState(NamedTuple):
     packets_received: Union[None, BaseException, int]
     packets_sent: Union[None, BaseException, int]
     status_info: Union[None, BaseException, StatusInfo]
-    external_ip_address: Union[str, BaseException, None]
+    external_ip_address: Union[None, BaseException, str]
 
     # Derived values.
     kibibytes_per_sec_received: Union[None, float]
     kibibytes_per_sec_sent: Union[None, float]
     packets_per_sec_received: Union[None, float]
     packets_per_sec_sent: Union[None, float]
+
+
+class IgdStateItem(Enum):
+    """
+    IGD state item.
+
+    Used to specify what to request from the device.
+    """
+
+    BYTES_RECEIVED = 1
+    BYTES_SENT = 2
+    PACKETS_RECEIVED = 3
+    PACKETS_SENT = 4
+
+    STATUS_INFO = 5
+    EXTERNAL_IP_ADDRESS = 6
+
+    KIBIBYTES_PER_SEC_RECEIVED = 11
+    KIBIBYTES_PER_SEC_SENT = 12
+    PACKETS_PER_SEC_RECEIVED = 13
+    PACKETS_PER_SEC_SENT = 14
 
 
 def _derive_value_per_second(
@@ -614,7 +636,7 @@ class IgdDevice(UpnpProfileDevice):
         await action.async_call(NewDefaultConnectionService=service)
 
     async def async_get_traffic_and_status_data(
-        self,
+        self, items: Optional[AbstractSet[IgdStateItem]] = None
     ) -> IgdState:
         """
         Get all traffic data at once, including derived data.
@@ -632,14 +654,42 @@ class IgdDevice(UpnpProfileDevice):
           * connection status
           * uptime
         """
+        items = items or {
+            IgdStateItem.BYTES_RECEIVED,
+            IgdStateItem.BYTES_SENT,
+            IgdStateItem.PACKETS_RECEIVED,
+            IgdStateItem.PACKETS_SENT,
+            IgdStateItem.STATUS_INFO,
+            IgdStateItem.EXTERNAL_IP_ADDRESS,
+        }
+
+        async def nop() -> None:
+            """Pass."""
+
         timestamp = datetime.now()
         values = await asyncio.gather(
-            self.async_get_total_bytes_received(),
-            self.async_get_total_bytes_sent(),
-            self.async_get_total_packets_received(),
-            self.async_get_total_packets_sent(),
-            self.async_get_status_info(),
-            self.async_get_external_ip_address(),
+            self.async_get_total_bytes_received()
+            if IgdStateItem.BYTES_RECEIVED in items
+            or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
+            else nop(),
+            self.async_get_total_bytes_sent()
+            if IgdStateItem.BYTES_SENT in items
+            or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
+            else nop(),
+            self.async_get_total_packets_received()
+            if IgdStateItem.PACKETS_RECEIVED in items
+            or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
+            else nop(),
+            self.async_get_total_packets_sent()
+            if IgdStateItem.PACKETS_SENT in items
+            or IgdStateItem.PACKETS_PER_SEC_SENT in items
+            else nop(),
+            self.async_get_status_info()
+            if IgdStateItem.STATUS_INFO in items
+            else nop(),
+            self.async_get_external_ip_address()
+            if IgdStateItem.EXTERNAL_IP_ADDRESS in items
+            else nop(),
             return_exceptions=True,
         )
 
@@ -684,6 +734,7 @@ class IgdDevice(UpnpProfileDevice):
             packets_sent_original=values[3],
         )
 
+        # Test if any of the calls were ok. If not, raise the exception.
         non_exceptions = [
             value for value in values if not isinstance(value, BaseException)
         ]
