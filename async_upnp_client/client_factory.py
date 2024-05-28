@@ -432,19 +432,7 @@ class UpnpFactory:
         request = self._on_pre_receive_device_spec(bare_request)
         bare_response = await self.requester.async_http_request(request)
         response = self._on_post_receive_device_spec(bare_response)
-
-        if response.status_code != 200:
-            raise UpnpResponseError(
-                status=response.status_code, headers=response.headers
-            )
-
-        description: str = response.body or ""
-        try:
-            element: ET.Element = DET.fromstring(description)
-            return element
-        except ET.ParseError as err:
-            _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, description)
-            raise UpnpXmlParseError(err) from err
+        return self._read_spec_from_reponse(response)
 
     async def _async_get_service_spec(self, url: str) -> ET.Element:
         """Get a url."""
@@ -452,7 +440,10 @@ class UpnpFactory:
         request = self._on_pre_receive_service_spec(bare_request)
         bare_response = await self.requester.async_http_request(request)
         response = self._on_post_receive_service_spec(bare_response)
+        return self._read_spec_from_reponse(response)
 
+    def _read_spec_from_reponse(self, response: HttpResponse) -> ET.Element:
+        """Read XML specification from response."""
         if response.status_code != 200:
             raise UpnpResponseError(
                 status=response.status_code, headers=response.headers
