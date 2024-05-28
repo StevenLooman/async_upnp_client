@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from ipaddress import IPv4Address
-from typing import List, NamedTuple, Optional, Sequence, Union, cast
+from typing import List, NamedTuple, Optional, Sequence, Set, Union, cast
 
 from async_upnp_client.client import UpnpAction, UpnpDevice
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -354,18 +354,22 @@ class IgdDevice(UpnpProfileDevice):
 
         result = await action.async_call(NewPortMappingIndex=port_mapping_index)
         return PortMappingEntry(
-            IPv4Address(result["NewRemoteHost"])
-            if result.get("NewRemoteHost")
-            else None,
+            (
+                IPv4Address(result["NewRemoteHost"])
+                if result.get("NewRemoteHost")
+                else None
+            ),
             result["NewExternalPort"],
             result["NewProtocol"],
             result["NewInternalPort"],
             IPv4Address(result["NewInternalClient"]),
             result["NewEnabled"],
             result["NewPortMappingDescription"],
-            timedelta(seconds=result["NewLeaseDuration"])
-            if result.get("NewLeaseDuration")
-            else None,
+            (
+                timedelta(seconds=result["NewLeaseDuration"])
+                if result.get("NewLeaseDuration")
+                else None
+            ),
         )
 
     async def async_get_specific_port_mapping_entry(
@@ -401,9 +405,11 @@ class IgdDevice(UpnpProfileDevice):
             IPv4Address(result["NewInternalClient"]),
             result["NewEnabled"],
             result["NewPortMappingDescription"],
-            timedelta(seconds=result["NewLeaseDuration"])
-            if result.get("NewLeaseDuration")
-            else None,
+            (
+                timedelta(seconds=result["NewLeaseDuration"])
+                if result.get("NewLeaseDuration")
+                else None
+            ),
         )
 
     async def async_add_port_mapping(
@@ -641,7 +647,7 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_traffic_and_status_data(
         self,
-        items: Optional[set[IgdStateItem]] = None,
+        items: Optional[Set[IgdStateItem]] = None,
         force_poll: bool = False,
     ) -> IgdState:
         """
@@ -694,30 +700,42 @@ class IgdDevice(UpnpProfileDevice):
 
         timestamp = datetime.now()
         values = await asyncio.gather(
-            self.async_get_total_bytes_received()
-            if IgdStateItem.BYTES_RECEIVED in items
-            or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
-            else nop(),
-            self.async_get_total_bytes_sent()
-            if IgdStateItem.BYTES_SENT in items
-            or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
-            else nop(),
-            self.async_get_total_packets_received()
-            if IgdStateItem.PACKETS_RECEIVED in items
-            or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
-            else nop(),
-            self.async_get_total_packets_sent()
-            if IgdStateItem.PACKETS_SENT in items
-            or IgdStateItem.PACKETS_PER_SEC_SENT in items
-            else nop(),
-            self.async_get_status_info()
-            if IgdStateItem.CONNECTION_STATUS in items
-            or IgdStateItem.LAST_CONNECTION_ERROR in items
-            or IgdStateItem.UPTIME in items
-            else nop(),
-            self.async_get_external_ip_address()
-            if IgdStateItem.EXTERNAL_IP_ADDRESS in items
-            else nop(),
+            (
+                self.async_get_total_bytes_received()
+                if IgdStateItem.BYTES_RECEIVED in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
+                else nop()
+            ),
+            (
+                self.async_get_total_bytes_sent()
+                if IgdStateItem.BYTES_SENT in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
+                else nop()
+            ),
+            (
+                self.async_get_total_packets_received()
+                if IgdStateItem.PACKETS_RECEIVED in items
+                or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
+                else nop()
+            ),
+            (
+                self.async_get_total_packets_sent()
+                if IgdStateItem.PACKETS_SENT in items
+                or IgdStateItem.PACKETS_PER_SEC_SENT in items
+                else nop()
+            ),
+            (
+                self.async_get_status_info()
+                if IgdStateItem.CONNECTION_STATUS in items
+                or IgdStateItem.LAST_CONNECTION_ERROR in items
+                or IgdStateItem.UPTIME in items
+                else nop()
+            ),
+            (
+                self.async_get_external_ip_address()
+                if IgdStateItem.EXTERNAL_IP_ADDRESS in items
+                else nop()
+            ),
             return_exceptions=True,
         )
 
@@ -781,12 +799,12 @@ class IgdDevice(UpnpProfileDevice):
             kibibytes_per_sec_sent=kibibytes_per_sec_sent,
             packets_per_sec_received=packets_per_sec_received,
             packets_per_sec_sent=packets_per_sec_sent,
-            connection_status=values[4].connection_status
-            if values[4]
-            else connection_status,
-            last_connection_error=values[4].last_connection_error
-            if values[4]
-            else None,
+            connection_status=(
+                values[4].connection_status if values[4] else connection_status
+            ),
+            last_connection_error=(
+                values[4].last_connection_error if values[4] else None
+            ),
             uptime=values[4].uptime if values[4] else None,
             external_ip_address=values[5] or external_ip_address,
         )
