@@ -61,10 +61,6 @@ subparser.add_argument(
     "service", nargs="+", help="service type or part or abbreviation"
 )
 subparser.add_argument(
-    "--bind",
-    help="ip to bind to, e.g., 192.168.0.10",
-)
-subparser.add_argument(
     "--nolastchange", action="store_true", help="Do not show LastChange events"
 )
 
