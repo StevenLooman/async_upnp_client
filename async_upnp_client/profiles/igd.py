@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from ipaddress import IPv4Address
-from typing import AbstractSet, List, NamedTuple, Optional, Sequence, Union, cast
+from typing import List, NamedTuple, Optional, Sequence, Union, cast
 
 from async_upnp_client.client import UpnpAction, UpnpDevice
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -93,7 +93,9 @@ class IgdState(NamedTuple):
     bytes_sent: Union[None, BaseException, int]
     packets_received: Union[None, BaseException, int]
     packets_sent: Union[None, BaseException, int]
-    status_info: Union[None, BaseException, StatusInfo]
+    connection_status: Union[None, BaseException, str]
+    last_connection_error: Union[None, BaseException, str]
+    uptime: Union[None, BaseException, int]
     external_ip_address: Union[None, BaseException, str]
 
     # Derived values.
@@ -115,8 +117,10 @@ class IgdStateItem(Enum):
     PACKETS_RECEIVED = 3
     PACKETS_SENT = 4
 
-    STATUS_INFO = 5
-    EXTERNAL_IP_ADDRESS = 6
+    CONNECTION_STATUS = 5
+    LAST_CONNECTION_ERROR = 6
+    UPTIME = 7
+    EXTERNAL_IP_ADDRESS = 8
 
     KIBIBYTES_PER_SEC_RECEIVED = 11
     KIBIBYTES_PER_SEC_SENT = 12
@@ -636,7 +640,9 @@ class IgdDevice(UpnpProfileDevice):
         await action.async_call(NewDefaultConnectionService=service)
 
     async def async_get_traffic_and_status_data(
-        self, items: Optional[AbstractSet[IgdStateItem]] = None
+        self,
+        items: Optional[set[IgdStateItem]] = None,
+        force_poll: bool = False,
     ) -> IgdState:
         """
         Get all traffic data at once, including derived data.
@@ -654,17 +660,37 @@ class IgdDevice(UpnpProfileDevice):
           * connection status
           * uptime
         """
+        # pylint: disable=too-many-locals
         items = items or {
             IgdStateItem.BYTES_RECEIVED,
             IgdStateItem.BYTES_SENT,
             IgdStateItem.PACKETS_RECEIVED,
             IgdStateItem.PACKETS_SENT,
-            IgdStateItem.STATUS_INFO,
+            IgdStateItem.CONNECTION_STATUS,
+            IgdStateItem.LAST_CONNECTION_ERROR,
+            IgdStateItem.UPTIME,
             IgdStateItem.EXTERNAL_IP_ADDRESS,
         }
 
         async def nop() -> None:
             """Pass."""
+
+        external_ip_address: Optional[str] = None
+        connection_status: Optional[str] = None
+        if not force_poll:
+            for service_type in ["WANIPC", "WANPPP"]:
+                if (service := self._service(service_type)) is not None:
+                    # Get ExternalIPAddress from state variables.
+                    if service.has_state_variable("ExternalIPAddress"):
+                        state_var = service.state_variable("ExternalIPAddress")
+                        if (external_ip_address := state_var.value) is not None:
+                            items.remove(IgdStateItem.EXTERNAL_IP_ADDRESS)
+
+                    # Get ConnectionStatus from state variables.
+                    if service.has_state_variable("ConnectionStatus"):
+                        state_var = service.state_variable("ConnectionStatus")
+                        if (connection_status := state_var.value) is not None:
+                            items.remove(IgdStateItem.CONNECTION_STATUS)
 
         timestamp = datetime.now()
         values = await asyncio.gather(
@@ -685,7 +711,9 @@ class IgdDevice(UpnpProfileDevice):
             or IgdStateItem.PACKETS_PER_SEC_SENT in items
             else nop(),
             self.async_get_status_info()
-            if IgdStateItem.STATUS_INFO in items
+            if IgdStateItem.CONNECTION_STATUS in items
+            or IgdStateItem.LAST_CONNECTION_ERROR in items
+            or IgdStateItem.UPTIME in items
             else nop(),
             self.async_get_external_ip_address()
             if IgdStateItem.EXTERNAL_IP_ADDRESS in items
@@ -753,6 +781,12 @@ class IgdDevice(UpnpProfileDevice):
             kibibytes_per_sec_sent=kibibytes_per_sec_sent,
             packets_per_sec_received=packets_per_sec_received,
             packets_per_sec_sent=packets_per_sec_sent,
-            status_info=values[4],
-            external_ip_address=values[5],
+            connection_status=values[4].connection_status
+            if values[4]
+            else connection_status,
+            last_connection_error=values[4].last_connection_error
+            if values[4]
+            else None,
+            uptime=values[4].uptime if values[4] else None,
+            external_ip_address=values[5] or external_ip_address,
         )
