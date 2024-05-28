@@ -265,7 +265,7 @@ async def subscribe(description_url: str, service_names: Any) -> None:
 
     # gather all wanted services
     if "*" in service_names:
-        service_names = device.services.keys()
+        service_names = [service.service_type for service in device.all_services]
 
     services = []
     for service_name in service_names:

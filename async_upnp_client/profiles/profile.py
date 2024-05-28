@@ -100,9 +100,8 @@ class UpnpProfileDevice:
 
         # Check that every service required by the subclass is declared by the device
         device_service_ids = {
-            service.service_id for service in profile_device.services.values()
+            service.service_id for service in profile_device.all_services
         }
-
         if not cls.SERVICE_IDS.issubset(device_service_ids):
             return False
 
@@ -347,7 +346,7 @@ class UpnpProfileDevice:
                 await self._async_resubscribe_services(now)
             else:
                 # Subscribe to services we are interested in
-                for service in self.profile_device.services.values():
+                for service in self.profile_device.all_services:
                     if not self._interesting_service(service):
                         continue
 
@@ -399,7 +398,7 @@ class UpnpProfileDevice:
 
     async def async_unsubscribe_services(self) -> None:
         """Unsubscribe from all of our subscribed services."""
-        # Delete list of subscriptions and cancel renewal before unsubcribing
+        # Delete list of subscriptions and cancel renewal before unsubscribing
         # to avoid unsub-resub race.
         sids = list(self._subscriptions)
         self._subscriptions.clear()
