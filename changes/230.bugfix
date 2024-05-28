@@ -1,0 +1,3 @@
+Fix subscribing to all services, for CLI and profile devices.
+
+Fixes only subscribing to top level services, when it should subscribe to services on embedded devices as well.
