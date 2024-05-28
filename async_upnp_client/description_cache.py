@@ -9,6 +9,7 @@ import aiohttp
 import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpRequester
+from async_upnp_client.const import HttpRequest
 from async_upnp_client.exceptions import UpnpResponseError
 from async_upnp_client.utils import etree_to_dict
 
@@ -51,6 +52,7 @@ class DescriptionCache:
         except Exception:  # pylint: disable=broad-except
             # If it fails, cache the failure so we do not keep trying over and over
             _LOGGER.exception("Failed to fetch description from: %s", location)
+
         return None
 
     def peek_description_dict(
@@ -105,12 +107,14 @@ class DescriptionCache:
         """Download a description from location."""
         try:
             for _ in range(2):
-                status, headers, body = await self._requester.async_http_request(
-                    "GET", location
-                )
-                if status != 200:
-                    raise UpnpResponseError(status=status, headers=headers)
-                return body
+                request = HttpRequest("GET", location, {}, None)
+                response = await self._requester.async_http_request(request)
+                if response.status_code != 200:
+                    raise UpnpResponseError(
+                        status=response.status_code, headers=response.headers
+                    )
+
+                return response.body
                 # Samsung Smart TV sometimes returns an empty document the
                 # first time. Retry once.
         except (aiohttp.ClientError, asyncio.TimeoutError) as err:

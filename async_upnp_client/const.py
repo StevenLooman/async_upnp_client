@@ -156,13 +156,6 @@ class ActionInfo(NamedTuple):
     xml: ET.Element
 
 
-class DescriptionSort(Enum):
-    """Specification sort."""
-
-    DEVICE_DESCRIPTION = 1
-    SERVICE_DESCRIPTION = 2
-
-
 @dataclass(frozen=True)
 class HttpRequest:
     """HTTP request."""

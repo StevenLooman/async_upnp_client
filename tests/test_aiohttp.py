@@ -1,4 +1,5 @@
 """Unit tests for aiohttp."""
+
 # pylint: disable=protected-access
 
 from unittest.mock import MagicMock, patch
@@ -10,6 +11,7 @@ from async_upnp_client.aiohttp import (
     AiohttpRequester,
     _fixed_host_header,
 )
+from async_upnp_client.const import HttpRequest
 from async_upnp_client.exceptions import UpnpCommunicationError
 
 from .conftest import RESPONSE_MAP, UpnpTestRequester
@@ -62,5 +64,6 @@ async def test_server_init() -> None:
 async def test_client_decode_error(_mock_request: MagicMock) -> None:
     """Test handling unicode decode error."""
     requester = AiohttpRequester()
+    request = HttpRequest("GET", "http://192.168.1.1/desc.xml", {}, None)
     with pytest.raises(UpnpCommunicationError):
-        await requester.async_http_request("GET", "http://192.168.1.1/desc.xml")
+        await requester.async_http_request(request)

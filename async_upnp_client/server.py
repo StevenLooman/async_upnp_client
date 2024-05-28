@@ -63,6 +63,7 @@ from async_upnp_client.const import (
     AddressTupleVXType,
     DeviceInfo,
     EventableStateVariableTypeInfo,
+    HttpRequest,
     NotificationSubType,
     ServiceInfo,
     StateVariableInfo,
@@ -409,7 +410,7 @@ class UpnpServerService(UpnpService):
             hdr["SEQ"] = str(sub.get_next_seq())
             tasks.append(
                 self.requester.async_http_request(
-                    "NOTIFY", sub.url, headers=hdr, body=message
+                    HttpRequest("NOTIFY", sub.url, headers=hdr, body=message)
                 )
             )
         await asyncio.gather(*tasks)
@@ -1013,9 +1014,9 @@ class UpnpXmlSerializer:
         arg_el = ET.Element("argument")
         ET.SubElement(arg_el, "name").text = argument.name
         ET.SubElement(arg_el, "direction").text = argument.direction
-        ET.SubElement(
-            arg_el, "relatedStateVariable"
-        ).text = argument.related_state_variable.name
+        ET.SubElement(arg_el, "relatedStateVariable").text = (
+            argument.related_state_variable.name
+        )
         return arg_el
 
     @classmethod
@@ -1153,9 +1154,7 @@ def _create_error_action_response(
     error_code = (
         exception.error_code or UpnpActionErrorCode.ACTION_FAILED.value
         if isinstance(exception, UpnpActionError)
-        else 402
-        if isinstance(exception, UpnpValueError)
-        else 501
+        else 402 if isinstance(exception, UpnpValueError) else 501
     )
     ET.SubElement(error_el, "errorCode").text = str(error_code)
     ET.SubElement(error_el, "errorDescription").text = "Action Failed"

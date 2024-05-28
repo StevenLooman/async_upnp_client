@@ -17,16 +17,17 @@ from async_upnp_client.client import (
     UpnpService,
     UpnpStateVariable,
     default_on_post_call_action,
-    default_on_post_receive_spec,
+    default_on_post_receive_device_spec,
+    default_on_post_receive_service_spec,
     default_on_pre_call_action,
-    default_on_pre_receive_spec,
+    default_on_pre_receive_device_spec,
+    default_on_pre_receive_service_spec,
 )
 from async_upnp_client.const import (
     NS,
     STATE_VARIABLE_TYPE_MAPPING,
     ActionArgumentInfo,
     ActionInfo,
-    DescriptionSort,
     DeviceIcon,
     DeviceInfo,
     HttpRequest,
@@ -54,18 +55,24 @@ class UpnpFactory:
     listening for advertisements.
     """
 
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,too-many-instance-attributes
 
     def __init__(
         self,
         requester: UpnpRequester,
         non_strict: bool = False,
-        on_pre_receive_spec: Callable[
-            [DescriptionSort, HttpRequest], HttpRequest
-        ] = default_on_pre_receive_spec,
-        on_post_receive_spec: Callable[
-            [DescriptionSort, HttpResponse], HttpResponse
-        ] = default_on_post_receive_spec,
+        on_pre_receive_device_spec: Callable[
+            [HttpRequest], HttpRequest
+        ] = default_on_pre_receive_device_spec,
+        on_post_receive_device_spec: Callable[
+            [HttpResponse], HttpResponse
+        ] = default_on_post_receive_device_spec,
+        on_pre_receive_service_spec: Callable[
+            [HttpRequest], HttpRequest
+        ] = default_on_pre_receive_service_spec,
+        on_post_receive_service_spec: Callable[
+            [HttpResponse], HttpResponse
+        ] = default_on_post_receive_service_spec,
         on_pre_call_action: Callable[
             [UpnpAction, Mapping[str, Any], HttpRequest], HttpRequest
         ] = default_on_pre_call_action,
@@ -77,8 +84,10 @@ class UpnpFactory:
         # pylint: disable=too-many-arguments
         self.requester = requester
         self._non_strict = non_strict
-        self._on_pre_receive_spec = on_pre_receive_spec
-        self._on_post_receive_spec = on_post_receive_spec
+        self._on_pre_receive_device_spec = on_pre_receive_device_spec
+        self._on_post_receive_device_spec = on_post_receive_device_spec
+        self._on_pre_receive_service_spec = on_pre_receive_service_spec
+        self._on_post_receive_service_spec = on_post_receive_service_spec
         self._on_pre_call_action = on_pre_call_action
         self._on_post_call_action = on_post_call_action
 
@@ -88,9 +97,7 @@ class UpnpFactory:
     ) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         _LOGGER.debug("Creating device, description_url: %s", description_url)
-        root_el = await self._async_get(
-            DescriptionSort.DEVICE_DESCRIPTION, description_url
-        )
+        root_el = await self._async_get_device_spec(description_url)
 
         # get root device
         device_el = root_el.find("./device:device", NS)
@@ -127,8 +134,8 @@ class UpnpFactory:
             device_info,
             services,
             embedded_devices,
-            self._on_pre_receive_spec,
-            self._on_post_receive_spec,
+            self._on_pre_receive_device_spec,
+            self._on_post_receive_device_spec,
         )
 
     def _parse_device_el(
@@ -180,9 +187,7 @@ class UpnpFactory:
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
 
         try:
-            scpd_el = await self._async_get(
-                DescriptionSort.SERVICE_DESCRIPTION, scpd_url
-            )
+            scpd_el = await self._async_get_service_spec(scpd_url)
         except UpnpXmlParseError as err:
             if not self._non_strict:
                 raise
@@ -421,12 +426,32 @@ class UpnpFactory:
 
         return ActionInfo(name=action_name, arguments=args, xml=action_el)
 
-    async def _async_get(self, spec_sort: DescriptionSort, url: str) -> ET.Element:
+    async def _async_get_device_spec(self, url: str) -> ET.Element:
         """Get a url."""
         bare_request = HttpRequest("GET", url, {}, None)
-        request = self._on_pre_receive_spec(spec_sort, bare_request)
+        request = self._on_pre_receive_device_spec(bare_request)
         bare_response = await self.requester.async_http_request(request)
-        response = self._on_post_receive_spec(spec_sort, bare_response)
+        response = self._on_post_receive_device_spec(bare_response)
+
+        if response.status_code != 200:
+            raise UpnpResponseError(
+                status=response.status_code, headers=response.headers
+            )
+
+        description: str = response.body or ""
+        try:
+            element: ET.Element = DET.fromstring(description)
+            return element
+        except ET.ParseError as err:
+            _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, description)
+            raise UpnpXmlParseError(err) from err
+
+    async def _async_get_service_spec(self, url: str) -> ET.Element:
+        """Get a url."""
+        bare_request = HttpRequest("GET", url, {}, None)
+        request = self._on_pre_receive_service_spec(bare_request)
+        bare_response = await self.requester.async_http_request(request)
+        response = self._on_post_receive_service_spec(bare_response)
 
         if response.status_code != 200:
             raise UpnpResponseError(

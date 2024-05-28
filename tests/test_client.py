@@ -643,7 +643,10 @@ class TestUpnpService:
     async def test_call_action(self) -> None:
         """Test calling a UpnpAction."""
         responses: MutableMapping = {
-            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+            (
+                "POST",
+                "http://dlna_dmr:1234/upnp/control/RenderingControl1",
+            ): HttpResponse(
                 200,
                 {},
                 read_file("dlna/dmr/action_GetVolume.xml"),
@@ -663,7 +666,10 @@ class TestUpnpService:
     async def test_soap_fault_http_error(self) -> None:
         """Test an action response with HTTP error and SOAP fault raises exception."""
         responses: MutableMapping = {
-            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+            (
+                "POST",
+                "http://dlna_dmr:1234/upnp/control/RenderingControl1",
+            ): HttpResponse(
                 500,
                 {},
                 read_file("dlna/dmr/action_GetVolumeError.xml"),
@@ -686,7 +692,10 @@ class TestUpnpService:
     async def test_http_error(self) -> None:
         """Test an action response with HTTP error and blank body raises exception."""
         responses: MutableMapping = {
-            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+            (
+                "POST",
+                "http://dlna_dmr:1234/upnp/control/RenderingControl1",
+            ): HttpResponse(
                 500,
                 {},
                 "",
@@ -707,7 +716,10 @@ class TestUpnpService:
     async def test_soap_fault_http_ok(self) -> None:
         """Test an action response with HTTP OK but SOAP fault raises exception."""
         responses: MutableMapping = {
-            ("POST", "http://dlna_dmr:1234/upnp/control/RenderingControl1"): (
+            (
+                "POST",
+                "http://dlna_dmr:1234/upnp/control/RenderingControl1",
+            ): HttpResponse(
                 200,
                 {},
                 read_file("dlna/dmr/action_GetVolumeError.xml"),

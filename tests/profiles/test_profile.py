@@ -1,4 +1,5 @@
 """Unit tests for profile."""
+
 # pylint: disable=protected-access
 
 import asyncio
@@ -9,6 +10,7 @@ from unittest.mock import Mock
 import pytest
 
 from async_upnp_client.client_factory import UpnpFactory
+from async_upnp_client.const import HttpResponse
 from async_upnp_client.exceptions import (
     UpnpActionResponseError,
     UpnpCommunicationError,
@@ -156,9 +158,14 @@ class TestUpnpProfileDevice:
         assert timeouts[2] == pytest.approx(now + 300, abs=1)
 
         # Tweak timeouts to check resubscription did something
+        entry = requester.response_map[
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
+        ]
         requester.response_map[
             ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ][1]["timeout"] = "Second-90"
+        ] = HttpResponse(
+            entry.status_code, {**entry.headers, "timeout": "Second-90"}, entry.body
+        )
 
         # Check subscriptions again, now timeouts should have changed
         timeout = await profile.async_subscribe_services(auto_resubscribe=False)
@@ -193,9 +200,19 @@ class TestUpnpProfileDevice:
 
         # Tweak timeouts to get a resubscription in a time suitable for testing.
         # Resubscription tolerance (60 seconds) + 1 second to get set up
+        entry = requester.response_map[
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
+        ]
         requester.response_map[
             ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ][1]["timeout"] = "Second-61"
+        ] = HttpResponse(
+            entry.status_code,
+            {
+                **entry.headers,
+                "timeout": "Second-61",
+            },
+            entry.body,
+        )
 
         # Test subscription
         timeout = await profile.async_subscribe_services(auto_resubscribe=True)
@@ -218,9 +235,19 @@ class TestUpnpProfileDevice:
         assert not profile._resubscriber_task.done()
 
         # Re-tweak timeouts to check resubscription did something
+        entry = requester.response_map[
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")
+        ]
         requester.response_map[
             ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")
-        ][1]["timeout"] = "Second-90"
+        ] = HttpResponse(
+            entry.status_code,
+            {
+                **entry.headers,
+                "timeout": "Second-90",
+            },
+            entry.body,
+        )
 
         # Wait for an auto-resubscribe
         await asyncio.sleep(1.5)
@@ -317,9 +344,14 @@ class TestUpnpProfileDevice:
         profile.on_event = on_event_mock
 
         # Setup for auto-resubscription
+        entry = requester.response_map[
+            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
+        ]
         requester.response_map[
             ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ][1]["timeout"] = "Second-61"
+        ] = HttpResponse(
+            entry.status_code, {**entry.headers, "timeout": "Second-61"}, entry.body
+        )
         await profile.async_subscribe_services(auto_resubscribe=True)
 
         # Exception raised when trying to resubscribe and subsequent retry subscribe
@@ -364,7 +396,7 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         requester.response_map[
             ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = (200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        ] = HttpResponse(200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -425,7 +457,7 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         requester.response_map[
             ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = (200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        ] = HttpResponse(200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -484,7 +516,7 @@ class TestUpnpProfileDevice:
         # Good action response
         requester.response_map[
             ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = (200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        ] = HttpResponse(200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")

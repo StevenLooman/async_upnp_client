@@ -1,4 +1,5 @@
 """Test server functionality."""
+
 import asyncio
 import socket
 import xml.etree.ElementTree as ET
@@ -227,9 +228,9 @@ async def test_init(upnp_server: Any) -> None:
     """Test device query."""
     # pylint: disable=redefined-outer-name
     http_client = upnp_server.http_client
-    resp = await http_client.get("/device.xml")
-    assert resp.status == 200
-    data = await resp.text()
+    response = await http_client.get("/device.xml")
+    assert response.status == 200
+    data = await response.text()
     assert data == read_file("server/device.xml").strip()
 
 
@@ -238,7 +239,7 @@ async def test_action(upnp_server: Any) -> None:
     """Test action execution."""
     # pylint: disable=redefined-outer-name
     http_client = upnp_server.http_client
-    resp = await http_client.post(
+    response = await http_client.post(
         "/upnp/control/TestServerService",
         data=read_file("server/action_request.xml"),
         headers={
@@ -247,14 +248,14 @@ async def test_action(upnp_server: Any) -> None:
             "soapaction": "urn:schemas-upnp-org:service:TestServerService:1#SetValues",
         },
     )
-    assert resp.status == 200
-    data = await resp.text()
+    assert response.status == 200
+    data = await response.text()
     assert data == read_file("server/action_response.xml").strip()
 
 
 @pytest.mark.asyncio
 async def test_subscribe(upnp_server: Any) -> None:
-    """Test subcsription to server event."""
+    """Test subscription to server event."""
     # pylint: disable=redefined-outer-name
     event = asyncio.Event()
     expect = 0
@@ -272,19 +273,21 @@ async def test_subscribe(upnp_server: Any) -> None:
 
     http_client = upnp_server.http_client
     callback = upnp_server.callback
-    service = upnp_server.server._device.service(  # pylint: disable=protected-access
-        "urn:schemas-upnp-org:service:TestServerService:1"
+    service: ServerServiceTest = (
+        upnp_server.server._device.service(  # pylint: disable=protected-access
+            "urn:schemas-upnp-org:service:TestServerService:1"
+        )
     )
     callback.set_callback(on_callback)
-    resp = await http_client.request(
+    response = await http_client.request(
         "SUBSCRIBE",
         "/upnp/event/TestServerService",
         headers={"CALLBACK": "</foo/bar>", "NT": "upnp:event", "TIMEOUT": "Second-30"},
     )
-    assert resp.status == 200
-    data = await resp.text()
+    assert response.status == 200
+    data = await response.text()
     assert not data
-    sid = resp.headers.get("SID")
+    sid = response.headers.get("SID")
     assert sid
     with suppress(asyncio.TimeoutError):
         await asyncio.wait_for(event.wait(), 2)

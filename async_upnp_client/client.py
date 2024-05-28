@@ -33,7 +33,6 @@ from async_upnp_client.const import (
     NS,
     ActionArgumentInfo,
     ActionInfo,
-    DescriptionSort,
     DeviceIcon,
     DeviceInfo,
     HttpRequest,
@@ -57,18 +56,27 @@ _LOGGER = logging.getLogger(__name__)
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
 
 
-def default_on_pre_receive_spec(
-    description_sort: DescriptionSort, request: HttpRequest
-) -> HttpRequest:
-    """Pre-receive specification hook."""
+def default_on_pre_receive_device_spec(request: HttpRequest) -> HttpRequest:
+    """Pre-receive device specification hook."""
     # pylint: disable=unused-argument
     return request
 
 
-def default_on_post_receive_spec(
-    description_sort: DescriptionSort, response: HttpResponse
-) -> HttpResponse:
-    """Post-receive specification hook."""
+def default_on_post_receive_device_spec(response: HttpResponse) -> HttpResponse:
+    """Post-receive device specification hook."""
+    # pylint: disable=unused-argument
+    fixed_body = (response.body or "").rstrip(" \t\r\n\0")
+    return HttpResponse(response.status_code, response.headers, fixed_body)
+
+
+def default_on_pre_receive_service_spec(request: HttpRequest) -> HttpRequest:
+    """Pre-receive service specification hook."""
+    # pylint: disable=unused-argument
+    return request
+
+
+def default_on_post_receive_service_spec(response: HttpResponse) -> HttpResponse:
+    """Post-receive service specification hook."""
     # pylint: disable=unused-argument
     fixed_body = (response.body or "").rstrip(" \t\r\n\0")
     return HttpResponse(response.status_code, response.headers, fixed_body)
@@ -147,12 +155,12 @@ class UpnpDevice:
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
         embedded_devices: Sequence["UpnpDevice"],
-        on_pre_receive_spec: Callable[
-            [DescriptionSort, HttpRequest], HttpRequest
-        ] = default_on_pre_receive_spec,
-        on_post_receive_spec: Callable[
-            [DescriptionSort, HttpResponse], HttpResponse
-        ] = default_on_post_receive_spec,
+        on_pre_receive_device_spec: Callable[
+            [HttpRequest], HttpRequest
+        ] = default_on_pre_receive_device_spec,
+        on_post_receive_device_spec: Callable[
+            [HttpResponse], HttpResponse
+        ] = default_on_post_receive_device_spec,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
@@ -163,8 +171,8 @@ class UpnpDevice:
             embedded_device.device_type: embedded_device
             for embedded_device in embedded_devices
         }
-        self.on_pre_receive_spec = on_pre_receive_spec
-        self.on_post_receive_spec = on_post_receive_spec
+        self.on_pre_receive_device_spec = on_pre_receive_device_spec
+        self.on_post_receive_device_spec = on_post_receive_device_spec
 
         self._parent_device: Optional["UpnpDevice"] = None
 
@@ -371,9 +379,7 @@ class UpnpDevice:
     async def async_ping(self) -> None:
         """Ping the device."""
         bare_request = HttpRequest("GET", self.device_url, {}, None)
-        request = self.on_pre_receive_spec(
-            DescriptionSort.DEVICE_DESCRIPTION, bare_request
-        )
+        request = self.on_pre_receive_device_spec(bare_request)
         await self.requester.async_http_request(request)
 
     def __str__(self) -> str:
@@ -394,8 +400,10 @@ class UpnpService:
         actions: Sequence["UpnpAction"],
         on_pre_call_action: Callable[
             ["UpnpAction", Mapping[str, Any], HttpRequest], HttpRequest
-        ],
-        on_post_call_action: Callable[["UpnpAction", HttpResponse], HttpResponse],
+        ] = default_on_pre_call_action,
+        on_post_call_action: Callable[
+            ["UpnpAction", HttpResponse], HttpResponse
+        ] = default_on_post_call_action,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
