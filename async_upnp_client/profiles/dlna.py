@@ -236,7 +236,7 @@ def _lower_split_commas(input_: str) -> Set[str]:
 def _cached_from_xml_string(
     xml: str,
 ) -> List[Union[didl_lite.DidlObject, didl_lite.Descriptor]]:
-    return didl_lite.from_xml_string(xml, strict=False)  # type: ignore
+    return didl_lite.from_xml_string(xml, strict=False)
 
 
 class ConnectionManagerMixin(UpnpProfileDevice):
