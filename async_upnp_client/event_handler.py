@@ -133,7 +133,7 @@ class UpnpEventHandler:
             return HTTPStatus.PRECONDITION_FAILED
 
         sid: ServiceId = headers["SID"]
-        service = self._subscriptions.get(sid)
+        service = self.service_for_sid(sid)
 
         # SID not known yet? store it in the backlog
         # Some devices don't behave nicely and send events before the SUBSCRIBE call is done.
@@ -217,7 +217,9 @@ class UpnpEventHandler:
 
         sid: ServiceId = response_headers["sid"]
         self._subscriptions[sid] = service
-        _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
+        _LOGGER.debug(
+            "Subscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout
+        )
 
         # replay any backlog we have for this service
         if sid in self._backlog:
@@ -269,7 +271,9 @@ class UpnpEventHandler:
             timeout = timedelta(seconds=timeout_seconds)
 
         self._subscriptions[sid] = service
-        _LOGGER.debug("Got SID: %s, timeout: %s", sid, timeout)
+        _LOGGER.debug(
+            "Resubscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout
+        )
 
         return sid, timeout
 

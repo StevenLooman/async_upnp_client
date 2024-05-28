@@ -12,12 +12,13 @@ import asyncio
 import logging
 import xml.etree.ElementTree as ET
 from time import time
-from typing import Dict, Mapping, Sequence, Type
+from typing import Dict, Mapping, Sequence, Type, cast
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
     STATE_VARIABLE_TYPE_MAPPING,
     DeviceInfo,
+    EventableStateVariableTypeInfo,
     ServiceInfo,
     StateVariableTypeInfo,
 )
@@ -46,15 +47,16 @@ class WANIPConnectionService(UpnpServerService):
     )
 
     STATE_VARIABLE_DEFINITIONS = {
-        "ExternalIPAddress": StateVariableTypeInfo(
+        "ExternalIPAddress": EventableStateVariableTypeInfo(
             data_type="string",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
-            default_value="1.2.3.4",
+            default_value="1.2.3.0",
             allowed_value_range={},
             allowed_values=None,
+            max_rate=None,
             xml=ET.Element("server_stateVariable"),
         ),
-        "ConnectionStatus": StateVariableTypeInfo(
+        "ConnectionStatus": EventableStateVariableTypeInfo(
             data_type="string",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
             default_value="Unconfigured",
@@ -68,6 +70,7 @@ class WANIPConnectionService(UpnpServerService):
                 "Disconnecting",
                 "Disconnected",
             ],
+            max_rate=None,
             xml=ET.Element("server_stateVariable"),
         ),
         "LastConnectionError": StateVariableTypeInfo(
@@ -364,9 +367,16 @@ async def async_main(server: UpnpServer) -> None:
     """Main."""
     await server.async_start()
 
+    loop_no = 0
     while True:
-        await asyncio.sleep(3600)
+        upnp_service = server._device.find_service("urn:schemas-upnp-org:service:WANIPConnection:1")
+        wanipc_service = cast(WANIPConnectionService, upnp_service)
+        external_ip_address_var = wanipc_service.state_variable("ExternalIPAddress")
+        external_ip_address_var.value = f"1.2.3.{(loop_no % 255) + 1}"
 
+        await asyncio.sleep(30)
+
+        loop_no += 1
 
 async def async_stop(server: UpnpServer) -> None:
     await server.async_stop()
