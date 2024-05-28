@@ -9,6 +9,7 @@ import pytest
 
 from async_upnp_client.client import UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
+from async_upnp_client.const import HttpResponse
 from async_upnp_client.exceptions import (
     UpnpActionError,
     UpnpActionErrorCode,
@@ -93,7 +94,7 @@ class TestUpnpStateVariable:
     async def test_init_bad_xml(self) -> None:
         """Test missing device element in device description."""
         responses = dict(RESPONSE_MAP)
-        responses[("GET", "http://dlna_dmr:1234/device.xml")] = (
+        responses[("GET", "http://dlna_dmr:1234/device.xml")] = HttpResponse(
             200,
             {},
             read_file("dlna/dmr/device_bad_namespace.xml"),
@@ -107,7 +108,7 @@ class TestUpnpStateVariable:
     async def test_empty_descriptor(self) -> None:
         """Test device with an empty descriptor file called in description.xml."""
         responses = dict(RESPONSE_MAP)
-        responses[("GET", "http://dlna_dmr:1234/device.xml")] = (
+        responses[("GET", "http://dlna_dmr:1234/device.xml")] = HttpResponse(
             200,
             {},
             read_file("dlna/dmr/device_with_empty_descriptor.xml"),
@@ -121,7 +122,7 @@ class TestUpnpStateVariable:
     async def test_empty_descriptor_non_strict(self) -> None:
         """Test device with an empty descriptor file called in description.xml."""
         responses = dict(RESPONSE_MAP)
-        responses[("GET", "http://dlna_dmr:1234/device.xml")] = (
+        responses[("GET", "http://dlna_dmr:1234/device.xml")] = HttpResponse(
             200,
             {},
             read_file("dlna/dmr/device_with_empty_descriptor.xml"),
@@ -314,9 +315,11 @@ class TestUpnpStateVariable:
         """Test state variable types i8 and ui8."""
         responses = dict(RESPONSE_MAP)
         responses[("GET", "http://dlna_dms:1234/ContentDirectory_1.xml")] = (
-            200,
-            {},
-            read_file("scpd_i8.xml"),
+            HttpResponse(
+                200,
+                {},
+                read_file("scpd_i8.xml"),
+            )
         )
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester)
@@ -377,11 +380,11 @@ class TestUpnpAction:
         action = service.action("SetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        _, _, body = action.create_request(
+        request = action.create_request(
             InstanceID=0, Channel="Master", DesiredVolume=10
         )
 
-        root = DET.fromstring(body)
+        root = DET.fromstring(request.body)
         namespace = {"rc_service": service_type}
         assert root.find(".//rc_service:SetVolume", namespace) is not None
         assert root.find(".//DesiredVolume", namespace) is not None
@@ -397,13 +400,13 @@ class TestUpnpAction:
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
         metadata = "<item>test thing</item>"
-        _, _, body = action.create_request(
+        request = action.create_request(
             InstanceID=0,
             CurrentURI="http://example.org/file.mp3",
             CurrentURIMetaData=metadata,
         )
 
-        root = DET.fromstring(body)
+        root = DET.fromstring(request.body)
         namespace = {"avt_service": service_type}
         assert root.find(".//avt_service:SetAVTransportURI", namespace) is not None
         assert root.find(".//CurrentURIMetaData", namespace) is not None
@@ -427,8 +430,9 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_GetVolume.xml")
-        result = action.parse_response(service_type, {}, response)
+        response_body = read_file("dlna/dmr/action_GetVolume.xml")
+        response = HttpResponse(200, {}, response_body)
+        result = action.parse_response(service_type, response)
         assert result == {"CurrentVolume": 3}
 
     @pytest.mark.asyncio
@@ -441,8 +445,9 @@ class TestUpnpAction:
         action = service.action("SetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_SetVolume.xml")
-        result = action.parse_response(service_type, {}, response)
+        response_body = read_file("dlna/dmr/action_SetVolume.xml")
+        response = HttpResponse(200, {}, response_body)
+        result = action.parse_response(service_type, response)
         assert result == {}
 
     @pytest.mark.asyncio
@@ -455,9 +460,10 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_GetVolumeError.xml")
+        response_body = read_file("dlna/dmr/action_GetVolumeError.xml")
+        response = HttpResponse(200, {}, response_body)
         with pytest.raises(UpnpActionError) as exc:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
         assert exc.value.error_code == UpnpActionErrorCode.INVALID_ARGS
         assert exc.value.error_desc == "Invalid Args"
 
@@ -471,8 +477,9 @@ class TestUpnpAction:
         action = service.action("GetMediaInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response = read_file("dlna/dmr/action_GetMediaInfo.xml")
-        result = action.parse_response(service_type, {}, response)
+        response_body = read_file("dlna/dmr/action_GetMediaInfo.xml")
+        response = HttpResponse(200, {}, response_body)
+        result = action.parse_response(service_type, response)
         assert result == {
             "CurrentURI": "uri://1.mp3",
             "CurrentURIMetaData": "<DIDL-Lite "
@@ -505,9 +512,10 @@ class TestUpnpAction:
         action = service.action("GetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        response = read_file("dlna/dmr/action_GetVolumeInvalidServiceType.xml")
+        response_body = read_file("dlna/dmr/action_GetVolumeInvalidServiceType.xml")
+        response = HttpResponse(200, {}, response_body)
         try:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
             assert False
         except UpnpError:
             pass
@@ -522,9 +530,12 @@ class TestUpnpAction:
         action = service.action("GetTransportInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response = read_file("dlna/dmr/action_GetTransportInfoInvalidServiceType.xml")
+        response_body = read_file(
+            "dlna/dmr/action_GetTransportInfoInvalidServiceType.xml"
+        )
+        response = HttpResponse(200, {}, response_body)
         try:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
             assert False
         except UpnpError:
             pass
@@ -542,9 +553,10 @@ class TestUpnpAction:
         service = device.service(service_type)
         action = service.action(test_action)
 
-        response = read_file("dlna/dmr/action_GetVolumeExtraOutParameter.xml")
+        response_body = read_file("dlna/dmr/action_GetVolumeExtraOutParameter.xml")
+        response = HttpResponse(200, {}, response_body)
         try:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
             assert False
         except UpnpError:
             pass
@@ -555,7 +567,7 @@ class TestUpnpAction:
         action = service.action(test_action)
 
         try:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
         except UpnpError:
             assert False
 
@@ -574,9 +586,10 @@ class TestUpnpAction:
         assert service is not None
         action = service.action(test_action)
 
-        response = read_file("igd/action_WANPIPConnection_DeletePortMapping.xml")
+        response_body = read_file("igd/action_WANPIPConnection_DeletePortMapping.xml")
+        response = HttpResponse(200, {}, response_body)
         try:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
             assert False
         except UpnpError:
             pass
@@ -589,7 +602,7 @@ class TestUpnpAction:
         action = service.action(test_action)
 
         try:
-            action.parse_response(service_type, {}, response)
+            action.parse_response(service_type, response)
         except UpnpError:
             assert False
 
@@ -725,9 +738,11 @@ class TestUpnpService:
         """Test handling of bad service descriptions in strict mode."""
         responses = dict(RESPONSE_MAP)
         responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = (
-            200,
-            {},
-            read_file(rc_doc),
+            HttpResponse(
+                200,
+                {},
+                read_file(rc_doc),
+            )
         )
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester)
@@ -747,9 +762,11 @@ class TestUpnpService:
         """Test bad SCPD in non-strict mode."""
         responses = dict(RESPONSE_MAP)
         responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = (
-            200,
-            {},
-            read_file(rc_doc),
+            HttpResponse(
+                200,
+                {},
+                read_file(rc_doc),
+            )
         )
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester, non_strict=True)

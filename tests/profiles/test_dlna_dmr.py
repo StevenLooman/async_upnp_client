@@ -12,6 +12,7 @@ from didl_lite import didl_lite
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
+from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.profiles.dlna import (
     DmrDevice,
     _parse_last_change_event,
@@ -181,7 +182,10 @@ async def test_on_notify_dlna_event() -> None:
 </e:propertyset>
 """
 
-    result = await event_handler.handle_notify(headers, body)
+    http_request = HttpRequest(
+        "NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body
+    )
+    result = await event_handler.handle_notify(http_request)
     assert result == 200
 
     assert len(changed_vars) == 3
@@ -205,10 +209,13 @@ async def test_wait_for_can_play_evented() -> None:
     await profile.async_subscribe_services()
 
     # Send a NOTIFY of CurrentTransportActions without Play
-    result = await event_handler.handle_notify(
+    http_request = HttpRequest(
+        "NOTIFY",
+        "http://dlna_dmr:1234/upnp/event/AVTransport1",
         AVT_NOTIFY_HEADERS,
         AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT.format(actions="Stop"),
     )
+    result = await event_handler.handle_notify(http_request)
     assert result == 200
 
     # Should not be able to play yet
@@ -219,10 +226,13 @@ async def test_wait_for_can_play_evented() -> None:
     async def delayed_notify() -> None:
         await asyncio.sleep(0.1)
         # Send NOTIFY of change to CurrentTransportActions
-        result = await event_handler.handle_notify(
+        http_request = HttpRequest(
+            "NOTIFY",
+            "http://dlna_dmr:1234/upnp/event/AVTransport1",
             AVT_NOTIFY_HEADERS,
             AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT.format(actions="Pause,Play"),
         )
+        result = await event_handler.handle_notify(http_request)
         assert result == 200
 
     loop = asyncio.get_event_loop()
@@ -253,7 +263,7 @@ async def test_wait_for_can_play_polled() -> None:
     # Polling of CurrentTransportActions does not contain "Play" yet
     requester.response_map[
         ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = (
+    ] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
@@ -270,7 +280,7 @@ async def test_wait_for_can_play_polled() -> None:
     # Polling of CurrentTransportActions now contains "Play"
     requester.response_map[
         ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = (
+    ] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
@@ -297,7 +307,7 @@ async def test_wait_for_can_play_timeout() -> None:
     # Polling of CurrentTransportActions does not contain "Play" yet
     requester.response_map[
         ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = (
+    ] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
@@ -535,7 +545,7 @@ http://dlna_dms:4321/object/file_1222
     )
 
     # Media server supplies media information for HEAD requests
-    requester.response_map[("HEAD", media_url)] = (
+    requester.response_map[("HEAD", media_url)] = HttpResponse(
         200,
         {
             "ContentFeatures.dlna.org": "DLNA_SERVER_FEATURES",
@@ -543,7 +553,7 @@ http://dlna_dms:4321/object/file_1222
         },
         "",
     )
-    requester.response_map[("HEAD", media_url + ".mp3")] = (
+    requester.response_map[("HEAD", media_url + ".mp3")] = HttpResponse(
         200,
         {
             "ContentFeatures.dlna.org": "DLNA_SERVER_FEATURES",

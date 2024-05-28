@@ -8,13 +8,13 @@ from abc import ABC
 from datetime import timedelta
 from http import HTTPStatus
 from ipaddress import ip_address
-from typing import Dict, Mapping, Optional, Set, Tuple, Type, Union
+from typing import Callable, Dict, Optional, Set, Tuple, Type, Union
 from urllib.parse import urlparse
 
 import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpDevice, UpnpRequester, UpnpService
-from async_upnp_client.const import NS, IPvXAddress, ServiceId
+from async_upnp_client.const import NS, HttpRequest, IPvXAddress, ServiceId
 from async_upnp_client.exceptions import (
     UpnpConnectionError,
     UpnpError,
@@ -24,6 +24,13 @@ from async_upnp_client.exceptions import (
 from async_upnp_client.utils import get_local_ip
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def default_on_pre_notify(request: HttpRequest) -> HttpRequest:
+    """Pre-notify hook."""
+    # pylint: disable=unused-argument
+    fixed_body = (request.body or "").rstrip(" \t\r\n\0")
+    return HttpRequest(request.method, request.url, request.headers, fixed_body)
 
 
 class UpnpNotifyServer(ABC):
@@ -64,6 +71,7 @@ class UpnpEventHandler:
         self,
         notify_server: UpnpNotifyServer,
         requester: UpnpRequester,
+        on_pre_notify: Callable[[HttpRequest], HttpRequest] = default_on_pre_notify,
     ) -> None:
         """
         Initialize.
@@ -72,11 +80,12 @@ class UpnpEventHandler:
         """
         self._notify_server = notify_server
         self._requester = requester
+        self.on_pre_notify = on_pre_notify
 
-        self._subscriptions: weakref.WeakValueDictionary[
-            ServiceId, UpnpService
-        ] = weakref.WeakValueDictionary()
-        self._backlog: Dict[ServiceId, Tuple[Mapping, str]] = {}
+        self._subscriptions: weakref.WeakValueDictionary[ServiceId, UpnpService] = (
+            weakref.WeakValueDictionary()
+        )
+        self._backlog: Dict[ServiceId, HttpRequest] = {}
 
     @property
     def callback_url(self) -> str:
@@ -119,37 +128,35 @@ class UpnpEventHandler:
 
         return sid, service
 
-    async def handle_notify(self, headers: Mapping[str, str], body: str) -> HTTPStatus:
+    async def handle_notify(self, http_request: HttpRequest) -> HTTPStatus:
         """Handle a NOTIFY request."""
+        http_request = self.on_pre_notify(http_request)
+
         # ensure valid request
-        if "NT" not in headers or "NTS" not in headers:
+        if "NT" not in http_request.headers or "NTS" not in http_request.headers:
             return HTTPStatus.BAD_REQUEST
 
         if (
-            headers["NT"] != "upnp:event"
-            or headers["NTS"] != "upnp:propchange"
-            or "SID" not in headers
+            http_request.headers["NT"] != "upnp:event"
+            or http_request.headers["NTS"] != "upnp:propchange"
+            or "SID" not in http_request.headers
         ):
             return HTTPStatus.PRECONDITION_FAILED
 
-        sid: ServiceId = headers["SID"]
+        sid: ServiceId = http_request.headers["SID"]
         service = self.service_for_sid(sid)
 
         # SID not known yet? store it in the backlog
         # Some devices don't behave nicely and send events before the SUBSCRIBE call is done.
         if not service:
             _LOGGER.debug("Storing NOTIFY in backlog for SID: %s", sid)
-            self._backlog[sid] = (
-                headers,
-                body,
-            )
+            self._backlog[sid] = http_request
 
             return HTTPStatus.OK
 
         # decode event and send updates to service
         changes = {}
-        stripped_body = body.rstrip(" \t\r\n\0")
-        el_root = DET.fromstring(stripped_body)
+        el_root = DET.fromstring(http_request.body)
         for el_property in el_root.findall("./event:property", NS):
             for el_state_var in el_property:
                 name = el_state_var.tag
@@ -192,30 +199,31 @@ class UpnpEventHandler:
             "HOST": urlparse(service.event_sub_url).netloc,
             "CALLBACK": f"<{self.callback_url}>",
         }
-        response_status, response_headers, _ = await self._requester.async_http_request(
-            "SUBSCRIBE", service.event_sub_url, headers
-        )
+        backlog_request = HttpRequest("SUBSCRIBE", service.event_sub_url, headers, None)
+        response = await self._requester.async_http_request(backlog_request)
 
         # check results
-        if response_status != 200:
-            _LOGGER.debug("Did not receive 200, but %s", response_status)
-            raise UpnpResponseError(status=response_status, headers=response_headers)
+        if response.status_code != 200:
+            _LOGGER.debug("Did not receive 200, but %s", response.status_code)
+            raise UpnpResponseError(
+                status=response.status_code, headers=response.headers
+            )
 
-        if "sid" not in response_headers:
+        if "sid" not in response.headers:
             _LOGGER.debug("No SID received, aborting subscribe")
             raise UpnpSIDError
 
         # Device can give a different TIMEOUT header than what we have provided.
         if (
-            "timeout" in response_headers
-            and response_headers["timeout"] != "Second-infinite"
-            and "Second-" in response_headers["timeout"]
+            "timeout" in response.headers
+            and response.headers["timeout"] != "Second-infinite"
+            and "Second-" in response.headers["timeout"]
         ):
-            response_timeout = response_headers["timeout"]
+            response_timeout = response.headers["timeout"]
             timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
             timeout = timedelta(seconds=timeout_seconds)
 
-        sid: ServiceId = response_headers["sid"]
+        sid: ServiceId = response.headers["sid"]
         self._subscriptions[sid] = service
         _LOGGER.debug(
             "Subscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout
@@ -224,8 +232,8 @@ class UpnpEventHandler:
         # replay any backlog we have for this service
         if sid in self._backlog:
             _LOGGER.debug("Re-playing backlogged NOTIFY for SID: %s", sid)
-            item = self._backlog[sid]
-            await self.handle_notify(item[0], item[1])
+            backlog_request = self._backlog[sid]
+            await self.handle_notify(backlog_request)
             del self._backlog[sid]
 
         return sid, timeout
@@ -243,30 +251,31 @@ class UpnpEventHandler:
             "SID": sid,
             "TIMEOUT": "Second-" + str(timeout.total_seconds()),
         }
-        response_status, response_headers, _ = await self._requester.async_http_request(
-            "SUBSCRIBE", service.event_sub_url, headers
-        )
+        request = HttpRequest("SUBSCRIBE", service.event_sub_url, headers, None)
+        response = await self._requester.async_http_request(request)
 
         # check results
-        if response_status != 200:
-            _LOGGER.debug("Did not receive 200, but %s", response_status)
-            raise UpnpResponseError(status=response_status, headers=response_headers)
+        if response.status_code != 200:
+            _LOGGER.debug("Did not receive 200, but %s", response.status_code)
+            raise UpnpResponseError(
+                status=response.status_code, headers=response.headers
+            )
 
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
-        if "sid" in response_headers and response_headers["sid"]:
-            new_sid: ServiceId = response_headers["sid"]
+        if "sid" in response.headers and response.headers["sid"]:
+            new_sid: ServiceId = response.headers["sid"]
             if new_sid != sid:
                 del self._subscriptions[sid]
                 sid = new_sid
 
         # Device can give a different TIMEOUT header than what we have provided.
         if (
-            "timeout" in response_headers
-            and response_headers["timeout"] != "Second-infinite"
-            and "Second-" in response_headers["timeout"]
+            "timeout" in response.headers
+            and response.headers["timeout"] != "Second-infinite"
+            and "Second-" in response.headers["timeout"]
         ):
-            response_timeout = response_headers["timeout"]
+            response_timeout = response.headers["timeout"]
             timeout_seconds = int(response_timeout[7:])  # len("Second-") == 7
             timeout = timedelta(seconds=timeout_seconds)
 
@@ -349,14 +358,15 @@ class UpnpEventHandler:
             "HOST": urlparse(service.event_sub_url).netloc,
             "SID": sid,
         }
-        response_status, response_headers, _ = await self._requester.async_http_request(
-            "UNSUBSCRIBE", service.event_sub_url, headers
-        )
+        request = HttpRequest("UNSUBSCRIBE", service.event_sub_url, headers, None)
+        response = await self._requester.async_http_request(request)
 
         # check results
-        if response_status != 200:
-            _LOGGER.debug("Did not receive 200, but %s", response_status)
-            raise UpnpResponseError(status=response_status, headers=response_headers)
+        if response.status_code != 200:
+            _LOGGER.debug("Did not receive 200, but %s", response.status_code)
+            raise UpnpResponseError(
+                status=response.status_code, headers=response.headers
+            )
 
         return sid
 

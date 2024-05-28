@@ -9,6 +9,7 @@ import pytest
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
+from async_upnp_client.const import HttpRequest
 from async_upnp_client.event_handler import UpnpEventHandlerRegister
 
 from .conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester
@@ -124,7 +125,10 @@ async def test_on_notify_upnp_event() -> None:
 </e:propertyset>
 """
 
-    result = await event_handler.handle_notify(headers, body)
+    http_request = HttpRequest(
+        "NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body
+    )
+    result = await event_handler.handle_notify(http_request)
     assert result == 200
 
     assert len(changed_vars) == 1

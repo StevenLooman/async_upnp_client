@@ -19,7 +19,6 @@ from typing import (
     Optional,
     Sequence,
     Set,
-    Tuple,
     Type,
     TypeVar,
 )
@@ -34,8 +33,11 @@ from async_upnp_client.const import (
     NS,
     ActionArgumentInfo,
     ActionInfo,
+    DescriptionSort,
     DeviceIcon,
     DeviceInfo,
+    HttpRequest,
+    HttpResponse,
     ServiceInfo,
     StateVariableInfo,
 )
@@ -53,6 +55,40 @@ _LOGGER = logging.getLogger(__name__)
 
 
 EventCallbackType = Callable[["UpnpService", Sequence["UpnpStateVariable"]], None]
+
+
+def default_on_pre_receive_spec(
+    description_sort: DescriptionSort, request: HttpRequest
+) -> HttpRequest:
+    """Pre-receive specification hook."""
+    # pylint: disable=unused-argument
+    return request
+
+
+def default_on_post_receive_spec(
+    description_sort: DescriptionSort, response: HttpResponse
+) -> HttpResponse:
+    """Post-receive specification hook."""
+    # pylint: disable=unused-argument
+    fixed_body = (response.body or "").rstrip(" \t\r\n\0")
+    return HttpResponse(response.status_code, response.headers, fixed_body)
+
+
+def default_on_pre_call_action(
+    action: "UpnpAction", args: Mapping[str, Any], request: HttpRequest
+) -> HttpRequest:
+    """Pre-action call hook."""
+    # pylint: disable=unused-argument
+    return request
+
+
+def default_on_post_call_action(
+    action: "UpnpAction", response: HttpResponse
+) -> HttpResponse:
+    """Post-action call hook."""
+    # pylint: disable=unused-argument
+    fixed_body = (response.body or "").rstrip(" \t\r\n\0")
+    return HttpResponse(response.status_code, response.headers, fixed_body)
 
 
 class DisableXmlNamespaces:
@@ -94,28 +130,16 @@ class UpnpRequester(ABC):
 
     async def async_http_request(
         self,
-        method: str,
-        url: str,
-        headers: Optional[Mapping[str, str]] = None,
-        body: Optional[str] = None,
-    ) -> Tuple[int, Mapping[str, str], str]:
-        """
-        Do a HTTP request.
-
-        :param method HTTP Method
-        :param url URL to call
-        :param headers Headers to send
-        :param body Body to send
-
-        :return status code, headers, body
-        """
+        http_request: HttpRequest,
+    ) -> HttpResponse:
+        """Do a HTTP request."""
         raise NotImplementedError()
 
 
 class UpnpDevice:
     """UPnP Device representation."""
 
-    # pylint: disable=too-many-public-methods
+    # pylint: disable=too-many-public-methods,too-many-instance-attributes
 
     def __init__(
         self,
@@ -123,6 +147,12 @@ class UpnpDevice:
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
         embedded_devices: Sequence["UpnpDevice"],
+        on_pre_receive_spec: Callable[
+            [DescriptionSort, HttpRequest], HttpRequest
+        ] = default_on_pre_receive_spec,
+        on_post_receive_spec: Callable[
+            [DescriptionSort, HttpResponse], HttpResponse
+        ] = default_on_post_receive_spec,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments
@@ -133,6 +163,9 @@ class UpnpDevice:
             embedded_device.device_type: embedded_device
             for embedded_device in embedded_devices
         }
+        self.on_pre_receive_spec = on_pre_receive_spec
+        self.on_post_receive_spec = on_post_receive_spec
+
         self._parent_device: Optional["UpnpDevice"] = None
 
         # bind services to ourselves
@@ -337,7 +370,11 @@ class UpnpDevice:
 
     async def async_ping(self) -> None:
         """Ping the device."""
-        await self.requester.async_http_request("GET", self.device_url)
+        bare_request = HttpRequest("GET", self.device_url, {}, None)
+        request = self.on_pre_receive_spec(
+            DescriptionSort.DEVICE_DESCRIPTION, bare_request
+        )
+        await self.requester.async_http_request(request)
 
     def __str__(self) -> str:
         """To string."""
@@ -355,12 +392,19 @@ class UpnpService:
         service_info: ServiceInfo,
         state_variables: Sequence["UpnpStateVariable"],
         actions: Sequence["UpnpAction"],
+        on_pre_call_action: Callable[
+            ["UpnpAction", Mapping[str, Any], HttpRequest], HttpRequest
+        ],
+        on_post_call_action: Callable[["UpnpAction", HttpResponse], HttpResponse],
     ) -> None:
         """Initialize."""
+        # pylint: disable=too-many-arguments
         self.requester = requester
         self._service_info = service_info
         self.state_variables = {sv.name: sv for sv in state_variables}
         self.actions = {ac.name: ac for ac in actions}
+        self.on_pre_call_action = on_pre_call_action
+        self.on_post_call_action = on_post_call_action
 
         self.on_event: Optional[EventCallbackType] = None
         self._device: Optional[UpnpDevice] = None
@@ -662,24 +706,22 @@ class UpnpAction:
         """Call an action with arguments."""
         # do request
         _LOGGER.debug("Calling action: %s, args: %s", self.name, kwargs)
-        url, headers, body = self.create_request(**kwargs)
-        (
-            status_code,
-            response_headers,
-            response_body,
-        ) = await self.service.requester.async_http_request("POST", url, headers, body)
-        if not isinstance(response_body, str):
+        bare_request = self.create_request(**kwargs)
+        request = self.service.on_pre_call_action(self, kwargs, bare_request)
+        bare_response = await self.service.requester.async_http_request(request)
+        response = self.service.on_post_call_action(self, bare_response)
+        if not isinstance(response.body, str):
             raise UpnpError(
                 f"Did not receive a body when calling action: {self.name}, args: {kwargs}"
             )
 
-        if status_code != 200:
+        if response.status_code != 200:
             try:
-                xml = DET.fromstring(response_body.strip(" \t\r\n\0"))
+                xml = DET.fromstring(response.body)
             except ET.ParseError:
                 pass
             else:
-                self._parse_fault(xml, status_code, response_headers)
+                self._parse_fault(xml, response.status_code, response.headers)
 
             # Couldn't parse body for fault details, raise generic response error
             _LOGGER.debug(
@@ -688,19 +730,17 @@ class UpnpAction:
                 kwargs,
             )
             raise UpnpResponseError(
-                status=status_code,
-                headers=response_headers,
+                status=response.status_code,
+                headers=response.headers,
                 message=f"Error during async_call(), "
                 f"action: {self.name}, "
                 f"args: {kwargs}, "
-                f"status: {status_code}, "
-                f"body: {response_body}",
+                f"status: {response.status_code}, "
+                f"body: {response.body}",
             )
 
         # parse body
-        response_args = self.parse_response(
-            self.service.service_type, response_headers, response_body
-        )
+        response_args = self.parse_response(self.service.service_type, response)
         _LOGGER.debug(
             "Called action: %s, args: %s, response_args: %s",
             self.name,
@@ -709,8 +749,8 @@ class UpnpAction:
         )
         return response_args
 
-    def create_request(self, **kwargs: Any) -> Tuple[str, Mapping[str, str], str]:
-        """Create headers and headers for this to-be-called UpnpAction."""
+    def create_request(self, **kwargs: Any) -> HttpRequest:
+        """Create HTTP request for this to-be-called UpnpAction."""
         # build URL
         control_url = self.service.control_url
 
@@ -737,7 +777,7 @@ class UpnpAction:
             "Content-Type": 'text/xml; charset="utf-8"',
         }
 
-        return control_url, headers, body
+        return HttpRequest("POST", control_url, headers, body)
 
     def _format_request_args(self, **kwargs: Any) -> str:
         self.validate_arguments(**kwargs)
@@ -748,11 +788,11 @@ class UpnpAction:
         return "\n".join(arg_strs)
 
     def parse_response(
-        self, service_type: str, response_headers: Mapping, response_body: str
+        self, service_type: str, http_response: HttpResponse
     ) -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
-        stripped_response_body = response_body.rstrip(" \t\r\n\0")
+        stripped_response_body = http_response.body
         try:
             xml = DET.fromstring(stripped_response_body)
         except ET.ParseError as err:
@@ -770,11 +810,13 @@ class UpnpAction:
                     xml = it_root
                 except ET.ParseError as err2:
                     _LOGGER.debug(
-                        "Unable to parse XML: %s\nXML:\n%s", err2, response_body
+                        "Unable to parse XML: %s\nXML:\n%s", err2, http_response.body
                     )
                     raise UpnpXmlParseError(err2) from err2
             else:
-                _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, response_body)
+                _LOGGER.debug(
+                    "Unable to parse XML: %s\nXML:\n%s", err, http_response.body
+                )
                 raise UpnpXmlParseError(err) from err
 
         # Check if a SOAP fault occurred. It should have been caught earlier, by
@@ -784,7 +826,7 @@ class UpnpAction:
         try:
             return self._parse_response_args(service_type, xml)
         except AttributeError:
-            _LOGGER.debug("Could not parse response: %s", response_body)
+            _LOGGER.debug("Could not parse response: %s", http_response.body)
             raise
 
     def _parse_response_args(

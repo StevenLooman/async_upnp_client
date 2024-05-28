@@ -156,6 +156,32 @@ class ActionInfo(NamedTuple):
     xml: ET.Element
 
 
+class DescriptionSort(Enum):
+    """Specification sort."""
+
+    DEVICE_DESCRIPTION = 1
+    SERVICE_DESCRIPTION = 2
+
+
+@dataclass(frozen=True)
+class HttpRequest:
+    """HTTP request."""
+
+    method: str
+    url: str
+    headers: Mapping[str, str]
+    body: Optional[str]
+
+
+@dataclass(frozen=True)
+class HttpResponse:
+    """HTTP response."""
+
+    status_code: int
+    headers: Mapping[str, str]
+    body: Optional[str]
+
+
 @dataclass(frozen=True)
 class StateVariableTypeInfo:
     """State variable type info."""
