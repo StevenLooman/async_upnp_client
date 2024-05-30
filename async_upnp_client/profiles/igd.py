@@ -8,7 +8,7 @@ from enum import Enum
 from ipaddress import IPv4Address
 from typing import List, NamedTuple, Optional, Sequence, Set, Union, cast
 
-from async_upnp_client.client import UpnpAction, UpnpDevice
+from async_upnp_client.client import UpnpAction, UpnpDevice, UpnpStateVariable
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
@@ -97,6 +97,7 @@ class IgdState(NamedTuple):
     last_connection_error: Union[None, BaseException, str]
     uptime: Union[None, BaseException, int]
     external_ip_address: Union[None, BaseException, str]
+    port_mapping_number_of_entries: Union[None, BaseException, int]
 
     # Derived values.
     kibibytes_per_sec_received: Union[None, float]
@@ -116,11 +117,11 @@ class IgdStateItem(Enum):
     BYTES_SENT = 2
     PACKETS_RECEIVED = 3
     PACKETS_SENT = 4
-
     CONNECTION_STATUS = 5
     LAST_CONNECTION_ERROR = 6
     UPTIME = 7
     EXTERNAL_IP_ADDRESS = 8
+    PORT_MAPPING_NUMBER_OF_ENTRIES = 9
 
     KIBIBYTES_PER_SEC_RECEIVED = 11
     KIBIBYTES_PER_SEC_SENT = 12
@@ -131,22 +132,19 @@ class IgdStateItem(Enum):
 def _derive_value_per_second(
     value_name: str,
     current_timestamp: datetime,
-    current_value: Union[None, BaseException, int],
+    current_value: Union[None, BaseException, StatusInfo, int, str],
     last_timestamp: Union[None, BaseException, datetime],
-    last_value: Union[None, BaseException, int],
+    last_value: Union[None, BaseException, StatusInfo, int, str],
 ) -> Union[None, float]:
     """Calculate average based on current and last value."""
     if (
-        last_timestamp is None
-        or isinstance(current_value, BaseException)
-        or current_value is None
-        or isinstance(last_value, BaseException)
-        or last_value is None
+        not isinstance(current_timestamp, datetime)
+        or not isinstance(current_value, int)
+        or not isinstance(last_timestamp, datetime)
+        or not isinstance(last_value, int)
     ):
         return None
 
-    assert isinstance(last_timestamp, datetime)
-    assert isinstance(last_value, int)
     if last_value > current_value:
         # Value has overflowed, don't try to calculate anything.
         return None
@@ -214,8 +212,66 @@ class IgdDevice(UpnpProfileDevice):
             if action is not None:
                 return action
 
-        _LOGGER.debug("Could not find %s/%s", service_names, action_name)
+        _LOGGER.debug("Could not find action %s/%s", service_names, action_name)
         return None
+
+    def _any_state_variable(
+        self, service_names: Sequence[str], variable_name: str
+    ) -> Optional[UpnpStateVariable]:
+        for service_name in service_names:
+            state_var = self._state_variable(service_name, variable_name)
+            if state_var is not None:
+                return state_var
+
+        _LOGGER.debug(
+            "Could not find service variable %s/%s", service_names, variable_name
+        )
+        return None
+
+    @property
+    def external_ip_address(self) -> Optional[str]:
+        """
+        Get the external IP address, from the state variable ExternalIPAddress.
+
+        This requires a subscription to the WANIPC/WANPPP service.
+        """
+        services = ["WANIPC", "WANPPP"]
+        state_var = self._any_state_variable(services, "ExternalIPAddress")
+        if not state_var:
+            return None
+
+        external_ip_address: Optional[str] = state_var.value
+        return external_ip_address
+
+    @property
+    def connection_status(self) -> Optional[str]:
+        """
+        Get the connection status, from the state variable ConnectionStatus.
+
+        This requires a subscription to the WANIPC/WANPPP service.
+        """
+        services = ["WANIPC", "WANPPP"]
+        state_var = self._any_state_variable(services, "ConnectionStatus")
+        if not state_var:
+            return None
+
+        connection_status: Optional[str] = state_var.value
+        return connection_status
+
+    @property
+    def port_mapping_number_of_entries(self) -> Optional[int]:
+        """
+        Get number of port mapping entries, from the state variable `PortMappingNumberOfEntries`.
+
+        This requires a subscription to the WANIPC/WANPPP service.
+        """
+        services = ["WANIPC", "WANPPP"]
+        state_var = self._any_state_variable(services, "PortMappingNumberOfEntries")
+        if not state_var:
+            return None
+
+        number_of_entries: Optional[int] = state_var.value
+        return number_of_entries
 
     async def async_get_total_bytes_received(self) -> Optional[int]:
         """Get total bytes received."""
@@ -590,6 +646,8 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get number of port mapping entries.
 
+        Note that this action is not officially supported by the IGD specification.
+
         :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
         services = services or ["WANIPC", "WANPPP"]
@@ -683,20 +741,18 @@ class IgdDevice(UpnpProfileDevice):
 
         external_ip_address: Optional[str] = None
         connection_status: Optional[str] = None
+        port_mapping_number_of_entries: Optional[int] = None
         if not force_poll:
-            for service_type in ["WANIPC", "WANPPP"]:
-                if (service := self._service(service_type)) is not None:
-                    # Get ExternalIPAddress from state variables.
-                    if service.has_state_variable("ExternalIPAddress"):
-                        state_var = service.state_variable("ExternalIPAddress")
-                        if (external_ip_address := state_var.value) is not None:
-                            items.remove(IgdStateItem.EXTERNAL_IP_ADDRESS)
+            if (external_ip_address := self.external_ip_address) is not None:
+                items.remove(IgdStateItem.EXTERNAL_IP_ADDRESS)
 
-                    # Get ConnectionStatus from state variables.
-                    if service.has_state_variable("ConnectionStatus"):
-                        state_var = service.state_variable("ConnectionStatus")
-                        if (connection_status := state_var.value) is not None:
-                            items.remove(IgdStateItem.CONNECTION_STATUS)
+            if (connection_status := self.connection_status) is not None:
+                items.remove(IgdStateItem.CONNECTION_STATUS)
+
+            if (
+                port_mapping_number_of_entries := self.port_mapping_number_of_entries
+            ) is not None:
+                items.remove(IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES)
 
         timestamp = datetime.now()
         values = await asyncio.gather(
@@ -736,6 +792,11 @@ class IgdDevice(UpnpProfileDevice):
                 if IgdStateItem.EXTERNAL_IP_ADDRESS in items
                 else nop()
             ),
+            (
+                self.async_get_port_mapping_number_of_entries()
+                if IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES in items
+                else nop()
+            ),
             return_exceptions=True,
         )
 
@@ -770,14 +831,14 @@ class IgdDevice(UpnpProfileDevice):
 
         self._last_traffic_state = TrafficCounterState(
             timestamp=timestamp,
-            bytes_received=values[0],
-            bytes_sent=values[1],
-            packets_received=values[2],
-            packets_sent=values[3],
-            bytes_received_original=values[0],
-            bytes_sent_original=values[1],
-            packets_received_original=values[2],
-            packets_sent_original=values[3],
+            bytes_received=cast(Union[int, BaseException, None], values[0]),
+            bytes_sent=cast(Union[int, BaseException, None], values[1]),
+            packets_received=cast(Union[int, BaseException, None], values[2]),
+            packets_sent=cast(Union[int, BaseException, None], values[3]),
+            bytes_received_original=cast(Union[int, BaseException, None], values[0]),
+            bytes_sent_original=cast(Union[int, BaseException, None], values[1]),
+            packets_received_original=cast(Union[int, BaseException, None], values[2]),
+            packets_sent_original=cast(Union[int, BaseException, None], values[3]),
         )
 
         # Test if any of the calls were ok. If not, raise the exception.
@@ -791,20 +852,29 @@ class IgdDevice(UpnpProfileDevice):
 
         return IgdState(
             timestamp=timestamp,
-            bytes_received=values[0],
-            bytes_sent=values[1],
-            packets_received=values[2],
-            packets_sent=values[3],
+            bytes_received=cast(Union[None, BaseException, int], values[0]),
+            bytes_sent=cast(Union[None, BaseException, int], values[1]),
+            packets_received=cast(Union[None, BaseException, int], values[2]),
+            packets_sent=cast(Union[None, BaseException, int], values[3]),
             kibibytes_per_sec_received=kibibytes_per_sec_received,
             kibibytes_per_sec_sent=kibibytes_per_sec_sent,
             packets_per_sec_received=packets_per_sec_received,
             packets_per_sec_sent=packets_per_sec_sent,
             connection_status=(
-                values[4].connection_status if values[4] else connection_status
+                values[4].connection_status
+                if isinstance(values[4], StatusInfo)
+                else connection_status
             ),
             last_connection_error=(
-                values[4].last_connection_error if values[4] else None
+                values[4].last_connection_error
+                if isinstance(values[4], StatusInfo)
+                else None
             ),
-            uptime=values[4].uptime if values[4] else None,
-            external_ip_address=values[5] or external_ip_address,
+            uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None,
+            external_ip_address=cast(
+                Union[None, BaseException, str], values[5] or external_ip_address
+            ),
+            port_mapping_number_of_entries=cast(
+                Union[None, int], values[6] or port_mapping_number_of_entries
+            ),
         )

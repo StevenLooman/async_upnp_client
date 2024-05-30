@@ -91,6 +91,19 @@ class WANIPConnectionService(UpnpServerService):
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
         ),
+        "PortMappingNumberOfEntries": EventableStateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value="0",
+            allowed_value_range={
+                "min": "0",
+                "max": "65535",
+                "step": "1"
+            },
+            allowed_values=None,
+            max_rate=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
     }
 
     @callable_action(
@@ -371,8 +384,12 @@ async def async_main(server: UpnpServer) -> None:
     while True:
         upnp_service = server._device.find_service("urn:schemas-upnp-org:service:WANIPConnection:1")
         wanipc_service = cast(WANIPConnectionService, upnp_service)
+
         external_ip_address_var = wanipc_service.state_variable("ExternalIPAddress")
         external_ip_address_var.value = f"1.2.3.{(loop_no % 255) + 1}"
+
+        number_of_port_entries_var = wanipc_service.state_variable("PortMappingNumberOfEntries")
+        number_of_port_entries_var.value = loop_no % 10
 
         await asyncio.sleep(30)
 
