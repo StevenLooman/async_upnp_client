@@ -224,7 +224,7 @@ class IgdDevice(UpnpProfileDevice):
                 return state_var
 
         _LOGGER.debug(
-            "Could not find service variable %s/%s", service_names, variable_name
+            "Could not find state variable %s/%s", service_names, variable_name
         )
         return None
 
