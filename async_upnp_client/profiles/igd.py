@@ -743,15 +743,25 @@ class IgdDevice(UpnpProfileDevice):
         connection_status: Optional[str] = None
         port_mapping_number_of_entries: Optional[int] = None
         if not force_poll:
-            if (external_ip_address := self.external_ip_address) is not None:
+            if (
+                IgdStateItem.EXTERNAL_IP_ADDRESS in items
+                and (external_ip_address := self.external_ip_address) is not None
+            ):
                 items.remove(IgdStateItem.EXTERNAL_IP_ADDRESS)
 
-            if (connection_status := self.connection_status) is not None:
+            if (
+                IgdStateItem.CONNECTION_STATUS in items
+                and (connection_status := self.connection_status) is not None
+            ):
                 items.remove(IgdStateItem.CONNECTION_STATUS)
 
             if (
-                port_mapping_number_of_entries := self.port_mapping_number_of_entries
-            ) is not None:
+                IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES in items
+                and (
+                    port_mapping_number_of_entries := self.port_mapping_number_of_entries
+                )
+                is not None
+            ):
                 items.remove(IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES)
 
         timestamp = datetime.now()
