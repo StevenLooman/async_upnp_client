@@ -720,21 +720,14 @@ class IgdDevice(UpnpProfileDevice):
         * bytes per second sent (derived from last update)
         * packets per second received (derived from last update)
         * packets per second sent (derived from last update)
-        * status info:
-          * connection status
-          * uptime
+        * connection status (status info)
+        * last connection error (status info)
+        * uptime (status info)
+        * external IP address
+        * number of port mapping entries
         """
         # pylint: disable=too-many-locals
-        items = items or {
-            IgdStateItem.BYTES_RECEIVED,
-            IgdStateItem.BYTES_SENT,
-            IgdStateItem.PACKETS_RECEIVED,
-            IgdStateItem.PACKETS_SENT,
-            IgdStateItem.CONNECTION_STATUS,
-            IgdStateItem.LAST_CONNECTION_ERROR,
-            IgdStateItem.UPTIME,
-            IgdStateItem.EXTERNAL_IP_ADDRESS,
-        }
+        items = items or set(IgdStateItem)
 
         async def nop() -> None:
             """Pass."""
