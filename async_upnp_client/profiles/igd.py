@@ -5,7 +5,7 @@ import asyncio
 import logging
 from datetime import datetime, timedelta
 from enum import Enum
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, IPv6Address
 from typing import List, NamedTuple, Optional, Sequence, Set, Union, cast
 
 from async_upnp_client.client import UpnpAction, UpnpDevice, UpnpStateVariable
@@ -69,6 +69,24 @@ class PortMappingEntry(NamedTuple):
     enabled: bool
     description: str
     lease_duration: Optional[timedelta]
+
+
+class FirewallStatus(NamedTuple):
+    """IPv6 Firewall status."""
+
+    firewall_enabled: bool
+    inbound_pinhole_allowed: bool
+
+
+class Pinhole(NamedTuple):
+    """IPv6 Pinhole."""
+
+    remote_host: str
+    remote_port: int
+    internal_client: str
+    internal_port: int
+    protocol: int
+    lease_time: int
 
 
 class TrafficCounterState(NamedTuple):
@@ -167,6 +185,9 @@ class IgdDevice(UpnpProfileDevice):
     ]
 
     _SERVICE_TYPES = {
+        "WANIP6FC": {
+            "urn:schemas-upnp-org:service:WANIPv6FirewallControl:1",
+        },
         "WANPPPC": {
             "urn:schemas-upnp-org:service:WANPPPConnection:1",
         },
@@ -535,6 +556,75 @@ class IgdDevice(UpnpProfileDevice):
             NewExternalPort=external_port,
             NewProtocol=protocol,
         )
+
+    async def async_get_firewall_status(self) -> Optional[FirewallStatus]:
+        """Get (IPv6) firewall status."""
+        action = self._action("WANIP6FC", "GetFirewallStatus")
+        if not action:
+            return None
+
+        result = await action.async_call()
+        return FirewallStatus(
+            result["FirewallEnabled"],
+            result["InboundPinholeAllowed"],
+        )
+
+    async def async_add_pinhole(
+        self,
+        remote_host: IPv6Address,
+        remote_port: int,
+        internal_client: IPv6Address,
+        internal_port: int,
+        protocol: int,
+        lease_time: timedelta,
+    ) -> Optional[int]:
+        """Add a pinhole."""
+        # pylint: disable=too-many-arguments
+        action = self._action("WANIP6FC", "AddPinhole")
+        if not action:
+            return None
+
+        result = await action.async_call(
+            RemoteHost=str(remote_host),
+            RemotePort=remote_port,
+            InternalClient=str(internal_client),
+            InternalPort=internal_port,
+            Protocol=protocol,
+            LeaseTime=int(lease_time.total_seconds()),
+        )
+        return cast(int, result["UniqueID"])
+
+    async def async_update_pinhole(self, pinhole_id: int, new_lease_time: int) -> None:
+        """Update pinhole."""
+        action = self._action("WANIP6FC", "UpdatePinhole")
+        if not action:
+            return
+
+        await action.async_call(
+            UniqueID=pinhole_id,
+            NewLeaseTime=new_lease_time,
+        )
+
+    async def async_delete_pinhole(self, pinhole_id: int) -> None:
+        """Delete an existing pinhole."""
+        action = self._action("WANIP6FC", "DeletePinhole")
+        if not action:
+            return
+
+        await action.async_call(
+            UniqueID=pinhole_id,
+        )
+
+    async def async_get_pinhole_packets(self, pinhole_id: int) -> Optional[int]:
+        """Get pinhole packet count."""
+        action = self._action("WANIP6FC", "GetPinholePackets")
+        if not action:
+            return None
+
+        result = await action.async_call(
+            UniqueID=pinhole_id,
+        )
+        return cast(int, result["PinholePackets"])
 
     async def async_get_connection_type_info(
         self, services: Optional[Sequence[str]] = None

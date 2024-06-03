@@ -12,7 +12,7 @@ import asyncio
 import logging
 import xml.etree.ElementTree as ET
 from time import time
-from typing import Dict, Mapping, Sequence, Type, cast
+from typing import Dict, Mapping, Sequence, Tuple, Type, cast
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -23,15 +23,173 @@ from async_upnp_client.const import (
     StateVariableTypeInfo,
 )
 
+from async_upnp_client.profiles.igd import Pinhole, PortMappingEntry
 from async_upnp_client.server import UpnpServer, UpnpServerDevice, UpnpServerService, callable_action
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger("dummy_router")
 LOGGER_SSDP_TRAFFIC = logging.getLogger("async_upnp_client.traffic")
 LOGGER_SSDP_TRAFFIC.setLevel(logging.WARNING)
-SOURCE = ("172.24.83.184", 0)  # Your IP here!
+SOURCE = ("192.168.178.54", 0)  # Your IP here!
 # SOURCE = ("fe80::215:5dff:fe3e:6d23", 0, 0, 6)  # Your IP here!
 HTTP_PORT = 8000
+
+
+class WANIPv6FirewallControlService(UpnpServerService):
+    """WANIPv6FirewallControl service."""
+
+    SERVICE_DEFINITION = ServiceInfo(
+        service_id="urn:upnp-org:serviceId:WANIPv6FirewallControl1",
+        service_type="urn:schemas-upnp-org:service:WANIPv6FirewallControl:1",
+        control_url="/upnp/control/WANIPv6FirewallControl1",
+        event_sub_url="/upnp/event/WANIPv6FirewallControl1",
+        scpd_url="/WANIPv6FirewallControl_1.xml",
+        xml=ET.Element("server_service"),
+    )
+
+    STATE_VARIABLE_DEFINITIONS = {
+        "FirewallEnabled": EventableStateVariableTypeInfo(
+            data_type="boolean",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["boolean"],
+            default_value="1",
+            allowed_value_range={},
+            allowed_values=None,
+            max_rate=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "InboundPinholeAllowed": EventableStateVariableTypeInfo(
+            data_type="boolean",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["boolean"],
+            default_value="1",
+            allowed_value_range={},
+            allowed_values=None,
+            max_rate=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_IPv6Address": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_Port": StateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_Protocol": StateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_LeaseTime": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={
+                "min": "1",
+                "max": "86400",
+            },
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "A_ARG_TYPE_UniqueID": StateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+    }
+
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize."""
+        super().__init__(*args, **kwargs)
+        self._pinholes: Dict[int, Pinhole] = {}
+        self._next_pinhole_id = 0
+
+    @callable_action(
+        name="GetFirewallStatus",
+        in_args={},
+        out_args={
+            "FirewallEnabled": "FirewallEnabled",
+            "InboundPinholeAllowed": "InboundPinholeAllowed",
+        },
+    )
+    async def get_firewall_status(self) -> Dict[str, UpnpStateVariable]:
+        """Get firewall status."""
+        return {
+            "FirewallEnabled": self.state_variable("FirewallEnabled"),
+            "InboundPinholeAllowed": self.state_variable("InboundPinholeAllowed"),
+        }
+
+    @callable_action(
+        name="AddPinhole",
+        in_args={
+            "RemoteHost": "A_ARG_TYPE_IPv6Address",
+            "RemotePort": "A_ARG_TYPE_Port",
+            "InternalClient": "A_ARG_TYPE_IPv6Address",
+            "InternalPort": "A_ARG_TYPE_Port",
+            "Protocol": "A_ARG_TYPE_Protocol",
+            "LeaseTime": "A_ARG_TYPE_LeaseTime",
+        },
+        out_args={
+            "UniqueID": "A_ARG_TYPE_UniqueID",
+        },
+    )
+    async def add_pinhole(self, RemoteHost: str, RemotePort: int, InternalClient: str, InternalPort: int, Protocol: int, LeaseTime: int) -> Dict[str, UpnpStateVariable]:
+        """Add pinhole."""
+        # pylint: disable=invalid-name
+        pinhole_id = self._next_pinhole_id
+        self._next_pinhole_id += 1
+        pinhole = Pinhole(
+            remote_host=RemoteHost,
+            remote_port=RemotePort,
+            internal_client=InternalClient,
+            internal_port=InternalPort,
+            protocol=Protocol,
+            lease_time=LeaseTime,
+        )
+        self._pinholes[pinhole_id] = pinhole
+        return {
+            "UniqueID": pinhole_id,
+        }
+
+    @callable_action(
+        name="UpdatePinhole",
+        in_args={
+            "UniqueID": "A_ARG_TYPE_UniqueID",
+            "LeaseTime": "A_ARG_TYPE_LeaseTime",
+        },
+        out_args={},
+    )
+    async def update_pinhole(self, UniqueID: int, LeaseTime: int) -> Dict[str, UpnpStateVariable]:
+        """Update pinhole."""
+        # pylint: disable=invalid-name
+        self._pinholes[UniqueID].lease_time = LeaseTime
+        return {}
+
+    @callable_action(
+        name="DeletePinhole",
+        in_args={
+            "UniqueID": "A_ARG_TYPE_UniqueID",
+        },
+        out_args={},
+    )
+    async def delete_pinhole(self, UniqueID: int) -> Dict[str, UpnpStateVariable]:
+        """Delete pinhole."""
+        # pylint: disable=invalid-name
+        del self._pinholes[UniqueID]
+        return {}
 
 
 class WANIPConnectionService(UpnpServerService):
@@ -91,6 +249,71 @@ class WANIPConnectionService(UpnpServerService):
             allowed_values=None,
             xml=ET.Element("server_stateVariable"),
         ),
+        "RemoteHost": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+
+        "ExternalPort": StateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PortMappingProtocol": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=["TCP", "UDP"],
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "InternalPort": StateVariableTypeInfo(
+            data_type="ui2",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "InternalClient": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PortMappingEnabled": StateVariableTypeInfo(
+            data_type="boolean",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["boolean"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PortMappingDescription": StateVariableTypeInfo(
+            data_type="string",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["string"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
+        "PortMappingLeaseDuration": StateVariableTypeInfo(
+            data_type="ui4",
+            data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui4"],
+            default_value=None,
+            allowed_value_range={},
+            allowed_values=None,
+            xml=ET.Element("server_stateVariable"),
+        ),
         "PortMappingNumberOfEntries": EventableStateVariableTypeInfo(
             data_type="ui2",
             data_type_mapping=STATE_VARIABLE_TYPE_MAPPING["ui2"],
@@ -101,10 +324,15 @@ class WANIPConnectionService(UpnpServerService):
                 "step": "1"
             },
             allowed_values=None,
-            max_rate=None,
+            max_rate=0,
             xml=ET.Element("server_stateVariable"),
-        ),
+        )
     }
+
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize."""
+        super().__init__(*args, **kwargs)
+        self._port_mappings: Dict[Tuple[str, int, str, str], PortMappingEntry] = {}
 
     @callable_action(
         name="GetStatusInfo",
@@ -144,6 +372,56 @@ class WANIPConnectionService(UpnpServerService):
             "NewExternalIPAddress": self.state_variable("ExternalIPAddress"),
         }
 
+    @callable_action(
+        name="AddPortMapping",
+        in_args={
+            "NewRemoteHost": "RemoteHost",
+            "NewExternalPort": "ExternalPort",
+            "NewProtocol": "PortMappingProtocol",
+            "NewInternalPort": "InternalPort",
+            "NewInternalClient": "InternalClient",
+            "NewEnabled": "PortMappingEnabled",
+            "NewPortMappingDescription": "PortMappingDescription",
+            "NewLeaseDuration": "PortMappingLeaseDuration",
+        },
+        out_args={},
+    )
+    async def add_port_mapping(self, NewRemoteHost: str, NewExternalPort: int, NewProtocol: str, NewInternalPort: int, NewInternalClient: str, NewEnabled: bool, NewPortMappingDescription: str, NewLeaseDuration: int) ->  Dict[str, UpnpStateVariable]:
+        """Add port mapping."""
+        # pylint: disable=invalid-name
+        key = (NewRemoteHost, NewExternalPort, NewProtocol)
+        existing_port_mapping = key in self._port_mappings
+        self._port_mappings[key] = PortMappingEntry(
+            remote_host=NewRemoteHost,
+            external_port=NewExternalPort,
+            protocol=NewProtocol,
+            internal_client=NewInternalClient,
+            internal_port=NewInternalPort,
+            enabled=NewEnabled,
+            description=NewPortMappingDescription,
+            lease_duration=NewLeaseDuration,
+        )
+        if not existing_port_mapping:
+            self.state_variable("PortMappingNumberOfEntries").value += 1
+        return {}
+
+    @callable_action(
+        name="DeletePortMapping",
+        in_args={
+            "NewRemoteHost": "RemoteHost",
+            "NewExternalPort": "ExternalPort",
+            "NewProtocol": "PortMappingProtocol",
+        },
+        out_args={},
+    )
+    async def delete_port_mapping(self, NewRemoteHost: str, NewExternalPort: int, NewProtocol: str) ->  Dict[str, UpnpStateVariable]:
+        """Delete an existing port mapping entry."""
+        # pylint: disable=invalid-name
+        key = (NewRemoteHost, NewExternalPort, NewProtocol)
+        del self._port_mappings[key]
+        self.state_variable("PortMappingNumberOfEntries").value -= 1
+        return {}
+
 
 class WanConnectionDevice(UpnpServerDevice):
     """WAN Connection device."""
@@ -166,7 +444,7 @@ class WanConnectionDevice(UpnpServerDevice):
         xml=ET.Element("server_device"),
     )
     EMBEDDED_DEVICES: Sequence[Type[UpnpServerDevice]] = []
-    SERVICES = [WANIPConnectionService]
+    SERVICES = [WANIPConnectionService, WANIPv6FirewallControlService]
 
     def __init__(self, requester: UpnpRequester, base_uri: str, boot_id: int, config_id: int) -> None:
         """Initialize."""
