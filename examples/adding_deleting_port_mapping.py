@@ -89,7 +89,7 @@ async def async_main() -> None:
     print("Creating port mapping")
     await async_add_port_mapping(igd_device)
 
-    await asyncio.sleep(60)
+    await asyncio.sleep(5)
 
     print("Deleting port mapping")
     await async_del_port_mapping(igd_device)
