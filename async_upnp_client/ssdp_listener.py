@@ -49,60 +49,46 @@ IGNORED_HEADERS = {
 }
 
 
+@lru_cache(maxsize=128)
+def is_valid_location(location: str) -> bool:
+    """Validate if this location is usable."""
+    return location.startswith("http") and not (
+        "://127.0.0.1" in location or "://[::1]" in location or "://169.254" in location
+    )
+
+
 def valid_search_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this search is usable."""
-    # pylint: disable=invalid-name
-    udn = headers.get_lower("_udn")  # type: Optional[str]
-    st = headers.get_lower("st")  # type: Optional[str]
-    location = headers.get_lower("location", "")  # type: str
     return bool(
-        udn
-        and st
-        and location
-        and location.startswith("http")
-        and not (
-            "://127.0.0.1" in location
-            or "://[::1]" in location
-            or "://169.254" in location
-        )
+        headers.get_lower("_udn")
+        and headers.get_lower("st")
+        and is_valid_location(headers.get_lower("location", ""))
     )
 
 
 def valid_advertisement_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement is usable for connecting to a device."""
-    # pylint: disable=invalid-name
-    udn = headers.get_lower("_udn")  # type: Optional[str]
-    nt = headers.get_lower("nt")  # type: Optional[str]
-    nts = headers.get_lower("nts")  # type: Optional[str]
-    location = headers.get_lower("location", "")  # type: str
     return bool(
-        udn
-        and nt
-        and nts
-        and location
-        and location.startswith("http")
-        and not (
-            "://127.0.0.1" in location
-            or "://[::1]" in location
-            or "://169.254" in location
-        )
+        headers.get_lower("_udn")
+        and headers.get_lower("nt")
+        and headers.get_lower("nts")
+        and is_valid_location(headers.get_lower("location", ""))
     )
 
 
 def valid_byebye_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement has required headers for byebye."""
-    # pylint: disable=invalid-name
-    udn = headers.get_lower("_udn")  # type: Optional[str]
-    nt = headers.get_lower("nt")  # type: Optional[str]
-    nts = headers.get_lower("nts")  # type: Optional[str]
-    return bool(udn and nt and nts)
+    return bool(
+        headers.get_lower("_udn")
+        and headers.get_lower("nt")
+        and headers.get_lower("nts")
+    )
 
 
 @lru_cache(maxsize=128)
 def extract_uncache_after(cache_control: str) -> timedelta:
     """Get uncache after from cache control header."""
-    match = CACHE_CONTROL_RE.search(cache_control)
-    if match:
+    if match := CACHE_CONTROL_RE.search(cache_control):
         max_age = int(match[1])
         return timedelta(seconds=max_age)
     return DEFAULT_MAX_AGE
