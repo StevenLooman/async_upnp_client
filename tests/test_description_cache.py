@@ -7,6 +7,7 @@ import aiohttp
 import defusedxml.ElementTree as DET
 import pytest
 
+from async_upnp_client.const import HttpResponse
 from async_upnp_client.description_cache import DescriptionCache
 
 from .conftest import UpnpTestRequester
@@ -22,7 +23,7 @@ async def test_fetch_parse_success() -> None:
   </device>
 </root>"""
     requester = UpnpTestRequester(
-        {("GET", "http://192.168.1.1/desc.xml"): (200, {}, xml)}
+        {("GET", "http://192.168.1.1/desc.xml"): HttpResponse(200, {}, xml)}
     )
     description_cache = DescriptionCache(requester)
     descr_xml = await description_cache.async_get_description_xml(
@@ -50,7 +51,7 @@ async def test_fetch_parse_success_invalid_chars() -> None:
   </device>
 </root>"""
     requester = UpnpTestRequester(
-        {("GET", "http://192.168.1.1/desc.xml"): (200, {}, xml)}
+        {("GET", "http://192.168.1.1/desc.xml"): HttpResponse(200, {}, xml)}
     )
     description_cache = DescriptionCache(requester)
     descr_xml = await description_cache.async_get_description_xml(
@@ -74,7 +75,7 @@ async def test_fetch_fail(exc: Exception) -> None:
     """Test fail fetching a description."""
     xml = ""
     requester = UpnpTestRequester(
-        {("GET", "http://192.168.1.1/desc.xml"): (200, {}, xml)}
+        {("GET", "http://192.168.1.1/desc.xml"): HttpResponse(200, {}, xml)}
     )
     requester.exceptions.append(exc)
     description_cache = DescriptionCache(requester)
@@ -94,7 +95,7 @@ async def test_parsing_fail_invalid_xml() -> None:
     """Test fail parsing a description with invalid XML."""
     xml = """<root xmlns="urn:schemas-upnp-org:device-1-0">INVALIDXML"""
     requester = UpnpTestRequester(
-        {("GET", "http://192.168.1.1/desc.xml"): (200, {}, xml)}
+        {("GET", "http://192.168.1.1/desc.xml"): HttpResponse(200, {}, xml)}
     )
     description_cache = DescriptionCache(requester)
     descr_xml = await description_cache.async_get_description_xml(
@@ -113,7 +114,7 @@ async def test_parsing_fail_error() -> None:
     """Test fail parsing a description with invalid XML."""
     xml = ""
     requester = UpnpTestRequester(
-        {("GET", "http://192.168.1.1/desc.xml"): (200, {}, xml)}
+        {("GET", "http://192.168.1.1/desc.xml"): HttpResponse(200, {}, xml)}
     )
     description_cache = DescriptionCache(requester)
     descr_xml = await description_cache.async_get_description_xml(

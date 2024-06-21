@@ -157,6 +157,25 @@ class ActionInfo(NamedTuple):
 
 
 @dataclass(frozen=True)
+class HttpRequest:
+    """HTTP request."""
+
+    method: str
+    url: str
+    headers: Mapping[str, str]
+    body: Optional[str]
+
+
+@dataclass(frozen=True)
+class HttpResponse:
+    """HTTP response."""
+
+    status_code: int
+    headers: Mapping[str, str]
+    body: Optional[str]
+
+
+@dataclass(frozen=True)
 class StateVariableTypeInfo:
     """State variable type info."""
 

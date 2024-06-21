@@ -3,7 +3,7 @@
 
 import logging
 import urllib.parse
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
 from xml.etree import ElementTree as ET
 
 import defusedxml.ElementTree as DET
@@ -16,6 +16,12 @@ from async_upnp_client.client import (
     UpnpRequester,
     UpnpService,
     UpnpStateVariable,
+    default_on_post_call_action,
+    default_on_post_receive_device_spec,
+    default_on_post_receive_service_spec,
+    default_on_pre_call_action,
+    default_on_pre_receive_device_spec,
+    default_on_pre_receive_service_spec,
 )
 from async_upnp_client.const import (
     NS,
@@ -24,6 +30,8 @@ from async_upnp_client.const import (
     ActionInfo,
     DeviceIcon,
     DeviceInfo,
+    HttpRequest,
+    HttpResponse,
     ServiceInfo,
     StateVariableInfo,
     StateVariableTypeInfo,
@@ -42,26 +50,46 @@ class UpnpFactory:
     """
     Factory for UpnpService and friends.
 
-    Use UpnpFactory.async_create_device() to instantiate UpnpDevice from a device XML.
-    You have probably received this URL from netdisco, for example.
+    Use UpnpFactory.async_create_device() to instantiate a UpnpDevice from a description URL. The
+    description URL can be retrieved by searching for the UPnP device on the network, or by
+    listening for advertisements.
     """
 
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,too-many-instance-attributes
 
     def __init__(
         self,
         requester: UpnpRequester,
-        disable_state_variable_validation: bool = False,
-        disable_unknown_out_argument_error: bool = False,
         non_strict: bool = False,
+        on_pre_receive_device_spec: Callable[
+            [HttpRequest], HttpRequest
+        ] = default_on_pre_receive_device_spec,
+        on_post_receive_device_spec: Callable[
+            [HttpResponse], HttpResponse
+        ] = default_on_post_receive_device_spec,
+        on_pre_receive_service_spec: Callable[
+            [HttpRequest], HttpRequest
+        ] = default_on_pre_receive_service_spec,
+        on_post_receive_service_spec: Callable[
+            [HttpResponse], HttpResponse
+        ] = default_on_post_receive_service_spec,
+        on_pre_call_action: Callable[
+            [UpnpAction, Mapping[str, Any], HttpRequest], HttpRequest
+        ] = default_on_pre_call_action,
+        on_post_call_action: Callable[
+            [UpnpAction, HttpResponse], HttpResponse
+        ] = default_on_post_call_action,
     ) -> None:
         """Initialize."""
+        # pylint: disable=too-many-arguments
         self.requester = requester
-        self._non_strict = (
-            non_strict
-            or disable_unknown_out_argument_error
-            or disable_state_variable_validation
-        )
+        self._non_strict = non_strict
+        self._on_pre_receive_device_spec = on_pre_receive_device_spec
+        self._on_post_receive_device_spec = on_post_receive_device_spec
+        self._on_pre_receive_service_spec = on_pre_receive_service_spec
+        self._on_post_receive_service_spec = on_post_receive_service_spec
+        self._on_pre_call_action = on_pre_call_action
+        self._on_post_call_action = on_post_call_action
 
     async def async_create_device(
         self,
@@ -69,7 +97,7 @@ class UpnpFactory:
     ) -> UpnpDevice:
         """Create a UpnpDevice, with all of it UpnpServices."""
         _LOGGER.debug("Creating device, description_url: %s", description_url)
-        root_el = await self._async_get(description_url)
+        root_el = await self._async_get_device_spec(description_url)
 
         # get root device
         device_el = root_el.find("./device:device", NS)
@@ -101,7 +129,14 @@ class UpnpFactory:
             )
             embedded_devices.append(embedded_device)
 
-        return UpnpDevice(self.requester, device_info, services, embedded_devices)
+        return UpnpDevice(
+            self.requester,
+            device_info,
+            services,
+            embedded_devices,
+            self._on_pre_receive_device_spec,
+            self._on_post_receive_device_spec,
+        )
 
     def _parse_device_el(
         self, device_desc_el: ET.Element, description_url: str
@@ -152,8 +187,7 @@ class UpnpFactory:
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
 
         try:
-            scpd_el = await self._async_get(scpd_url)
-
+            scpd_el = await self._async_get_service_spec(scpd_url)
         except UpnpXmlParseError as err:
             if not self._non_strict:
                 raise
@@ -166,7 +200,14 @@ class UpnpFactory:
         service_info = self._parse_service_el(service_description_el)
         state_vars = self._create_state_variables(scpd_el)
         actions = self._create_actions(scpd_el, state_vars)
-        return UpnpService(self.requester, service_info, state_vars, actions)
+        return UpnpService(
+            self.requester,
+            service_info,
+            state_vars,
+            actions,
+            self._on_pre_call_action,
+            self._on_post_call_action,
+        )
 
     def _parse_service_el(self, service_description_el: ET.Element) -> ServiceInfo:
         """Parse service description XML."""
@@ -385,18 +426,30 @@ class UpnpFactory:
 
         return ActionInfo(name=action_name, arguments=args, xml=action_el)
 
-    async def _async_get(self, url: str) -> ET.Element:
+    async def _async_get_device_spec(self, url: str) -> ET.Element:
         """Get a url."""
-        (
-            status_code,
-            response_headers,
-            response_body,
-        ) = await self.requester.async_http_request("GET", url)
+        bare_request = HttpRequest("GET", url, {}, None)
+        request = self._on_pre_receive_device_spec(bare_request)
+        bare_response = await self.requester.async_http_request(request)
+        response = self._on_post_receive_device_spec(bare_response)
+        return self._read_spec_from_reponse(response)
 
-        if status_code != 200:
-            raise UpnpResponseError(status=status_code, headers=response_headers)
+    async def _async_get_service_spec(self, url: str) -> ET.Element:
+        """Get a url."""
+        bare_request = HttpRequest("GET", url, {}, None)
+        request = self._on_pre_receive_service_spec(bare_request)
+        bare_response = await self.requester.async_http_request(request)
+        response = self._on_post_receive_service_spec(bare_response)
+        return self._read_spec_from_reponse(response)
 
-        description: str = (response_body or "").rstrip(" \t\r\n\0")
+    def _read_spec_from_reponse(self, response: HttpResponse) -> ET.Element:
+        """Read XML specification from response."""
+        if response.status_code != 200:
+            raise UpnpResponseError(
+                status=response.status_code, headers=response.headers
+            )
+
+        description: str = response.body or ""
         try:
             element: ET.Element = DET.fromstring(description)
             return element

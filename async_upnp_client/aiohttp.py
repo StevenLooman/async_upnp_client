@@ -5,7 +5,7 @@ import asyncio
 import logging
 from asyncio.events import AbstractEventLoop, AbstractServer
 from ipaddress import ip_address
-from typing import Dict, Mapping, Optional, Tuple
+from typing import Dict, Mapping, Optional
 from urllib.parse import urlparse
 
 import aiohttp.web
@@ -17,7 +17,12 @@ from aiohttp import (
 )
 
 from async_upnp_client.client import UpnpRequester
-from async_upnp_client.const import AddressTupleVXType, IPvXAddress
+from async_upnp_client.const import (
+    AddressTupleVXType,
+    HttpRequest,
+    HttpResponse,
+    IPvXAddress,
+)
 from async_upnp_client.event_handler import UpnpEventHandler, UpnpNotifyServer
 from async_upnp_client.exceptions import (
     UpnpClientResponseError,
@@ -64,34 +69,35 @@ class AiohttpRequester(UpnpRequester):
 
     async def async_http_request(
         self,
-        method: str,
-        url: str,
-        headers: Optional[Mapping[str, str]] = None,
-        body: Optional[str] = None,
-    ) -> Tuple[int, Mapping, str]:
+        http_request: HttpRequest,
+    ) -> HttpResponse:
         """Do a HTTP request."""
         req_headers = {
-            **_fixed_host_header(url),
+            **_fixed_host_header(http_request.url),
             **self._http_headers,
-            **(headers or {}),
+            **(http_request.headers or {}),
         }
 
         log_traffic = _LOGGER_TRAFFIC_UPNP.isEnabledFor(logging.DEBUG)
         if log_traffic:  # pragma: no branch
             _LOGGER_TRAFFIC_UPNP.debug(
                 "Sending request:\n%s %s\n%s\n%s\n",
-                method,
-                url,
+                http_request.method,
+                http_request.url,
                 "\n".join(
                     [key + ": " + value for key, value in (req_headers or {}).items()]
                 ),
-                body or "",
+                http_request.body or "",
             )
 
         try:
             async with ClientSession() as session:
                 async with session.request(
-                    method, url, headers=req_headers, data=body, timeout=self._timeout
+                    http_request.method,
+                    http_request.url,
+                    headers=req_headers,
+                    data=http_request.body,
+                    timeout=self._timeout,
                 ) as response:
                     status = response.status
                     resp_headers: Mapping = response.headers or {}
@@ -100,8 +106,8 @@ class AiohttpRequester(UpnpRequester):
                     if log_traffic:  # pragma: no branch
                         _LOGGER_TRAFFIC_UPNP.debug(
                             "Got response from %s %s:\n%s\n%s\n\n%s",
-                            method,
-                            url,
+                            http_request.method,
+                            http_request.url,
                             status,
                             "\n".join(
                                 [
@@ -130,7 +136,7 @@ class AiohttpRequester(UpnpRequester):
         except UnicodeDecodeError as err:
             raise UpnpCommunicationError(repr(err)) from err
 
-        return status, resp_headers, resp_body_text
+        return HttpResponse(status, resp_headers, resp_body_text)
 
 
 class AiohttpSessionRequester(UpnpRequester):
@@ -157,11 +163,8 @@ class AiohttpSessionRequester(UpnpRequester):
 
     async def async_http_request(
         self,
-        method: str,
-        url: str,
-        headers: Optional[Mapping[str, str]] = None,
-        body: Optional[str] = None,
-    ) -> Tuple[int, Mapping[str, str], str]:
+        http_request: HttpRequest,
+    ) -> HttpResponse:
         """Do a HTTP request with a retry on ServerDisconnectedError.
 
         The HTTP/1.1 spec allows the server to disconnect at any time.
@@ -169,39 +172,41 @@ class AiohttpSessionRequester(UpnpRequester):
         """
         for _ in range(2):
             try:
-                return await self._async_http_request(method, url, headers, body)
+                return await self._async_http_request(http_request)
             except ClientConnectionError as err:
-                _LOGGER.debug("%r during request %s %s; retrying", err, method, url)
+                _LOGGER.debug(
+                    "%r during request %s %s; retrying",
+                    err,
+                    http_request.method,
+                    http_request.url,
+                )
         try:
-            return await self._async_http_request(method, url, headers, body)
+            return await self._async_http_request(http_request)
         except ClientConnectionError as err:
             raise UpnpConnectionError(repr(err)) from err
 
     async def _async_http_request(
         self,
-        method: str,
-        url: str,
-        headers: Optional[Mapping[str, str]] = None,
-        body: Optional[str] = None,
-    ) -> Tuple[int, Mapping[str, str], str]:
+        http_request: HttpRequest,
+    ) -> HttpResponse:
         """Do a HTTP request."""
         # pylint: disable=too-many-arguments
         req_headers = {
-            **_fixed_host_header(url),
+            **_fixed_host_header(http_request.url),
             **self._http_headers,
-            **(headers or {}),
+            **(http_request.headers or {}),
         }
 
         log_traffic = _LOGGER_TRAFFIC_UPNP.isEnabledFor(logging.DEBUG)
         if log_traffic:  # pragma: no branch
             _LOGGER_TRAFFIC_UPNP.debug(
                 "Sending request:\n%s %s\n%s\n%s\n",
-                method,
-                url,
+                http_request.method,
+                http_request.url,
                 "\n".join(
                     [key + ": " + value for key, value in (req_headers or {}).items()]
                 ),
-                body or "",
+                http_request.body or "",
             )
 
         if self._with_sleep:
@@ -209,7 +214,11 @@ class AiohttpSessionRequester(UpnpRequester):
 
         try:
             async with self._session.request(
-                method, url, headers=req_headers, data=body, timeout=self._timeout
+                http_request.method,
+                http_request.url,
+                headers=req_headers,
+                data=http_request.body,
+                timeout=self._timeout,
             ) as response:
                 status = response.status
                 resp_headers: Mapping = response.headers or {}
@@ -218,8 +227,8 @@ class AiohttpSessionRequester(UpnpRequester):
                 if log_traffic:  # pragma: no branch
                     _LOGGER_TRAFFIC_UPNP.debug(
                         "Got response from %s %s:\n%s\n%s\n\n%s",
-                        method,
-                        url,
+                        http_request.method,
+                        http_request.url,
                         status,
                         "\n".join(
                             [key + ": " + value for key, value in resp_headers.items()]
@@ -245,7 +254,7 @@ class AiohttpSessionRequester(UpnpRequester):
         except UnicodeDecodeError as err:
             raise UpnpCommunicationError(repr(err)) from err
 
-        return status, resp_headers, resp_body_text
+        return HttpResponse(status, resp_headers, resp_body_text)
 
 
 class AiohttpNotifyServer(UpnpNotifyServer):
@@ -332,7 +341,10 @@ class AiohttpNotifyServer(UpnpNotifyServer):
             _LOGGER.debug("Not notify")
             return aiohttp.web.Response(status=405)
 
-        status = await self.event_handler.handle_notify(headers, body)
+        http_request = HttpRequest(
+            request.method, self.callback_url, request.headers, body
+        )
+        status = await self.event_handler.handle_notify(http_request)
         _LOGGER.debug("NOTIFY response status: %s", status)
         if log_traffic:
             _LOGGER_TRAFFIC_UPNP.debug("Sending response: %s", status)

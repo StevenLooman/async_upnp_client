@@ -31,7 +31,7 @@ from defusedxml.sax import parseString
 from didl_lite import didl_lite
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
-from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING
+from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING, HttpRequest
 from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
@@ -892,27 +892,28 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         requester = self.profile_device.requester
 
         # try a HEAD first
-        status, rsp_hdrs, _ = await requester.async_http_request("HEAD", url, headers)
-        if 200 <= status < 300:
-            return rsp_hdrs
+        request = HttpRequest("HEAD", url, headers, None)
+        response = await requester.async_http_request(request)
+        if 200 <= response.status_code < 300:
+            return response.headers
 
-        if status == HTTPStatus.NOT_FOUND:
+        if response.status_code == HTTPStatus.NOT_FOUND:
             # Give up when the item doesn't exist, otherwise try GET below
             return None
 
         # then try a GET request for only the first byte of content
         get_headers = dict(headers)
         get_headers["Range"] = "bytes=0-0"
-        status, rsp_hdrs, _ = await requester.async_http_request(
-            "GET", url, get_headers
-        )
-        if 200 <= status < 300:
-            return rsp_hdrs
+        request = HttpRequest("GET", url, get_headers, None)
+        response = await requester.async_http_request(request)
+        if 200 <= response.status_code < 300:
+            return response.headers
 
         # finally try a plain GET, which might return a lot of data
-        status, rsp_hdrs, _ = await requester.async_http_request("GET", url, headers)
-        if 200 <= status < 300:
-            return rsp_hdrs
+        request = HttpRequest("GET", url, headers, None)
+        response = await requester.async_http_request(request)
+        if 200 <= response.status_code < 300:
+            return response.headers
 
         return None
 

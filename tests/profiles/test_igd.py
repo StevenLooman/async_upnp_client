@@ -3,6 +3,7 @@
 import pytest
 
 from async_upnp_client.client_factory import UpnpFactory
+from async_upnp_client.const import HttpResponse
 from async_upnp_client.profiles.igd import IgdDevice
 
 from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester, read_file
@@ -27,7 +28,7 @@ async def test_init_igd_profile() -> None:
 async def test_get_total_bytes_received() -> None:
     """Test getting total bytes received."""
     responses = dict(RESPONSE_MAP)
-    responses[("POST", "http://igd:1234/WANCommonInterfaceConfig")] = (
+    responses[("POST", "http://igd:1234/WANCommonInterfaceConfig")] = HttpResponse(
         200,
         {},
         read_file("igd/action_WANCIC_GetTotalBytesReceived.xml"),
@@ -49,7 +50,7 @@ async def test_get_total_bytes_received() -> None:
 async def test_get_total_packets_received_empty_response() -> None:
     """Test getting total packets received with empty response, for broken (Draytek) device."""
     responses = dict(RESPONSE_MAP)
-    responses[("POST", "http://igd:1234/WANCommonInterfaceConfig")] = (
+    responses[("POST", "http://igd:1234/WANCommonInterfaceConfig")] = HttpResponse(
         200,
         {},
         read_file("igd/action_WANCIC_GetTotalPacketsReceived.xml"),
@@ -71,7 +72,7 @@ async def test_get_total_packets_received_empty_response() -> None:
 async def test_get_status_info_invalid_uptime() -> None:
     """Test getting status info with an invalid uptime response."""
     responses = dict(RESPONSE_MAP)
-    responses[("POST", "http://igd:1234/WANIPConnection")] = (
+    responses[("POST", "http://igd:1234/WANIPConnection")] = HttpResponse(
         200,
         {},
         read_file("igd/action_WANIPConnection_GetStatusInfoInvalidUptime.xml"),
@@ -98,7 +99,7 @@ async def test_negative_bytes_received_counter() -> None:
     which can result in negative values.
     """
     responses = dict(RESPONSE_MAP)
-    responses[("POST", "http://igd:1234/WANCommonInterfaceConfig")] = (
+    responses[("POST", "http://igd:1234/WANCommonInterfaceConfig")] = HttpResponse(
         200,
         {},
         read_file("igd/action_WANCIC_GetTotalBytesReceived_i4.xml"),

@@ -12,6 +12,7 @@ from didl_lite import didl_lite
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
+from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.profiles.dlna import (
     DmrDevice,
     _parse_last_change_event,
@@ -181,7 +182,10 @@ async def test_on_notify_dlna_event() -> None:
 </e:propertyset>
 """
 
-    result = await event_handler.handle_notify(headers, body)
+    http_request = HttpRequest(
+        "NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body
+    )
+    result = await event_handler.handle_notify(http_request)
     assert result == 200
 
     assert len(changed_vars) == 3
@@ -205,10 +209,13 @@ async def test_wait_for_can_play_evented() -> None:
     await profile.async_subscribe_services()
 
     # Send a NOTIFY of CurrentTransportActions without Play
-    result = await event_handler.handle_notify(
+    http_request = HttpRequest(
+        "NOTIFY",
+        "http://dlna_dmr:1234/upnp/event/AVTransport1",
         AVT_NOTIFY_HEADERS,
         AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT.format(actions="Stop"),
     )
+    result = await event_handler.handle_notify(http_request)
     assert result == 200
 
     # Should not be able to play yet
@@ -219,10 +226,13 @@ async def test_wait_for_can_play_evented() -> None:
     async def delayed_notify() -> None:
         await asyncio.sleep(0.1)
         # Send NOTIFY of change to CurrentTransportActions
-        result = await event_handler.handle_notify(
+        http_request = HttpRequest(
+            "NOTIFY",
+            "http://dlna_dmr:1234/upnp/event/AVTransport1",
             AVT_NOTIFY_HEADERS,
             AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT.format(actions="Pause,Play"),
         )
+        result = await event_handler.handle_notify(http_request)
         assert result == 200
 
     loop = asyncio.get_event_loop()
@@ -253,7 +263,7 @@ async def test_wait_for_can_play_polled() -> None:
     # Polling of CurrentTransportActions does not contain "Play" yet
     requester.response_map[
         ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = (
+    ] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
@@ -270,7 +280,7 @@ async def test_wait_for_can_play_polled() -> None:
     # Polling of CurrentTransportActions now contains "Play"
     requester.response_map[
         ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = (
+    ] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
@@ -297,7 +307,7 @@ async def test_wait_for_can_play_timeout() -> None:
     # Polling of CurrentTransportActions does not contain "Play" yet
     requester.response_map[
         ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = (
+    ] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
@@ -339,9 +349,11 @@ async def test_fetch_headers() -> None:
     with mock.patch.object(
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
-        ahr_mock.side_effect = [(200, expected_response_headers, "")]
+        ahr_mock.side_effect = [HttpResponse(200, expected_response_headers, "")]
         headers = await profile._fetch_headers(media_url, fetch_headers)
-        ahr_mock.assert_awaited_once_with("HEAD", media_url, fetch_headers)
+        ahr_mock.assert_awaited_once_with(
+            HttpRequest("HEAD", media_url, fetch_headers, None)
+        )
         assert headers == expected_response_headers
 
     # HEAD method is not allowed, but GET with Range works
@@ -351,13 +363,17 @@ async def test_fetch_headers() -> None:
         ranged_response_headers = dict(expected_response_headers)
         ranged_response_headers["Content-Range"] = "bytes 0-0/1024"
         ahr_mock.side_effect = [
-            (405, expected_response_headers, ""),
-            (200, ranged_response_headers, ""),
+            HttpResponse(405, expected_response_headers, ""),
+            HttpResponse(200, ranged_response_headers, ""),
         ]
         headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
-            mock.call("HEAD", media_url, fetch_headers),
-            mock.call("GET", media_url, dict(fetch_headers, Range="bytes=0-0")),
+            mock.call(HttpRequest("HEAD", media_url, fetch_headers, None)),
+            mock.call(
+                HttpRequest(
+                    "GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None
+                )
+            ),
         ]
         assert headers == ranged_response_headers
 
@@ -369,15 +385,19 @@ async def test_fetch_headers() -> None:
         get_headers = dict(expected_response_headers)
         get_headers["Content-Length"] = "2"
         ahr_mock.side_effect = [
-            (405, expected_response_headers, ""),
-            (405, expected_response_headers, ""),
-            (200, get_headers, ""),
+            HttpResponse(405, expected_response_headers, ""),
+            HttpResponse(405, expected_response_headers, ""),
+            HttpResponse(200, get_headers, ""),
         ]
         headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
-            mock.call("HEAD", media_url, fetch_headers),
-            mock.call("GET", media_url, dict(fetch_headers, Range="bytes=0-0")),
-            mock.call("GET", media_url, fetch_headers),
+            mock.call(HttpRequest("HEAD", media_url, fetch_headers, None)),
+            mock.call(
+                HttpRequest(
+                    "GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None
+                )
+            ),
+            mock.call(HttpRequest("GET", media_url, fetch_headers, None)),
         ]
         assert headers == get_headers
 
@@ -386,12 +406,14 @@ async def test_fetch_headers() -> None:
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
         ahr_mock.side_effect = [
-            (404, expected_response_headers, ""),
-            (405, expected_response_headers, ""),
-            (200, expected_response_headers, ""),
+            HttpResponse(404, expected_response_headers, ""),
+            HttpResponse(405, expected_response_headers, ""),
+            HttpResponse(200, expected_response_headers, ""),
         ]
         headers = await profile._fetch_headers(media_url, fetch_headers)
-        ahr_mock.assert_called_once_with("HEAD", media_url, fetch_headers)
+        ahr_mock.assert_called_once_with(
+            HttpRequest("HEAD", media_url, fetch_headers, None)
+        )
         assert headers is None
 
     # Repeated server failures should give no headers
@@ -399,12 +421,16 @@ async def test_fetch_headers() -> None:
         profile.profile_device.requester, "async_http_request"
     ) as ahr_mock:
         # Different headers for working response, to check correct thing returned
-        ahr_mock.return_value = (500, {}, "")
+        ahr_mock.return_value = HttpResponse(500, {}, "")
         headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
-            mock.call("HEAD", media_url, fetch_headers),
-            mock.call("GET", media_url, dict(fetch_headers, Range="bytes=0-0")),
-            mock.call("GET", media_url, fetch_headers),
+            mock.call(HttpRequest("HEAD", media_url, fetch_headers, None)),
+            mock.call(
+                HttpRequest(
+                    "GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None
+                )
+            ),
+            mock.call(HttpRequest("GET", media_url, fetch_headers, None)),
         ]
         assert headers is None
 
@@ -535,7 +561,7 @@ http://dlna_dms:4321/object/file_1222
     )
 
     # Media server supplies media information for HEAD requests
-    requester.response_map[("HEAD", media_url)] = (
+    requester.response_map[("HEAD", media_url)] = HttpResponse(
         200,
         {
             "ContentFeatures.dlna.org": "DLNA_SERVER_FEATURES",
@@ -543,7 +569,7 @@ http://dlna_dms:4321/object/file_1222
         },
         "",
     )
-    requester.response_map[("HEAD", media_url + ".mp3")] = (
+    requester.response_map[("HEAD", media_url + ".mp3")] = HttpResponse(
         200,
         {
             "ContentFeatures.dlna.org": "DLNA_SERVER_FEATURES",
