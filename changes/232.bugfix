@@ -1,1 +1,0 @@
-Drop unused `--bind` option in `subscribe` command in cli/`upnp-client`.

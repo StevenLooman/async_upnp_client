@@ -1,3 +1,34 @@
+async_upnp_client 0.39.0 (2024-06-21)
+=====================================
+
+Features
+--------
+
+- Only fetch wanted IgdState items in IGD profile. (#227)
+- Subscribe to IGD to reduce number of polls.
+
+  This also simplifies the returned IgdState from IgdDevice.async_get_traffic_and_status_data(), as the items from StatusInfo are now diectly added to IgdState.
+
+  As a bonus, extend the dummy_router to support subscribing and use evented state variables ExternalIPAddress and ConnectionStatus. (#231)
+- Add pre-/post-hooks when doing/handling HTTP requests.
+
+  Includes refactoring of Tuples to HttpRequest/HttpResponse, causing in breaking changes. (#233)
+- Add retrieving of port_mapping_number_of_entries for IGDs. (#234)
+- Add WANIPv6FirewallControl service to IGD profile.
+
+  Extend dummy_router as well to support accompanying example scripts. (#235)
+- Reduce code in ssdp_listener to improve performance (#236)
+
+
+Bugfixes
+--------
+
+- Fix subscribing to all services, for CLI and profile devices.
+
+  Fixes only subscribing to top level services, when it should subscribe to services on embedded devices as well. (#230)
+- Drop unused `--bind` option in `subscribe` command in cli/`upnp-client`. (#232)
+
+
 async_upnp_client 0.38.3 (2024-03-29)
 =====================================
 
