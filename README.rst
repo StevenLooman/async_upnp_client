@@ -103,7 +103,7 @@ Steps for releasing:
 - Do a pull: ``git pull``
 - Run towncrier: ``towncrier build --version <version>``
 - Commit towncrier results: ``git commit -m "Towncrier"``
-- Run bump2version: ``bump2version --tag --new-version <version>``
+- Run bump2version: ``bump2version --tag major/minor/patch``
    - Note that this creates a new commit + tag.
 - Checkout tag: ``git checkout <version>``
 - Build: ``rm -rf build dist && python setup.py build sdist``
