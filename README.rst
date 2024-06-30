@@ -106,7 +106,7 @@ Steps for releasing:
 - Run bump2version: ``bump2version --tag major/minor/patch``
    - Note that this creates a new commit + tag.
 - Checkout tag: ``git checkout <version>``
-- Build: ``rm -rf build dist && python setup.py build sdist``
+- Build: ``rm -rf build dist && python -m build``
 - Upload using twine: ``twine upload dist/*``
 - Switch to development: ``git checkout development``
 - Push to github: ``git push && git push --tags``
