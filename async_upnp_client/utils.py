@@ -9,7 +9,7 @@ from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Callable, Dict, Generator, Iterable, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import defusedxml.ElementTree as DET
@@ -133,7 +133,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Get a lower case key."""
         return self._data.get(self._case_map.get(lower_key), default)
 
-    def lower_values_true(self, lower_keys: Iterable[str]) -> bool:
+    def lower_values_true(self, lower_keys: Tuple[str, ...]) -> bool:
         """Check if all lower case keys are present and true values."""
         for lower_key in lower_keys:
             if not self._data.get(self._case_map.get(lower_key)):
