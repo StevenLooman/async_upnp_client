@@ -9,7 +9,7 @@ from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
 from datetime import datetime, timedelta, timezone
 from socket import AddressFamily  # pylint: disable=no-name-in-module
-from typing import Any, Callable, Dict, Generator, Optional, Tuple
+from typing import Any, Callable, Dict, Generator, Iterable, Optional, Tuple
 from urllib.parse import urljoin, urlsplit
 
 import defusedxml.ElementTree as DET
@@ -72,11 +72,13 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def __init__(self, data: Optional[abcMapping] = None, **kwargs: Any) -> None:
         """Initialize."""
-        self._data: Dict[str, Any] = {**(data or {}), **kwargs}
+        self._data: Dict[Any, Any] = {**(data or {}), **kwargs}
         self._case_map: Dict[str, Any] = {
-            k
-            if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
-            else k.lower(): k
+            (
+                k
+                if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
+                else k.lower()
+            ): k
             for k in self._data
         }
 
@@ -113,7 +115,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         """
         # pylint: disable=protected-access
         _combined = CaseInsensitiveDict.__new__(CaseInsensitiveDict)
-        _combined._data = {**self._data, **lower_dict}  # type: ignore[dict-item]
+        _combined._data = {**self._data, **lower_dict}
         _combined._case_map = {**self._case_map, **{k: k for k in lower_dict}}
         return _combined
 
@@ -133,6 +135,13 @@ class CaseInsensitiveDict(abcMutableMapping):
         """Get a lower case key."""
         return self._data.get(self._case_map.get(lower_key, _SENTINEL), default)
 
+    def lower_values_true(self, lower_keys: Iterable[str]) -> bool:
+        """Check if all lower case keys are present and true values."""
+        for lower_key in lower_keys:
+            if not self._data.get(self._case_map.get(lower_key)):
+                return False
+        return True
+
     def replace(self, new_data: abcMapping) -> None:
         """Replace the underlying dict without making a copy if possible."""
         if isinstance(new_data, CaseInsensitiveDict):
@@ -141,9 +150,11 @@ class CaseInsensitiveDict(abcMutableMapping):
         else:
             self._data = {**new_data}
             self._case_map = {
-                k
-                if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
-                else k.lower(): k
+                (
+                    k
+                    if type(k) is lowerstr  # pylint: disable=unidiomatic-typecheck
+                    else k.lower()
+                ): k
                 for k in self._data
             }
 
