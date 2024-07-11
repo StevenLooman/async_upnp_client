@@ -18,8 +18,6 @@ from voluptuous import Invalid
 EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
 
-_SENTINEL = object()
-
 UTC = timezone(timedelta(hours=0))
 _UNCOMPILED_MATCHERS: Dict[str, Callable] = {
     # date
@@ -133,7 +131,7 @@ class CaseInsensitiveDict(abcMutableMapping):
 
     def get_lower(self, lower_key: str, default: Any = None) -> Any:
         """Get a lower case key."""
-        return self._data.get(self._case_map.get(lower_key, _SENTINEL), default)
+        return self._data.get(self._case_map.get(lower_key), default)
 
     def lower_values_true(self, lower_keys: Iterable[str]) -> bool:
         """Check if all lower case keys are present and true values."""
