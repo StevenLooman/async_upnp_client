@@ -59,30 +59,21 @@ def is_valid_location(location: str) -> bool:
 
 def valid_search_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this search is usable."""
-    return bool(
-        headers.get_lower("_udn")
-        and headers.get_lower("st")
-        and is_valid_location(headers.get_lower("location", ""))
+    return headers.lower_values_true(("_udn", "st")) and is_valid_location(
+        headers.get_lower("location", "")
     )
 
 
 def valid_advertisement_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement is usable for connecting to a device."""
-    return bool(
-        headers.get_lower("_udn")
-        and headers.get_lower("nt")
-        and headers.get_lower("nts")
-        and is_valid_location(headers.get_lower("location", ""))
+    return headers.lower_values_true(("_udn", "nt", "nts")) and is_valid_location(
+        headers.get_lower("location", "")
     )
 
 
 def valid_byebye_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement has required headers for byebye."""
-    return bool(
-        headers.get_lower("_udn")
-        and headers.get_lower("nt")
-        and headers.get_lower("nts")
-    )
+    return headers.lower_values_true(("_udn", "nt", "nts"))
 
 
 @lru_cache(maxsize=128)
