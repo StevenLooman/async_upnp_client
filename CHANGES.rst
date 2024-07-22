@@ -1,3 +1,18 @@
+async_upnp_client 0.40.0 (2024-07-22)
+=====================================
+
+Features
+--------
+
+- Small speed up to verifying keys are present and true in CaseInsensitiveDict (#238)
+
+
+Misc
+----
+
+- #239
+
+
 async_upnp_client 0.39.0 (2024-06-21)
 =====================================
 
