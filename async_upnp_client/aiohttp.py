@@ -14,6 +14,7 @@ from aiohttp import (
     ClientError,
     ClientResponseError,
     ClientSession,
+    ClientTimeout,
 )
 
 from async_upnp_client.client import UpnpRequester
@@ -64,7 +65,7 @@ class AiohttpRequester(UpnpRequester):
         self, timeout: int = 5, http_headers: Optional[Mapping[str, str]] = None
     ) -> None:
         """Initialize."""
-        self._timeout = timeout
+        self._timeout = ClientTimeout(total=float(timeout))
         self._http_headers = http_headers or {}
 
     async def async_http_request(
@@ -158,7 +159,7 @@ class AiohttpSessionRequester(UpnpRequester):
         """Initialize."""
         self._session = session
         self._with_sleep = with_sleep
-        self._timeout = timeout
+        self._timeout = ClientTimeout(total=float(timeout))
         self._http_headers = http_headers or {}
 
     async def async_http_request(
