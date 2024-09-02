@@ -59,3 +59,4 @@ share/*
 # Other
 prof/
 /.mypy_cache/
+coverage-py*.xml
