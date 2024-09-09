@@ -1208,8 +1208,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
             for res in item.resources:
                 protocol_info = res.protocol_info or ""
-                if protocol_info.startswith("http-get:*:image/"):
-                    return absolute_url(device_url, res.url)
+                if protocol_info.startswith("http-get:*:image/") and res.uri:
+                    return absolute_url(device_url, res.uri)
 
         return None
 
