@@ -8,8 +8,8 @@ Written initially for use in `Home Assistant <https://github.com/home-assistant/
 Status
 ------
 
-.. image:: https://img.shields.io/travis/StevenLooman/async_upnp_client.svg
-   :target: https://app.travis-ci.com/github/StevenLooman/async_upnp_client
+.. image:: https://github.com/StevenLooman/async_upnp_client/workflows/Build/badge.svg
+   :target: https://github.com/StevenLooman/async_upnp_client/actions/workflows/ci-cd.yml
 
 .. image:: https://img.shields.io/pypi/v/async_upnp_client.svg
    :target: https://pypi.python.org/pypi/async_upnp_client
