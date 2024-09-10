@@ -109,6 +109,7 @@ jobs:
   publish-to-testpypi:
     name: Publish to TestPyPI
     runs-on: ubuntu-latest
+    if: github.repository == 'StevenLooman/async_upnp_client'
     needs:
       - markdown_lint
       - lint_test_build
