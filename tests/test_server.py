@@ -11,6 +11,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    List,
     NamedTuple,
     Optional,
     Tuple,
@@ -177,7 +178,7 @@ class UpnpServerTuple(NamedTuple):
     """Upnp server tuple."""
 
     http_client: AiohttpClient
-    ssdp_sockets: list[socket.socket]
+    ssdp_sockets: List[socket.socket]
     callback: Callback
     server: UpnpServer
 
