@@ -514,7 +514,7 @@ class IgdDevice(UpnpProfileDevice):
         :param lease_duration Lease duration
         :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
         """
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         services = services or ["WANIPC", "WANPPP"]
         action = self._any_action(services, "AddPortMapping")
         if not action:
@@ -579,7 +579,7 @@ class IgdDevice(UpnpProfileDevice):
         lease_time: timedelta,
     ) -> Optional[int]:
         """Add a pinhole."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         action = self._action("WANIP6FC", "AddPinhole")
         if not action:
             return None

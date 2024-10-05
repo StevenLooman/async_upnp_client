@@ -797,7 +797,7 @@ class SsdpAdvertisementAnnouncer:
         loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
         """Init the ssdp search responder class."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.device = device
         self.source, self.target = determine_source_target(source, target)
         self.options = options or {}
@@ -1302,7 +1302,7 @@ class UpnpServer:
         options: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.server_device = server_device
         self.source, self.target = determine_source_target(source, target)
         self.http_port = http_port

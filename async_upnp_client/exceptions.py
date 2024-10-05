@@ -144,7 +144,7 @@ class UpnpActionResponseError(UpnpActionError, UpnpResponseError):
         )
 
 
-class UpnpClientResponseError(aiohttp.ClientResponseError, UpnpResponseError):
+class UpnpClientResponseError(aiohttp.ClientResponseError, UpnpResponseError):  # type: ignore
     """HTTP response error with more details from aiohttp."""
 
 

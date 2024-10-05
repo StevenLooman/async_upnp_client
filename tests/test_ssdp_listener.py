@@ -548,9 +548,9 @@ async def test_see_search_invalid_usn() -> None:
 
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    headers[
-        "ST"
-    ] = "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal"
+    headers["ST"] = (
+        "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal"
+    )
     headers["USN"] = "[fe80::aaaa:bbbb:cccc:dddd]:3540"
     del headers["_udn"]
     advertisement_listener._on_data(SEARCH_REQUEST_LINE, headers)

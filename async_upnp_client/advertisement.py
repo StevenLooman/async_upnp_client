@@ -44,7 +44,7 @@ class SsdpAdvertisementListener:
         loop: Optional[AbstractEventLoop] = None,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         assert (
             async_on_alive
             or async_on_byebye

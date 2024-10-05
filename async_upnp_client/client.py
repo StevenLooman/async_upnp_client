@@ -163,7 +163,7 @@ class UpnpDevice:
         ] = default_on_post_receive_device_spec,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.requester = requester
         self.device_info = device_info
         self.services = {service.service_type: service for service in services}
@@ -406,7 +406,7 @@ class UpnpService:
         ] = default_on_post_call_action,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.requester = requester
         self._service_info = service_info
         self.state_variables = {sv.name: sv for sv in state_variables}

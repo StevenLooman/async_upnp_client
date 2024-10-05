@@ -495,7 +495,7 @@ class SsdpListener:
         device_tracker: Optional[SsdpDeviceTracker] = None,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         assert callback or async_callback, "Provide at least one callback"
 
         self.async_callback = async_callback

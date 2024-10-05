@@ -936,7 +936,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         The base metadata is updated with key:values from meta_data, e.g.
         `meta_data = {"artist": "Singer X"}`
         """
-        # pylint: disable=too-many-arguments, too-many-locals, too-many-branches
+        # pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-branches
         mime_type = override_mime_type or ""
         upnp_class = override_upnp_class or ""
         dlna_features = override_dlna_features or "*"
@@ -1428,7 +1428,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
     ) -> BrowseResult:
         """Retrieve an object's metadata or its children."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         action = self._action("CD", "Browse")
         if not action:
             raise UpnpError("Missing action CD/Browse")
@@ -1481,7 +1481,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
     ) -> BrowseResult:
         """Get the direct children of an object."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         _LOGGER.debug("browse_direct_children(%r, %r)", object_id, metadata_filter)
         result = await self.async_browse(
             object_id,
@@ -1513,7 +1513,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         NOTE: This is not UpnpProfileDevice.async_search, which searches for
         matching UPnP devices.
         """
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         _LOGGER.debug(
             "search_directory(%r, %r, %r)",
             container_id,

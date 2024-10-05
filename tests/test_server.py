@@ -3,7 +3,6 @@
 import asyncio
 import socket
 import xml.etree.ElementTree as ET
-from collections import namedtuple
 from contextlib import asynccontextmanager, suppress
 from typing import (
     Any,
@@ -12,13 +11,16 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    NamedTuple,
     Optional,
     Tuple,
+    cast,
 )
 
 import aiohttp
 import pytest
 import pytest_asyncio
+from pytest_aiohttp.plugin import AiohttpClient
 
 import async_upnp_client.aiohttp
 import async_upnp_client.client
@@ -171,6 +173,15 @@ class Callback:
             yield self.session
 
 
+class UpnpServerTuple(NamedTuple):
+    """Upnp server tuple."""
+
+    http_client: AiohttpClient
+    ssdp_sockets: list[socket.socket]
+    callback: Callback
+    server: UpnpServer
+
+
 @pytest_asyncio.fixture
 async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
     """Fixture to initialize device."""
@@ -198,7 +209,7 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
         async def start(self) -> Any:
             """Create HTTP server."""
             nonlocal http_client
-            http_client = await aiohttp_client(self.app)
+            http_client = cast(AiohttpClient, await aiohttp_client(self.app))
             return http_client
 
     callback = Callback()
@@ -215,16 +226,16 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
     )
     await server.async_start()
 
+    assert aiohttp_client
     await callback.start(aiohttp_client)
-    upnpserver = namedtuple("upnpserver", "http_client ssdp_sockets callback server")
-    yield upnpserver(http_client, ssdp_sockets, callback, server)
+    yield UpnpServerTuple(http_client, ssdp_sockets, callback, server)
     # await server.async_stop()
     for sock in ssdp_sockets:
         sock.close()
 
 
 @pytest.mark.asyncio
-async def test_init(upnp_server: Any) -> None:
+async def test_init(upnp_server: UpnpServerTuple) -> None:
     """Test device query."""
     # pylint: disable=redefined-outer-name
     http_client = upnp_server.http_client
@@ -235,7 +246,7 @@ async def test_init(upnp_server: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_action(upnp_server: Any) -> None:
+async def test_action(upnp_server: UpnpServerTuple) -> None:
     """Test action execution."""
     # pylint: disable=redefined-outer-name
     http_client = upnp_server.http_client
@@ -254,7 +265,7 @@ async def test_action(upnp_server: Any) -> None:
 
 
 @pytest.mark.asyncio
-async def test_subscribe(upnp_server: Any) -> None:
+async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
     """Test subscription to server event."""
     # pylint: disable=redefined-outer-name
     event = asyncio.Event()
@@ -273,10 +284,12 @@ async def test_subscribe(upnp_server: Any) -> None:
 
     http_client = upnp_server.http_client
     callback = upnp_server.callback
-    service: ServerServiceTest = (
-        upnp_server.server._device.service(  # pylint: disable=protected-access
-            "urn:schemas-upnp-org:service:TestServerService:1"
-        )
+    server = upnp_server.server
+    server_device = server._device  # pylint: disable=protected-access
+    assert server_device
+    service = cast(
+        ServerServiceTest,
+        server_device.service("urn:schemas-upnp-org:service:TestServerService:1"),
     )
     callback.set_callback(on_callback)
     response = await http_client.request(

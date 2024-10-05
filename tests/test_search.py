@@ -1,4 +1,5 @@
 """Unit tests for search."""
+
 # pylint: disable=protected-access
 
 from unittest.mock import AsyncMock

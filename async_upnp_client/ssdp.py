@@ -275,7 +275,7 @@ class SsdpProtocol(DatagramProtocol):
         on_data: Optional[Callable[[str, CaseInsensitiveDict], None]] = None,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.loop = loop
         self.async_on_connect = async_on_connect
         self.on_connect = on_connect

@@ -81,7 +81,7 @@ class UpnpFactory:
         ] = default_on_post_call_action,
     ) -> None:
         """Initialize."""
-        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.requester = requester
         self._non_strict = non_strict
         self._on_pre_receive_device_spec = on_pre_receive_device_spec

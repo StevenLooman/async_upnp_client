@@ -1,4 +1,5 @@
 """Unit tests for ssdp."""
+
 import asyncio
 from unittest.mock import ANY, AsyncMock, MagicMock
 

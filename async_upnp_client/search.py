@@ -28,8 +28,10 @@ from async_upnp_client.utils import CaseInsensitiveDict
 _LOGGER = logging.getLogger(__name__)
 
 
-class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instance-attributes
+class SsdpSearchListener:
     """SSDP Search (response) listener."""
+
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -48,6 +50,7 @@ class SsdpSearchListener:  # pylint: disable=too-many-arguments,too-many-instanc
         connect_callback: Optional[Callable[[], None]] = None,
     ) -> None:
         """Init the ssdp listener class."""
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         assert (
             callback is not None or async_callback is not None
         ), "Provide at least one callback"
@@ -168,7 +171,7 @@ async def async_search(
     loop: Optional[AbstractEventLoop] = None,
 ) -> None:
     """Discover devices via SSDP."""
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
     listener: Optional[SsdpSearchListener] = None
 
