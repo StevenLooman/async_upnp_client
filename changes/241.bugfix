@@ -1,1 +1,0 @@
-Argument `timeout` of method `aiohttp.ClientSession.request()` has to be of type `ClientTimeout`.

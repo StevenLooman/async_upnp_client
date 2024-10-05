@@ -1,3 +1,29 @@
+async_upnp_client 0.41.0 (2024-10-05)
+=====================================
+
+Features
+--------
+
+- Add Python 3.13 support. (#240)
+- Bump dev dependencies
+- Bump dependencies
+
+
+Bugfixes
+--------
+
+- Argument `timeout` of method `aiohttp.ClientSession.request()` has to be of type `ClientTimeout`. (#241)
+- Fix send_events in server state variable. (#242)
+- Add proper XML preamble in server communication. (#243)
+- Fix media_image_url using Resource.url instead of .uri (@chishm) (#244)
+
+
+Misc
+----
+
+- #237
+
+
 async_upnp_client 0.40.0 (2024-07-22)
 =====================================
 

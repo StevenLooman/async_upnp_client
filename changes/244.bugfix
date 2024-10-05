@@ -1,1 +1,0 @@
-Fix media_image_url using Resource.url instead of .uri (@chishm)
