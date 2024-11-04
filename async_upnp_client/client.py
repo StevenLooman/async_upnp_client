@@ -21,6 +21,7 @@ from typing import (
     Set,
     Type,
     TypeVar,
+    Union,
 )
 from xml.etree import ElementTree as ET
 from xml.parsers import expat
@@ -508,7 +509,7 @@ class UpnpService:
         return self.actions[name]
 
     async def async_call_action(
-        self, action: "UpnpAction", **kwargs: Any
+        self, action: Union["UpnpAction", str], **kwargs: Any
     ) -> Mapping[str, Any]:
         """
         Call a UpnpAction.
