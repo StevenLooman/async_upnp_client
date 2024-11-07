@@ -301,12 +301,10 @@ class UpnpProfileDevice:
         if self._subscriptions and not self._resubscriber_task:
             _LOGGER.debug("Creating resubscribe_task")
             # pylint: disable=fixme
-            # TODO: Use create_task instead of ensure_future with Python 3.8+
-            # self._resubscriber_task = asyncio.create_task(
-            # self._resubscribe_loop(),
-            # name=f"UpnpProfileDevice({self.name})._resubscriber_task",
-            # )
-            self._resubscriber_task = asyncio.ensure_future(self._resubscribe_loop())
+            self._resubscriber_task = asyncio.create_task(
+                self._resubscribe_loop(),
+                name=f"UpnpProfileDevice({self.name})._resubscriber_task",
+            )
 
         if not self._subscriptions and self._resubscriber_task:
             _LOGGER.debug("Cancelling resubscribe_task")
