@@ -1,3 +1,19 @@
+async_upnp_client 0.42.0 (2024-12-22)
+=====================================
+
+Features
+--------
+
+- Drop Python 3.8 support. (#245)
+- Log OSErrors when sending search responses, instead of letting it fail. (#247)
+
+
+Bugfixes
+--------
+
+- Make async_call_action signature accept string parameter. (#246)
+
+
 async_upnp_client 0.41.0 (2024-10-05)
 =====================================
 
