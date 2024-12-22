@@ -710,7 +710,10 @@ class SsdpSearchResponder:
         )
         assert self._response_socket, "Socket not initialized"
         for response in responses:
-            self._response_socket.sendto(response, remote_addr)
+            try:
+                self._response_socket.sendto(response, remote_addr)
+            except OSError as err:
+                _LOGGER.debug("Error sending response: %s", err)
 
 
 def _build_advertisements(
