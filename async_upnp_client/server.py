@@ -461,15 +461,17 @@ class SsdpSearchResponder:
         source: Optional[AddressTupleVXType] = None,
         target: Optional[AddressTupleVXType] = None,
         options: Optional[Dict[str, Any]] = None,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
     ) -> None:
         """Init the ssdp search responder class."""
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.device = device
         self.source, self.target = determine_source_target(source, target)
         self.options = options or {}
 
         self._transport: Optional[DatagramTransport] = None
         self._response_socket: Optional[socket.socket] = None
-        self._loop = asyncio.get_running_loop()
+        self._loop = loop or asyncio.get_running_loop()
 
     def _on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -629,10 +631,9 @@ class SsdpSearchResponder:
         sock.bind(address)
 
         # Create protocol and send discovery packet.
-        loop = asyncio.get_event_loop()
-        await loop.create_datagram_endpoint(
+        await self._loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
-                loop,
+                self._loop,
                 on_connect=self._on_connect,
                 on_data=self._on_data,
             ),
@@ -709,7 +710,10 @@ class SsdpSearchResponder:
         )
         assert self._response_socket, "Socket not initialized"
         for response in responses:
-            self._response_socket.sendto(response, remote_addr)
+            try:
+                self._response_socket.sendto(response, remote_addr)
+            except OSError as err:
+                _LOGGER.debug("Error sending response: %s", err)
 
 
 def _build_advertisements(
@@ -801,7 +805,7 @@ class SsdpAdvertisementAnnouncer:
         self.device = device
         self.source, self.target = determine_source_target(source, target)
         self.options = options or {}
-        self.loop = loop or asyncio.get_event_loop()
+        self._loop = loop or asyncio.get_running_loop()
 
         self._transport: Optional[DatagramTransport] = None
         advertisements = _build_advertisements(self.target, device)
@@ -824,10 +828,9 @@ class SsdpAdvertisementAnnouncer:
             sock.bind(address)
 
         # Create protocol and send discovery packet.
-        loop = asyncio.get_event_loop()
-        await loop.create_datagram_endpoint(
+        await self._loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
-                loop,
+                self._loop,
                 on_connect=self._on_connect,
             ),
             sock=sock,
@@ -874,7 +877,7 @@ class SsdpAdvertisementAnnouncer:
             protocol.send_ssdp_packet(packet, self.target)
 
         # Reschedule self.
-        self._cancel_announce = self.loop.call_later(
+        self._cancel_announce = self._loop.call_later(
             SsdpAdvertisementAnnouncer.ANNOUNCE_INTERVAL.total_seconds(),
             self._announce_next,
         )
