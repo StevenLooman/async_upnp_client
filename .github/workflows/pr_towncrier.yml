@@ -12,6 +12,11 @@ jobs:
         env:
           PR_NUMBER: ${{ github.event.number }}
         run: |
+          # Allow dependabot PRs to skip this check.
+          if [ "${{ github.actor }}" == "dependabot" ]; then
+            exit 0
+          fi
+
           if [ ! -f "changes/${PR_NUMBER}.feature" ] && [ ! -f "changes/${PR_NUMBER}.bugfix" ] && [ ! -f "changes/${PR_NUMBER}.doc" ] && [ ! -f "changes/${PR_NUMBER}.removal" ] && [ ! -f "changes/${PR_NUMBER}.misc" ]; then
             echo "Towncrier file for #${PR_NUMBER} not found. Please add a changes file to the `changes/` directory. See README.rst for more information."
             exit 1
