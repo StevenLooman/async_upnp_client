@@ -17,6 +17,7 @@ from typing import (
     Tuple,
     cast,
 )
+from unittest.mock import Mock
 
 import aiohttp
 import pytest
@@ -36,6 +37,7 @@ from async_upnp_client.server import (
     create_event_var,
     create_state_var,
 )
+from async_upnp_client.utils import CaseInsensitiveDict
 
 from .conftest import read_file
 
@@ -314,3 +316,57 @@ async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
     with suppress(asyncio.TimeoutError):
         await asyncio.wait_for(event.wait(), 2)
     assert event.is_set()
+
+
+def test_send_search_response_ok(upnp_server: UpnpServerTuple) -> None:
+    """Test sending search response without any failure."""
+    # pylint: disable=redefined-outer-name
+    server = upnp_server.server
+    search_responser = server._search_responder  # pylint: disable=protected-access
+    assert search_responser
+    response_socket = cast(
+        Mock, search_responser._response_socket  # pylint: disable=protected-access
+    )
+    assert response_socket
+    response_socket.sendto = Mock(side_effect=None)
+
+    headers = CaseInsensitiveDict(
+        {
+            "HOST": "192.168.1.100",
+            "man": '"ssdp:discover"',
+            "st": "upnp:rootdevice",
+            "_remote_addr": ("192.168.1.101", 31234),
+        }
+    )
+    search_responser._on_data(  # pylint: disable=protected-access
+        "M-SEARCH * HTTP/1.1", headers
+    )
+
+    response_socket.sendto.assert_called()
+
+
+def test_send_search_response_oserror(upnp_server: UpnpServerTuple) -> None:
+    """Test sending search response and failing, but the error is handled."""
+    # pylint: disable=redefined-outer-name
+    server = upnp_server.server
+    search_responser = server._search_responder  # pylint: disable=protected-access
+    assert search_responser
+    response_socket = cast(
+        Mock, search_responser._response_socket  # pylint: disable=protected-access
+    )
+    assert response_socket
+    response_socket.sendto = Mock(side_effect=OSError)
+
+    headers = CaseInsensitiveDict(
+        {
+            "HOST": "192.168.1.100",
+            "man": '"ssdp:discover"',
+            "st": "upnp:rootdevice",
+            "_remote_addr": ("192.168.1.101", 31234),
+        }
+    )
+    search_responser._on_data(  # pylint: disable=protected-access
+        "M-SEARCH * HTTP/1.1", headers
+    )
+
+    response_socket.sendto.assert_called()

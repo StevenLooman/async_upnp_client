@@ -512,7 +512,6 @@ class SsdpSearchResponder:
         if not (responses := self._build_responses(headers)):
             return
 
-        remote_addr = headers.get_lower("_remote_addr")
         if delay:
             # The delay should be random between 0 and MX.
             # We use between 0.100 and MX-0.250 seconds to avoid
