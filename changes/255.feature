@@ -1,0 +1,1 @@
+Send SSDP announcement on server start. In case the announcement cannot be sent, it will cause an error on initialization, instead of at a later moment. This makes handling the error easier from Home Assistant, as the server can be cleaned up directly.
