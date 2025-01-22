@@ -254,9 +254,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get the external IP address, from the state variable ExternalIPAddress.
 
-        This requires a subscription to the WANIPC/WANPPP service.
+        This requires a subscription to the WANIPC/WANPPPC service.
         """
-        services = ["WANIPC", "WANPPP"]
+        services = ["WANIPC", "WANPPPC"]
         state_var = self._any_state_variable(services, "ExternalIPAddress")
         if not state_var:
             return None
@@ -269,9 +269,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get the connection status, from the state variable ConnectionStatus.
 
-        This requires a subscription to the WANIPC/WANPPP service.
+        This requires a subscription to the WANIPC/WANPPPC service.
         """
-        services = ["WANIPC", "WANPPP"]
+        services = ["WANIPC", "WANPPPC"]
         state_var = self._any_state_variable(services, "ConnectionStatus")
         if not state_var:
             return None
@@ -284,9 +284,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get number of port mapping entries, from the state variable `PortMappingNumberOfEntries`.
 
-        This requires a subscription to the WANIPC/WANPPP service.
+        This requires a subscription to the WANIPC/WANPPPC service.
         """
-        services = ["WANIPC", "WANPPP"]
+        services = ["WANIPC", "WANPPPC"]
         state_var = self._any_state_variable(services, "PortMappingNumberOfEntries")
         if not state_var:
             return None
@@ -404,9 +404,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get the external IP address.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetExternalIPAddress")
         if not action:
             return None
@@ -422,9 +422,9 @@ class IgdDevice(UpnpProfileDevice):
         Get generic port mapping entry.
 
         :param port_mapping_index Index of port mapping entry
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetGenericPortMappingEntry")
         if not action:
             return None
@@ -462,9 +462,9 @@ class IgdDevice(UpnpProfileDevice):
         :param remote_host Address of remote host or None
         :param external_port External port
         :param protocol Protocol, 'TCP' or 'UDP'
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetSpecificPortMappingEntry")
         if not action:
             return None
@@ -512,10 +512,10 @@ class IgdDevice(UpnpProfileDevice):
         :param enabled Port mapping enabled
         :param description Description for port mapping
         :param lease_duration Lease duration
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
         # pylint: disable=too-many-arguments,too-many-positional-arguments
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "AddPortMapping")
         if not action:
             return
@@ -544,9 +544,9 @@ class IgdDevice(UpnpProfileDevice):
         :param remote_host Address of remote host or None
         :param external_port External port
         :param protocol Protocol, 'TCP' or 'UDP'
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "DeletePortMapping")
         if not action:
             return
@@ -632,9 +632,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get connection type info.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetConnectionTypeInfo")
         if not action:
             return None
@@ -651,9 +651,9 @@ class IgdDevice(UpnpProfileDevice):
         Set connection type.
 
         :param connection_type connection type
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "SetConnectionType")
         if not action:
             return
@@ -666,9 +666,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Request connection.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "RequestConnection")
         if not action:
             return
@@ -681,9 +681,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Request connection termination.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "RequestTermination")
         if not action:
             return
@@ -696,9 +696,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Force connection termination.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "ForceTermination")
         if not action:
             return
@@ -711,9 +711,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get status info.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetStatusInfo")
         if not action:
             return None
@@ -738,9 +738,9 @@ class IgdDevice(UpnpProfileDevice):
 
         Note that this action is not officially supported by the IGD specification.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetPortMappingNumberOfEntries")
         if not action:
             return None
@@ -759,9 +759,9 @@ class IgdDevice(UpnpProfileDevice):
         """
         Get NAT enabled and RSIP availability statuses.
 
-        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPP]
+        :param services List of service names to try to get action from, defaults to [WANIPC,WANPPPC]
         """
-        services = services or ["WANIPC", "WANPPP"]
+        services = services or ["WANIPC", "WANPPPC"]
         action = self._any_action(services, "GetNATRSIPStatus")
         if not action:
             return None
