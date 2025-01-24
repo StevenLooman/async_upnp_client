@@ -859,19 +859,15 @@ class SsdpAdvertisementAnnouncer:
 
     async def async_wait_for_transport_protocol(self) -> None:
         """Wait for the protocol to become available."""
-        loop = 0
-        max_loops = 5
-        while loop < max_loops:
-            await asyncio.sleep(0.1)
+        for _ in range(0, 5):
             if (
                 self._transport is not None
                 and self._transport.get_protocol() is not None
             ):
                 break
 
-            loop += 1
-
-        if loop > max_loops:
+            await asyncio.sleep(0.1)
+        else:
             raise UpnpError("Failed to get protocol")
 
     def _announce_next(self) -> None:
