@@ -1,3 +1,18 @@
+async_upnp_client 0.43.0 (2025-01-24)
+=====================================
+
+Features
+--------
+
+- Send SSDP announcement on server start. In case the announcement cannot be sent, it will cause an error on initialization, instead of at a later moment. This makes handling the error easier from Home Assistant, as the server can be cleaned up directly. (#255)
+
+
+Bugfixes
+--------
+
+- Fix variable name for WANPPPConnection service. This will add external ipaddress, uptime and wan status for supported devices. (#257)
+
+
 async_upnp_client 0.42.0 (2024-12-22)
 =====================================
 
