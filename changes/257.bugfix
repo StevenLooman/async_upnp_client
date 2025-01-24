@@ -1,0 +1,1 @@
+Fix variable name for WANPPPConnection service. This will add external ipaddress, uptime and wan status for supported devices.
