@@ -835,6 +835,8 @@ class SsdpAdvertisementAnnouncer:
             sock=sock,
         )
 
+        await self.async_wait_for_transport_protocol()
+
         # Announce and reschedule self.
         self._announce_next()
 
@@ -855,25 +857,36 @@ class SsdpAdvertisementAnnouncer:
         self._send_byebyes()
         self._transport.close()
 
+    async def async_wait_for_transport_protocol(self) -> None:
+        """Wait for the protocol to become available."""
+        for _ in range(0, 5):
+            if (
+                self._transport is not None
+                and self._transport.get_protocol() is not None
+            ):
+                break
+
+            await asyncio.sleep(0.1)
+        else:
+            raise UpnpError("Failed to get protocol")
+
     def _announce_next(self) -> None:
         """Announce next advertisement."""
         _LOGGER.debug("Announcing")
         assert self._transport
 
         protocol = cast(SsdpProtocol, self._transport.get_protocol())
-        # Protocol can be None when it is not yet initialized.
-        if protocol:
-            start_line = "NOTIFY * HTTP/1.1"
-            headers = next(self._advertisements)
-            packet = build_ssdp_packet(start_line, headers)
+        start_line = "NOTIFY * HTTP/1.1"
+        headers = next(self._advertisements)
+        packet = build_ssdp_packet(start_line, headers)
 
-            _LOGGER.debug(
-                "Sending advertisement, NTS: %s, NT: %s, USN: %s",
-                headers["NTS"],
-                headers["NT"],
-                headers["USN"],
-            )
-            protocol.send_ssdp_packet(packet, self.target)
+        _LOGGER.debug(
+            "Sending advertisement, NTS: %s, NT: %s, USN: %s",
+            headers["NTS"],
+            headers["NT"],
+            headers["USN"],
+        )
+        protocol.send_ssdp_packet(packet, self.target)
 
         # Reschedule self.
         self._cancel_announce = self._loop.call_later(
