@@ -6,6 +6,7 @@ on:
 jobs:
   pr_require_towncrier_file:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     steps:
       - uses: actions/checkout@v4
       - name: Ensure towncrier file exists
