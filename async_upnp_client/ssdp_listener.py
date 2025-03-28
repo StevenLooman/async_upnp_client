@@ -33,7 +33,12 @@ from async_upnp_client.const import (
     UniqueDeviceName,
 )
 from async_upnp_client.search import SsdpSearchListener
-from async_upnp_client.ssdp import SSDP_MX, determine_source_target, udn_from_usn
+from async_upnp_client.ssdp import (
+    SSDP_MX,
+    SSDP_ST_ALL,
+    determine_source_target,
+    udn_from_usn,
+)
 from async_upnp_client.utils import CaseInsensitiveDict
 
 _SENTINEL = object()
@@ -492,6 +497,7 @@ class SsdpListener:
         target: Optional[AddressTupleVXType] = None,
         loop: Optional[AbstractEventLoop] = None,
         search_timeout: int = SSDP_MX,
+        search_target: str = SSDP_ST_ALL,
         device_tracker: Optional[SsdpDeviceTracker] = None,
     ) -> None:
         """Initialize."""
@@ -503,6 +509,7 @@ class SsdpListener:
         self.source, self.target = determine_source_target(source, target)
         self.loop = loop or asyncio.get_event_loop()
         self.search_timeout = search_timeout
+        self.search_target = search_target
         self._device_tracker = device_tracker or SsdpDeviceTracker()
         self._advertisement_listener: Optional[SsdpAdvertisementListener] = None
         self._search_listener: Optional[SsdpSearchListener] = None
@@ -525,6 +532,7 @@ class SsdpListener:
             source=self.source,
             target=self.target,
             timeout=self.search_timeout,
+            search_target=self.search_target,
         )
         await self._search_listener.async_start()
 
