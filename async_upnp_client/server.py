@@ -470,8 +470,13 @@ class SsdpSearchResponder:
         self.options = options or {}
 
         self._transport: Optional[DatagramTransport] = None
-        self._response_socket: Optional[socket.socket] = None
+        self._response_transport: Optional[DatagramTransport] = None
         self._loop = loop or asyncio.get_running_loop()
+
+    def _on_connect_response(self, transport: DatagramTransport) -> None:
+        """Handle on connect for response."""
+        _LOGGER.debug("Connected to response transport: %s", transport)
+        self._response_transport = transport
 
     def _on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -492,7 +497,7 @@ class SsdpSearchResponder:
         ):
             return
 
-        remote_addr = headers.get_lower("_remote_addr")
+        remote_addr = cast(AddressTupleVXType, headers.get_lower("_remote_addr"))
         debug = _LOGGER.isEnabledFor(logging.DEBUG)
         if debug:  # pragma: no branch
             _LOGGER.debug(
@@ -616,20 +621,24 @@ class SsdpSearchResponder:
         """Start."""
         _LOGGER.debug("Start listening for search requests")
 
-        # Create response socket.
-        self._response_socket, _source, _target = get_ssdp_socket(
-            self.source, self.target
+        # Create response socket/protocol.
+        response_sock, _source, _target = get_ssdp_socket(self.source, self.target)
+
+        await self._loop.create_datagram_endpoint(
+            lambda: SsdpProtocol(
+                self._loop,
+                on_connect=self._on_connect_response,
+            ),
+            sock=response_sock,
         )
 
-        # Construct a socket for use with this pair of endpoints.
+        # Create listening socket/protocol.
         sock, _source, _target = get_ssdp_socket(self.source, self.target)
 
-        # Bind to address.
         address = ("", self.target[1])
         _LOGGER.debug("Binding socket, socket: %s, address: %s", sock, address)
         sock.bind(address)
 
-        # Create protocol and send discovery packet.
         await self._loop.create_datagram_endpoint(
             lambda: SsdpProtocol(
                 self._loop,
@@ -695,22 +704,28 @@ class SsdpSearchResponder:
             },
         )
 
-    def _send_responses(self, remote_addr: str, responses: List[bytes]) -> None:
+    def _send_responses(
+        self, remote_addr: AddressTupleVXType, responses: List[bytes]
+    ) -> None:
         """Send responses."""
+        assert self._response_transport
         if _LOGGER.isEnabledFor(logging.DEBUG):  # pragma: no branch
+            sock: Optional[socket.socket] = self._response_transport.get_extra_info(
+                "socket"
+            )
             _LOGGER.debug(
                 "Sending SSDP packet, transport: %s, socket: %s, target: %s",
-                None,
-                self._response_socket,
+                self._response_transport,
+                sock,
                 remote_addr,
             )
         _LOGGER_TRAFFIC_SSDP.debug(
             "Sending SSDP packets, target: %s, data: %s", remote_addr, responses
         )
-        assert self._response_socket, "Socket not initialized"
         for response in responses:
             try:
-                self._response_socket.sendto(response, remote_addr)
+                protocol = cast(SsdpProtocol, self._response_transport.get_protocol())
+                protocol.send_ssdp_packet(response, remote_addr)
             except OSError as err:
                 _LOGGER.debug("Error sending response: %s", err)
 
