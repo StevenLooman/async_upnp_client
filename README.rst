@@ -93,7 +93,6 @@ A change type can be one of:
 A new file is then created in the ``changes`` directory. Add a short description of the change to that file.
 
 
-
 Releasing
 ---------
 

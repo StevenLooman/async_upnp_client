@@ -8,14 +8,6 @@ env:
   publish-python-version: 3.12
 
 jobs:
-  markdown_lint:
-    name: Markdown Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: DavidAnson/markdownlint-cli2-action@v19
-        with:
-          globs: "**/*.md"
-
   lint_test_build:
     runs-on: ubuntu-latest
     strategy:
