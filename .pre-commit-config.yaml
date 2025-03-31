@@ -47,7 +47,7 @@ repos:
           - python-didl-lite~=1.4.0
           - defusedxml~=0.6.0
           - pytest-asyncio >= 0.24,< 0.26
-          - pytest-aiohttp~=1.0.5
+          - pytest-aiohttp >=1.0.5,<1.2.0
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/PyCQA/isort
     rev: '5.13.2'
@@ -66,5 +66,5 @@ repos:
           - pytest~=8.3.3
           - aiohttp~=3.10.9
           - pytest-asyncio >= 0.24,< 0.26
-          - pytest-aiohttp~=1.0.5
+          - pytest-aiohttp >=1.0.5,<1.2.0
         files: ^(async_upnp_client|tests)/.+\.py$
