@@ -47,7 +47,6 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     needs:
-      - markdown_lint
       - lint_test_build
     environment:
       name: pypi
@@ -103,7 +102,6 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository == 'StevenLooman/async_upnp_client'
     needs:
-      - markdown_lint
       - lint_test_build
     environment:
       name: testpypi
