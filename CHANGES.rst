@@ -1,3 +1,13 @@
+async_upnp_client 0.44.0 (2025-03-31)
+=====================================
+
+Features
+--------
+
+- Add the option to change the search-target in SsdpListener. (#262)
+- Use transport for sending responses instead of a blocking socket. (#263)
+
+
 async_upnp_client 0.43.0 (2025-01-24)
 =====================================
 
