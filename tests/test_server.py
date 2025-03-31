@@ -320,15 +320,14 @@ async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
 
 def test_send_search_response_ok(upnp_server: UpnpServerTuple) -> None:
     """Test sending search response without any failure."""
-    # pylint: disable=redefined-outer-name
+    # pylint: disable=redefined-outer-name, protected-access
     server = upnp_server.server
-    search_responser = server._search_responder  # pylint: disable=protected-access
+    search_responser = server._search_responder
     assert search_responser
-    response_socket = cast(
-        Mock, search_responser._response_socket  # pylint: disable=protected-access
-    )
-    assert response_socket
-    response_socket.sendto = Mock(side_effect=None)
+    assert search_responser._response_transport
+    response_transport = cast(Mock, search_responser._response_transport)
+    assert response_transport
+    response_transport.sendto = Mock(side_effect=None)
 
     headers = CaseInsensitiveDict(
         {
@@ -338,24 +337,21 @@ def test_send_search_response_ok(upnp_server: UpnpServerTuple) -> None:
             "_remote_addr": ("192.168.1.101", 31234),
         }
     )
-    search_responser._on_data(  # pylint: disable=protected-access
-        "M-SEARCH * HTTP/1.1", headers
-    )
+    search_responser._on_data("M-SEARCH * HTTP/1.1", headers)
 
-    response_socket.sendto.assert_called()
+    response_transport.sendto.assert_called()
 
 
 def test_send_search_response_oserror(upnp_server: UpnpServerTuple) -> None:
     """Test sending search response and failing, but the error is handled."""
-    # pylint: disable=redefined-outer-name
+    # pylint: disable=redefined-outer-name, protected-access
     server = upnp_server.server
-    search_responser = server._search_responder  # pylint: disable=protected-access
+    search_responser = server._search_responder
     assert search_responser
-    response_socket = cast(
-        Mock, search_responser._response_socket  # pylint: disable=protected-access
-    )
-    assert response_socket
-    response_socket.sendto = Mock(side_effect=OSError)
+    assert search_responser._response_transport
+    response_transport = cast(Mock, search_responser._response_transport)
+    assert response_transport
+    response_transport.sendto = Mock(side_effect=None)
 
     headers = CaseInsensitiveDict(
         {
@@ -365,8 +361,6 @@ def test_send_search_response_oserror(upnp_server: UpnpServerTuple) -> None:
             "_remote_addr": ("192.168.1.101", 31234),
         }
     )
-    search_responser._on_data(  # pylint: disable=protected-access
-        "M-SEARCH * HTTP/1.1", headers
-    )
+    search_responser._on_data("M-SEARCH * HTTP/1.1", headers)
 
-    response_socket.sendto.assert_called()
+    response_transport.sendto.assert_called()
