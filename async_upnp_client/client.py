@@ -973,6 +973,7 @@ class UpnpStateVariable(Generic[T]):
         # these to be @cached_property
         self._min_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
         self._max_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
+        self._step_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
         self._allowed_values: Set[T] = _UNDEFINED  # type: ignore[assignment]
         self._normalized_allowed_values: Set[str] = _UNDEFINED  # type: ignore[assignment]
 
@@ -1025,6 +1026,17 @@ class UpnpStateVariable(Generic[T]):
             else:
                 self._max_value = None
         return self._max_value
+
+    @property
+    def step_value(self) -> Optional[T]:
+        """Step value for this UpnpStateVariable, if defined."""
+        if self._step_value is _UNDEFINED:
+            step = self._state_variable_info.type_info.allowed_value_range.get("step")
+            if step is not None:
+                self._step_value = self.coerce_python(step)
+            else:
+                self._step_value = None
+        return self._step_value
 
     @property
     def allowed_values(self) -> Set[T]:
