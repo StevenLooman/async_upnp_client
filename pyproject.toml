@@ -1,0 +1,51 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=77.0"]
+
+[project]
+name = "async_upnp_client"
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
+description = "Async UPnP Client"
+readme = "README.rst"
+authors = [{ name = "Steven Looman", email = "steven.looman@gmail.com" }]
+keywords = [
+  "ssdp",
+  "Simple Service Discovery Protocol",
+  "upnp",
+  "Universal Plug and Play",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Framework :: AsyncIO",
+  "Operating System :: POSIX",
+  "Operating System :: MacOS :: MacOS X",
+  "Operating System :: Microsoft :: Windows",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.9"
+dependencies = [
+  "aiohttp>3.9.0,<4.0",
+  "async-timeout>=3.0,<6.0",
+  "defusedxml>=0.6.0",
+  "python-didl-lite~=1.4.0",
+  "voluptuous>=0.15.2",
+]
+dynamic = ["version"]
+
+[project.urls]
+"GitHub: repo" = "https://github.com/StevenLooman/async_upnp_client"
+
+[project.scripts]
+upnp-client = "async_upnp_client.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "async_upnp_client.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["async_upnp_client*"]
