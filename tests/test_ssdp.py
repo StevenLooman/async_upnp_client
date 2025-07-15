@@ -55,7 +55,8 @@ def test_is_valid_ssdp_packet() -> None:
         b"Server: UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0\r\n"
         b"ST:urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1\r\n"
         b"USN: uuid:...::WANCommonInterfaceConfig:1\r\n"
-        b"EXT:\r\n\r\n"
+        b"EXT:\r\n"
+        b"\r\n"
     )
     assert is_valid_ssdp_packet(msg)
 
@@ -69,7 +70,8 @@ def test_decode_ssdp_packet() -> None:
         b"Server: UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0\r\n"
         b"ST:urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1\r\n"
         b"USN: uuid:...::WANCommonInterfaceConfig:1\r\n"
-        b"EXT:\r\n\r\n"
+        b"EXT:\r\n"
+        b"\r\n"
     )
     request_line, headers = decode_ssdp_packet(
         msg, ("local_addr", 1900), ("remote_addr", 12345)
@@ -137,7 +139,8 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
     msg = (
         b"HTTP/1.1 200 OK\r\n"
         b"CACHE-CONTROL: max-age = 1800\r\n"
-        b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n"
+        b"\r\n"
     )
     _, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
@@ -156,7 +159,8 @@ def test_decode_ssdp_packet_empty_location() -> None:
     msg = (
         b"HTTP/1.1 200 OK\r\n"
         b"LOCATION: \r\n"
-        b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n"
+        b"\r\n"
     )
     _, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
@@ -174,7 +178,12 @@ def test_decode_ssdp_packet_empty_location() -> None:
 @pytest.mark.asyncio
 async def test_ssdp_protocol_handles_broken_headers() -> None:
     """Test SsdpProtocol is able to handle broken headers."""
-    msg = b"HTTP/1.1 200 OK\r\n" b"DEFUNCT\r\n" b"CACHE-CONTROL: max-age = 1800\r\n\r\n"
+    msg = (
+        b"HTTP/1.1 200 OK\r\n"
+        b"DEFUNCT\r\n"
+        b"CACHE-CONTROL: max-age = 1800\r\n"
+        b"\r\n"
+    )
     addr = ("addr", 123)
     loop = asyncio.get_event_loop()
 
@@ -194,7 +203,8 @@ def test_decode_ssdp_packet_v6() -> None:
         b"Server: UPnP/1.0 UPnP/1.0 UPnP-Device-Host/1.0\r\n"
         b"ST:urn:schemas-upnp-org:service:WANCommonInterfaceConfig:1\r\n"
         b"USN: uuid:...::WANCommonInterfaceConfig:1\r\n"
-        b"EXT:\r\n\r\n"
+        b"EXT:\r\n"
+        b"\r\n"
     )
 
     request_line, headers = decode_ssdp_packet(

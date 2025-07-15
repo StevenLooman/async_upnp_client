@@ -84,7 +84,7 @@ class DlnaOrgCi(Enum):
 
 
 class DlnaOrgPs(Enum):
-    """DLNA.ORG_PS (PlaySpeed ) flags."""
+    """DLNA.ORG_PS (PlaySpeed) flags."""
 
     INVALID = 0
     NORMAL = 1

@@ -183,13 +183,13 @@ def _cached_header_parse(
     """
     lines = data.replace(b"\r\n", b"\n").split(b"\n")
 
-    # request_line
     request_line = lines[0].strip().decode()
 
-    if lines and lines[-1] != b"":
-        lines.append(b"")
+    header_lines = lines[1:] if lines else []
+    if header_lines and header_lines[-1] != b"":
+        header_lines.append(b"")
 
-    parsed_headers, _ = HeadersParser().parse_headers(lines)
+    parsed_headers, _ = HeadersParser().parse_headers(header_lines)
 
     usn = parsed_headers.get("usn")
     udn = udn_from_usn(usn) if usn else None

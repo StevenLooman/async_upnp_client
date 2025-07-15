@@ -22,10 +22,11 @@ from unittest.mock import Mock
 import aiohttp
 import pytest
 import pytest_asyncio
+from aiohttp.test_utils import TestClient
+from aiohttp.web import Application, Request
 from pytest_aiohttp.plugin import AiohttpClient
 
 import async_upnp_client.aiohttp
-import async_upnp_client.client
 import async_upnp_client.server
 from async_upnp_client.client import UpnpStateVariable
 from async_upnp_client.const import DeviceInfo, ServiceInfo
@@ -149,11 +150,11 @@ class Callback:
         self.callback: Optional[
             Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]]
         ] = None
-        self.session = None
+        self.session: TestClient[Request, Application] | None = None
         self.app = aiohttp.web.Application()
         self.app.router.add_route("NOTIFY", "/{tail:.*}", self.handler)
 
-    async def start(self, aiohttp_client: Any) -> None:
+    async def start(self, aiohttp_client: AiohttpClient) -> None:
         """Generate session."""
         self.session = await aiohttp_client(self.app)
 
@@ -179,18 +180,20 @@ class Callback:
 class UpnpServerTuple(NamedTuple):
     """Upnp server tuple."""
 
-    http_client: AiohttpClient
+    http_client: TestClient
     ssdp_sockets: List[socket.socket]
     callback: Callback
     server: UpnpServer
 
 
 @pytest_asyncio.fixture
-async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
+async def upnp_server(
+    monkeypatch: Any, aiohttp_client: AiohttpClient
+) -> AsyncGenerator[UpnpServerTuple, None]:
     """Fixture to initialize device."""
     # pylint: disable=too-few-public-methods
 
-    ssdp_sockets = []
+    ssdp_sockets: List[socket.socket] = []
     http_client = None
 
     def get_ssdp_socket_mock(
@@ -212,7 +215,7 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
         async def start(self) -> Any:
             """Create HTTP server."""
             nonlocal http_client
-            http_client = cast(AiohttpClient, await aiohttp_client(self.app))
+            http_client = await aiohttp_client(self.app)
             return http_client
 
     callback = Callback()
@@ -229,6 +232,7 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
     )
     await server.async_start()
 
+    assert http_client
     assert aiohttp_client
     await callback.start(aiohttp_client)
     yield UpnpServerTuple(http_client, ssdp_sockets, callback, server)
