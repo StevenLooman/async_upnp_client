@@ -215,7 +215,7 @@ async def upnp_server(
         async def start(self) -> Any:
             """Create HTTP server."""
             nonlocal http_client
-            http_client = cast(TestClient, await aiohttp_client(self.app))
+            http_client = await aiohttp_client(self.app)
             return http_client
 
     callback = Callback()
