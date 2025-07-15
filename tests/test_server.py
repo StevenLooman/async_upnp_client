@@ -190,7 +190,7 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
     """Fixture to initialize device."""
     # pylint: disable=too-few-public-methods
 
-    ssdp_sockets = []
+    ssdp_sockets: List[socket.socket] = []
     http_client = None
 
     def get_ssdp_socket_mock(
@@ -231,6 +231,7 @@ async def upnp_server(monkeypatch: Any, aiohttp_client: Any) -> AsyncGenerator:
 
     assert aiohttp_client
     await callback.start(aiohttp_client)
+    assert http_client
     yield UpnpServerTuple(http_client, ssdp_sockets, callback, server)
     # await server.async_stop()
     for sock in ssdp_sockets:
