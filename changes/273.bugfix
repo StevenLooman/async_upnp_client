@@ -1,3 +1,0 @@
-Fix SSDP header parsing.
-
-aiohttp 3.12.14 starts failing due to including the request line in the header lines to be parsed.

@@ -1,3 +1,26 @@
+async_upnp_client 0.45.0 (2025-07-16)
+=====================================
+
+Features
+--------
+
+- Add UpnpStateVariable.step_value. (#268)
+
+
+Bugfixes
+--------
+
+- Fix SSDP header parsing.
+
+  aiohttp 3.12.14 starts failing due to including the request line in the header lines to be parsed. (#273)
+
+
+Misc
+----
+
+- #267, #267
+
+
 async_upnp_client 0.44.0 (2025-03-31)
 =====================================
 
