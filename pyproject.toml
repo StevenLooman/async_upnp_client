@@ -32,7 +32,6 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
   "aiohttp>3.9.0,<4.0",
-  "async-timeout>=3.0,<6.0",
   "defusedxml>=0.6.0",
   "python-didl-lite~=1.4.0",
   "voluptuous>=0.15.2",
