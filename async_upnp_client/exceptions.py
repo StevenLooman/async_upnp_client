@@ -3,7 +3,7 @@
 
 import asyncio
 from enum import IntEnum
-from typing import Any, Optional
+from typing import Any
 from xml.etree import ElementTree as ET
 
 import aiohttp
@@ -14,9 +14,7 @@ import aiohttp
 class UpnpError(Exception):
     """Base class for all errors raised by this library."""
 
-    def __init__(
-        self, *args: Any, message: Optional[str] = None, **_kwargs: Any
-    ) -> None:
+    def __init__(self, *args: Any, message: str | None = None, **_kwargs: Any) -> None:
         """Initialize base UpnpError."""
         super().__init__(*args, message)
 
@@ -46,9 +44,9 @@ class UpnpActionError(UpnpError):
     def __init__(
         self,
         *args: Any,
-        error_code: Optional[int] = None,
-        error_desc: Optional[str] = None,
-        message: Optional[str] = None,
+        error_code: int | None = None,
+        error_desc: str | None = None,
+        message: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize from response body."""
@@ -98,8 +96,8 @@ class UpnpResponseError(UpnpCommunicationError):
         self,
         *args: Any,
         status: int,
-        headers: Optional[aiohttp.typedefs.LooseHeaders] = None,
-        message: Optional[str] = None,
+        headers: aiohttp.typedefs.LooseHeaders | None = None,
+        message: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize."""
@@ -121,10 +119,10 @@ class UpnpActionResponseError(UpnpActionError, UpnpResponseError):
         self,
         *args: Any,
         status: int,
-        headers: Optional[aiohttp.typedefs.LooseHeaders] = None,
-        error_code: Optional[int] = None,
-        error_desc: Optional[str] = None,
-        message: Optional[str] = None,
+        headers: aiohttp.typedefs.LooseHeaders | None = None,
+        error_code: int | None = None,
+        error_desc: str | None = None,
+        message: str | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize."""

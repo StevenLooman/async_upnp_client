@@ -5,7 +5,7 @@ import asyncio
 import os.path
 from collections import deque
 from copy import deepcopy
-from typing import Deque, Mapping, MutableMapping, Optional, Tuple, cast
+from typing import Deque, Mapping, MutableMapping, cast
 
 from async_upnp_client.client import UpnpRequester
 from async_upnp_client.const import AddressTupleVXType, HttpRequest, HttpResponse
@@ -26,13 +26,13 @@ class UpnpTestRequester(UpnpRequester):
 
     def __init__(
         self,
-        response_map: Mapping[Tuple[str, str], HttpResponse],
+        response_map: Mapping[tuple[str, str], HttpResponse],
     ) -> None:
         """Class initializer."""
-        self.response_map: MutableMapping[Tuple[str, str], HttpResponse] = deepcopy(
+        self.response_map: MutableMapping[tuple[str, str], HttpResponse] = deepcopy(
             cast(MutableMapping, response_map)
         )
-        self.exceptions: Deque[Optional[Exception]] = deque()
+        self.exceptions: Deque[Exception | None] = deque()
 
     async def async_http_request(
         self,
@@ -53,7 +53,7 @@ class UpnpTestRequester(UpnpRequester):
         return self.response_map[key]
 
 
-RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
+RESPONSE_MAP: Mapping[tuple[str, str], HttpResponse] = {
     # DLNA/DMR
     ("GET", "http://dlna_dmr:1234/device.xml"): HttpResponse(
         200,
@@ -200,7 +200,7 @@ class UpnpTestNotifyServer(UpnpNotifyServer):
         self,
         requester: UpnpRequester,
         source: AddressTupleVXType,
-        callback_url: Optional[str] = None,
+        callback_url: str | None = None,
     ) -> None:
         """Initialize."""
         self._requester = requester

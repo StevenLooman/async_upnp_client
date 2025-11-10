@@ -8,7 +8,7 @@ from abc import ABC
 from datetime import timedelta
 from http import HTTPStatus
 from ipaddress import ip_address
-from typing import Callable, Dict, Optional, Set, Tuple, Type, Union
+from typing import Callable, Type
 from urllib.parse import urlparse
 
 import defusedxml.ElementTree as DET
@@ -85,14 +85,14 @@ class UpnpEventHandler:
         self._subscriptions: weakref.WeakValueDictionary[ServiceId, UpnpService] = (
             weakref.WeakValueDictionary()
         )
-        self._backlog: Dict[ServiceId, HttpRequest] = {}
+        self._backlog: dict[ServiceId, HttpRequest] = {}
 
     @property
     def callback_url(self) -> str:
         """Return callback URL on which we are callable."""
         return self._notify_server.callback_url
 
-    def sid_for_service(self, service: UpnpService) -> Optional[ServiceId]:
+    def sid_for_service(self, service: UpnpService) -> ServiceId | None:
         """Get the service connected to SID."""
         for sid, subscribed_service in self._subscriptions.items():
             if subscribed_service == service:
@@ -100,20 +100,20 @@ class UpnpEventHandler:
 
         return None
 
-    def service_for_sid(self, sid: ServiceId) -> Optional[UpnpService]:
+    def service_for_sid(self, sid: ServiceId) -> UpnpService | None:
         """Get a UpnpService for SID."""
         return self._subscriptions.get(sid)
 
     def _sid_and_service(
-        self, service_or_sid: Union[UpnpService, ServiceId]
-    ) -> Tuple[ServiceId, UpnpService]:
+        self, service_or_sid: UpnpService | ServiceId
+    ) -> tuple[ServiceId, UpnpService]:
         """
         Resolve a SID or service to both SID and service.
 
         :raise KeyError: Cannot determine SID from UpnpService, or vice versa.
         """
-        sid: Optional[ServiceId]
-        service: Optional[UpnpService]
+        sid: ServiceId | None
+        service: UpnpService | None
 
         if isinstance(service_or_sid, UpnpService):
             service = service_or_sid
@@ -172,7 +172,7 @@ class UpnpEventHandler:
         self,
         service: UpnpService,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[ServiceId, timedelta]:
+    ) -> tuple[ServiceId, timedelta]:
         """
         Subscription to a UpnpService.
 
@@ -243,7 +243,7 @@ class UpnpEventHandler:
         service: UpnpService,
         sid: ServiceId,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[ServiceId, timedelta]:
+    ) -> tuple[ServiceId, timedelta]:
         """Perform only a resubscribe, caller can retry subscribe if this fails."""
         # do SUBSCRIBE request
         headers = {
@@ -288,9 +288,9 @@ class UpnpEventHandler:
 
     async def async_resubscribe(
         self,
-        service_or_sid: Union[UpnpService, ServiceId],
+        service_or_sid: UpnpService | ServiceId,
         timeout: timedelta = timedelta(seconds=1800),
-    ) -> Tuple[ServiceId, timedelta]:
+    ) -> tuple[ServiceId, timedelta]:
         """
         Renew subscription to a UpnpService.
 
@@ -338,7 +338,7 @@ class UpnpEventHandler:
 
     async def async_unsubscribe(
         self,
-        service_or_sid: Union[UpnpService, ServiceId],
+        service_or_sid: UpnpService | ServiceId,
     ) -> ServiceId:
         """Unsubscribe from a UpnpService."""
         sid, service = self._sid_and_service(service_or_sid)
@@ -391,13 +391,13 @@ class UpnpEventHandlerRegister:
         """Initialize."""
         self.requester = requester
         self.notify_server_type = notify_server_type
-        self._event_handlers: Dict[
-            IPvXAddress, Tuple[UpnpEventHandler, Set[UpnpDevice]]
+        self._event_handlers: dict[
+            IPvXAddress, tuple[UpnpEventHandler, set[UpnpDevice]]
         ] = {}
 
     def _get_event_handler_for_device(
         self, device: UpnpDevice
-    ) -> Optional[UpnpEventHandler]:
+    ) -> UpnpEventHandler | None:
         """Get the event handler for the device, if known."""
         local_ip_str = get_local_ip(device.device_url)
         local_ip = ip_address(local_ip_str)
@@ -440,9 +440,7 @@ class UpnpEventHandlerRegister:
         await notify_server.async_start_server()
         return UpnpEventHandler(notify_server, self.requester)
 
-    async def async_remove_device(
-        self, device: UpnpDevice
-    ) -> Optional[UpnpEventHandler]:
+    async def async_remove_device(self, device: UpnpDevice) -> UpnpEventHandler | None:
         """Remove an existing device, destroys the event handler and returns it, if needed."""
         local_ip_str = get_local_ip(device.device_url)
         local_ip = ip_address(local_ip_str)

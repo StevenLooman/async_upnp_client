@@ -11,19 +11,7 @@ from functools import lru_cache
 from http import HTTPStatus
 from mimetypes import guess_type
 from time import monotonic as monotonic_timer
-from typing import (
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Mapping,
-    MutableMapping,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Set,
-    Union,
-)
+from typing import Any, Iterable, Mapping, MutableMapping, NamedTuple, Sequence
 from xml.sax.handler import ContentHandler, ErrorHandler
 from xml.sax.xmlreader import AttributesImpl
 
@@ -130,7 +118,7 @@ class DlnaDmrEventContentHandler(ContentHandler):
         """Initialize."""
         super().__init__()
         self.changes: MutableMapping[str, MutableMapping[str, Any]] = {}
-        self._current_instance: Optional[str] = None
+        self._current_instance: str | None = None
 
     def startElement(self, name: str, attrs: AttributesImpl) -> None:
         """Handle startElement."""
@@ -200,7 +188,7 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
     if state_var.name != "LastChange":
         raise UpnpError("Call this only on state variable LastChange")
 
-    event_data: Optional[str] = state_var.value
+    event_data: str | None = state_var.value
     if not event_data:
         _LOGGER.debug("No event data on state_variable")
         return
@@ -216,7 +204,7 @@ def dlna_handle_notify_last_change(state_var: UpnpStateVariable) -> None:
 
 
 @lru_cache(maxsize=128)
-def split_commas(input_: str) -> List[str]:
+def split_commas(input_: str) -> list[str]:
     """
     Split a string into a list of comma separated values.
 
@@ -227,7 +215,7 @@ def split_commas(input_: str) -> List[str]:
 
 
 @lru_cache(maxsize=128)
-def _lower_split_commas(input_: str) -> Set[str]:
+def _lower_split_commas(input_: str) -> set[str]:
     """Lowercase version of split_commas."""
     return {a.lower() for a in split_commas(input_)}
 
@@ -235,7 +223,7 @@ def _lower_split_commas(input_: str) -> Set[str]:
 @lru_cache
 def _cached_from_xml_string(
     xml: str,
-) -> List[Union[didl_lite.DidlObject, didl_lite.Descriptor]]:
+) -> list[didl_lite.DidlObject | didl_lite.Descriptor]:
     return didl_lite.from_xml_string(xml, strict=False)
 
 
@@ -264,7 +252,7 @@ class ConnectionManagerMixin(UpnpProfileDevice):
         """Check if device can report its protocol info."""
         return self._action("CM", "GetProtocolInfo") is not None
 
-    async def async_get_protocol_info(self) -> Mapping[str, List[str]]:
+    async def async_get_protocol_info(self) -> Mapping[str, list[str]]:
         """Get protocol info."""
         action = self._action("CM", "GetProtocolInfo")
         if not action:
@@ -277,7 +265,7 @@ class ConnectionManagerMixin(UpnpProfileDevice):
         }
 
     @property
-    def source_protocol_info(self) -> List[str]:
+    def source_protocol_info(self) -> list[str]:
         """Supported source protocols."""
         state_var = self._state_variable("CM", "SourceProtocolInfo")
         if state_var is None or not state_var.value:
@@ -286,7 +274,7 @@ class ConnectionManagerMixin(UpnpProfileDevice):
         return split_commas(state_var.value)
 
     @property
-    def sink_protocol_info(self) -> List[str]:
+    def sink_protocol_info(self) -> list[str]:
         """Supported sink protocols."""
         state_var = self._state_variable("CM", "SinkProtocolInfo")
         if state_var is None or not state_var.value:
@@ -330,8 +318,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         **ConnectionManagerMixin._SERVICE_TYPES,
     }
 
-    _current_track_meta_data: Optional[didl_lite.DidlObject] = None
-    _av_transport_uri_meta_data: Optional[didl_lite.DidlObject] = None
+    _current_track_meta_data: didl_lite.DidlObject | None = None
+    _av_transport_uri_meta_data: didl_lite.DidlObject | None = None
     __did_first_update: bool = False
 
     async def async_update(self, do_ping: bool = True) -> None:
@@ -420,7 +408,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return DeviceState.IDLE
 
     @property
-    def transport_state(self) -> Optional[TransportState]:
+    def transport_state(self) -> TransportState | None:
         """Get transport state."""
         state_var = self._state_variable("AVT", "TransportState")
         if not state_var:
@@ -441,7 +429,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return state_var.value is not None or state_var.updated_at is not None
 
     @property
-    def _current_transport_actions(self) -> Set[str]:
+    def _current_transport_actions(self) -> set[str]:
         state_var = self._state_variable("AVT", "CurrentTransportActions")
         if not state_var:
             return set()
@@ -457,13 +445,13 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             and self._action("RC", f"Set{var_name}") is not None
         )
 
-    def _level(self, var_name: str) -> Optional[float]:
+    def _level(self, var_name: str) -> float | None:
         state_var = self._state_variable("RC", var_name)
         if state_var is None:
             _LOGGER.debug("Missing StateVariable RC/%s", var_name)
             return None
 
-        value: Optional[float] = state_var.value
+        value: float | None = state_var.value
         if value is None:
             _LOGGER.debug("Got no value for %s", var_name)
             return None
@@ -499,7 +487,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._supports("Brightness")
 
     @property
-    def brightness_level(self) -> Optional[float]:
+    def brightness_level(self) -> float | None:
         """Brightness level of the media player (0..1)."""
         return self._level("Brightness")
 
@@ -513,7 +501,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._supports("Contrast")
 
     @property
-    def contrast_level(self) -> Optional[float]:
+    def contrast_level(self) -> float | None:
         """Contrast level of the media player (0..1)."""
         return self._level("Contrast")
 
@@ -527,7 +515,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._supports("Sharpness")
 
     @property
-    def sharpness_level(self) -> Optional[float]:
+    def sharpness_level(self) -> float | None:
         """Sharpness level of the media player (0..1)."""
         return self._level("Sharpness")
 
@@ -541,7 +529,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._supports("ColorTemperature")
 
     @property
-    def color_temperature_level(self) -> Optional[float]:
+    def color_temperature_level(self) -> float | None:
         """Color temperature level of the media player (0..1)."""
         return self._level("ColorTemperature")
 
@@ -559,7 +547,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._supports("Volume")
 
     @property
-    def volume_level(self) -> Optional[float]:
+    def volume_level(self) -> float | None:
         """Volume level of the media player (0..1)."""
         return self._level("Volume")
 
@@ -573,12 +561,12 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._supports("Mute")
 
     @property
-    def is_volume_muted(self) -> Optional[bool]:
+    def is_volume_muted(self) -> bool | None:
         """Boolean if volume is currently muted."""
         state_var = self._state_variable("RC", "Mute")
         if not state_var:
             return None
-        value: Optional[bool] = state_var.value
+        value: bool | None = state_var.value
         if value is None:
             _LOGGER.debug("Got no value for Volume_mute")
             return None
@@ -607,14 +595,14 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         )
 
     @property
-    def preset_names(self) -> List[str]:
+    def preset_names(self) -> list[str]:
         """List of valid preset names."""
         state_var = self._state_variable("RC", "PresetNameList")
         if state_var is None:
             _LOGGER.debug("Missing StateVariable RC/PresetNameList")
             return []
 
-        value: Optional[str] = state_var.value
+        value: str | None = state_var.value
         if value is None:
             _LOGGER.debug("Got no value for PresetNameList")
             return []
@@ -794,7 +782,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._action("AVT", "SetAVTransportURI") is not None
 
     @property
-    def current_track_uri(self) -> Optional[str]:
+    def current_track_uri(self) -> str | None:
         """Return the URI of the currently playing track."""
         state_var = self._state_variable("AVT", "CurrentTrackURI")
         if state_var is None:
@@ -804,7 +792,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return state_var.value
 
     @property
-    def av_transport_uri(self) -> Optional[str]:
+    def av_transport_uri(self) -> str | None:
         """Return the URI of the currently playing resource (playlist or track)."""
         state_var = self._state_variable("AVT", "AVTransportURI")
         if state_var is None:
@@ -817,7 +805,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         self,
         media_url: str,
         media_title: str,
-        meta_data: Union[None, str, Mapping] = None,
+        meta_data: None | str | Mapping = None,
     ) -> None:
         """Play a piece of media."""
         # escape media_url
@@ -847,7 +835,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         self,
         media_url: str,
         media_title: str,
-        meta_data: Union[None, str, Mapping] = None,
+        meta_data: None | str | Mapping = None,
     ) -> None:
         """Enqueue a piece of media for playing immediately after the current media."""
         # escape media_url
@@ -887,7 +875,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
     async def _fetch_headers(
         self, url: str, headers: Mapping[str, str]
-    ) -> Optional[Mapping[str, str]]:
+    ) -> Mapping[str, str] | None:
         """Do a HEAD/GET to get resources headers."""
         requester = self.profile_device.requester
 
@@ -921,12 +909,12 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         self,
         media_url: str,
         media_title: str,
-        default_mime_type: Optional[str] = None,
-        default_upnp_class: Optional[str] = None,
-        override_mime_type: Optional[str] = None,
-        override_upnp_class: Optional[str] = None,
-        override_dlna_features: Optional[str] = None,
-        meta_data: Optional[Mapping[str, Any]] = None,
+        default_mime_type: str | None = None,
+        default_upnp_class: str | None = None,
+        override_mime_type: str | None = None,
+        override_upnp_class: str | None = None,
+        override_dlna_features: str | None = None,
+        meta_data: Mapping[str, Any] | None = None,
     ) -> str:
         """
         Construct the metadata for play_media command.
@@ -1013,7 +1001,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
     async def _async_get_sink_protocol_info_for_mime_type(
         self, mime_type: str
-    ) -> List[List[str]]:
+    ) -> list[list[str]]:
         """Get protocol_info for a specific mime type."""
         # example entry:
         # http-get:*:video/mpeg:DLNA.ORG_PN=MPEG_TS_HD_KO_ISO;DLNA.ORG_FLAGS=ED100000000000000000...
@@ -1035,9 +1023,9 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         )
 
     @property
-    def valid_play_modes(self) -> Set[PlayMode]:
+    def valid_play_modes(self) -> set[PlayMode]:
         """Return a set of play modes that can be used."""
-        play_modes: Set[PlayMode] = set()
+        play_modes: set[PlayMode] = set()
         state_var = self._state_variable("AVT", "CurrentPlayMode")
         if state_var is None:
             return play_modes
@@ -1053,7 +1041,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return play_modes
 
     @property
-    def play_mode(self) -> Optional[PlayMode]:
+    def play_mode(self) -> PlayMode | None:
         """Get play mode."""
         state_var = self._state_variable("AVT", "CurrentPlayMode")
         if not state_var:
@@ -1095,7 +1083,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
         self._current_track_meta_data = item
 
-    def _get_current_track_meta_data(self, attr: str) -> Optional[str]:
+    def _get_current_track_meta_data(self, attr: str) -> str | None:
         """Return a metadata attribute if it exists, None otherwise."""
         if not self._current_track_meta_data:
             return None
@@ -1107,7 +1095,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return value
 
     @property
-    def media_class(self) -> Optional[str]:
+    def media_class(self) -> str | None:
         """DIDL-Lite class of currently playing media."""
         if not self._current_track_meta_data:
             return None
@@ -1115,53 +1103,53 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return media_class
 
     @property
-    def media_title(self) -> Optional[str]:
+    def media_title(self) -> str | None:
         """Title of current playing media."""
         return self._get_current_track_meta_data("title")
 
     @property
-    def media_program_title(self) -> Optional[str]:
+    def media_program_title(self) -> str | None:
         """Title of current playing media."""
         return self._get_current_track_meta_data("program_title")
 
     @property
-    def media_artist(self) -> Optional[str]:
+    def media_artist(self) -> str | None:
         """Artist of current playing media."""
         return self._get_current_track_meta_data("artist")
 
     @property
-    def media_album_name(self) -> Optional[str]:
+    def media_album_name(self) -> str | None:
         """Album name of current playing media."""
         return self._get_current_track_meta_data("album")
 
     @property
-    def media_album_artist(self) -> Optional[str]:
+    def media_album_artist(self) -> str | None:
         """Album artist of current playing media."""
         return self._get_current_track_meta_data("album_artist")
 
     @property
-    def media_track_number(self) -> Optional[int]:
+    def media_track_number(self) -> int | None:
         """Track number of current playing media."""
         state_var = self._state_variable("AVT", "CurrentTrack")
         if state_var is None:
             _LOGGER.debug("Missing StateVariable AVT/CurrentTrack")
             return None
 
-        value: Optional[int] = state_var.value
+        value: int | None = state_var.value
         return value
 
     @property
-    def media_series_title(self) -> Optional[str]:
+    def media_series_title(self) -> str | None:
         """Title of series of currently playing media."""
         return self._get_current_track_meta_data("series_title")
 
     @property
-    def media_season_number(self) -> Optional[str]:
+    def media_season_number(self) -> str | None:
         """Season of series of currently playing media."""
         return self._get_current_track_meta_data("episode_season")
 
     @property
-    def media_episode_number(self) -> Optional[str]:
+    def media_episode_number(self) -> str | None:
         """Episode number, within the series, of current playing media.
 
         Note: This is usually the absolute number, starting at 1, of the episode
@@ -1170,22 +1158,22 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._get_current_track_meta_data("episode_number")
 
     @property
-    def media_episode_count(self) -> Optional[str]:
+    def media_episode_count(self) -> str | None:
         """Total number of episodes in series to which currently playing media belongs."""
         return self._get_current_track_meta_data("episode_count")
 
     @property
-    def media_channel_name(self) -> Optional[str]:
+    def media_channel_name(self) -> str | None:
         """Name of currently playing channel."""
         return self._get_current_track_meta_data("channel_name")
 
     @property
-    def media_channel_number(self) -> Optional[str]:
+    def media_channel_number(self) -> str | None:
         """Channel number of currently playing channel."""
         return self._get_current_track_meta_data("channel_number")
 
     @property
-    def media_image_url(self) -> Optional[str]:
+    def media_image_url(self) -> str | None:
         """Image url of current playing media."""
         state_var = self._state_variable("AVT", "CurrentTrackMetaData")
         if state_var is None:
@@ -1214,7 +1202,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return None
 
     @property
-    def media_duration(self) -> Optional[int]:
+    def media_duration(self) -> int | None:
         """Duration of current playing media in seconds."""
         state_var = self._state_variable("AVT", "CurrentTrackDuration")
         if (
@@ -1231,7 +1219,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return time.seconds
 
     @property
-    def media_position(self) -> Optional[int]:
+    def media_position(self) -> int | None:
         """Position of current playing media in seconds."""
         state_var = self._state_variable("AVT", "RelativeTimePosition")
         if (
@@ -1248,7 +1236,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return time.seconds
 
     @property
-    def media_position_updated_at(self) -> Optional[datetime]:
+    def media_position_updated_at(self) -> datetime | None:
         """When was the position of the current playing media valid."""
         state_var = self._state_variable("AVT", "RelativeTimePosition")
         if state_var is None:
@@ -1278,7 +1266,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
         self._av_transport_uri_meta_data = item
 
-    def _get_av_transport_meta_data(self, attr: str) -> Optional[str]:
+    def _get_av_transport_meta_data(self, attr: str) -> str | None:
         """Return an attribute of AVTransportURIMetaData if it exists, None otherwise."""
         if not self._av_transport_uri_meta_data:
             return None
@@ -1290,7 +1278,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return value
 
     @property
-    def media_playlist_title(self) -> Optional[str]:
+    def media_playlist_title(self) -> str | None:
         """Title of currently playing playlist, if a playlist is playing."""
         if self.av_transport_uri == self.current_track_uri:
             # A single track is playing, no playlist to report
@@ -1358,7 +1346,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
     # region CD
     @property
-    def search_capabilities(self) -> List[str]:
+    def search_capabilities(self) -> list[str]:
         """List of capabilities that are supported for search."""
         state_var = self._state_variable("CD", "SearchCapabilities")
         if state_var is None or state_var.value is None:
@@ -1367,7 +1355,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return split_commas(state_var.value)
 
     @property
-    def sort_capabilities(self) -> List[str]:
+    def sort_capabilities(self) -> list[str]:
         """List of meta-data tags that can be used in sort_criteria."""
         state_var = self._state_variable("CD", "SortCapabilities")
         if state_var is None or state_var.value is None:
@@ -1376,7 +1364,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return split_commas(state_var.value)
 
     @property
-    def system_update_id(self) -> Optional[int]:
+    def system_update_id(self) -> int | None:
         """Return the latest update SystemUpdateID.
 
         Changes to this ID indicate that changes have occurred in the Content
@@ -1394,7 +1382,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return self._action("CD", "ContainerUpdateIDs") is not None
 
     @property
-    def container_update_ids(self) -> Optional[Dict[str, int]]:
+    def container_update_ids(self) -> dict[str, int] | None:
         """Return latest list of changed containers.
 
         This variable is evented only, and optional. If it's None, use the
@@ -1413,7 +1401,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
     class BrowseResult(NamedTuple):
         """Result returned from a Browse or Search action."""
 
-        result: List[Union[didl_lite.DidlObject, didl_lite.Descriptor]]
+        result: list[didl_lite.DidlObject | didl_lite.Descriptor]
         number_returned: int
         total_matches: int
         update_id: int
@@ -1422,10 +1410,10 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         self,
         object_id: str,
         browse_flag: str,
-        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        metadata_filter: Iterable[str] | str = DEFAULT_METADATA_FILTER,
         starting_index: int = 0,
         requested_count: int = 0,
-        sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
+        sort_criteria: Iterable[str] | str = DEFAULT_SORT_CRITERIA,
     ) -> BrowseResult:
         """Retrieve an object's metadata or its children."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -1458,7 +1446,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
     async def async_browse_metadata(
         self,
         object_id: str,
-        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        metadata_filter: Iterable[str] | str = DEFAULT_METADATA_FILTER,
     ) -> didl_lite.DidlObject:
         """Get the metadata (properties) of an object."""
         _LOGGER.debug("browse_metadata(%r, %r)", object_id, metadata_filter)
@@ -1475,10 +1463,10 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
     async def async_browse_direct_children(
         self,
         object_id: str,
-        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        metadata_filter: Iterable[str] | str = DEFAULT_METADATA_FILTER,
         starting_index: int = 0,
         requested_count: int = 0,
-        sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
+        sort_criteria: Iterable[str] | str = DEFAULT_SORT_CRITERIA,
     ) -> BrowseResult:
         """Get the direct children of an object."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -1503,10 +1491,10 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
         self,
         container_id: str,
         search_criteria: str,
-        metadata_filter: Union[Iterable[str], str] = DEFAULT_METADATA_FILTER,
+        metadata_filter: Iterable[str] | str = DEFAULT_METADATA_FILTER,
         starting_index: int = 0,
         requested_count: int = 0,
-        sort_criteria: Union[Iterable[str], str] = DEFAULT_SORT_CRITERIA,
+        sort_criteria: Iterable[str] | str = DEFAULT_SORT_CRITERIA,
     ) -> BrowseResult:
         """Search ContentDirectory for objects that match some criteria.
 

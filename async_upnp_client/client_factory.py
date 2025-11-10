@@ -3,7 +3,7 @@
 
 import logging
 import urllib.parse
-from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Callable, Mapping, Sequence
 from xml.etree import ElementTree as ET
 
 import defusedxml.ElementTree as DET
@@ -220,7 +220,7 @@ class UpnpFactory:
             xml=service_description_el,
         )
 
-    def _create_state_variables(self, scpd_el: ET.Element) -> List[UpnpStateVariable]:
+    def _create_state_variables(self, scpd_el: ET.Element) -> list[UpnpStateVariable]:
         """Create UpnpStateVariables from scpd_el."""
         service_state_table_el = scpd_el.find("./service:serviceStateTable", NS)
         if service_state_table_el is None:
@@ -276,7 +276,7 @@ class UpnpFactory:
         default_value = state_variable_el.findtext("service:defaultValue", None, NS)
 
         # allowed value ranges
-        allowed_value_range: Dict[str, Optional[str]] = {}
+        allowed_value_range: dict[str, str | None] = {}
         allowed_value_range_el = state_variable_el.find("service:allowedValueRange", NS)
         if allowed_value_range_el is not None:
             allowed_value_range = {
@@ -286,7 +286,7 @@ class UpnpFactory:
             }
 
         # allowed value list
-        allowed_values: Optional[List[str]] = None
+        allowed_values: list[str] | None = None
         allowed_value_list_el = state_variable_el.find("service:allowedValueList", NS)
         if allowed_value_list_el is not None:
             allowed_values = [
@@ -361,7 +361,7 @@ class UpnpFactory:
 
     def _create_actions(
         self, scpd_el: ET.Element, state_variables: Sequence[UpnpStateVariable]
-    ) -> List[UpnpAction]:
+    ) -> list[UpnpAction]:
         """Create UpnpActions from scpd_el."""
         action_list_el = scpd_el.find("./service:actionList", NS)
         if action_list_el is None:
@@ -388,7 +388,7 @@ class UpnpFactory:
     def _parse_action_el(self, action_el: ET.Element) -> ActionInfo:
         """Parse XML for action."""
         # build arguments
-        args: List[ActionArgumentInfo] = []
+        args: list[ActionArgumentInfo] = []
         for argument_el in action_el.findall(
             "./service:argumentList/service:argument", NS
         ):

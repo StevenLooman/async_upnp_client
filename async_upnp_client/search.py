@@ -8,7 +8,7 @@ import sys
 from asyncio import DatagramTransport
 from asyncio.events import AbstractEventLoop
 from ipaddress import IPv4Address, IPv6Address
-from typing import Any, Callable, Coroutine, Optional, cast
+from typing import Any, Callable, Coroutine, cast
 
 from async_upnp_client.const import SsdpSource
 from async_upnp_client.ssdp import (
@@ -35,19 +35,17 @@ class SsdpSearchListener:
 
     def __init__(
         self,
-        async_callback: Optional[
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
-        ] = None,
-        callback: Optional[Callable[[CaseInsensitiveDict], None]] = None,
-        loop: Optional[AbstractEventLoop] = None,
-        source: Optional[AddressTupleVXType] = None,
-        target: Optional[AddressTupleVXType] = None,
+        async_callback: (
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
+        ) = None,
+        callback: Callable[[CaseInsensitiveDict], None] | None = None,
+        loop: AbstractEventLoop | None = None,
+        source: AddressTupleVXType | None = None,
+        target: AddressTupleVXType | None = None,
         timeout: int = SSDP_MX,
         search_target: str = SSDP_ST_ALL,
-        async_connect_callback: Optional[
-            Callable[[], Coroutine[Any, Any, None]]
-        ] = None,
-        connect_callback: Optional[Callable[[], None]] = None,
+        async_connect_callback: Callable[[], Coroutine[Any, Any, None]] | None = None,
+        connect_callback: Callable[[], None] | None = None,
     ) -> None:
         """Init the ssdp listener class."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -63,15 +61,13 @@ class SsdpSearchListener:
         self.source, self.target = determine_source_target(source, target)
         self.timeout = timeout
         self.loop = loop or asyncio.get_event_loop()
-        self._target_host: Optional[str] = None
-        self._transport: Optional[DatagramTransport] = None
+        self._target_host: str | None = None
+        self._transport: DatagramTransport | None = None
 
-    def async_search(
-        self, override_target: Optional[AddressTupleVXType] = None
-    ) -> None:
+    def async_search(self, override_target: AddressTupleVXType | None = None) -> None:
         """Start an SSDP search."""
         assert self._transport is not None
-        sock: Optional[socket.socket] = self._transport.get_extra_info("socket")
+        sock: socket.socket | None = self._transport.get_extra_info("socket")
         _LOGGER.debug(
             "Sending SEARCH packet, transport: %s, socket: %s, override_target: %s",
             self._transport,
@@ -114,7 +110,7 @@ class SsdpSearchListener:
             self.callback(headers)
 
     def _on_connect(self, transport: DatagramTransport) -> None:
-        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        sock: socket.socket | None = transport.get_extra_info("socket")
         _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
         if self.async_connect_callback:
@@ -166,14 +162,14 @@ async def async_search(
     async_callback: Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]],
     timeout: int = SSDP_MX,
     search_target: str = SSDP_ST_ALL,
-    source: Optional[AddressTupleVXType] = None,
-    target: Optional[AddressTupleVXType] = None,
-    loop: Optional[AbstractEventLoop] = None,
+    source: AddressTupleVXType | None = None,
+    target: AddressTupleVXType | None = None,
+    loop: AbstractEventLoop | None = None,
 ) -> None:
     """Discover devices via SSDP."""
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     loop_: AbstractEventLoop = loop or asyncio.get_event_loop()
-    listener: Optional[SsdpSearchListener] = None
+    listener: SsdpSearchListener | None = None
 
     async def _async_connected() -> None:
         nonlocal listener

@@ -10,11 +10,7 @@ from typing import (
     AsyncIterator,
     Awaitable,
     Callable,
-    Dict,
-    List,
     NamedTuple,
-    Optional,
-    Tuple,
     cast,
 )
 from unittest.mock import Mock
@@ -74,7 +70,7 @@ class ServerServiceTest(UpnpServerService):
     )
     async def set_values(
         self, In_Var1_str: str  # pylint: disable=invalid-name
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Handle action."""
         self.state_variable("TestVariable_str").value = In_Var1_str
         return {
@@ -147,9 +143,9 @@ class Callback:
 
     def __init__(self) -> None:
         """Initialize."""
-        self.callback: Optional[
-            Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]]
-        ] = None
+        self.callback: (
+            Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]] | None
+        ) = None
         self.session: TestClient[Request, Application] | None = None
         self.app = aiohttp.web.Application()
         self.app.router.add_route("NOTIFY", "/{tail:.*}", self.handler)
@@ -181,7 +177,7 @@ class UpnpServerTuple(NamedTuple):
     """Upnp server tuple."""
 
     http_client: TestClient
-    ssdp_sockets: List[socket.socket]
+    ssdp_sockets: list[socket.socket]
     callback: Callback
     server: UpnpServer
 
@@ -193,12 +189,12 @@ async def upnp_server(
     """Fixture to initialize device."""
     # pylint: disable=too-few-public-methods
 
-    ssdp_sockets: List[socket.socket] = []
+    ssdp_sockets: list[socket.socket] = []
     http_client = None
 
     def get_ssdp_socket_mock(
         *_args: Any, **_kwargs: Any
-    ) -> Tuple[MockSocket, None, None]:
+    ) -> tuple[MockSocket, None, None]:
         sock1, sock2 = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
         ssdp_sockets.append(sock2)
         return MockSocket(sock1), None, None

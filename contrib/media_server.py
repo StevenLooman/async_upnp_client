@@ -12,7 +12,7 @@ import asyncio
 import logging
 import xml.etree.ElementTree as ET
 from time import time
-from typing import Dict, Mapping, Sequence, Type
+from typing import Mapping, Sequence, Type
 from datetime import datetime
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
@@ -98,7 +98,7 @@ class ContentDirectoryService(UpnpServerService):
         },
     )
     async def browse(self, BrowseFlag: str, Filter: str, ObjectID: str, StartingIndex: int,
-                     RequestedCount: int, SortCriteria: str) -> Dict[str, UpnpStateVariable]:
+                     RequestedCount: int, SortCriteria: str) -> dict[str, UpnpStateVariable]:
         """Browse media."""
         root =  ET.Element("DIDL-Lite", {
              'xmlns:dc': 'http://purl.org/dc/elements/1.1/',
@@ -123,7 +123,7 @@ class ContentDirectoryService(UpnpServerService):
             "SearchCaps": "SearchCapabilities",
         },
     )
-    async def GetSearchCapabilities(self) -> Dict[str, UpnpStateVariable]:
+    async def GetSearchCapabilities(self) -> dict[str, UpnpStateVariable]:
         """Browse media."""
         return {
             "SearchCaps": self.state_variable("SearchCapabilities"),
@@ -136,7 +136,7 @@ class ContentDirectoryService(UpnpServerService):
             "SortCaps": "SortCapabilities",
         },
     )
-    async def GetSortCapabilities(self) -> Dict[str, UpnpStateVariable]:
+    async def GetSortCapabilities(self) -> dict[str, UpnpStateVariable]:
         """Browse media."""
         return {
             "SortCaps": self.state_variable("SortCapabilities"),
@@ -148,7 +148,7 @@ class ContentDirectoryService(UpnpServerService):
             "FeatureList": "FeatureList",
         },
     )
-    async def GetFeatureList(self) -> Dict[str, UpnpStateVariable]:
+    async def GetFeatureList(self) -> dict[str, UpnpStateVariable]:
         """Browse media."""
         return {
             "FeatureList": self.state_variable("FeatureList"),
@@ -160,7 +160,7 @@ class ContentDirectoryService(UpnpServerService):
             "Id": "SystemUpdateID",
         },
     )
-    async def GetSystemUpdateID(self) -> Dict[str, UpnpStateVariable]:
+    async def GetSystemUpdateID(self) -> dict[str, UpnpStateVariable]:
         """Browse media."""
         return {
             "Id": self.state_variable("SystemUpdateID"),

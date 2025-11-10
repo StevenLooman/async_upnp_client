@@ -12,7 +12,7 @@ import asyncio
 import logging
 import xml.etree.ElementTree as ET
 from time import time
-from typing import Dict, Mapping, Sequence, Tuple, Type, cast
+from typing import Mapping, Sequence, Type, cast
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -114,7 +114,7 @@ class WANIPv6FirewallControlService(UpnpServerService):
     def __init__(self, *args, **kwargs) -> None:
         """Initialize."""
         super().__init__(*args, **kwargs)
-        self._pinholes: Dict[int, Pinhole] = {}
+        self._pinholes: dict[int, Pinhole] = {}
         self._next_pinhole_id = 0
 
     @callable_action(
@@ -125,7 +125,7 @@ class WANIPv6FirewallControlService(UpnpServerService):
             "InboundPinholeAllowed": "InboundPinholeAllowed",
         },
     )
-    async def get_firewall_status(self) -> Dict[str, UpnpStateVariable]:
+    async def get_firewall_status(self) -> dict[str, UpnpStateVariable]:
         """Get firewall status."""
         return {
             "FirewallEnabled": self.state_variable("FirewallEnabled"),
@@ -146,7 +146,7 @@ class WANIPv6FirewallControlService(UpnpServerService):
             "UniqueID": "A_ARG_TYPE_UniqueID",
         },
     )
-    async def add_pinhole(self, RemoteHost: str, RemotePort: int, InternalClient: str, InternalPort: int, Protocol: int, LeaseTime: int) -> Dict[str, UpnpStateVariable]:
+    async def add_pinhole(self, RemoteHost: str, RemotePort: int, InternalClient: str, InternalPort: int, Protocol: int, LeaseTime: int) -> dict[str, UpnpStateVariable]:
         """Add pinhole."""
         # pylint: disable=invalid-name
         pinhole_id = self._next_pinhole_id
@@ -172,7 +172,7 @@ class WANIPv6FirewallControlService(UpnpServerService):
         },
         out_args={},
     )
-    async def update_pinhole(self, UniqueID: int, LeaseTime: int) -> Dict[str, UpnpStateVariable]:
+    async def update_pinhole(self, UniqueID: int, LeaseTime: int) -> dict[str, UpnpStateVariable]:
         """Update pinhole."""
         # pylint: disable=invalid-name
         self._pinholes[UniqueID].lease_time = LeaseTime
@@ -185,7 +185,7 @@ class WANIPv6FirewallControlService(UpnpServerService):
         },
         out_args={},
     )
-    async def delete_pinhole(self, UniqueID: int) -> Dict[str, UpnpStateVariable]:
+    async def delete_pinhole(self, UniqueID: int) -> dict[str, UpnpStateVariable]:
         """Delete pinhole."""
         # pylint: disable=invalid-name
         del self._pinholes[UniqueID]
@@ -332,7 +332,7 @@ class WANIPConnectionService(UpnpServerService):
     def __init__(self, *args, **kwargs) -> None:
         """Initialize."""
         super().__init__(*args, **kwargs)
-        self._port_mappings: Dict[Tuple[str, int, str, str], PortMappingEntry] = {}
+        self._port_mappings: dict[tuple[str, int, str, str], PortMappingEntry] = {}
 
     @callable_action(
         name="GetStatusInfo",
@@ -343,7 +343,7 @@ class WANIPConnectionService(UpnpServerService):
             "NewUptime": "Uptime",
         },
     )
-    async def get_status_info(self) -> Dict[str, UpnpStateVariable]:
+    async def get_status_info(self) -> dict[str, UpnpStateVariable]:
         """Get status info."""
         # from async_upnp_client.exceptions import UpnpActionError, UpnpActionErrorCode
         # raise UpnpActionError(
@@ -362,7 +362,7 @@ class WANIPConnectionService(UpnpServerService):
             "NewExternalIPAddress": "ExternalIPAddress",
         },
     )
-    async def get_external_ip_address(self) -> Dict[str, UpnpStateVariable]:
+    async def get_external_ip_address(self) -> dict[str, UpnpStateVariable]:
         """Get external IP address."""
         # from async_upnp_client.exceptions import UpnpActionError, UpnpActionErrorCode
         # raise UpnpActionError(
@@ -386,7 +386,7 @@ class WANIPConnectionService(UpnpServerService):
         },
         out_args={},
     )
-    async def add_port_mapping(self, NewRemoteHost: str, NewExternalPort: int, NewProtocol: str, NewInternalPort: int, NewInternalClient: str, NewEnabled: bool, NewPortMappingDescription: str, NewLeaseDuration: int) ->  Dict[str, UpnpStateVariable]:
+    async def add_port_mapping(self, NewRemoteHost: str, NewExternalPort: int, NewProtocol: str, NewInternalPort: int, NewInternalClient: str, NewEnabled: bool, NewPortMappingDescription: str, NewLeaseDuration: int) ->  dict[str, UpnpStateVariable]:
         """Add port mapping."""
         # pylint: disable=invalid-name
         key = (NewRemoteHost, NewExternalPort, NewProtocol)
@@ -414,7 +414,7 @@ class WANIPConnectionService(UpnpServerService):
         },
         out_args={},
     )
-    async def delete_port_mapping(self, NewRemoteHost: str, NewExternalPort: int, NewProtocol: str) ->  Dict[str, UpnpStateVariable]:
+    async def delete_port_mapping(self, NewRemoteHost: str, NewExternalPort: int, NewProtocol: str) ->  dict[str, UpnpStateVariable]:
         """Delete an existing port mapping entry."""
         # pylint: disable=invalid-name
         key = (NewRemoteHost, NewExternalPort, NewProtocol)
@@ -523,7 +523,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalBytesReceived": "TotalBytesReceived",
         },
     )
-    async def get_total_bytes_received(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_bytes_received(self) -> dict[str, UpnpStateVariable]:
         """Get total bytes received."""
         self._update_bytes("TotalBytesReceived")
         return {
@@ -537,7 +537,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalBytesSent": "TotalBytesSent",
         },
     )
-    async def get_total_bytes_sent(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_bytes_sent(self) -> dict[str, UpnpStateVariable]:
         """Get total bytes sent."""
         self._update_bytes("TotalBytesSent")
         return {
@@ -551,7 +551,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalPacketsReceived": "TotalPacketsReceived",
         },
     )
-    async def get_total_packets_received(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_packets_received(self) -> dict[str, UpnpStateVariable]:
         """Get total packets received."""
         self._update_packets("TotalPacketsReceived")
         return {
@@ -565,7 +565,7 @@ class WANCommonInterfaceConfigService(UpnpServerService):
             "NewTotalPacketsSent": "TotalPacketsSent",
         },
     )
-    async def get_total_packets_sent(self) -> Dict[str, UpnpStateVariable]:
+    async def get_total_packets_sent(self) -> dict[str, UpnpStateVariable]:
         """Get total packets sent."""
         self._update_packets("TotalPacketsSent")
         return {

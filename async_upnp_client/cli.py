@@ -10,7 +10,7 @@ import operator
 import sys
 import time
 from datetime import datetime
-from typing import Any, Optional, Sequence, Tuple, Union, cast
+from typing import Any, Sequence, cast
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.aiohttp import AiohttpNotifyServer, AiohttpRequester
@@ -113,14 +113,14 @@ async def create_device(description_url: str) -> UpnpDevice:
     return await factory.async_create_device(description_url)
 
 
-def get_timestamp() -> Union[str, float]:
+def get_timestamp() -> str | float:
     """Timestamp depending on configuration."""
     if args.iso8601:
         return datetime.now().isoformat(" ")
     return time.time()
 
 
-def service_from_device(device: UpnpDevice, service_name: str) -> Optional[UpnpService]:
+def service_from_device(device: UpnpDevice, service_name: str) -> UpnpService | None:
     """Get UpnpService from UpnpDevice by name or part or abbreviation."""
     for service in device.all_services:
         part = service.service_id.split(":")[-1]
@@ -287,10 +287,10 @@ async def subscribe(description_url: str, service_names: Any) -> None:
 
 
 def source_target(
-    source: Optional[str],
-    target: Optional[str],
+    source: str | None,
+    target: str | None,
     target_port: int,
-) -> Tuple[AddressTupleVXType, AddressTupleVXType]:
+) -> tuple[AddressTupleVXType, AddressTupleVXType]:
     """Determine source/target."""
     # pylint: disable=too-many-branches, too-many-return-statements
     if source is None and target is None:

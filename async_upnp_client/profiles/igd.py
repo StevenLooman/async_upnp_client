@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
-from typing import List, NamedTuple, Optional, Sequence, Set, Union, cast
+from typing import NamedTuple, Sequence, cast
 
 from async_upnp_client.client import UpnpAction, UpnpDevice, UpnpStateVariable
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -61,14 +61,14 @@ class NatRsipStatusInfo(NamedTuple):
 class PortMappingEntry(NamedTuple):
     """Port mapping entry."""
 
-    remote_host: Optional[IPv4Address]
+    remote_host: IPv4Address | None
     external_port: int
     protocol: str
     internal_port: int
     internal_client: IPv4Address
     enabled: bool
     description: str
-    lease_duration: Optional[timedelta]
+    lease_duration: timedelta | None
 
 
 class FirewallStatus(NamedTuple):
@@ -93,35 +93,35 @@ class TrafficCounterState(NamedTuple):
     """Traffic state."""
 
     timestamp: datetime
-    bytes_received: Union[None, BaseException, int]
-    bytes_sent: Union[None, BaseException, int]
-    packets_received: Union[None, BaseException, int]
-    packets_sent: Union[None, BaseException, int]
-    bytes_received_original: Union[None, BaseException, int]
-    bytes_sent_original: Union[None, BaseException, int]
-    packets_received_original: Union[None, BaseException, int]
-    packets_sent_original: Union[None, BaseException, int]
+    bytes_received: None | BaseException | int
+    bytes_sent: None | BaseException | int
+    packets_received: None | BaseException | int
+    packets_sent: None | BaseException | int
+    bytes_received_original: None | BaseException | int
+    bytes_sent_original: None | BaseException | int
+    packets_received_original: None | BaseException | int
+    packets_sent_original: None | BaseException | int
 
 
 class IgdState(NamedTuple):
     """IGD state."""
 
     timestamp: datetime
-    bytes_received: Union[None, BaseException, int]
-    bytes_sent: Union[None, BaseException, int]
-    packets_received: Union[None, BaseException, int]
-    packets_sent: Union[None, BaseException, int]
-    connection_status: Union[None, BaseException, str]
-    last_connection_error: Union[None, BaseException, str]
-    uptime: Union[None, BaseException, int]
-    external_ip_address: Union[None, BaseException, str]
-    port_mapping_number_of_entries: Union[None, BaseException, int]
+    bytes_received: None | BaseException | int
+    bytes_sent: None | BaseException | int
+    packets_received: None | BaseException | int
+    packets_sent: None | BaseException | int
+    connection_status: None | BaseException | str
+    last_connection_error: None | BaseException | str
+    uptime: None | BaseException | int
+    external_ip_address: None | BaseException | str
+    port_mapping_number_of_entries: None | BaseException | int
 
     # Derived values.
-    kibibytes_per_sec_received: Union[None, float]
-    kibibytes_per_sec_sent: Union[None, float]
-    packets_per_sec_received: Union[None, float]
-    packets_per_sec_sent: Union[None, float]
+    kibibytes_per_sec_received: None | float
+    kibibytes_per_sec_sent: None | float
+    packets_per_sec_received: None | float
+    packets_per_sec_sent: None | float
 
 
 class IgdStateItem(Enum):
@@ -150,10 +150,10 @@ class IgdStateItem(Enum):
 def _derive_value_per_second(
     value_name: str,
     current_timestamp: datetime,
-    current_value: Union[None, BaseException, StatusInfo, int, str],
-    last_timestamp: Union[None, BaseException, datetime],
-    last_value: Union[None, BaseException, StatusInfo, int, str],
-) -> Union[None, float]:
+    current_value: None | BaseException | StatusInfo | int | str,
+    last_timestamp: None | BaseException | datetime,
+    last_value: None | BaseException | StatusInfo | int | str,
+) -> None | float:
     """Calculate average based on current and last value."""
     if (
         not isinstance(current_timestamp, datetime)
@@ -168,7 +168,7 @@ def _derive_value_per_second(
         return None
 
     delta_time = current_timestamp - last_timestamp
-    delta_value: Union[int, float] = current_value - last_value
+    delta_value: int | float = current_value - last_value
     if value_name in (BYTES_RECEIVED, BYTES_SENT):
         delta_value = delta_value / 1024  # 1KB
     return delta_value / delta_time.total_seconds()
@@ -204,7 +204,7 @@ class IgdDevice(UpnpProfileDevice):
     }
 
     def __init__(
-        self, device: UpnpDevice, event_handler: Optional[UpnpEventHandler]
+        self, device: UpnpDevice, event_handler: UpnpEventHandler | None
     ) -> None:
         """Initialize."""
         super().__init__(device, event_handler)
@@ -227,7 +227,7 @@ class IgdDevice(UpnpProfileDevice):
 
     def _any_action(
         self, service_names: Sequence[str], action_name: str
-    ) -> Optional[UpnpAction]:
+    ) -> UpnpAction | None:
         for service_name in service_names:
             action = self._action(service_name, action_name)
             if action is not None:
@@ -238,7 +238,7 @@ class IgdDevice(UpnpProfileDevice):
 
     def _any_state_variable(
         self, service_names: Sequence[str], variable_name: str
-    ) -> Optional[UpnpStateVariable]:
+    ) -> UpnpStateVariable | None:
         for service_name in service_names:
             state_var = self._state_variable(service_name, variable_name)
             if state_var is not None:
@@ -250,7 +250,7 @@ class IgdDevice(UpnpProfileDevice):
         return None
 
     @property
-    def external_ip_address(self) -> Optional[str]:
+    def external_ip_address(self) -> str | None:
         """
         Get the external IP address, from the state variable ExternalIPAddress.
 
@@ -261,11 +261,11 @@ class IgdDevice(UpnpProfileDevice):
         if not state_var:
             return None
 
-        external_ip_address: Optional[str] = state_var.value
+        external_ip_address: str | None = state_var.value
         return external_ip_address
 
     @property
-    def connection_status(self) -> Optional[str]:
+    def connection_status(self) -> str | None:
         """
         Get the connection status, from the state variable ConnectionStatus.
 
@@ -276,11 +276,11 @@ class IgdDevice(UpnpProfileDevice):
         if not state_var:
             return None
 
-        connection_status: Optional[str] = state_var.value
+        connection_status: str | None = state_var.value
         return connection_status
 
     @property
-    def port_mapping_number_of_entries(self) -> Optional[int]:
+    def port_mapping_number_of_entries(self) -> int | None:
         """
         Get number of port mapping entries, from the state variable `PortMappingNumberOfEntries`.
 
@@ -291,17 +291,17 @@ class IgdDevice(UpnpProfileDevice):
         if not state_var:
             return None
 
-        number_of_entries: Optional[int] = state_var.value
+        number_of_entries: int | None = state_var.value
         return number_of_entries
 
-    async def async_get_total_bytes_received(self) -> Optional[int]:
+    async def async_get_total_bytes_received(self) -> int | None:
         """Get total bytes received."""
         action = self._action("WANCIC", "GetTotalBytesReceived")
         if not action:
             return None
 
         result = await action.async_call()
-        total_bytes_received: Optional[int] = result.get("NewTotalBytesReceived")
+        total_bytes_received: int | None = result.get("NewTotalBytesReceived")
 
         if total_bytes_received is None:
             return None
@@ -311,14 +311,14 @@ class IgdDevice(UpnpProfileDevice):
 
         return total_bytes_received + self._offset_bytes_received
 
-    async def async_get_total_bytes_sent(self) -> Optional[int]:
+    async def async_get_total_bytes_sent(self) -> int | None:
         """Get total bytes sent."""
         action = self._action("WANCIC", "GetTotalBytesSent")
         if not action:
             return None
 
         result = await action.async_call()
-        total_bytes_sent: Optional[int] = result.get("NewTotalBytesSent")
+        total_bytes_sent: int | None = result.get("NewTotalBytesSent")
 
         if total_bytes_sent is None:
             return None
@@ -328,14 +328,14 @@ class IgdDevice(UpnpProfileDevice):
 
         return total_bytes_sent + self._offset_bytes_sent
 
-    async def async_get_total_packets_received(self) -> Optional[int]:
+    async def async_get_total_packets_received(self) -> int | None:
         """Get total packets received."""
         action = self._action("WANCIC", "GetTotalPacketsReceived")
         if not action:
             return None
 
         result = await action.async_call()
-        total_packets_received: Optional[int] = result.get("NewTotalPacketsReceived")
+        total_packets_received: int | None = result.get("NewTotalPacketsReceived")
 
         if total_packets_received is None:
             return None
@@ -345,14 +345,14 @@ class IgdDevice(UpnpProfileDevice):
 
         return total_packets_received + self._offset_packets_received
 
-    async def async_get_total_packets_sent(self) -> Optional[int]:
+    async def async_get_total_packets_sent(self) -> int | None:
         """Get total packets sent."""
         action = self._action("WANCIC", "GetTotalPacketsSent")
         if not action:
             return None
 
         result = await action.async_call()
-        total_packets_sent: Optional[int] = result.get("NewTotalPacketsSent")
+        total_packets_sent: int | None = result.get("NewTotalPacketsSent")
 
         if total_packets_sent is None:
             return None
@@ -362,14 +362,14 @@ class IgdDevice(UpnpProfileDevice):
 
         return total_packets_sent + self._offset_packets_sent
 
-    async def async_get_enabled_for_internet(self) -> Optional[bool]:
+    async def async_get_enabled_for_internet(self) -> bool | None:
         """Get internet access enabled state."""
         action = self._action("WANCIC", "GetEnabledForInternet")
         if not action:
             return None
 
         result = await action.async_call()
-        enabled_for_internet: Optional[bool] = result.get("NewEnabledForInternet")
+        enabled_for_internet: bool | None = result.get("NewEnabledForInternet")
         return enabled_for_internet
 
     async def async_set_enabled_for_internet(self, enabled: bool) -> None:
@@ -384,7 +384,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call(NewEnabledForInternet=enabled)
 
-    async def async_get_common_link_properties(self) -> Optional[CommonLinkProperties]:
+    async def async_get_common_link_properties(self) -> CommonLinkProperties | None:
         """Get common link properties."""
         action = self._action("WANCIC", "GetCommonLinkProperties")
         if not action:
@@ -399,8 +399,8 @@ class IgdDevice(UpnpProfileDevice):
         )
 
     async def async_get_external_ip_address(
-        self, services: Optional[Sequence[str]] = None
-    ) -> Optional[str]:
+        self, services: Sequence[str] | None = None
+    ) -> str | None:
         """
         Get the external IP address.
 
@@ -413,12 +413,12 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        external_ip_address: Optional[str] = result.get("NewExternalIPAddress")
+        external_ip_address: str | None = result.get("NewExternalIPAddress")
         return external_ip_address
 
     async def async_get_generic_port_mapping_entry(
-        self, port_mapping_index: int, services: Optional[List[str]] = None
-    ) -> Optional[PortMappingEntry]:
+        self, port_mapping_index: int, services: list[str] | None = None
+    ) -> PortMappingEntry | None:
         """
         Get generic port mapping entry.
 
@@ -453,11 +453,11 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_specific_port_mapping_entry(
         self,
-        remote_host: Optional[IPv4Address],
+        remote_host: IPv4Address | None,
         external_port: int,
         protocol: str,
-        services: Optional[List[str]] = None,
-    ) -> Optional[PortMappingEntry]:
+        services: list[str] | None = None,
+    ) -> PortMappingEntry | None:
         """
         Get specific port mapping entry.
 
@@ -502,7 +502,7 @@ class IgdDevice(UpnpProfileDevice):
         enabled: bool,
         description: str,
         lease_duration: timedelta,
-        services: Optional[List[str]] = None,
+        services: list[str] | None = None,
     ) -> None:
         """
         Add a port mapping.
@@ -540,7 +540,7 @@ class IgdDevice(UpnpProfileDevice):
         remote_host: IPv4Address,
         external_port: int,
         protocol: str,
-        services: Optional[List[str]] = None,
+        services: list[str] | None = None,
     ) -> None:
         """
         Delete an existing port mapping.
@@ -562,7 +562,7 @@ class IgdDevice(UpnpProfileDevice):
             NewProtocol=protocol,
         )
 
-    async def async_get_firewall_status(self) -> Optional[FirewallStatus]:
+    async def async_get_firewall_status(self) -> FirewallStatus | None:
         """Get (IPv6) firewall status."""
         action = self._action("WANIP6FC", "GetFirewallStatus")
         if not action:
@@ -582,7 +582,7 @@ class IgdDevice(UpnpProfileDevice):
         internal_port: int,
         protocol: int,
         lease_time: timedelta,
-    ) -> Optional[int]:
+    ) -> int | None:
         """Add a pinhole."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
         action = self._action("WANIP6FC", "AddPinhole")
@@ -620,7 +620,7 @@ class IgdDevice(UpnpProfileDevice):
             UniqueID=pinhole_id,
         )
 
-    async def async_get_pinhole_packets(self, pinhole_id: int) -> Optional[int]:
+    async def async_get_pinhole_packets(self, pinhole_id: int) -> int | None:
         """Get pinhole packet count."""
         action = self._action("WANIP6FC", "GetPinholePackets")
         if not action:
@@ -632,8 +632,8 @@ class IgdDevice(UpnpProfileDevice):
         return cast(int, result["PinholePackets"])
 
     async def async_get_connection_type_info(
-        self, services: Optional[Sequence[str]] = None
-    ) -> Optional[ConnectionTypeInfo]:
+        self, services: Sequence[str] | None = None
+    ) -> ConnectionTypeInfo | None:
         """
         Get connection type info.
 
@@ -651,7 +651,7 @@ class IgdDevice(UpnpProfileDevice):
         )
 
     async def async_set_connection_type(
-        self, connection_type: str, services: Optional[List[str]] = None
+        self, connection_type: str, services: list[str] | None = None
     ) -> None:
         """
         Set connection type.
@@ -668,7 +668,7 @@ class IgdDevice(UpnpProfileDevice):
         await action.async_call(NewConnectionType=connection_type)
 
     async def async_request_connection(
-        self, services: Optional[Sequence[str]] = None
+        self, services: Sequence[str] | None = None
     ) -> None:
         """
         Request connection.
@@ -684,7 +684,7 @@ class IgdDevice(UpnpProfileDevice):
         await action.async_call()
 
     async def async_request_termination(
-        self, services: Optional[Sequence[str]] = None
+        self, services: Sequence[str] | None = None
     ) -> None:
         """
         Request connection termination.
@@ -700,7 +700,7 @@ class IgdDevice(UpnpProfileDevice):
         await action.async_call()
 
     async def async_force_termination(
-        self, services: Optional[Sequence[str]] = None
+        self, services: Sequence[str] | None = None
     ) -> None:
         """
         Force connection termination.
@@ -716,8 +716,8 @@ class IgdDevice(UpnpProfileDevice):
         await action.async_call()
 
     async def async_get_status_info(
-        self, services: Optional[Sequence[str]] = None
-    ) -> Optional[StatusInfo]:
+        self, services: Sequence[str] | None = None
+    ) -> StatusInfo | None:
         """
         Get status info.
 
@@ -742,8 +742,8 @@ class IgdDevice(UpnpProfileDevice):
         )
 
     async def async_get_port_mapping_number_of_entries(
-        self, services: Optional[Sequence[str]] = None
-    ) -> Optional[int]:
+        self, services: Sequence[str] | None = None
+    ) -> int | None:
         """
         Get number of port mapping entries.
 
@@ -758,7 +758,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        number_of_entries: Optional[str] = result.get(
+        number_of_entries: str | None = result.get(
             "NewPortMappingNumberOfEntries"
         )  # str?
         if number_of_entries is None:
@@ -766,8 +766,8 @@ class IgdDevice(UpnpProfileDevice):
         return int(number_of_entries)
 
     async def async_get_nat_rsip_status(
-        self, services: Optional[Sequence[str]] = None
-    ) -> Optional[NatRsipStatusInfo]:
+        self, services: Sequence[str] | None = None
+    ) -> NatRsipStatusInfo | None:
         """
         Get NAT enabled and RSIP availability statuses.
 
@@ -782,14 +782,14 @@ class IgdDevice(UpnpProfileDevice):
         result = await action.async_call()
         return NatRsipStatusInfo(result["NewNATEnabled"], result["NewRSIPAvailable"])
 
-    async def async_get_default_connection_service(self) -> Optional[str]:
+    async def async_get_default_connection_service(self) -> str | None:
         """Get default connection service."""
         action = self._action("L3FWD", "GetDefaultConnectionService")
         if not action:
             return None
 
         result = await action.async_call()
-        default_connection_service: Optional[str] = result.get(
+        default_connection_service: str | None = result.get(
             "NewDefaultConnectionService"
         )
         return default_connection_service
@@ -808,7 +808,7 @@ class IgdDevice(UpnpProfileDevice):
 
     async def async_get_traffic_and_status_data(
         self,
-        items: Optional[Set[IgdStateItem]] = None,
+        items: set[IgdStateItem] | None = None,
         force_poll: bool = False,
     ) -> IgdState:
         """
@@ -835,9 +835,9 @@ class IgdDevice(UpnpProfileDevice):
         async def nop() -> None:
             """Pass."""
 
-        external_ip_address: Optional[str] = None
-        connection_status: Optional[str] = None
-        port_mapping_number_of_entries: Optional[int] = None
+        external_ip_address: str | None = None
+        connection_status: str | None = None
+        port_mapping_number_of_entries: int | None = None
         if not force_poll:
             if (
                 IgdStateItem.EXTERNAL_IP_ADDRESS in items
@@ -937,14 +937,14 @@ class IgdDevice(UpnpProfileDevice):
 
         self._last_traffic_state = TrafficCounterState(
             timestamp=timestamp,
-            bytes_received=cast(Union[int, BaseException, None], values[0]),
-            bytes_sent=cast(Union[int, BaseException, None], values[1]),
-            packets_received=cast(Union[int, BaseException, None], values[2]),
-            packets_sent=cast(Union[int, BaseException, None], values[3]),
-            bytes_received_original=cast(Union[int, BaseException, None], values[0]),
-            bytes_sent_original=cast(Union[int, BaseException, None], values[1]),
-            packets_received_original=cast(Union[int, BaseException, None], values[2]),
-            packets_sent_original=cast(Union[int, BaseException, None], values[3]),
+            bytes_received=cast(int | BaseException | None, values[0]),
+            bytes_sent=cast(int | BaseException | None, values[1]),
+            packets_received=cast(int | BaseException | None, values[2]),
+            packets_sent=cast(int | BaseException | None, values[3]),
+            bytes_received_original=cast(int | BaseException | None, values[0]),
+            bytes_sent_original=cast(int | BaseException | None, values[1]),
+            packets_received_original=cast(int | BaseException | None, values[2]),
+            packets_sent_original=cast(int | BaseException | None, values[3]),
         )
 
         # Test if any of the calls were ok. If not, raise the exception.
@@ -958,10 +958,10 @@ class IgdDevice(UpnpProfileDevice):
 
         return IgdState(
             timestamp=timestamp,
-            bytes_received=cast(Union[None, BaseException, int], values[0]),
-            bytes_sent=cast(Union[None, BaseException, int], values[1]),
-            packets_received=cast(Union[None, BaseException, int], values[2]),
-            packets_sent=cast(Union[None, BaseException, int], values[3]),
+            bytes_received=cast(None | BaseException | int, values[0]),
+            bytes_sent=cast(None | BaseException | int, values[1]),
+            packets_received=cast(None | BaseException | int, values[2]),
+            packets_sent=cast(None | BaseException | int, values[3]),
             kibibytes_per_sec_received=kibibytes_per_sec_received,
             kibibytes_per_sec_sent=kibibytes_per_sec_sent,
             packets_per_sec_received=packets_per_sec_received,
@@ -978,9 +978,9 @@ class IgdDevice(UpnpProfileDevice):
             ),
             uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None,
             external_ip_address=cast(
-                Union[None, BaseException, str], values[5] or external_ip_address
+                None | BaseException | str, values[5] or external_ip_address
             ),
             port_mapping_number_of_entries=cast(
-                Union[None, int], values[6] or port_mapping_number_of_entries
+                None | int, values[6] or port_mapping_number_of_entries
             ),
         )
