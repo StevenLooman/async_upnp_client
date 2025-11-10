@@ -270,8 +270,6 @@ Or on macOS using the ``ifconfig`` command::
 
 The ``scope_id`` is ``4`` in this example, as shown by ``scopeid 0x4``. Note that this is a hexadecimal value.
 
-Be aware that Python ``<3.9`` does not support the ``IPv6Address.scope_id`` attribute. As such, a ``AddressTupleVXType`` is used to specify the ``source``- and ``target``-addresses. In case of IPv4, ``AddressTupleV4Type`` is a 2-tuple with ``address``, ``port``. ``AddressTupleV6Type`` is used for IPv6 and is a 4-tuple with ``address``, ``port``, ``flowinfo``, ``scope_id``. More information can be found in the Python ``socket`` module documentation.
+All functionality regarding SSDP uses ``AddressTupleVXType`` to specify addresses.
 
-All functionality regarding SSDP uses ``AddressTupleVXType`` the specify addresses.
-
-For consistency, the ``AiohttpNotifyServer`` also uses a tuple the specify the ``source`` (the address and port the notify server listens on.)
+For consistency, the ``AiohttpNotifyServer`` also uses ``AddressTupleVXType`` to specify the ``source`` (the address and port the notify server listens on.)

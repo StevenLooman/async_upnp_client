@@ -22,14 +22,13 @@ classifiers = [
   "Operating System :: POSIX",
   "Operating System :: MacOS :: MacOS X",
   "Operating System :: Microsoft :: Windows",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Programming Language :: Python :: 3.14",
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
   "aiohttp>3.9.0,<4.0",
   "defusedxml>=0.6.0",

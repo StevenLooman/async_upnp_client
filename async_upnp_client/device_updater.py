@@ -2,7 +2,6 @@
 """async_upnp_client.device_updater module."""
 
 import logging
-from typing import Optional
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.client import UpnpDevice
@@ -27,7 +26,7 @@ class DeviceUpdater:
         self,
         device: UpnpDevice,
         factory: UpnpFactory,
-        source: Optional[AddressTupleVXType] = None,
+        source: AddressTupleVXType | None = None,
     ) -> None:
         """Initialize."""
         self._device = device

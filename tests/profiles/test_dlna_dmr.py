@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import List, Sequence
+from typing import Sequence
 from unittest import mock
 
 import defusedxml.ElementTree
@@ -125,7 +125,7 @@ def test_parse_last_change_event_invalid_xml() -> None:
         ),
     ),
 )
-def test_split_commas(value: str, expected: List[str]) -> None:
+def test_split_commas(value: str, expected: list[str]) -> None:
     """Test splitting comma separated value lists."""
     actual = split_commas(value)
     assert actual == expected
@@ -134,7 +134,7 @@ def test_split_commas(value: str, expected: List[str]) -> None:
 @pytest.mark.asyncio
 async def test_on_notify_dlna_event() -> None:
     """Test handling an event.."""
-    changed_vars: List[UpnpStateVariable] = []
+    changed_vars: list[UpnpStateVariable] = []
 
     def on_event(
         _self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]

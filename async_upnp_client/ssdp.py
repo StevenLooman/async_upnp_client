@@ -9,17 +9,7 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    Dict,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -154,15 +144,15 @@ def is_valid_ssdp_packet(data: bytes) -> bool:
 
 # No longer used internally, but left for backwards compatibility
 def udn_from_headers(
-    headers: Union[CIMultiDictProxy, CaseInsensitiveDict]
-) -> Optional[UniqueDeviceName]:
+    headers: CIMultiDictProxy | CaseInsensitiveDict,
+) -> UniqueDeviceName | None:
     """Get UDN from USN in headers."""
     usn: str = headers.get("usn", "")
     return udn_from_usn(usn)
 
 
 @lru_cache(maxsize=128)
-def udn_from_usn(usn: str) -> Optional[UniqueDeviceName]:
+def udn_from_usn(usn: str) -> UniqueDeviceName | None:
     """Get UDN from USN in headers."""
     if usn.lower().startswith("uuid:"):
         return usn.partition("::")[0]
@@ -172,7 +162,7 @@ def udn_from_usn(usn: str) -> Optional[UniqueDeviceName]:
 @lru_cache(maxsize=128)
 def _cached_header_parse(
     data: bytes,
-) -> Tuple[CIMultiDictProxy[str], str, Optional[UniqueDeviceName]]:
+) -> tuple[CIMultiDictProxy[str], str, UniqueDeviceName | None]:
     """Cache parsing headers.
 
     SSDP discover packets frequently end up being sent multiple
@@ -211,11 +201,11 @@ LOWER_LOCATION = lowerstr("location")
 def _cached_decode_ssdp_packet(
     data: bytes,
     remote_addr_without_port: AddressTupleVXType,
-) -> Tuple[str, CaseInsensitiveDict]:
+) -> tuple[str, CaseInsensitiveDict]:
     """Cache decoding SSDP packets."""
     parsed_headers, request_line, udn = _cached_header_parse(data)
     # own data
-    extra: Dict[str, Any] = {LOWER__HOST: get_host_string(remote_addr_without_port)}
+    extra: dict[str, Any] = {LOWER__HOST: get_host_string(remote_addr_without_port)}
     if udn:
         extra[LOWER__UDN] = udn
 
@@ -231,9 +221,9 @@ def _cached_decode_ssdp_packet(
 
 def decode_ssdp_packet(
     data: bytes,
-    local_addr: Optional[AddressTupleVXType],
+    local_addr: AddressTupleVXType | None,
     remote_addr: AddressTupleVXType,
-) -> Tuple[str, CaseInsensitiveDict]:
+) -> tuple[str, CaseInsensitiveDict]:
     """Decode a message."""
     # We want to use remote_addr_without_port as the cache
     # key since nothing in _cached_decode_ssdp_packet cares
@@ -265,14 +255,14 @@ class SsdpProtocol(DatagramProtocol):
     def __init__(
         self,
         loop: AbstractEventLoop,
-        async_on_connect: Optional[
-            Callable[[DatagramTransport], Coroutine[Any, Any, None]]
-        ] = None,
-        on_connect: Optional[Callable[[DatagramTransport], None]] = None,
-        async_on_data: Optional[
-            Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]]
-        ] = None,
-        on_data: Optional[Callable[[str, CaseInsensitiveDict], None]] = None,
+        async_on_connect: (
+            Callable[[DatagramTransport], Coroutine[Any, Any, None]] | None
+        ) = None,
+        on_connect: Callable[[DatagramTransport], None] | None = None,
+        async_on_data: (
+            Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
+        ) = None,
+        on_data: Callable[[str, CaseInsensitiveDict], None] | None = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -282,13 +272,13 @@ class SsdpProtocol(DatagramProtocol):
         self.async_on_data = async_on_data
         self.on_data = on_data
 
-        self.transport: Optional[DatagramTransport] = None
-        self.local_addr: Optional[AddressTupleVXType] = None
+        self.transport: DatagramTransport | None = None
+        self.local_addr: AddressTupleVXType | None = None
 
     def connection_made(self, transport: BaseTransport) -> None:
         """Handle connection made."""
         self.transport = cast(DatagramTransport, transport)
-        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        sock: socket.socket | None = transport.get_extra_info("socket")
         self.local_addr = sock.getsockname() if sock is not None else None
         _LOGGER.debug(
             "Connection made, transport: %s, socket: %s",
@@ -322,19 +312,19 @@ class SsdpProtocol(DatagramProtocol):
 
     def error_received(self, exc: Exception) -> None:
         """Handle an error."""
-        sock: Optional[socket.socket] = (
+        sock: socket.socket | None = (
             self.transport.get_extra_info("socket") if self.transport else None
         )
         _LOGGER.error(
             "Received error: %s, transport: %s, socket: %s", exc, self.transport, sock
         )
 
-    def connection_lost(self, exc: Optional[Exception]) -> None:
+    def connection_lost(self, exc: Exception | None) -> None:
         """Handle connection lost."""
         if not _LOGGER.isEnabledFor(logging.DEBUG):
             return
         assert self.transport
-        sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+        sock: socket.socket | None = self.transport.get_extra_info("socket")
         _LOGGER.debug(
             "Lost connection, error: %s, transport: %s, socket: %s",
             exc,
@@ -346,7 +336,7 @@ class SsdpProtocol(DatagramProtocol):
         """Send a SSDP packet."""
         assert self.transport
         if _LOGGER.isEnabledFor(logging.DEBUG):
-            sock: Optional[socket.socket] = self.transport.get_extra_info("socket")
+            sock: socket.socket | None = self.transport.get_extra_info("socket")
             _LOGGER.debug(
                 "Sending SSDP packet, transport: %s, socket: %s, target: %s",
                 self.transport,
@@ -361,9 +351,9 @@ class SsdpProtocol(DatagramProtocol):
 
 
 def determine_source_target(
-    source: Optional[AddressTupleVXType] = None,
-    target: Optional[AddressTupleVXType] = None,
-) -> Tuple[AddressTupleVXType, AddressTupleVXType]:
+    source: AddressTupleVXType | None = None,
+    target: AddressTupleVXType | None = None,
+) -> tuple[AddressTupleVXType, AddressTupleVXType]:
     """Determine source and target."""
     if source is None and target is None:
         return ("0.0.0.0", 0), (SSDP_IP_V4, SSDP_PORT)
@@ -392,8 +382,8 @@ def determine_source_target(
 
 
 def fix_ipv6_address_scope_id(
-    address: Optional[AddressTupleVXType],
-) -> Optional[AddressTupleVXType]:
+    address: AddressTupleVXType | None,
+) -> AddressTupleVXType | None:
     """Fix scope_id for an IPv6 address, if needed."""
     if address is None or is_ipv4_address(address):
         return address
@@ -422,7 +412,7 @@ def fix_ipv6_address_scope_id(
 
 def ip_port_from_address_tuple(
     address_tuple: AddressTupleVXType,
-) -> Tuple[IPvXAddress, int]:
+) -> tuple[IPvXAddress, int]:
     """Get IPvXAddress from AddressTupleVXType."""
     if len(address_tuple) == 4:
         address_tuple = cast(AddressTupleV6Type, address_tuple)
@@ -437,7 +427,7 @@ def ip_port_from_address_tuple(
 def get_ssdp_socket(
     source: AddressTupleVXType,
     target: AddressTupleVXType,
-) -> Tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
+) -> tuple[socket.socket, AddressTupleVXType, AddressTupleVXType]:
     """Create a socket to listen on."""
     # Ensure a proper IPv6 source/target.
     if is_ipv6_address(source):

@@ -15,19 +15,7 @@ from functools import partial, wraps
 from itertools import cycle
 from random import randrange
 from time import mktime
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Callable, Mapping, Sequence, Type, cast
 from urllib.parse import urlparse
 from uuid import uuid4
 from wsgiref.handlers import format_date_time
@@ -117,7 +105,7 @@ class EventSubscriber:
 
     DEFAULT_TIMEOUT = 3600
 
-    def __init__(self, callback_url: str, timeout: Optional[int]) -> None:
+    def __init__(self, callback_url: str, timeout: int | None) -> None:
         """Initialize."""
         self._url = callback_url
         self._uuid = str(uuid4())
@@ -136,12 +124,12 @@ class EventSubscriber:
         return self._uuid
 
     @property
-    def timeout(self) -> Optional[int]:
+    def timeout(self) -> int | None:
         """Return timeout in seconds."""
         return self._timeout
 
     @timeout.setter
-    def timeout(self, timeout: Optional[int]) -> None:
+    def timeout(self, timeout: int | None) -> None:
         """Set timeout before unsubscribe."""
         if timeout is None:
             timeout = self.DEFAULT_TIMEOUT
@@ -171,7 +159,7 @@ class UpnpEventableStateVariable(UpnpStateVariable):
         """Initialize."""
         super().__init__(state_variable_info, schema)
         self._last_sent = datetime.fromtimestamp(0, timezone.utc)
-        self._defered_event: Optional[asyncio.TimerHandle] = None
+        self._defered_event: asyncio.TimerHandle | None = None
         self._sent_event = asyncio.Event()
 
     @property
@@ -188,7 +176,7 @@ class UpnpEventableStateVariable(UpnpStateVariable):
         return type_info.max_rate or 0.0
 
     @property
-    def value(self) -> Optional[T]:
+    def value(self) -> T | None:
         """Get Python value for this argument."""
         return super().value
 
@@ -240,7 +228,7 @@ class UpnpServerService(UpnpService):
 
         self._init_state_variables()
         self._init_actions()
-        self._subscribers: List[EventSubscriber] = []
+        self._subscribers: list[EventSubscriber] = []
 
     def _init_state_variables(self) -> None:
         """Initialize state variables from STATE_VARIABLE_DEFINITIONS."""
@@ -296,12 +284,12 @@ class UpnpServerService(UpnpService):
     def _init_action(self, func: Callable) -> UpnpAction:
         """Initialize action for method."""
         name, in_args, out_args = cast(
-            Tuple[str, Mapping[str, str], Mapping[str, str]],
+            tuple[str, Mapping[str, str], Mapping[str, str]],
             getattr(func, "__upnp_action__"),
         )
 
-        arg_infos: List[ActionArgumentInfo] = []
-        args: List[UpnpAction.Argument] = []
+        arg_infos: list[ActionArgumentInfo] = []
+        args: list[UpnpAction.Argument] = []
         for arg_name, state_var_name in in_args.items():
             # Validate function has parameter.
             assert arg_name in func.__annotations__
@@ -366,7 +354,7 @@ class UpnpServerService(UpnpService):
             return True
         return False
 
-    def get_subscriber(self, sid: str) -> Optional[EventSubscriber]:
+    def get_subscriber(self, sid: str) -> EventSubscriber | None:
         """Get matching subscriber (if any)."""
         for subscriber in self._subscribers:
             if subscriber.uuid == sid:
@@ -374,7 +362,7 @@ class UpnpServerService(UpnpService):
         return None
 
     async def async_send_events(
-        self, subscriber: Optional[EventSubscriber] = None
+        self, subscriber: EventSubscriber | None = None
     ) -> None:
         """Send event updates to any subscribers."""
         if not subscriber:
@@ -420,7 +408,7 @@ class UpnpServerDevice(UpnpDevice):
     DEVICE_DEFINITION: DeviceInfo
     EMBEDDED_DEVICES: Sequence[Type["UpnpServerDevice"]]
     SERVICES: Sequence[Type[UpnpServerService]]
-    ROUTES: Optional[Sequence[RouteDef]] = None
+    ROUTES: Sequence[RouteDef] | None = None
 
     def __init__(
         self,
@@ -458,10 +446,10 @@ class SsdpSearchResponder:
     def __init__(
         self,
         device: UpnpServerDevice,
-        source: Optional[AddressTupleVXType] = None,
-        target: Optional[AddressTupleVXType] = None,
-        options: Optional[Dict[str, Any]] = None,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
+        source: AddressTupleVXType | None = None,
+        target: AddressTupleVXType | None = None,
+        options: dict[str, Any] | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
         """Init the ssdp search responder class."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -469,8 +457,8 @@ class SsdpSearchResponder:
         self.source, self.target = determine_source_target(source, target)
         self.options = options or {}
 
-        self._transport: Optional[DatagramTransport] = None
-        self._response_transport: Optional[DatagramTransport] = None
+        self._transport: DatagramTransport | None = None
+        self._response_transport: DatagramTransport | None = None
         self._loop = loop or asyncio.get_running_loop()
 
     def _on_connect_response(self, transport: DatagramTransport) -> None:
@@ -534,11 +522,11 @@ class SsdpSearchResponder:
             )
         self._send_responses(remote_addr, responses)
 
-    def _build_responses(self, headers: CaseInsensitiveDict) -> List[bytes]:
+    def _build_responses(self, headers: CaseInsensitiveDict) -> list[bytes]:
         # Determine how we should respond, page 1.3.2 of UPnP-arch-DeviceArchitecture-v2.0.
         st_header: str = headers.get_lower("st", "")
         search_target = st_header.lower()
-        responses: List[bytes] = []
+        responses: list[bytes] = []
 
         if search_target == SSDP_ST_ALL:
             # 3 + 2d + k (d: embedded device, k: service)
@@ -601,7 +589,7 @@ class SsdpSearchResponder:
                 return True
         return False
 
-    def _matched_devices_by_type(self, search_target: str) -> List[UpnpDevice]:
+    def _matched_devices_by_type(self, search_target: str) -> list[UpnpDevice]:
         """Get matched devices by device type."""
         return [
             device
@@ -609,7 +597,7 @@ class SsdpSearchResponder:
             if self._match_type_versions(device.device_type, search_target)
         ]
 
-    def _matched_services_by_type(self, search_target: str) -> List[UpnpService]:
+    def _matched_services_by_type(self, search_target: str) -> list[UpnpService]:
         """Get matched services by service type."""
         return [
             service
@@ -666,7 +654,7 @@ class SsdpSearchResponder:
         return self._build_response(device.udn, f"{self.device.udn}")
 
     def _build_responses_device_type(
-        self, device: UpnpDevice, device_type: Optional[str] = None
+        self, device: UpnpDevice, device_type: str | None = None
     ) -> bytes:
         """Send device responses for device type."""
         return self._build_response(
@@ -675,7 +663,7 @@ class SsdpSearchResponder:
         )
 
     def _build_responses_service(
-        self, service: UpnpService, service_type: Optional[str] = None
+        self, service: UpnpService, service_type: str | None = None
     ) -> bytes:
         """Send service responses."""
         return self._build_response(
@@ -705,12 +693,12 @@ class SsdpSearchResponder:
         )
 
     def _send_responses(
-        self, remote_addr: AddressTupleVXType, responses: List[bytes]
+        self, remote_addr: AddressTupleVXType, responses: list[bytes]
     ) -> None:
         """Send responses."""
         assert self._response_transport
         if _LOGGER.isEnabledFor(logging.DEBUG):  # pragma: no branch
-            sock: Optional[socket.socket] = self._response_transport.get_extra_info(
+            sock: socket.socket | None = self._response_transport.get_extra_info(
                 "socket"
             )
             _LOGGER.debug(
@@ -734,7 +722,7 @@ def _build_advertisements(
     target: AddressTupleVXType,
     root_device: UpnpServerDevice,
     nts: NotificationSubType = NotificationSubType.SSDP_ALIVE,
-) -> List[CaseInsensitiveDict]:
+) -> list[CaseInsensitiveDict]:
     """Build advertisements to be sent for a UpnpDevice."""
     # 3 + 2d + k (d: embedded device, k: service)
     # global:      ST: upnp:rootdevice
@@ -745,7 +733,7 @@ def _build_advertisements(
     #              USN: uuid:device-UUID::urn:schemas-upnp-org:device:deviceType:ver
     # per service: ST: urn:schemas-upnp-org:service:serviceType:ver
     #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
-    advertisements: List[CaseInsensitiveDict] = []
+    advertisements: list[CaseInsensitiveDict] = []
 
     host = (
         f"[{target[0]}]:{target[1]}"
@@ -809,10 +797,10 @@ class SsdpAdvertisementAnnouncer:
     def __init__(
         self,
         device: UpnpServerDevice,
-        source: Optional[AddressTupleVXType] = None,
-        target: Optional[AddressTupleVXType] = None,
-        options: Optional[Dict[str, Any]] = None,
-        loop: Optional[asyncio.AbstractEventLoop] = None,
+        source: AddressTupleVXType | None = None,
+        target: AddressTupleVXType | None = None,
+        options: dict[str, Any] | None = None,
+        loop: asyncio.AbstractEventLoop | None = None,
     ) -> None:
         """Init the ssdp search responder class."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -821,10 +809,10 @@ class SsdpAdvertisementAnnouncer:
         self.options = options or {}
         self._loop = loop or asyncio.get_running_loop()
 
-        self._transport: Optional[DatagramTransport] = None
+        self._transport: DatagramTransport | None = None
         advertisements = _build_advertisements(self.target, device)
         self._advertisements = cycle(advertisements)
-        self._cancel_announce: Optional[asyncio.TimerHandle] = None
+        self._cancel_announce: asyncio.TimerHandle | None = None
 
     def _on_connect(self, transport: DatagramTransport) -> None:
         """Handle on connect."""
@@ -859,7 +847,7 @@ class SsdpAdvertisementAnnouncer:
         """Stop listening for advertisements."""
         assert self._transport
 
-        sock: Optional[socket.socket] = self._transport.get_extra_info("socket")
+        sock: socket.socket | None = self._transport.get_extra_info("socket")
         _LOGGER.debug(
             "Stop advertisements announcer, transport: %s, socket: %s",
             self._transport,
@@ -935,7 +923,7 @@ class UpnpXmlSerializer:
     # pylint: disable=too-few-public-methods
 
     @classmethod
-    def to_xml(cls, thing: Union[UpnpDevice, UpnpService]) -> ET.Element:
+    def to_xml(cls, thing: UpnpDevice | UpnpService) -> ET.Element:
         """Convert thing to XML."""
         if isinstance(thing, UpnpDevice):
             return cls._device_to_xml(thing)
@@ -1097,7 +1085,7 @@ def callable_action(
 
 async def _parse_action_body(
     service: UpnpServerService, request: Request
-) -> Tuple[str, Dict[str, Any]]:
+) -> tuple[str, dict[str, Any]]:
     """Parse action body."""
     # Parse call.
     soap_action = request.headers.get("SOAPAction", "").strip('"')
@@ -1114,7 +1102,7 @@ async def _parse_action_body(
     if action_name not in service.actions:
         raise HTTPBadRequest(reason="InvalidAction")
 
-    kwargs: Dict[str, Any] = {}
+    kwargs: dict[str, Any] = {}
     action = service.action(action_name)
     for arg in rpc_el:
         action_arg = action.argument(arg.tag, direction="in")
@@ -1127,7 +1115,7 @@ async def _parse_action_body(
 
 
 def _create_action_response(
-    service: UpnpServerService, action_name: str, result: Dict[str, Any]
+    service: UpnpServerService, action_name: str, result: dict[str, Any]
 ) -> Response:
     """Create action call response."""
     envelope_el = ET.Element(
@@ -1265,7 +1253,7 @@ async def unsubscribe_handler(service: UpnpServerService, request: Request) -> R
 
 
 async def to_xml(
-    thing: Union[UpnpServerDevice, UpnpServerService], _request: Request
+    thing: UpnpServerDevice | UpnpServerService, _request: Request
 ) -> Response:
     """Construct device/service description."""
     serializer = UpnpXmlSerializer()
@@ -1278,9 +1266,9 @@ async def to_xml(
 def create_state_var(
     data_type: str,
     *,
-    allowed: Optional[List[str]] = None,
-    allowed_range: Optional[Mapping[str, Optional[str]]] = None,
-    default: Optional[str] = None,
+    allowed: list[str] | None = None,
+    allowed_range: Mapping[str, str | None] | None = None,
+    default: str | None = None,
 ) -> StateVariableTypeInfo:
     """Create state variables."""
     return StateVariableTypeInfo(
@@ -1296,10 +1284,10 @@ def create_state_var(
 def create_event_var(
     data_type: str,
     *,
-    allowed: Optional[List[str]] = None,
-    allowed_range: Optional[Mapping[str, Optional[str]]] = None,
-    default: Optional[str] = None,
-    max_rate: Optional[float] = None,
+    allowed: list[str] | None = None,
+    allowed_range: Mapping[str, str | None] | None = None,
+    default: str | None = None,
+    max_rate: float | None = None,
 ) -> StateVariableTypeInfo:
     """Create event variables."""
     return cast(
@@ -1325,11 +1313,11 @@ class UpnpServer:
         self,
         server_device: Type[UpnpServerDevice],
         source: AddressTupleVXType,
-        target: Optional[AddressTupleVXType] = None,
-        http_port: Optional[int] = None,
+        target: AddressTupleVXType | None = None,
+        http_port: int | None = None,
         boot_id: int = 1,
         config_id: int = 1,
-        options: Optional[Dict[str, Any]] = None,
+        options: dict[str, Any] | None = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -1340,11 +1328,11 @@ class UpnpServer:
         self.config_id = config_id
         self.options = options or {}
 
-        self.base_uri: Optional[str] = None
-        self._device: Optional[UpnpServerDevice] = None
-        self._site: Optional[TCPSite] = None
-        self._search_responder: Optional[SsdpSearchResponder] = None
-        self._advertisement_announcer: Optional[SsdpAdvertisementAnnouncer] = None
+        self.base_uri: str | None = None
+        self._device: UpnpServerDevice | None = None
+        self._site: TCPSite | None = None
+        self._search_responder: SsdpSearchResponder | None = None
+        self._advertisement_announcer: SsdpAdvertisementAnnouncer | None = None
 
     async def async_start(self) -> None:
         """Start."""

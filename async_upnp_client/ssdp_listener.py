@@ -9,17 +9,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from functools import lru_cache
 from ipaddress import ip_address
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    Dict,
-    KeysView,
-    Mapping,
-    Optional,
-    Tuple,
-)
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, KeysView, Mapping
 from urllib.parse import urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
@@ -110,8 +100,8 @@ class SsdpDevice:
         """Initialize."""
         self.udn = udn
         self.valid_to: datetime = valid_to
-        self._locations: Dict[str, datetime] = {}
-        self.last_seen: Optional[datetime] = None
+        self._locations: dict[str, datetime] = {}
+        self.last_seen: datetime | None = None
         self.search_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.advertisement_headers: dict[DeviceOrServiceType, CaseInsensitiveDict] = {}
         self.userdata: Any = None
@@ -121,7 +111,7 @@ class SsdpDevice:
         self._locations[location] = valid_to
 
     @property
-    def location(self) -> Optional[str]:
+    def location(self) -> str | None:
         """
         Get a location of the device.
 
@@ -138,7 +128,7 @@ class SsdpDevice:
         """Get all know locations of the device."""
         return self._locations.keys()
 
-    def purge_locations(self, now: Optional[datetime] = None) -> None:
+    def purge_locations(self, now: datetime | None = None) -> None:
         """Purge locations which are no longer valid/timed out."""
         if not now:
             now = datetime.now()
@@ -256,7 +246,7 @@ def headers_differ_from_existing_search(
     return same_headers_differ(headers_old, headers)
 
 
-def ip_version_from_location(location: str) -> Optional[int]:
+def ip_version_from_location(location: str) -> int | None:
     """Get the ip version for a location."""
     with suppress(ValueError):
         hostname = urlparse(location).hostname
@@ -306,13 +296,11 @@ class SsdpDeviceTracker:
     def __init__(self) -> None:
         """Initialize."""
         self.devices: dict[UniqueDeviceName, SsdpDevice] = {}
-        self.next_valid_to: Optional[datetime] = None
+        self.next_valid_to: datetime | None = None
 
     def see_search(
         self, headers: CaseInsensitiveDict
-    ) -> Tuple[
-        bool, Optional[SsdpDevice], Optional[DeviceOrServiceType], Optional[SsdpSource]
-    ]:
+    ) -> tuple[bool, SsdpDevice | None, DeviceOrServiceType | None, SsdpSource | None]:
         """See a device through a search."""
         if not valid_search_headers(headers):
             _LOGGER.debug("Received invalid search headers: %s", headers)
@@ -352,7 +340,7 @@ class SsdpDeviceTracker:
 
     def see_advertisement(
         self, headers: CaseInsensitiveDict
-    ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
+    ) -> tuple[bool, SsdpDevice | None, DeviceOrServiceType | None]:
         """See a device through an advertisement."""
         if not valid_advertisement_headers(headers):
             _LOGGER.debug("Received invalid advertisement headers: %s", headers)
@@ -397,7 +385,7 @@ class SsdpDeviceTracker:
 
     def _see_device(
         self, headers: CaseInsensitiveDict
-    ) -> Tuple[Optional[SsdpDevice], bool]:
+    ) -> tuple[SsdpDevice | None, bool]:
         """See a device through a search or advertisement."""
         # Purge any old devices.
         now = headers.get_lower("_timestamp")
@@ -430,7 +418,7 @@ class SsdpDeviceTracker:
 
     def unsee_advertisement(
         self, headers: CaseInsensitiveDict
-    ) -> Tuple[bool, Optional[SsdpDevice], Optional[DeviceOrServiceType]]:
+    ) -> tuple[bool, SsdpDevice | None, DeviceOrServiceType | None]:
         """Remove a device through an advertisement."""
         if not valid_byebye_headers(headers):
             return False, None, None
@@ -454,13 +442,13 @@ class SsdpDeviceTracker:
         propagate = True  # Always true, if this is the 2nd unsee then device is already deleted.
         return propagate, ssdp_device, notification_type
 
-    def get_device(self, headers: CaseInsensitiveDict) -> Optional[SsdpDevice]:
+    def get_device(self, headers: CaseInsensitiveDict) -> SsdpDevice | None:
         """Get a device from headers."""
         if not (usn := headers.get_lower("usn")) or not (udn := udn_from_usn(usn)):
             return None
         return self.devices.get(udn)
 
-    def purge_devices(self, override_now: Optional[datetime] = None) -> None:
+    def purge_devices(self, override_now: datetime | None = None) -> None:
         """Purge any devices for which the CACHE-CONTROL header is timed out."""
         now = override_now or datetime.now()
         if self.next_valid_to and self.next_valid_to > now:
@@ -485,20 +473,21 @@ class SsdpListener:
 
     def __init__(
         self,
-        async_callback: Optional[
+        async_callback: (
             Callable[
                 [SsdpDevice, DeviceOrServiceType, SsdpSource], Coroutine[Any, Any, None]
             ]
-        ] = None,
-        callback: Optional[
-            Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], None]
-        ] = None,
-        source: Optional[AddressTupleVXType] = None,
-        target: Optional[AddressTupleVXType] = None,
-        loop: Optional[AbstractEventLoop] = None,
+            | None
+        ) = None,
+        callback: (
+            Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], None] | None
+        ) = None,
+        source: AddressTupleVXType | None = None,
+        target: AddressTupleVXType | None = None,
+        loop: AbstractEventLoop | None = None,
         search_timeout: int = SSDP_MX,
         search_target: str = SSDP_ST_ALL,
-        device_tracker: Optional[SsdpDeviceTracker] = None,
+        device_tracker: SsdpDeviceTracker | None = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -511,8 +500,8 @@ class SsdpListener:
         self.search_timeout = search_timeout
         self.search_target = search_target
         self._device_tracker = device_tracker or SsdpDeviceTracker()
-        self._advertisement_listener: Optional[SsdpAdvertisementListener] = None
-        self._search_listener: Optional[SsdpSearchListener] = None
+        self._advertisement_listener: SsdpAdvertisementListener | None = None
+        self._search_listener: SsdpSearchListener | None = None
 
     async def async_start(self) -> None:
         """Start search listener/advertisement listener."""
@@ -545,7 +534,7 @@ class SsdpListener:
             self._search_listener.async_stop()
 
     async def async_search(
-        self, override_target: Optional[AddressTupleVXType] = None
+        self, override_target: AddressTupleVXType | None = None
     ) -> None:
         """Send a SSDP Search packet."""
         assert self._search_listener is not None, "Call async_start() first"

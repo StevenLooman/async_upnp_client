@@ -12,7 +12,7 @@ import asyncio
 import logging
 import xml.etree.ElementTree as ET
 from time import time
-from typing import Dict, Sequence, Type
+from typing import Sequence, Type
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
@@ -98,7 +98,7 @@ class RenderingControlService(UpnpServerService):
     )
     async def get_volume(
         self, InstanceID: int, Channel: str
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Get Volume."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -116,7 +116,7 @@ class RenderingControlService(UpnpServerService):
     )
     async def set_volume(
         self, InstanceID: int, Channel: str, DesiredVolume: int
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Set Volume."""
         # pylint: disable=invalid-name, unused-argument
         volume = self.state_variable("Volume")
@@ -135,7 +135,7 @@ class RenderingControlService(UpnpServerService):
     )
     async def get_mute(
         self, InstanceID: int, Channel: str
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Get Mute."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -153,7 +153,7 @@ class RenderingControlService(UpnpServerService):
     )
     async def set_mute(
         self, InstanceID: int, Channel: str, DesiredMute: bool
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Set Volume."""
         # pylint: disable=invalid-name, unused-argument
         volume = self.state_variable("Mute")
@@ -288,7 +288,7 @@ class AVTransportService(UpnpServerService):
             "CurrentSpeed": "TransportPlaySpeed",
         },
     )
-    async def get_transport_info(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+    async def get_transport_info(self, InstanceID: int) -> dict[str, UpnpStateVariable]:
         """Get Transport Info."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -306,7 +306,7 @@ class AVTransportService(UpnpServerService):
             "CurrentURI": "AVTransportURI",
         },
     )
-    async def get_media_info(self, InstanceID: int) -> Dict[str, UpnpStateVariable]:
+    async def get_media_info(self, InstanceID: int) -> dict[str, UpnpStateVariable]:
         """Get Media Info."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -326,7 +326,7 @@ class AVTransportService(UpnpServerService):
     )
     async def get_device_capabilities(
         self, InstanceID: int
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Get Device Capabilities."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -347,7 +347,7 @@ class AVTransportService(UpnpServerService):
     )
     async def get_transport_settings(
         self, InstanceID: int
-    ) -> Dict[str, UpnpStateVariable]:
+    ) -> dict[str, UpnpStateVariable]:
         """Get Transport Settings."""
         # pylint: disable=invalid-name, unused-argument
         return {
@@ -403,7 +403,7 @@ class ConnectionManagerService(UpnpServerService):
             "Sink": "SinkProtocolInfo",
         },
     )
-    async def get_protocol_info(self) -> Dict[str, UpnpStateVariable]:
+    async def get_protocol_info(self) -> dict[str, UpnpStateVariable]:
         """Get Transport Settings."""
         # pylint: disable=invalid-name, unused-argument
         return {

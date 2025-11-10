@@ -3,7 +3,7 @@
 
 import asyncio
 import logging
-from typing import Any, Dict, Mapping, Optional, Tuple, Union, cast
+from typing import Any, Mapping, cast
 
 import aiohttp
 import defusedxml.ElementTree as DET
@@ -19,10 +19,10 @@ _LOGGER = logging.getLogger(__name__)
 _UNDEF = object()
 
 
-DescriptionType = Optional[Mapping[str, Any]]
+DescriptionType = Mapping[str, Any] | None
 
 
-def _description_xml_to_dict(description_xml: str) -> Optional[Mapping[str, str]]:
+def _description_xml_to_dict(description_xml: str) -> Mapping[str, str] | None:
     """Convert description (XML) to dict."""
     try:
         tree = DET.fromstring(description_xml)
@@ -43,9 +43,9 @@ class DescriptionCache:
     def __init__(self, requester: UpnpRequester):
         """Initialize."""
         self._requester = requester
-        self._cache_dict: Dict[str, Union[asyncio.Event, DescriptionType]] = {}
+        self._cache_dict: dict[str, asyncio.Event | DescriptionType] = {}
 
-    async def async_get_description_xml(self, location: str) -> Optional[str]:
+    async def async_get_description_xml(self, location: str) -> str | None:
         """Get a description as XML, either from cache or download it."""
         try:
             return await self._async_fetch_description(location)
@@ -56,8 +56,8 @@ class DescriptionCache:
         return None
 
     def peek_description_dict(
-        self, location: Optional[str]
-    ) -> Tuple[bool, DescriptionType]:
+        self, location: str | None
+    ) -> tuple[bool, DescriptionType]:
         """Peek a description as dict, only try the cache."""
         if location is None:
             return True, None
@@ -71,9 +71,7 @@ class DescriptionCache:
 
         return True, cast(DescriptionType, description)
 
-    async def async_get_description_dict(
-        self, location: Optional[str]
-    ) -> DescriptionType:
+    async def async_get_description_dict(self, location: str | None) -> DescriptionType:
         """Get a description as dict, either from cache or download it."""
         if location is None:
             return None
@@ -103,7 +101,7 @@ class DescriptionCache:
         if location in self._cache_dict:
             del self._cache_dict[location]
 
-    async def _async_fetch_description(self, location: str) -> Optional[str]:
+    async def _async_fetch_description(self, location: str) -> str | None:
         """Download a description from location."""
         try:
             for _ in range(2):

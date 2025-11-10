@@ -5,7 +5,7 @@ import asyncio
 import logging
 import time
 from datetime import timedelta
-from typing import Any, Dict, FrozenSet, List, Optional, Sequence, Set, Union
+from typing import Any, Sequence
 
 from async_upnp_client.client import (
     EventCallbackType,
@@ -34,7 +34,7 @@ RESUBSCRIBE_TOLERANCE = timedelta(minutes=1)
 RESUBSCRIBE_TOLERANCE_SECS = RESUBSCRIBE_TOLERANCE.total_seconds()
 
 
-def find_device_of_type(device: UpnpDevice, device_types: List[str]) -> UpnpDevice:
+def find_device_of_type(device: UpnpDevice, device_types: list[str]) -> UpnpDevice:
     """Find the (embedded) UpnpDevice of any of the device types."""
     for device_ in device.all_devices:
         if device_.device_type in device_types:
@@ -51,16 +51,16 @@ class UpnpProfileDevice:
     service_id values.
     """
 
-    DEVICE_TYPES: List[str] = []
+    DEVICE_TYPES: list[str] = []
 
-    SERVICE_IDS: FrozenSet[str] = frozenset()
+    SERVICE_IDS: frozenset[str] = frozenset()
 
-    _SERVICE_TYPES: Dict[str, Set[str]] = {}
+    _SERVICE_TYPES: dict[str, set[str]] = {}
 
     @classmethod
     async def async_search(
-        cls, source: Optional[AddressTupleVXType] = None, timeout: int = SSDP_MX
-    ) -> Set[CaseInsensitiveDict]:
+        cls, source: AddressTupleVXType | None = None, timeout: int = SSDP_MX
+    ) -> set[CaseInsensitiveDict]:
         """
         Search for this device type.
 
@@ -81,7 +81,7 @@ class UpnpProfileDevice:
         return responses
 
     @classmethod
-    async def async_discover(cls) -> Set[CaseInsensitiveDict]:
+    async def async_discover(cls) -> set[CaseInsensitiveDict]:
         """Alias for async_search."""
         return await cls.async_search()
 
@@ -108,17 +108,17 @@ class UpnpProfileDevice:
         return True
 
     def __init__(
-        self, device: UpnpDevice, event_handler: Optional[UpnpEventHandler]
+        self, device: UpnpDevice, event_handler: UpnpEventHandler | None
     ) -> None:
         """Initialize."""
         self.device = device
         self.profile_device = find_device_of_type(device, self.DEVICE_TYPES)
         self._event_handler = event_handler
-        self.on_event: Optional[EventCallbackType] = None
-        self._icon: Optional[str] = None
+        self.on_event: EventCallbackType | None = None
+        self._icon: str | None = None
         # Map of SID to renewal timestamp (monotonic clock seconds)
-        self._subscriptions: Dict[str, float] = {}
-        self._resubscriber_task: Optional[asyncio.Task] = None
+        self._subscriptions: dict[str, float] = {}
+        self._resubscriber_task: asyncio.Task | None = None
 
     @property
     def name(self) -> str:
@@ -131,7 +131,7 @@ class UpnpProfileDevice:
         return self.profile_device.manufacturer
 
     @property
-    def model_description(self) -> Optional[str]:
+    def model_description(self) -> str | None:
         """Get the model description of this device."""
         return self.profile_device.model_description
 
@@ -141,12 +141,12 @@ class UpnpProfileDevice:
         return self.profile_device.model_name
 
     @property
-    def model_number(self) -> Optional[str]:
+    def model_number(self) -> str | None:
         """Get the model number of this device."""
         return self.profile_device.model_number
 
     @property
-    def serial_number(self) -> Optional[str]:
+    def serial_number(self) -> str | None:
         """Get the serial number of this device."""
         return self.profile_device.serial_number
 
@@ -161,7 +161,7 @@ class UpnpProfileDevice:
         return self.profile_device.device_type
 
     @property
-    def icon(self) -> Optional[str]:
+    def icon(self) -> str | None:
         """Get a URL for the biggest icon for this device."""
         if not self.profile_device.icons:
             return None
@@ -183,7 +183,7 @@ class UpnpProfileDevice:
 
         return self._icon
 
-    def _service(self, service_type_abbreviation: str) -> Optional[UpnpService]:
+    def _service(self, service_type_abbreviation: str) -> UpnpService | None:
         """Get UpnpService by service_type or alias."""
         if not self.profile_device:
             return None
@@ -200,7 +200,7 @@ class UpnpProfileDevice:
 
     def _state_variable(
         self, service_name: str, state_variable_name: str
-    ) -> Optional[UpnpStateVariable]:
+    ) -> UpnpStateVariable | None:
         """Get state_variable from service."""
         service = self._service(service_name)
         if not service:
@@ -211,7 +211,7 @@ class UpnpProfileDevice:
 
         return service.state_variable(state_variable_name)
 
-    def _action(self, service_name: str, action_name: str) -> Optional[UpnpAction]:
+    def _action(self, service_name: str, action_name: str) -> UpnpAction | None:
         """Check if service has action."""
         service = self._service(service_name)
         if not service:
@@ -232,7 +232,7 @@ class UpnpProfileDevice:
         return False
 
     async def _async_resubscribe_services(
-        self, now: Optional[float] = None, notify_errors: bool = False
+        self, now: float | None = None, notify_errors: bool = False
     ) -> None:
         """Renew existing subscriptions.
 
@@ -317,7 +317,7 @@ class UpnpProfileDevice:
 
     async def async_subscribe_services(
         self, auto_resubscribe: bool = False
-    ) -> Optional[timedelta]:
+    ) -> timedelta | None:
         """(Re-)Subscribe to services.
 
         :param auto_resubscribe: Automatically resubscribe to subscriptions
@@ -410,7 +410,7 @@ class UpnpProfileDevice:
         return bool(self._subscriptions)
 
     async def _async_poll_state_variables(
-        self, service_name: str, action_names: Union[str, Sequence[str]], **in_args: Any
+        self, service_name: str, action_names: str | Sequence[str], **in_args: Any
     ) -> None:
         """Update state variables by polling actions that return their values.
 
@@ -425,7 +425,7 @@ class UpnpProfileDevice:
         if isinstance(action_names, str):
             action_names = [action_names]
 
-        changed_state_variables: List[UpnpStateVariable] = []
+        changed_state_variables: list[UpnpStateVariable] = []
 
         for action_name in action_names:
             try:

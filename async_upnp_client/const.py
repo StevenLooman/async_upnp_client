@@ -5,27 +5,17 @@ from dataclasses import dataclass
 from datetime import date, datetime, time
 from enum import Enum
 from ipaddress import IPv4Address, IPv6Address
-from typing import (
-    Any,
-    Callable,
-    List,
-    Mapping,
-    MutableMapping,
-    NamedTuple,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Callable, Mapping, MutableMapping, NamedTuple
 from xml.etree import ElementTree as ET
 
 from async_upnp_client.utils import parse_date_time, require_tzinfo
 
-IPvXAddress = Union[IPv4Address, IPv6Address]  # pylint: disable=invalid-name
-AddressTupleV4Type = Tuple[str, int]
-AddressTupleV6Type = Tuple[str, int, int, int]
-AddressTupleVXType = Union[  # pylint: disable=invalid-name
-    AddressTupleV4Type, AddressTupleV6Type
-]
+IPvXAddress = IPv4Address | IPv6Address  # pylint: disable=invalid-name
+AddressTupleV4Type = tuple[str, int]
+AddressTupleV6Type = tuple[str, int, int, int]
+AddressTupleVXType = (
+    AddressTupleV4Type | AddressTupleV6Type
+)  # pylint: disable=invalid-name
 
 NS = {
     "soap_envelope": "http://schemas.xmlsoap.org/soap/envelope/",
@@ -114,17 +104,17 @@ class DeviceInfo(NamedTuple):
     device_type: str
     friendly_name: str
     manufacturer: str
-    manufacturer_url: Optional[str]
-    model_description: Optional[str]
+    manufacturer_url: str | None
+    model_description: str | None
     model_name: str
-    model_number: Optional[str]
-    model_url: Optional[str]
-    serial_number: Optional[str]
+    model_number: str | None
+    model_url: str | None
+    serial_number: str | None
     udn: str
-    upc: Optional[str]
-    presentation_url: Optional[str]
+    upc: str | None
+    presentation_url: str | None
     url: str
-    icons: List[DeviceIcon]
+    icons: list[DeviceIcon]
     xml: ET.Element
 
 
@@ -152,7 +142,7 @@ class ActionInfo(NamedTuple):
     """Action info."""
 
     name: str
-    arguments: List[ActionArgumentInfo]
+    arguments: list[ActionArgumentInfo]
     xml: ET.Element
 
 
@@ -163,7 +153,7 @@ class HttpRequest:
     method: str
     url: str
     headers: Mapping[str, str]
-    body: Optional[str]
+    body: str | None
 
 
 @dataclass(frozen=True)
@@ -172,7 +162,7 @@ class HttpResponse:
 
     status_code: int
     headers: Mapping[str, str]
-    body: Optional[str]
+    body: str | None
 
 
 @dataclass(frozen=True)
@@ -181,9 +171,9 @@ class StateVariableTypeInfo:
 
     data_type: str
     data_type_mapping: Mapping[str, Callable]
-    default_value: Optional[str]
-    allowed_value_range: Mapping[str, Optional[str]]
-    allowed_values: Optional[List[str]]
+    default_value: str | None
+    allowed_value_range: Mapping[str, str | None]
+    allowed_values: list[str] | None
     xml: ET.Element
 
 
@@ -191,7 +181,7 @@ class StateVariableTypeInfo:
 class EventableStateVariableTypeInfo(StateVariableTypeInfo):
     """Eventable State variable type info."""
 
-    max_rate: Optional[float]
+    max_rate: float | None
 
 
 @dataclass(frozen=True)

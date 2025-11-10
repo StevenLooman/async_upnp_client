@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """async_upnp_client.client module."""
 
-# pylint: disable=too-many-lines
+from __future__ import annotations
 
 import io
 import logging
@@ -9,20 +9,7 @@ import urllib.parse
 from abc import ABC
 from datetime import datetime, timezone
 from types import TracebackType
-from typing import (
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Mapping,
-    Optional,
-    Sequence,
-    Set,
-    Type,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Generic, Mapping, Sequence, Type, TypeVar
 from xml.etree import ElementTree as ET
 from xml.parsers import expat
 from xml.sax.saxutils import escape
@@ -50,6 +37,9 @@ from async_upnp_client.exceptions import (
     UpnpXmlParseError,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
+
+# pylint: disable=too-many-lines
+
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -109,9 +99,9 @@ class DisableXmlNamespaces:
         self._old_parser_create = expat.ParserCreate
 
         def expat_parser_create(
-            encoding: Optional[str] = None,
-            namespace_separator: Optional[str] = None,
-            intern: Optional[Dict[str, Any]] = None,
+            encoding: str | None = None,
+            namespace_separator: str | None = None,
+            intern: dict[str, Any] | None = None,
         ) -> expat.XMLParserType:
             # pylint: disable=unused-argument
             return self._old_parser_create(encoding, None, intern)
@@ -120,9 +110,9 @@ class DisableXmlNamespaces:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None:
         """Exit context manager."""
         expat.ParserCreate = self._old_parser_create
@@ -175,7 +165,7 @@ class UpnpDevice:
         self.on_pre_receive_device_spec = on_pre_receive_device_spec
         self.on_post_receive_device_spec = on_post_receive_device_spec
 
-        self._parent_device: Optional["UpnpDevice"] = None
+        self._parent_device: "UpnpDevice" | None = None
 
         # bind services to ourselves
         for service in services:
@@ -192,7 +182,7 @@ class UpnpDevice:
         self.available = True
 
     @property
-    def parent_device(self) -> Optional["UpnpDevice"]:
+    def parent_device(self) -> "UpnpDevice" | None:
         """Get parent UpnpDevice, if any."""
         return self._parent_device
 
@@ -212,7 +202,7 @@ class UpnpDevice:
 
         return self._parent_device.root_device
 
-    def find_device(self, device_type: str) -> Optional["UpnpDevice"]:
+    def find_device(self, device_type: str) -> "UpnpDevice" | None:
         """Find a (embedded) device with the given device_type."""
         if self.device_type == device_type:
             return self
@@ -224,7 +214,7 @@ class UpnpDevice:
 
         return None
 
-    def find_service(self, service_type: str) -> Optional["UpnpService"]:
+    def find_service(self, service_type: str) -> "UpnpService" | None:
         """Find a service with the give service_type."""
         if service_type in self.services:
             return self.services[service_type]
@@ -237,7 +227,7 @@ class UpnpDevice:
         return None
 
     @property
-    def all_devices(self) -> List["UpnpDevice"]:
+    def all_devices(self) -> list["UpnpDevice"]:
         """Get all devices, self and embedded."""
         devices = [self]
 
@@ -246,9 +236,9 @@ class UpnpDevice:
 
         return devices
 
-    def get_devices_matching_udn(self, udn: str) -> List["UpnpDevice"]:
+    def get_devices_matching_udn(self, udn: str) -> list["UpnpDevice"]:
         """Get all devices matching udn."""
-        devices: List["UpnpDevice"] = []
+        devices: list["UpnpDevice"] = []
 
         if self.udn.lower() == udn:
             devices.append(self)
@@ -259,9 +249,9 @@ class UpnpDevice:
         return devices
 
     @property
-    def all_services(self) -> List["UpnpService"]:
+    def all_services(self) -> list["UpnpService"]:
         """Get all services, from self and embedded devices."""
-        services: List["UpnpService"] = []
+        services: list["UpnpService"] = []
 
         for device in self.all_devices:
             services += device.services.values()
@@ -298,12 +288,12 @@ class UpnpDevice:
         return self.device_info.manufacturer
 
     @property
-    def manufacturer_url(self) -> Optional[str]:
+    def manufacturer_url(self) -> str | None:
         """Get the manufacturer URL of this device."""
         return self.device_info.manufacturer_url
 
     @property
-    def model_description(self) -> Optional[str]:
+    def model_description(self) -> str | None:
         """Get the model description of this device."""
         return self.device_info.model_description
 
@@ -313,17 +303,17 @@ class UpnpDevice:
         return self.device_info.model_name
 
     @property
-    def model_number(self) -> Optional[str]:
+    def model_number(self) -> str | None:
         """Get the model number of this device."""
         return self.device_info.model_number
 
     @property
-    def model_url(self) -> Optional[str]:
+    def model_url(self) -> str | None:
         """Get the model URL of this device."""
         return self.device_info.model_url
 
     @property
-    def serial_number(self) -> Optional[str]:
+    def serial_number(self) -> str | None:
         """Get the serial number of this device."""
         return self.device_info.serial_number
 
@@ -333,12 +323,12 @@ class UpnpDevice:
         return self.device_info.udn
 
     @property
-    def upc(self) -> Optional[str]:
+    def upc(self) -> str | None:
         """Get UPC of this device."""
         return self.device_info.upc
 
     @property
-    def presentation_url(self) -> Optional[str]:
+    def presentation_url(self) -> str | None:
         """Get presentationURL of this device."""
         return self.device_info.presentation_url
 
@@ -370,7 +360,7 @@ class UpnpDevice:
         """Get service by service_type."""
         return self.services[service_type]
 
-    def service_id(self, service_id: str) -> Optional["UpnpService"]:
+    def service_id(self, service_id: str) -> "UpnpService" | None:
         """Get service by service_id."""
         for service in self.services.values():
             if service.service_id == service_id:
@@ -415,8 +405,8 @@ class UpnpService:
         self.on_pre_call_action = on_pre_call_action
         self.on_post_call_action = on_post_call_action
 
-        self.on_event: Optional[EventCallbackType] = None
-        self._device: Optional[UpnpDevice] = None
+        self.on_event: EventCallbackType | None = None
+        self._device: UpnpDevice | None = None
 
         # bind state variables to ourselves
         for state_var in state_variables:
@@ -509,7 +499,7 @@ class UpnpService:
         return self.actions[name]
 
     async def async_call_action(
-        self, action: Union["UpnpAction", str], **kwargs: Any
+        self, action: "UpnpAction" | str, **kwargs: Any
     ) -> Mapping[str, Any]:
         """
         Call a UpnpAction.
@@ -570,7 +560,7 @@ class UpnpAction:
             self._argument_info = argument_info
             self._related_state_variable = state_variable
             self._value = None
-            self.raw_upnp_value: Optional[str] = None
+            self.raw_upnp_value: str | None = None
 
         def validate_value(self, value: Any) -> None:
             """Validate value against related UpnpStateVariable."""
@@ -632,13 +622,13 @@ class UpnpAction:
     def __init__(
         self,
         action_info: ActionInfo,
-        arguments: List["UpnpAction.Argument"],
+        arguments: list["UpnpAction.Argument"],
         non_strict: bool = False,
     ) -> None:
         """Initialize."""
         self._action_info = action_info
         self._arguments = arguments
-        self._service: Optional[UpnpService] = None
+        self._service: UpnpService | None = None
         self._non_strict = non_strict
 
     @property
@@ -647,7 +637,7 @@ class UpnpAction:
         return self._action_info.name
 
     @property
-    def arguments(self) -> List["UpnpAction.Argument"]:
+    def arguments(self) -> list["UpnpAction.Argument"]:
         """Get the arguments."""
         return self._arguments
 
@@ -690,17 +680,17 @@ class UpnpAction:
             value = kwargs[arg.name]
             arg.validate_value(value)
 
-    def in_arguments(self) -> List["UpnpAction.Argument"]:
+    def in_arguments(self) -> list["UpnpAction.Argument"]:
         """Get all in-arguments."""
         return [arg for arg in self.arguments if arg.direction == "in"]
 
-    def out_arguments(self) -> List["UpnpAction.Argument"]:
+    def out_arguments(self) -> list["UpnpAction.Argument"]:
         """Get all out-arguments."""
         return [arg for arg in self.arguments if arg.direction == "out"]
 
     def argument(
-        self, name: str, direction: Optional[str] = None
-    ) -> Optional["UpnpAction.Argument"]:
+        self, name: str, direction: str | None = None
+    ) -> "UpnpAction.Argument" | None:
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self.arguments:
             if arg.name != name:
@@ -882,8 +872,8 @@ class UpnpAction:
     def _parse_fault(
         self,
         xml: ET.Element,
-        status_code: Optional[int] = None,
-        response_headers: Optional[Mapping] = None,
+        status_code: int | None = None,
+        response_headers: Mapping | None = None,
     ) -> None:
         """Parse SOAP fault and raise appropriate exception."""
         # pylint: disable=too-many-branches
@@ -907,7 +897,7 @@ class UpnpAction:
                 error_code_str = fault.findtext(".//errorCode")
 
         if error_code_str:
-            error_code: Optional[int] = int(error_code_str)
+            error_code: int | None = int(error_code_str)
         else:
             error_code = None
 
@@ -965,17 +955,17 @@ class UpnpStateVariable(Generic[T]):
         self._state_variable_info = state_variable_info
         self._schema = schema
 
-        self._service: Optional[UpnpService] = None
-        self._value: Optional[Any] = None  # None, T or UPNP_VALUE_ERROR
-        self._updated_at: Optional[datetime] = None
+        self._service: UpnpService | None = None
+        self._value: Any | None = None  # None, T or UPNP_VALUE_ERROR
+        self._updated_at: datetime | None = None
 
         # When py3.12 is the minimum version, we can switch
         # these to be @cached_property
-        self._min_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
-        self._max_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
-        self._step_value: Optional[T] = _UNDEFINED  # type: ignore[assignment]
-        self._allowed_values: Set[T] = _UNDEFINED  # type: ignore[assignment]
-        self._normalized_allowed_values: Set[str] = _UNDEFINED  # type: ignore[assignment]
+        self._min_value: T | None = _UNDEFINED  # type: ignore[assignment]
+        self._max_value: T | None = _UNDEFINED  # type: ignore[assignment]
+        self._step_value: T | None = _UNDEFINED  # type: ignore[assignment]
+        self._allowed_values: set[T] = _UNDEFINED  # type: ignore[assignment]
+        self._normalized_allowed_values: set[str] = _UNDEFINED  # type: ignore[assignment]
 
     @property
     def service(self) -> UpnpService:
@@ -1006,7 +996,7 @@ class UpnpStateVariable(Generic[T]):
         return self.data_type_mapping["type"]
 
     @property
-    def min_value(self) -> Optional[T]:
+    def min_value(self) -> T | None:
         """Min value for this UpnpStateVariable, if defined."""
         if self._min_value is _UNDEFINED:
             min_ = self._state_variable_info.type_info.allowed_value_range.get("min")
@@ -1017,7 +1007,7 @@ class UpnpStateVariable(Generic[T]):
         return self._min_value
 
     @property
-    def max_value(self) -> Optional[T]:
+    def max_value(self) -> T | None:
         """Max value for this UpnpStateVariable, if defined."""
         if self._max_value is _UNDEFINED:
             max_ = self._state_variable_info.type_info.allowed_value_range.get("max")
@@ -1028,7 +1018,7 @@ class UpnpStateVariable(Generic[T]):
         return self._max_value
 
     @property
-    def step_value(self) -> Optional[T]:
+    def step_value(self) -> T | None:
         """Step value for this UpnpStateVariable, if defined."""
         if self._step_value is _UNDEFINED:
             step = self._state_variable_info.type_info.allowed_value_range.get("step")
@@ -1039,7 +1029,7 @@ class UpnpStateVariable(Generic[T]):
         return self._step_value
 
     @property
-    def allowed_values(self) -> Set[T]:
+    def allowed_values(self) -> set[T]:
         """Set with allowed values for this UpnpStateVariable, if defined."""
         if self._allowed_values is _UNDEFINED:
             allowed_values = self._state_variable_info.type_info.allowed_values or []
@@ -1049,7 +1039,7 @@ class UpnpStateVariable(Generic[T]):
         return self._allowed_values
 
     @property
-    def normalized_allowed_values(self) -> Set[str]:
+    def normalized_allowed_values(self) -> set[str]:
         """Set with normalized allowed values for this UpnpStateVariable, if defined."""
         if self._normalized_allowed_values is _UNDEFINED:
             self._normalized_allowed_values = {
@@ -1074,7 +1064,7 @@ class UpnpStateVariable(Generic[T]):
         return self._state_variable_info.type_info.data_type
 
     @property
-    def default_value(self) -> Optional[T]:
+    def default_value(self) -> T | None:
         """Get default value for UpnpStateVariable, if defined."""
         type_info = self._state_variable_info.type_info
         default_value = type_info.default_value
@@ -1092,7 +1082,7 @@ class UpnpStateVariable(Generic[T]):
             raise UpnpValueError(self.name, value) from ex
 
     @property
-    def value(self) -> Optional[T]:
+    def value(self) -> T | None:
         """
         Get the value, python typed.
 
@@ -1111,7 +1101,7 @@ class UpnpStateVariable(Generic[T]):
         self._updated_at = datetime.now(timezone.utc)
 
     @property
-    def value_unchecked(self) -> Optional[T]:
+    def value_unchecked(self) -> T | None:
         """
         Get the value, python typed.
 
@@ -1147,7 +1137,7 @@ class UpnpStateVariable(Generic[T]):
         return coerced_value
 
     @property
-    def updated_at(self) -> Optional[datetime]:
+    def updated_at(self) -> datetime | None:
         """
         Get timestamp at which this UpnpStateVariable was updated.
 

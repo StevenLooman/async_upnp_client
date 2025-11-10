@@ -5,7 +5,7 @@ import asyncio
 import logging
 from asyncio.events import AbstractEventLoop, AbstractServer
 from ipaddress import ip_address
-from typing import Dict, Mapping, Optional
+from typing import Mapping
 from urllib.parse import urlparse
 
 import aiohttp.web
@@ -37,7 +37,7 @@ _LOGGER = logging.getLogger(__name__)
 _LOGGER_TRAFFIC_UPNP = logging.getLogger("async_upnp_client.traffic.upnp")
 
 
-def _fixed_host_header(url: str) -> Dict[str, str]:
+def _fixed_host_header(url: str) -> dict[str, str]:
     """Strip scope_id from IPv6 host, if needed."""
     if "%" not in url:
         return {}
@@ -62,7 +62,7 @@ class AiohttpRequester(UpnpRequester):
     # pylint: disable=too-few-public-methods
 
     def __init__(
-        self, timeout: int = 5, http_headers: Optional[Mapping[str, str]] = None
+        self, timeout: int = 5, http_headers: Mapping[str, str] | None = None
     ) -> None:
         """Initialize."""
         self._timeout = ClientTimeout(total=float(timeout))
@@ -154,7 +154,7 @@ class AiohttpSessionRequester(UpnpRequester):
         session: ClientSession,
         with_sleep: bool = False,
         timeout: int = 5,
-        http_headers: Optional[Mapping[str, str]] = None,
+        http_headers: Mapping[str, str] | None = None,
     ) -> None:
         """Initialize."""
         self._session = session
@@ -270,16 +270,16 @@ class AiohttpNotifyServer(UpnpNotifyServer):
         self,
         requester: UpnpRequester,
         source: AddressTupleVXType,
-        callback_url: Optional[str] = None,
-        loop: Optional[AbstractEventLoop] = None,
+        callback_url: str | None = None,
+        loop: AbstractEventLoop | None = None,
     ) -> None:
         """Initialize."""
         self._source = source
         self._callback_url = callback_url
         self._loop = loop or asyncio.get_event_loop()
 
-        self._aiohttp_server: Optional[aiohttp.web.Server] = None
-        self._server: Optional[AbstractServer] = None
+        self._aiohttp_server: aiohttp.web.Server | None = None
+        self._server: AbstractServer | None = None
 
         self.event_handler = UpnpEventHandler(self, requester)
 

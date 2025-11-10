@@ -6,7 +6,7 @@ import logging
 import socket
 from asyncio.events import AbstractEventLoop
 from asyncio.transports import BaseTransport, DatagramTransport
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine
 
 from async_upnp_client.const import AddressTupleVXType, NotificationSubType, SsdpSource
 from async_upnp_client.ssdp import (
@@ -27,21 +27,21 @@ class SsdpAdvertisementListener:
 
     def __init__(
         self,
-        async_on_alive: Optional[
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
-        ] = None,
-        async_on_byebye: Optional[
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
-        ] = None,
-        async_on_update: Optional[
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]]
-        ] = None,
-        on_alive: Optional[Callable[[CaseInsensitiveDict], None]] = None,
-        on_byebye: Optional[Callable[[CaseInsensitiveDict], None]] = None,
-        on_update: Optional[Callable[[CaseInsensitiveDict], None]] = None,
-        source: Optional[AddressTupleVXType] = None,
-        target: Optional[AddressTupleVXType] = None,
-        loop: Optional[AbstractEventLoop] = None,
+        async_on_alive: (
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
+        ) = None,
+        async_on_byebye: (
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
+        ) = None,
+        async_on_update: (
+            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
+        ) = None,
+        on_alive: Callable[[CaseInsensitiveDict], None] | None = None,
+        on_byebye: Callable[[CaseInsensitiveDict], None] | None = None,
+        on_update: Callable[[CaseInsensitiveDict], None] | None = None,
+        source: AddressTupleVXType | None = None,
+        target: AddressTupleVXType | None = None,
+        loop: AbstractEventLoop | None = None,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -62,7 +62,7 @@ class SsdpAdvertisementListener:
         self.on_update = on_update
         self.source, self.target = determine_source_target(source, target)
         self.loop: AbstractEventLoop = loop or asyncio.get_event_loop()
-        self._transport: Optional[BaseTransport] = None
+        self._transport: BaseTransport | None = None
 
     def _on_data(self, request_line: str, headers: CaseInsensitiveDict) -> None:
         """Handle data."""
@@ -106,7 +106,7 @@ class SsdpAdvertisementListener:
                 self.on_update(headers)
 
     def _on_connect(self, transport: DatagramTransport) -> None:
-        sock: Optional[socket.socket] = transport.get_extra_info("socket")
+        sock: socket.socket | None = transport.get_extra_info("socket")
         _LOGGER.debug("On connect, transport: %s, socket: %s", transport, sock)
         self._transport = transport
 
