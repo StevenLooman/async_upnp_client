@@ -50,6 +50,7 @@ _INVALID_LOCATIONS = (
     "://localhost",
 )
 
+
 @lru_cache(maxsize=128)
 def is_valid_location(location: str) -> bool:
     """Validate if this location is usable."""
