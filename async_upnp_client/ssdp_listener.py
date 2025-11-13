@@ -44,7 +44,7 @@ IGNORED_HEADERS = {
 }
 
 _INVALID_LOCATIONS = (
-    "://127.0.0.",
+    "://127.",
     "://[::1]",
     "://169.254",
     "://localhost",
