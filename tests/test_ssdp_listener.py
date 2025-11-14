@@ -584,8 +584,10 @@ async def test_see_search_invalid_location() -> None:
     "location",
     [
         "http://127.0.0.1:1234/device.xml",
+        "http://127.0.0.20:1234/device.xml",
         "http://[::1]:1234/device.xml",
         "http://169.254.12.1:1234/device.xml",
+        "http://localhost:1234/device.xml",
     ],
 )
 async def test_see_search_localhost_location(location: str) -> None:

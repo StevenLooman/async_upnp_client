@@ -43,12 +43,19 @@ IGNORED_HEADERS = {
     "location",  # Location-header is handled differently!
 }
 
+_INVALID_LOCATIONS = (
+    "://127.",
+    "://[::1]",
+    "://169.254",
+    "://localhost",
+)
+
 
 @lru_cache(maxsize=128)
 def is_valid_location(location: str) -> bool:
     """Validate if this location is usable."""
-    return location.startswith("http") and not (
-        "://127.0.0.1" in location or "://[::1]" in location or "://169.254" in location
+    return location.startswith("http") and not any(
+        invalid in location for invalid in _INVALID_LOCATIONS
     )
 
 
