@@ -1,3 +1,25 @@
+async_upnp_client 0.46.0 (2025-11-14)
+=====================================
+
+Features
+--------
+
+- Add Python 3.14 support (#274)
+- Drop Python 3.9 support. (#282)
+
+
+Bugfixes
+--------
+
+- Add localhost hostname to invalid locations (#283)
+
+
+Misc
+----
+
+- #278
+
+
 async_upnp_client 0.45.0 (2025-07-16)
 =====================================
 
