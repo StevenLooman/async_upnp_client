@@ -332,7 +332,7 @@ class UpnpProfileDevice:
             services.
         """
         if not self._event_handler:
-            _LOGGER.info("No event_handler, event handling disabled")
+            _LOGGER.debug("No event_handler, event handling disabled")
             return None
 
         # Using time.monotonic to avoid problems with system clock changes
@@ -356,7 +356,7 @@ class UpnpProfileDevice:
                     self._subscriptions[new_sid] = now + timeout.total_seconds()
         except UpnpError as err:
             if isinstance(err, UpnpResponseError) and not self._subscriptions:
-                _LOGGER.info("Device rejected subscription request: %r", err)
+                _LOGGER.debug("Device rejected subscription request: %r", err)
             else:
                 _LOGGER.warning("Failed subscribing to service: %r", err)
             # Unsubscribe anything that was subscribed, no half-done subscriptions

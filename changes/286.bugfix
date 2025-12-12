@@ -1,0 +1,1 @@
+Reduce log noise by changing subscription INFO logs to DEBUG level.
