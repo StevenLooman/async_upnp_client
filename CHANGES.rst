@@ -1,3 +1,12 @@
+async_upnp_client 0.46.1 (2025-12-12)
+=====================================
+
+Bugfixes
+--------
+
+- Reduce log noise by changing subscription INFO logs to DEBUG level. (#286)
+
+
 async_upnp_client 0.46.0 (2025-11-14)
 =====================================
 
