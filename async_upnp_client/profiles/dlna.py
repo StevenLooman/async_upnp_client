@@ -1436,8 +1436,15 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
             SortCriteria=sort_criteria,
         )
 
+        xml_result = result["Result"]
+        if '<song:' in xml_result and 'xmlns:song=' not in xml_result:
+            xml_result = xml_result.replace(
+                'xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/">',
+                'xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/" xmlns:song="www.wiimu.com/song/">'
+            )
+        
         return DmsDevice.BrowseResult(
-            didl_lite.from_xml_string(result["Result"], strict=False),
+            didl_lite.from_xml_string(xml_result, strict=False),
             int(result["NumberReturned"]),
             int(result["TotalMatches"]),
             int(result["UpdateID"]),
@@ -1527,8 +1534,15 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
             SortCriteria=sort_criteria,
         )
 
+        xml_result = result["Result"]
+        if '<song:' in xml_result and 'xmlns:song=' not in xml_result:
+            xml_result = xml_result.replace(
+                'xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/">',
+                'xmlns:dlna="urn:schemas-dlna-org:metadata-1-0/" xmlns:song="www.wiimu.com/song/">'
+            )
+         
         browse_result = DmsDevice.BrowseResult(
-            didl_lite.from_xml_string(result["Result"], strict=False),
+            didl_lite.from_xml_string(xml_result, strict=False),
             int(result["NumberReturned"]),
             int(result["TotalMatches"]),
             int(result["UpdateID"]),
