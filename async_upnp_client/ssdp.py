@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.ssdp module."""
 
 import logging
@@ -9,7 +8,7 @@ from asyncio.events import AbstractEventLoop
 from datetime import datetime
 from functools import lru_cache
 from ipaddress import IPv4Address, IPv6Address, ip_address
-from typing import TYPE_CHECKING, Any, Callable, Coroutine, cast
+from typing import Any, Callable, Coroutine, cast
 from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.http_exceptions import InvalidHeader
@@ -17,7 +16,6 @@ from aiohttp.http_parser import HeadersParser
 from multidict import CIMultiDictProxy
 
 from async_upnp_client.const import (
-    AddressTupleV4Type,
     AddressTupleV6Type,
     AddressTupleVXType,
     IPvXAddress,
@@ -54,8 +52,6 @@ _LOGGER_TRAFFIC_SSDP = logging.getLogger("async_upnp_client.traffic.ssdp")
 def get_host_string(addr: AddressTupleVXType) -> str:
     """Construct host string from address tuple."""
     if len(addr) == 4:
-        if TYPE_CHECKING:
-            addr = cast(AddressTupleV6Type, addr)
         if addr[3]:
             return f"{addr[0]}%{addr[3]}"
 
@@ -75,9 +71,6 @@ def get_adjusted_url(url: str, addr: AddressTupleVXType) -> str:
     """Adjust a url with correction for link local scope."""
     if len(addr) < 4:
         return url
-
-    if TYPE_CHECKING:
-        addr = cast(AddressTupleV6Type, addr)
 
     if not addr[3]:
         return url
@@ -114,9 +107,7 @@ def build_ssdp_packet(status_line: str, headers: SsdpHeaders) -> bytes:
     return f"{status_line}\r\n{headers_str}\r\n\r\n".encode()
 
 
-def build_ssdp_search_packet(
-    ssdp_target: AddressTupleVXType, ssdp_mx: int, ssdp_st: str
-) -> bytes:
+def build_ssdp_search_packet(ssdp_target: AddressTupleVXType, ssdp_mx: int, ssdp_st: str) -> bytes:
     """Construct a SSDP M-SEARCH packet."""
     request_line = "M-SEARCH * HTTP/1.1"
     headers = {
@@ -229,13 +220,9 @@ def decode_ssdp_packet(
     # key since nothing in _cached_decode_ssdp_packet cares
     # about the port
     if len(remote_addr) == 4:
-        if TYPE_CHECKING:
-            remote_addr = cast(AddressTupleV6Type, remote_addr)
         addr, port, flow, scope = remote_addr
         remote_addr_without_port: AddressTupleVXType = addr, 0, flow, scope
     else:
-        if TYPE_CHECKING:
-            remote_addr = cast(AddressTupleV4Type, remote_addr)
         addr, port = remote_addr
         remote_addr_without_port = remote_addr[0], 0
     request_line, headers = _cached_decode_ssdp_packet(data, remote_addr_without_port)
@@ -255,13 +242,9 @@ class SsdpProtocol(DatagramProtocol):
     def __init__(
         self,
         loop: AbstractEventLoop,
-        async_on_connect: (
-            Callable[[DatagramTransport], Coroutine[Any, Any, None]] | None
-        ) = None,
+        async_on_connect: (Callable[[DatagramTransport], Coroutine[Any, Any, None]] | None) = None,
         on_connect: Callable[[DatagramTransport], None] | None = None,
-        async_on_data: (
-            Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
-        ) = None,
+        async_on_data: (Callable[[str, CaseInsensitiveDict], Coroutine[Any, Any, None]] | None) = None,
         on_data: Callable[[str, CaseInsensitiveDict], None] | None = None,
     ) -> None:
         """Initialize."""
@@ -312,12 +295,8 @@ class SsdpProtocol(DatagramProtocol):
 
     def error_received(self, exc: Exception) -> None:
         """Handle an error."""
-        sock: socket.socket | None = (
-            self.transport.get_extra_info("socket") if self.transport else None
-        )
-        _LOGGER.error(
-            "Received error: %s, transport: %s, socket: %s", exc, self.transport, sock
-        )
+        sock: socket.socket | None = self.transport.get_extra_info("socket") if self.transport else None
+        _LOGGER.error("Received error: %s, transport: %s, socket: %s", exc, self.transport, sock)
 
     def connection_lost(self, exc: Exception | None) -> None:
         """Handle connection lost."""
@@ -344,9 +323,7 @@ class SsdpProtocol(DatagramProtocol):
                 target,
             )
         if _LOGGER_TRAFFIC_SSDP.isEnabledFor(logging.DEBUG):
-            _LOGGER_TRAFFIC_SSDP.debug(
-                "Sending SSDP packet, target: %s, data: %s", target, packet
-            )
+            _LOGGER_TRAFFIC_SSDP.debug("Sending SSDP packet, target: %s, data: %s", target, packet)
         self.transport.sendto(packet, target)
 
 
@@ -362,7 +339,6 @@ def determine_source_target(
         if len(source) == 2:
             return source, (SSDP_IP_V4, SSDP_PORT)
 
-        source = cast(AddressTupleV6Type, source)
         return source, (SSDP_IP_V6, SSDP_PORT, 0, source[3])
 
     if source is None and target is not None:
@@ -372,7 +348,6 @@ def determine_source_target(
                 0,
             ), target
 
-        target = cast(AddressTupleV6Type, target)
         return ("::", 0, 0, target[3]), target
 
     if source is not None and target is not None and len(source) != len(target):
@@ -415,7 +390,6 @@ def ip_port_from_address_tuple(
 ) -> tuple[IPvXAddress, int]:
     """Get IPvXAddress from AddressTupleVXType."""
     if len(address_tuple) == 4:
-        address_tuple = cast(AddressTupleV6Type, address_tuple)
         if "%" in address_tuple[0]:
             return IPv6Address(address_tuple[0]), address_tuple[1]
 
@@ -448,9 +422,7 @@ def get_ssdp_socket(
         proto=socket.IPPROTO_UDP,
     )[0]
     source_ip, source_port = ip_port_from_address_tuple(source)
-    source_info = socket.getaddrinfo(
-        str(source_ip), source_port, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP
-    )[0]
+    source_info = socket.getaddrinfo(str(source_ip), source_port, type=socket.SOCK_DGRAM, proto=socket.IPPROTO_UDP)[0]
     _LOGGER.debug("Creating socket, source: %s, target: %s", source_info, target_info)
 
     # create socket
@@ -484,4 +456,4 @@ def get_ssdp_socket(
                 target_ip.packed + source_ip.packed,
             )
 
-    return sock, source_info[4], target_info[4]
+    return sock, cast(AddressTupleVXType, source_info[4]), cast(AddressTupleVXType, target_info[4])

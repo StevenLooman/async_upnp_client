@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.profiles.dlna module."""
 
 # pylint: disable=too-many-lines
@@ -335,9 +334,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if avt_service:
             if not self.is_subscribed or do_ping:
                 # CurrentTransportState is evented, so don't need to poll when subscribed
-                await self._async_poll_state_variables(
-                    "AVT", "GetTransportInfo", InstanceID=0
-                )
+                await self._async_poll_state_variables("AVT", "GetTransportInfo", InstanceID=0)
 
             if self.transport_state in (
                 TransportState.PLAYING,
@@ -345,9 +342,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             ):
                 # playing something, get position info
                 # RelativeTimePosition is *never* evented, must always poll
-                await self._async_poll_state_variables(
-                    "AVT", "GetPositionInfo", InstanceID=0
-                )
+                await self._async_poll_state_variables("AVT", "GetPositionInfo", InstanceID=0)
             if not self.is_subscribed or not self.__did_first_update:
                 # Events won't be sent, so poll all state variables
                 await self._async_poll_state_variables(
@@ -360,16 +355,12 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
                     ],
                     InstanceID=0,
                 )
-                await self._async_poll_state_variables(
-                    "RC", ["GetMute", "GetVolume"], InstanceID=0, Channel="Master"
-                )
+                await self._async_poll_state_variables("RC", ["GetMute", "GetVolume"], InstanceID=0, Channel="Master")
                 self.__did_first_update = True
         elif do_ping:
             await self.profile_device.async_ping()
 
-    def _on_event(
-        self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
-    ) -> None:
+    def _on_event(self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]) -> None:
         """State variable(s) changed, perform callback(s)."""
         # handle DLNA specific event
         for state_variable in state_variables:
@@ -440,10 +431,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         return not current_transport_actions or action in current_transport_actions
 
     def _supports(self, var_name: str) -> bool:
-        return (
-            self._state_variable("RC", var_name) is not None
-            and self._action("RC", f"Set{var_name}") is not None
-        )
+        return self._state_variable("RC", var_name) is not None and self._action("RC", f"Set{var_name}") is not None
 
     def _level(self, var_name: str) -> float | None:
         state_var = self._state_variable("RC", var_name)
@@ -459,9 +447,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         max_value = state_var.max_value or 100.0
         return min(value / max_value, 1.0)
 
-    async def _async_set_level(
-        self, var_name: str, level: float, **kwargs: Any
-    ) -> None:
+    async def _async_set_level(self, var_name: str, level: float, **kwargs: Any) -> None:
         action = self._action("RC", f"Set{var_name}")
         if not action:
             raise UpnpError(f"Missing Action RC/Set{var_name}")
@@ -579,9 +565,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if not action:
             raise UpnpError("Missing action RC/SetMute")
         desired_mute = bool(mute)
-        await action.async_call(
-            InstanceID=0, Channel="Master", DesiredMute=desired_mute
-        )
+        await action.async_call(InstanceID=0, Channel="Master", DesiredMute=desired_mute)
 
     # endregion
 
@@ -590,8 +574,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     def has_presets(self) -> bool:
         """Check if device has control for rendering presets."""
         return (
-            self._state_variable("RC", "PresetNameList") is not None
-            and self._action("RC", "SelectPreset") is not None
+            self._state_variable("RC", "PresetNameList") is not None and self._action("RC", "SelectPreset") is not None
         )
 
     @property
@@ -813,15 +796,11 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
         # queue media
         if not isinstance(meta_data, str):
-            meta_data = await self.construct_play_media_metadata(
-                media_url, media_title, meta_data=meta_data
-            )
+            meta_data = await self.construct_play_media_metadata(media_url, media_title, meta_data=meta_data)
         action = self._action("AVT", "SetAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetAVTransportURI")
-        await action.async_call(
-            InstanceID=0, CurrentURI=media_url, CurrentURIMetaData=meta_data
-        )
+        await action.async_call(InstanceID=0, CurrentURI=media_url, CurrentURIMetaData=meta_data)
 
     @property
     def has_next_transport_uri(self) -> bool:
@@ -843,15 +822,11 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
         # queue media
         if not isinstance(meta_data, str):
-            meta_data = await self.construct_play_media_metadata(
-                media_url, media_title, meta_data=meta_data
-            )
+            meta_data = await self.construct_play_media_metadata(media_url, media_title, meta_data=meta_data)
         action = self._action("AVT", "SetNextAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetNextAVTransportURI")
-        await action.async_call(
-            InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data
-        )
+        await action.async_call(InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data)
 
     async def async_wait_for_can_play(self, max_wait_time: float = 5) -> None:
         """Wait for play command to be ready."""
@@ -867,15 +842,11 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
                 break
             # Poll current transport actions, even if we're subscribed, just in
             # case the device isn't eventing properly.
-            await self._async_poll_state_variables(
-                "AVT", "GetCurrentTransportActions", InstanceID=0
-            )
+            await self._async_poll_state_variables("AVT", "GetCurrentTransportActions", InstanceID=0)
         else:
             _LOGGER.debug("break out of waiting game")
 
-    async def _fetch_headers(
-        self, url: str, headers: Mapping[str, str]
-    ) -> Mapping[str, str] | None:
+    async def _fetch_headers(self, url: str, headers: Mapping[str, str]) -> Mapping[str, str] | None:
         """Do a HEAD/GET to get resources headers."""
         requester = self.profile_device.requester
 
@@ -933,16 +904,11 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if None in (override_mime_type, override_dlna_features):
             # do a HEAD/GET, to retrieve content-type/mime-type
             try:
-                headers = await self._fetch_headers(
-                    media_url, {"GetContentFeatures.dlna.org": "1"}
-                )
+                headers = await self._fetch_headers(media_url, {"GetContentFeatures.dlna.org": "1"})
                 if headers:
                     if not override_mime_type and "Content-Type" in headers:
                         mime_type = headers["Content-Type"]
-                    if (
-                        not override_dlna_features
-                        and "ContentFeatures.dlna.org" in headers
-                    ):
+                    if not override_dlna_features and "ContentFeatures.dlna.org" in headers:
                         dlna_features = headers["ContentFeatures.dlna.org"]
             except Exception:  # pylint: disable=broad-except
                 pass
@@ -954,14 +920,8 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
                     mime_type = default_mime_type or "application/octet-stream"
 
             # use CM/GetProtocolInfo to improve on dlna_features
-            if (
-                not override_dlna_features
-                and dlna_features != "*"
-                and self.has_get_protocol_info
-            ):
-                protocol_info_entries = (
-                    await self._async_get_sink_protocol_info_for_mime_type(mime_type)
-                )
+            if not override_dlna_features and dlna_features != "*" and self.has_get_protocol_info:
+                protocol_info_entries = await self._async_get_sink_protocol_info_for_mime_type(mime_type)
                 for entry in protocol_info_entries:
                     if entry[3] == "*":
                         # device accepts anything, send this
@@ -999,9 +959,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         xml_string: bytes = didl_lite.to_xml_string(item)
         return xml_string.decode("utf-8")
 
-    async def _async_get_sink_protocol_info_for_mime_type(
-        self, mime_type: str
-    ) -> list[list[str]]:
+    async def _async_get_sink_protocol_info_for_mime_type(self, mime_type: str) -> list[list[str]]:
         """Get protocol_info for a specific mime type."""
         # example entry:
         # http-get:*:video/mpeg:DLNA.ORG_PN=MPEG_TS_HD_KO_ISO;DLNA.ORG_FLAGS=ED100000000000000000...
@@ -1205,11 +1163,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     def media_duration(self) -> int | None:
         """Duration of current playing media in seconds."""
         state_var = self._state_variable("AVT", "CurrentTrackDuration")
-        if (
-            state_var is None
-            or state_var.value is None
-            or state_var.value == "NOT_IMPLEMENTED"
-        ):
+        if state_var is None or state_var.value is None or state_var.value == "NOT_IMPLEMENTED":
             return None
 
         time = str_to_time(state_var.value)
@@ -1222,11 +1176,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     def media_position(self) -> int | None:
         """Position of current playing media in seconds."""
         state_var = self._state_variable("AVT", "RelativeTimePosition")
-        if (
-            state_var is None
-            or state_var.value is None
-            or state_var.value == "NOT_IMPLEMENTED"
-        ):
+        if state_var is None or state_var.value is None or state_var.value == "NOT_IMPLEMENTED":
             return None
 
         time = str_to_time(state_var.value)
@@ -1335,9 +1285,7 @@ class DmsDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
         # Retrieve unchanging state variables only once
         if not self.__did_first_update:
-            await self._async_poll_state_variables(
-                "CD", ["GetSearchCapabilities", "GetSortCapabilities"]
-            )
+            await self._async_poll_state_variables("CD", ["GetSearchCapabilities", "GetSortCapabilities"])
             self.__did_first_update = True
 
     def get_absolute_url(self, url: str) -> str:

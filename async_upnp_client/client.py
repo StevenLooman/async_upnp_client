@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.client module."""
 
 from __future__ import annotations
@@ -73,17 +72,13 @@ def default_on_post_receive_service_spec(response: HttpResponse) -> HttpResponse
     return HttpResponse(response.status_code, response.headers, fixed_body)
 
 
-def default_on_pre_call_action(
-    action: "UpnpAction", args: Mapping[str, Any], request: HttpRequest
-) -> HttpRequest:
+def default_on_pre_call_action(action: "UpnpAction", args: Mapping[str, Any], request: HttpRequest) -> HttpRequest:
     """Pre-action call hook."""
     # pylint: disable=unused-argument
     return request
 
 
-def default_on_post_call_action(
-    action: "UpnpAction", response: HttpResponse
-) -> HttpResponse:
+def default_on_post_call_action(action: "UpnpAction", response: HttpResponse) -> HttpResponse:
     """Post-action call hook."""
     # pylint: disable=unused-argument
     fixed_body = (response.body or "").rstrip(" \t\r\n\0")
@@ -146,22 +141,15 @@ class UpnpDevice:
         device_info: DeviceInfo,
         services: Sequence["UpnpService"],
         embedded_devices: Sequence["UpnpDevice"],
-        on_pre_receive_device_spec: Callable[
-            [HttpRequest], HttpRequest
-        ] = default_on_pre_receive_device_spec,
-        on_post_receive_device_spec: Callable[
-            [HttpResponse], HttpResponse
-        ] = default_on_post_receive_device_spec,
+        on_pre_receive_device_spec: Callable[[HttpRequest], HttpRequest] = default_on_pre_receive_device_spec,
+        on_post_receive_device_spec: Callable[[HttpResponse], HttpResponse] = default_on_post_receive_device_spec,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
         self.requester = requester
         self.device_info = device_info
         self.services = {service.service_type: service for service in services}
-        self.embedded_devices = {
-            embedded_device.device_type: embedded_device
-            for embedded_device in embedded_devices
-        }
+        self.embedded_devices = {embedded_device.device_type: embedded_device for embedded_device in embedded_devices}
         self.on_pre_receive_device_spec = on_pre_receive_device_spec
         self.on_post_receive_device_spec = on_post_receive_device_spec
 
@@ -261,9 +249,7 @@ class UpnpDevice:
     def reinit(self, new_device: "UpnpDevice") -> None:
         """Reinitialize self from another device."""
         if self.device_type != new_device.device_type:
-            raise UpnpError(
-                f"Mismatch in device_type: {self.device_type} vs {new_device.device_type}"
-            )
+            raise UpnpError(f"Mismatch in device_type: {self.device_type} vs {new_device.device_type}")
 
         self.device_info = new_device.device_info
 
@@ -392,9 +378,7 @@ class UpnpService:
         on_pre_call_action: Callable[
             ["UpnpAction", Mapping[str, Any], HttpRequest], HttpRequest
         ] = default_on_pre_call_action,
-        on_post_call_action: Callable[
-            ["UpnpAction", HttpResponse], HttpResponse
-        ] = default_on_post_call_action,
+        on_post_call_action: Callable[["UpnpAction", HttpResponse], HttpResponse] = default_on_post_call_action,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -442,25 +426,19 @@ class UpnpService:
     @property
     def scpd_url(self) -> str:
         """Get full SCPD-url for this UpnpService."""
-        url: str = urllib.parse.urljoin(
-            self.device.device_url, self._service_info.scpd_url
-        )
+        url: str = urllib.parse.urljoin(self.device.device_url, self._service_info.scpd_url)
         return url
 
     @property
     def control_url(self) -> str:
         """Get full control-url for this UpnpService."""
-        url: str = urllib.parse.urljoin(
-            self.device.device_url, self._service_info.control_url
-        )
+        url: str = urllib.parse.urljoin(self.device.device_url, self._service_info.control_url)
         return url
 
     @property
     def event_sub_url(self) -> str:
         """Get full event sub-url for this UpnpService."""
-        url: str = urllib.parse.urljoin(
-            self.device.device_url, self._service_info.event_sub_url
-        )
+        url: str = urllib.parse.urljoin(self.device.device_url, self._service_info.event_sub_url)
         return url
 
     @property
@@ -498,9 +476,7 @@ class UpnpService:
         """Get UPnpAction by name."""
         return self.actions[name]
 
-    async def async_call_action(
-        self, action: "UpnpAction" | str, **kwargs: Any
-    ) -> Mapping[str, Any]:
+    async def async_call_action(self, action: "UpnpAction" | str, **kwargs: Any) -> Mapping[str, Any]:
         """
         Call a UpnpAction.
 
@@ -553,9 +529,7 @@ class UpnpAction:
     class Argument:
         """Representation of an Argument of an Action."""
 
-        def __init__(
-            self, argument_info: ActionArgumentInfo, state_variable: "UpnpStateVariable"
-        ) -> None:
+        def __init__(self, argument_info: ActionArgumentInfo, state_variable: "UpnpStateVariable") -> None:
             """Initialize."""
             self._argument_info = argument_info
             self._related_state_variable = state_variable
@@ -688,9 +662,7 @@ class UpnpAction:
         """Get all out-arguments."""
         return [arg for arg in self.arguments if arg.direction == "out"]
 
-    def argument(
-        self, name: str, direction: str | None = None
-    ) -> "UpnpAction.Argument" | None:
+    def argument(self, name: str, direction: str | None = None) -> "UpnpAction.Argument" | None:
         """Get an UpnpAction.Argument by name (and possibliy direction)."""
         for arg in self.arguments:
             if arg.name != name:
@@ -710,9 +682,7 @@ class UpnpAction:
         bare_response = await self.service.requester.async_http_request(request)
         response = self.service.on_post_call_action(self, bare_response)
         if not isinstance(response.body, str):
-            raise UpnpError(
-                f"Did not receive a body when calling action: {self.name}, args: {kwargs}"
-            )
+            raise UpnpError(f"Did not receive a body when calling action: {self.name}, args: {kwargs}")
 
         if response.status_code != 200:
             try:
@@ -781,14 +751,11 @@ class UpnpAction:
     def _format_request_args(self, **kwargs: Any) -> str:
         self.validate_arguments(**kwargs)
         arg_strs = [
-            f"<{arg.name}>{escape(arg.coerce_upnp(kwargs[arg.name]))}</{arg.name}>"
-            for arg in self.in_arguments()
+            f"<{arg.name}>{escape(arg.coerce_upnp(kwargs[arg.name]))}</{arg.name}>" for arg in self.in_arguments()
         ]
         return "\n".join(arg_strs)
 
-    def parse_response(
-        self, service_type: str, http_response: HttpResponse
-    ) -> Mapping[str, Any]:
+    def parse_response(self, service_type: str, http_response: HttpResponse) -> Mapping[str, Any]:
         """Parse response from called Action."""
         # pylint: disable=unused-argument
         stripped_response_body = http_response.body
@@ -808,14 +775,10 @@ class UpnpAction:
                     it_root = it.root  # type: ET.Element
                     xml = it_root
                 except ET.ParseError as err2:
-                    _LOGGER.debug(
-                        "Unable to parse XML: %s\nXML:\n%s", err2, http_response.body
-                    )
+                    _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err2, http_response.body)
                     raise UpnpXmlParseError(err2) from err2
             else:
-                _LOGGER.debug(
-                    "Unable to parse XML: %s\nXML:\n%s", err, http_response.body
-                )
+                _LOGGER.debug("Unable to parse XML: %s\nXML:\n%s", err, http_response.body)
                 raise UpnpXmlParseError(err) from err
 
         # Check if a SOAP fault occurred. It should have been caught earlier, by
@@ -828,9 +791,7 @@ class UpnpAction:
             _LOGGER.debug("Could not parse response: %s", http_response.body)
             raise
 
-    def _parse_response_args(
-        self, service_type: str, xml: ET.Element
-    ) -> Mapping[str, Any]:
+    def _parse_response_args(self, service_type: str, xml: ET.Element) -> Mapping[str, Any]:
         """Parse response arguments."""
         args = {}
         query = f".//{{{service_type}}}{self.name}Response"
@@ -859,9 +820,7 @@ class UpnpAction:
                     continue
 
                 xml_str = ET.tostring(xml, encoding="unicode")
-                raise UpnpError(
-                    f"Invalid response, unknown argument: {name}, {xml_str}"
-                )
+                raise UpnpError(f"Invalid response, unknown argument: {name}, {xml_str}")
 
             arg.raw_upnp_value = arg_xml.text
             arg.upnp_value = arg_xml.text or ""
@@ -930,9 +889,7 @@ class UpnpAction:
         raise UpnpActionError(
             error_code=error_code,
             error_desc=error_desc,
-            message=f"Error during async_call(), "
-            f"action: {self.name}, "
-            f"upnp error: {error_code} ({error_desc})",
+            message=f"Error during async_call(), action: {self.name}, upnp error: {error_code} ({error_desc})",
         )
 
 
@@ -948,9 +905,7 @@ class UpnpStateVariable(Generic[T]):
 
     UPNP_VALUE_ERROR = object()
 
-    def __init__(
-        self, state_variable_info: StateVariableInfo, schema: vol.Schema
-    ) -> None:
+    def __init__(self, state_variable_info: StateVariableInfo, schema: vol.Schema) -> None:
         """Initialize."""
         self._state_variable_info = state_variable_info
         self._schema = schema
@@ -1033,9 +988,7 @@ class UpnpStateVariable(Generic[T]):
         """Set with allowed values for this UpnpStateVariable, if defined."""
         if self._allowed_values is _UNDEFINED:
             allowed_values = self._state_variable_info.type_info.allowed_values or []
-            self._allowed_values = {
-                self.coerce_python(allowed_value) for allowed_value in allowed_values
-            }
+            self._allowed_values = {self.coerce_python(allowed_value) for allowed_value in allowed_values}
         return self._allowed_values
 
     @property
@@ -1043,8 +996,7 @@ class UpnpStateVariable(Generic[T]):
         """Set with normalized allowed values for this UpnpStateVariable, if defined."""
         if self._normalized_allowed_values is _UNDEFINED:
             self._normalized_allowed_values = {
-                str(allowed_value).lower().strip()
-                for allowed_value in self.allowed_values
+                str(allowed_value).lower().strip() for allowed_value in self.allowed_values
             }
         return self._normalized_allowed_values
 

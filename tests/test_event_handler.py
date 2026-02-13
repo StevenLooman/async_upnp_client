@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for event handler module."""
 
 from datetime import timedelta
@@ -94,9 +93,7 @@ async def test_on_notify_upnp_event() -> None:
     """Test handling of a UPnP event."""
     changed_vars: Sequence[UpnpStateVariable] = []
 
-    def on_event(
-        _self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]
-    ) -> None:
+    def on_event(_self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]) -> None:
         nonlocal changed_vars
         changed_vars = changed_state_variables
 
@@ -125,9 +122,7 @@ async def test_on_notify_upnp_event() -> None:
 </e:propertyset>
 """
 
-    http_request = HttpRequest(
-        "NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body
-    )
+    http_request = HttpRequest("NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body)
     result = await event_handler.handle_notify(http_request)
     assert result == 200
 

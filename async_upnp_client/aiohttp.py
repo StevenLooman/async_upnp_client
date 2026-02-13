@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.aiohttp module."""
 
 import asyncio
@@ -48,9 +47,7 @@ def _fixed_host_header(url: str) -> dict[str, str]:
         fixed_hostname = url_parts.hostname[:idx]
         if ":" in fixed_hostname:
             fixed_hostname = f"[{fixed_hostname}]"
-        host = (
-            f"{fixed_hostname}:{url_parts.port}" if url_parts.port else fixed_hostname
-        )
+        host = f"{fixed_hostname}:{url_parts.port}" if url_parts.port else fixed_hostname
         return {"Host": host}
 
     return {}
@@ -61,9 +58,7 @@ class AiohttpRequester(UpnpRequester):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(
-        self, timeout: int = 5, http_headers: Mapping[str, str] | None = None
-    ) -> None:
+    def __init__(self, timeout: int = 5, http_headers: Mapping[str, str] | None = None) -> None:
         """Initialize."""
         self._timeout = ClientTimeout(total=float(timeout))
         self._http_headers = http_headers or {}
@@ -85,9 +80,7 @@ class AiohttpRequester(UpnpRequester):
                 "Sending request:\n%s %s\n%s\n%s\n",
                 http_request.method,
                 http_request.url,
-                "\n".join(
-                    [key + ": " + value for key, value in (req_headers or {}).items()]
-                ),
+                "\n".join([key + ": " + value for key, value in (req_headers or {}).items()]),
                 http_request.body or "",
             )
 
@@ -110,12 +103,7 @@ class AiohttpRequester(UpnpRequester):
                             http_request.method,
                             http_request.url,
                             status,
-                            "\n".join(
-                                [
-                                    key + ": " + value
-                                    for key, value in resp_headers.items()
-                                ]
-                            ),
+                            "\n".join([key + ": " + value for key, value in resp_headers.items()]),
                             resp_body,
                         )
 
@@ -204,9 +192,7 @@ class AiohttpSessionRequester(UpnpRequester):
                 "Sending request:\n%s %s\n%s\n%s\n",
                 http_request.method,
                 http_request.url,
-                "\n".join(
-                    [key + ": " + value for key, value in (req_headers or {}).items()]
-                ),
+                "\n".join([key + ": " + value for key, value in (req_headers or {}).items()]),
                 http_request.body or "",
             )
 
@@ -231,9 +217,7 @@ class AiohttpSessionRequester(UpnpRequester):
                         http_request.method,
                         http_request.url,
                         status,
-                        "\n".join(
-                            [key + ": " + value for key, value in resp_headers.items()]
-                        ),
+                        "\n".join([key + ": " + value for key, value in resp_headers.items()]),
                         resp_body,
                     )
 
@@ -288,9 +272,7 @@ class AiohttpNotifyServer(UpnpNotifyServer):
         self._aiohttp_server = aiohttp.web.Server(self._handle_request)
 
         try:
-            self._server = await self._loop.create_server(
-                self._aiohttp_server, self._source[0], self._source[1]
-            )
+            self._server = await self._loop.create_server(self._aiohttp_server, self._source[0], self._source[1])
         except OSError as err:
             _LOGGER.error(
                 "Failed to create HTTP server at %s:%d: %s",
@@ -322,9 +304,7 @@ class AiohttpNotifyServer(UpnpNotifyServer):
             self._server.close()
             self._server = None
 
-    async def _handle_request(
-        self, request: aiohttp.web.BaseRequest
-    ) -> aiohttp.web.Response:
+    async def _handle_request(self, request: aiohttp.web.BaseRequest) -> aiohttp.web.Response:
         """Handle incoming requests."""
         _LOGGER.debug("Received request: %s", request)
         log_traffic = _LOGGER_TRAFFIC_UPNP.isEnabledFor(logging.DEBUG)
@@ -342,9 +322,7 @@ class AiohttpNotifyServer(UpnpNotifyServer):
             _LOGGER.debug("Not notify")
             return aiohttp.web.Response(status=405)
 
-        http_request = HttpRequest(
-            request.method, self.callback_url, request.headers, body
-        )
+        http_request = HttpRequest(request.method, self.callback_url, request.headers, body)
         status = await self.event_handler.handle_notify(http_request)
         _LOGGER.debug("NOTIFY response status: %s", status)
         if log_traffic:

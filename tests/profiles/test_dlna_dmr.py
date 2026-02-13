@@ -42,9 +42,7 @@ AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT = """
 """
 
 
-def assert_xml_equal(
-    left: defusedxml.ElementTree, right: defusedxml.ElementTree
-) -> None:
+def assert_xml_equal(left: defusedxml.ElementTree, right: defusedxml.ElementTree) -> None:
     """Check two XML trees are equal."""
     assert left.tag == right.tag
     assert left.text == right.text
@@ -60,9 +58,7 @@ def test_parse_last_change_event() -> None:
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0"><TransportState val="PAUSED_PLAYBACK"/></InstanceID>
 </Event>"""
-    assert _parse_last_change_event(data) == {
-        "0": {"TransportState": "PAUSED_PLAYBACK"}
-    }
+    assert _parse_last_change_event(data) == {"0": {"TransportState": "PAUSED_PLAYBACK"}}
 
 
 def test_parse_last_change_event_multiple_instances() -> None:
@@ -96,9 +92,7 @@ def test_parse_last_change_event_invalid_xml() -> None:
     data = """<Event xmlns="urn:schemas-upnp-org:metadata-1-0/AVT/">
 <InstanceID val="0"><TransportState val="PAUSED_PLAYBACK"></InstanceID>
 </Event>"""
-    assert _parse_last_change_event(data) == {
-        "0": {"TransportState": "PAUSED_PLAYBACK"}
-    }
+    assert _parse_last_change_event(data) == {"0": {"TransportState": "PAUSED_PLAYBACK"}}
 
 
 @pytest.mark.parametrize(
@@ -136,9 +130,7 @@ async def test_on_notify_dlna_event() -> None:
     """Test handling an event.."""
     changed_vars: list[UpnpStateVariable] = []
 
-    def on_event(
-        _self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]
-    ) -> None:
+    def on_event(_self: UpnpService, changed_state_variables: Sequence[UpnpStateVariable]) -> None:
         nonlocal changed_vars
         changed_vars += changed_state_variables
 
@@ -181,9 +173,7 @@ async def test_on_notify_dlna_event() -> None:
 </e:propertyset>
 """
 
-    http_request = HttpRequest(
-        "NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body
-    )
+    http_request = HttpRequest("NOTIFY", "http://dlna_dmr:1234/upnp/event/RenderingControl1", headers, body)
     result = await event_handler.handle_notify(http_request)
     assert result == 200
 
@@ -260,26 +250,20 @@ async def test_wait_for_can_play_polled() -> None:
     profile = DmrDevice(device, event_handler=None)
 
     # Polling of CurrentTransportActions does not contain "Play" yet
-    requester.response_map[
-        ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = HttpResponse(
+    requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
     )
     # Force update of CurrentTransportActions
     # pylint: disable=protected-access
-    await profile._async_poll_state_variables(
-        "AVT", ["GetCurrentTransportActions"], InstanceID=0
-    )
+    await profile._async_poll_state_variables("AVT", ["GetCurrentTransportActions"], InstanceID=0)
 
     # Should not be able to play yet
     assert not profile.can_play
 
     # Polling of CurrentTransportActions now contains "Play"
-    requester.response_map[
-        ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = HttpResponse(
+    requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
@@ -304,18 +288,14 @@ async def test_wait_for_can_play_timeout() -> None:
     profile = DmrDevice(device, event_handler=None)
 
     # Polling of CurrentTransportActions does not contain "Play" yet
-    requester.response_map[
-        ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-    ] = HttpResponse(
+    requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
         200,
         {},
         read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
     )
     # Force update of CurrentTransportActions
     # pylint: disable=protected-access
-    await profile._async_poll_state_variables(
-        "AVT", ["GetCurrentTransportActions"], InstanceID=0
-    )
+    await profile._async_poll_state_variables("AVT", ["GetCurrentTransportActions"], InstanceID=0)
 
     # Should not be able to play
     assert not profile.can_play
@@ -344,20 +324,14 @@ async def test_fetch_headers() -> None:
     expected_response_headers = {"Content-Length": "1024", "Content-Type": "audio/mpeg"}
 
     # When HEAD works
-    with mock.patch.object(
-        profile.profile_device.requester, "async_http_request"
-    ) as ahr_mock:
+    with mock.patch.object(profile.profile_device.requester, "async_http_request") as ahr_mock:
         ahr_mock.side_effect = [HttpResponse(200, expected_response_headers, "")]
         headers = await profile._fetch_headers(media_url, fetch_headers)
-        ahr_mock.assert_awaited_once_with(
-            HttpRequest("HEAD", media_url, fetch_headers, None)
-        )
+        ahr_mock.assert_awaited_once_with(HttpRequest("HEAD", media_url, fetch_headers, None))
         assert headers == expected_response_headers
 
     # HEAD method is not allowed, but GET with Range works
-    with mock.patch.object(
-        profile.profile_device.requester, "async_http_request"
-    ) as ahr_mock:
+    with mock.patch.object(profile.profile_device.requester, "async_http_request") as ahr_mock:
         ranged_response_headers = dict(expected_response_headers)
         ranged_response_headers["Content-Range"] = "bytes 0-0/1024"
         ahr_mock.side_effect = [
@@ -367,18 +341,12 @@ async def test_fetch_headers() -> None:
         headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
             mock.call(HttpRequest("HEAD", media_url, fetch_headers, None)),
-            mock.call(
-                HttpRequest(
-                    "GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None
-                )
-            ),
+            mock.call(HttpRequest("GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None)),
         ]
         assert headers == ranged_response_headers
 
     # HEAD method and GET with Range is not allowed, but plain GET works
-    with mock.patch.object(
-        profile.profile_device.requester, "async_http_request"
-    ) as ahr_mock:
+    with mock.patch.object(profile.profile_device.requester, "async_http_request") as ahr_mock:
         # Different headers for working response, to check correct thing returned
         get_headers = dict(expected_response_headers)
         get_headers["Content-Length"] = "2"
@@ -390,44 +358,30 @@ async def test_fetch_headers() -> None:
         headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
             mock.call(HttpRequest("HEAD", media_url, fetch_headers, None)),
-            mock.call(
-                HttpRequest(
-                    "GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None
-                )
-            ),
+            mock.call(HttpRequest("GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None)),
             mock.call(HttpRequest("GET", media_url, fetch_headers, None)),
         ]
         assert headers == get_headers
 
     # HTTP 404 should bail early
-    with mock.patch.object(
-        profile.profile_device.requester, "async_http_request"
-    ) as ahr_mock:
+    with mock.patch.object(profile.profile_device.requester, "async_http_request") as ahr_mock:
         ahr_mock.side_effect = [
             HttpResponse(404, expected_response_headers, ""),
             HttpResponse(405, expected_response_headers, ""),
             HttpResponse(200, expected_response_headers, ""),
         ]
         headers = await profile._fetch_headers(media_url, fetch_headers)
-        ahr_mock.assert_called_once_with(
-            HttpRequest("HEAD", media_url, fetch_headers, None)
-        )
+        ahr_mock.assert_called_once_with(HttpRequest("HEAD", media_url, fetch_headers, None))
         assert headers is None
 
     # Repeated server failures should give no headers
-    with mock.patch.object(
-        profile.profile_device.requester, "async_http_request"
-    ) as ahr_mock:
+    with mock.patch.object(profile.profile_device.requester, "async_http_request") as ahr_mock:
         # Different headers for working response, to check correct thing returned
         ahr_mock.return_value = HttpResponse(500, {}, "")
         headers = await profile._fetch_headers(media_url, fetch_headers)
         assert ahr_mock.await_args_list == [
             mock.call(HttpRequest("HEAD", media_url, fetch_headers, None)),
-            mock.call(
-                HttpRequest(
-                    "GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None
-                )
-            ),
+            mock.call(HttpRequest("GET", media_url, dict(fetch_headers, Range="bytes=0-0"), None)),
             mock.call(HttpRequest("GET", media_url, fetch_headers, None)),
         ]
         assert headers is None
@@ -465,9 +419,7 @@ async def test_construct_play_media_metadata_types() -> None:
 http://dlna_dms:4321/object/file_1222
 </res>
 </item>
-</DIDL-Lite>""".replace(
-            "\n", ""
-        )
+</DIDL-Lite>""".replace("\n", "")
     )
     assert_xml_equal(defusedxml.ElementTree.fromstring(metadata_xml), expected_xml)
 
@@ -479,18 +431,16 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.res[0].uri == media_url
     assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:*"
 
-    metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(media_url + ".mp3", media_title)
-    )[0]
+    metadata = didl_lite.from_xml_string(await profile.construct_play_media_metadata(media_url + ".mp3", media_title))[
+        0
+    ]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.audioItem"
     assert metadata.res[0].uri == media_url + ".mp3"
     assert metadata.res[0].protocol_info == "http-get:*:audio/mpeg:*"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            media_url, media_title, default_mime_type="video/test-mime"
-        )
+        await profile.construct_play_media_metadata(media_url, media_title, default_mime_type="video/test-mime")
     )[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
@@ -498,9 +448,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.res[0].protocol_info == "http-get:*:video/test-mime:*"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            media_url, media_title, default_upnp_class="object.item.imageItem"
-        )
+        await profile.construct_play_media_metadata(media_url, media_title, default_upnp_class="object.item.imageItem")
     )[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
@@ -508,9 +456,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:*"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            media_url, media_title, override_mime_type="video/test-mime"
-        )
+        await profile.construct_play_media_metadata(media_url, media_title, override_mime_type="video/test-mime")
     )[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
@@ -537,10 +483,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:application/octet-stream:DLNA_OVERRIDE_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:application/octet-stream:DLNA_OVERRIDE_FEATURES"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
@@ -553,10 +496,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/test-mime:DLNA_OVERRIDE_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/test-mime:DLNA_OVERRIDE_FEATURES"
 
     # Media server supplies media information for HEAD requests
     requester.response_map[("HEAD", media_url)] = HttpResponse(
@@ -576,66 +516,43 @@ http://dlna_dms:4321/object/file_1222
         "",
     )
 
-    metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(media_url, media_title)
-    )[0]
+    metadata = didl_lite.from_xml_string(await profile.construct_play_media_metadata(media_url, media_title))[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
 
-    metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(media_url + ".mp3", media_title)
-    )[0]
+    metadata = didl_lite.from_xml_string(await profile.construct_play_media_metadata(media_url + ".mp3", media_title))[
+        0
+    ]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
     assert metadata.res[0].uri == media_url + ".mp3"
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            media_url, media_title, default_mime_type="video/test-mime"
-        )
+        await profile.construct_play_media_metadata(media_url, media_title, default_mime_type="video/test-mime")
     )[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            media_url, media_title, default_upnp_class="object.item.imageItem"
-        )
+        await profile.construct_play_media_metadata(media_url, media_title, default_upnp_class="object.item.imageItem")
     )[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
 
     metadata = didl_lite.from_xml_string(
-        await profile.construct_play_media_metadata(
-            media_url, media_title, override_mime_type="image/test-mime"
-        )
+        await profile.construct_play_media_metadata(media_url, media_title, override_mime_type="image/test-mime")
     )[0]
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:image/test-mime:DLNA_SERVER_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:image/test-mime:DLNA_SERVER_FEATURES"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
@@ -645,10 +562,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/server-mime:DLNA_SERVER_FEATURES"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
@@ -660,10 +574,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.videoItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:video/server-mime:DLNA_OVERRIDE_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:video/server-mime:DLNA_OVERRIDE_FEATURES"
 
     metadata = didl_lite.from_xml_string(
         await profile.construct_play_media_metadata(
@@ -676,10 +587,7 @@ http://dlna_dms:4321/object/file_1222
     assert metadata.title == media_title
     assert metadata.upnp_class == "object.item.imageItem"
     assert metadata.res[0].uri == media_url
-    assert (
-        metadata.res[0].protocol_info
-        == "http-get:*:image/test-mime:DLNA_OVERRIDE_FEATURES"
-    )
+    assert metadata.res[0].protocol_info == "http-get:*:image/test-mime:DLNA_OVERRIDE_FEATURES"
 
 
 @pytest.mark.asyncio

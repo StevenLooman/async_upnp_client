@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UPnP Server."""
 
 # pylint: disable=too-many-lines
@@ -82,9 +81,7 @@ NAMESPACES = {
 HEADER_SERVER = f"async-upnp-client/{version} UPnP/2.0 Server/1.0"
 HEADER_CACHE_CONTROL = "max-age=1800"
 SSDP_SEARCH_RESPONDER_OPTIONS = "ssdp_search_responder_options"
-SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE = (
-    "ssdp_search_responder_always_rootdevice"
-)
+SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE = "ssdp_search_responder_always_rootdevice"
 SSDP_SEARCH_RESPONDER_OPTION_HEADERS = "search_headers"
 SSDP_ADVERTISEMENT_ANNOUNCER_OPTIONS = "ssdp_advertisement_announcer_options"
 SSDP_ADVERTISEMENT_ANNOUNCER_OPTION_HEADERS = "advertisement_headers"
@@ -153,9 +150,7 @@ class EventSubscriber:
 class UpnpEventableStateVariable(UpnpStateVariable):
     """Representation of an eventable State Variable."""
 
-    def __init__(
-        self, state_variable_info: StateVariableInfo, schema: vol.Schema
-    ) -> None:
+    def __init__(self, state_variable_info: StateVariableInfo, schema: vol.Schema) -> None:
         """Initialize."""
         super().__init__(state_variable_info, schema)
         self._last_sent = datetime.fromtimestamp(0, timezone.utc)
@@ -170,9 +165,7 @@ class UpnpEventableStateVariable(UpnpStateVariable):
     @property
     def max_rate(self) -> float:
         """Return max event rate."""
-        type_info = cast(
-            EventableStateVariableTypeInfo, self._state_variable_info.type_info
-        )
+        type_info = cast(EventableStateVariableTypeInfo, self._state_variable_info.type_info)
         return type_info.max_rate or 0.0
 
     @property
@@ -194,9 +187,7 @@ class UpnpEventableStateVariable(UpnpStateVariable):
             asyncio.create_task(self.trigger_event())
         else:
             loop = asyncio.get_running_loop()
-            self._defered_event = loop.call_at(
-                next_update.timestamp(), self.trigger_event
-            )
+            self._defered_event = loop.call_at(next_update.timestamp(), self.trigger_event)
 
     async def trigger_event(self) -> None:
         """Update any waiting subscribers."""
@@ -235,9 +226,7 @@ class UpnpServerService(UpnpService):
         for name, type_info in self.STATE_VARIABLE_DEFINITIONS.items():
             self.create_state_var(name, type_info)
 
-    def create_state_var(
-        self, name: str, type_info: StateVariableTypeInfo
-    ) -> UpnpStateVariable:
+    def create_state_var(self, name: str, type_info: StateVariableTypeInfo) -> UpnpStateVariable:
         """Create UpnpStateVariable."""
         existing = self.state_variables.get(name, None)
         if existing is not None:
@@ -361,15 +350,11 @@ class UpnpServerService(UpnpService):
                 return subscriber
         return None
 
-    async def async_send_events(
-        self, subscriber: EventSubscriber | None = None
-    ) -> None:
+    async def async_send_events(self, subscriber: EventSubscriber | None = None) -> None:
         """Send event updates to any subscribers."""
         if not subscriber:
             now = datetime.now()
-            self._subscribers = [
-                _sub for _sub in self._subscribers if now < _sub.expiration
-            ]
+            self._subscribers = [_sub for _sub in self._subscribers if now < _sub.expiration]
             subscribers = self._subscribers
             if not self._subscribers:
                 return
@@ -394,11 +379,7 @@ class UpnpServerService(UpnpService):
             hdr = headers.copy()
             hdr["SID"] = sub.uuid
             hdr["SEQ"] = str(sub.get_next_seq())
-            tasks.append(
-                self.requester.async_http_request(
-                    HttpRequest("NOTIFY", sub.url, headers=hdr, body=message)
-                )
-            )
+            tasks.append(self.requester.async_http_request(HttpRequest("NOTIFY", sub.url, headers=hdr, body=message)))
         await asyncio.gather(*tasks)
 
 
@@ -479,18 +460,13 @@ class SsdpSearchResponder:
         # pylint: disable=too-many-branches
         assert self._transport
 
-        if (
-            request_line != "M-SEARCH * HTTP/1.1"
-            or headers.get_lower("man") != SSDP_DISCOVER
-        ):
+        if request_line != "M-SEARCH * HTTP/1.1" or headers.get_lower("man") != SSDP_DISCOVER:
             return
 
         remote_addr = cast(AddressTupleVXType, headers.get_lower("_remote_addr"))
         debug = _LOGGER.isEnabledFor(logging.DEBUG)
         if debug:  # pragma: no branch
-            _LOGGER.debug(
-                "Received M-SEARCH from: %s, headers: %s", remote_addr, headers
-            )
+            _LOGGER.debug("Received M-SEARCH from: %s, headers: %s", remote_addr, headers)
 
         mx_header = headers.get_lower("mx")
         delay = 0
@@ -541,31 +517,17 @@ class SsdpSearchResponder:
             all_devices = self.device.all_devices
             all_services = self.device.all_services
             responses.append(self._build_response_rootdevice())
-            responses.extend(
-                self._build_responses_device_udn(device) for device in all_devices
-            )
-            responses.extend(
-                self._build_responses_device_type(device) for device in all_devices
-            )
-            responses.extend(
-                self._build_responses_service(service) for service in all_services
-            )
+            responses.extend(self._build_responses_device_udn(device) for device in all_devices)
+            responses.extend(self._build_responses_device_type(device) for device in all_devices)
+            responses.extend(self._build_responses_service(service) for service in all_services)
         elif search_target == SSDP_ST_ROOTDEVICE:
             responses.append(self._build_response_rootdevice())
         elif matched_devices := self.device.get_devices_matching_udn(search_target):
-            responses.extend(
-                self._build_responses_device_udn(device) for device in matched_devices
-            )
+            responses.extend(self._build_responses_device_udn(device) for device in matched_devices)
         elif matched_devices := self._matched_devices_by_type(search_target):
-            responses.extend(
-                self._build_responses_device_type(device, search_target)
-                for device in matched_devices
-            )
+            responses.extend(self._build_responses_device_type(device, search_target) for device in matched_devices)
         elif matched_services := self._matched_services_by_type(search_target):
-            responses.extend(
-                self._build_responses_service(service, search_target)
-                for service in matched_services
-            )
+            responses.extend(self._build_responses_service(service, search_target) for service in matched_services)
 
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
             responses.append(self._build_response_rootdevice())
@@ -645,26 +607,20 @@ class SsdpSearchResponder:
 
     def _build_response_rootdevice(self) -> bytes:
         """Send root device response."""
-        return self._build_response(
-            "upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice"
-        )
+        return self._build_response("upnp:rootdevice", f"{self.device.udn}::upnp:rootdevice")
 
     def _build_responses_device_udn(self, device: UpnpDevice) -> bytes:
         """Send device responses for UDN."""
         return self._build_response(device.udn, f"{self.device.udn}")
 
-    def _build_responses_device_type(
-        self, device: UpnpDevice, device_type: str | None = None
-    ) -> bytes:
+    def _build_responses_device_type(self, device: UpnpDevice, device_type: str | None = None) -> bytes:
         """Send device responses for device type."""
         return self._build_response(
             device_type or device.device_type,
             f"{self.device.udn}::{device.device_type}",
         )
 
-    def _build_responses_service(
-        self, service: UpnpService, service_type: str | None = None
-    ) -> bytes:
+    def _build_responses_service(self, service: UpnpService, service_type: str | None = None) -> bytes:
         """Send service responses."""
         return self._build_response(
             service_type or service.service_type,
@@ -692,24 +648,18 @@ class SsdpSearchResponder:
             },
         )
 
-    def _send_responses(
-        self, remote_addr: AddressTupleVXType, responses: list[bytes]
-    ) -> None:
+    def _send_responses(self, remote_addr: AddressTupleVXType, responses: list[bytes]) -> None:
         """Send responses."""
         assert self._response_transport
         if _LOGGER.isEnabledFor(logging.DEBUG):  # pragma: no branch
-            sock: socket.socket | None = self._response_transport.get_extra_info(
-                "socket"
-            )
+            sock: socket.socket | None = self._response_transport.get_extra_info("socket")
             _LOGGER.debug(
                 "Sending SSDP packet, transport: %s, socket: %s, target: %s",
                 self._response_transport,
                 sock,
                 remote_addr,
             )
-        _LOGGER_TRAFFIC_SSDP.debug(
-            "Sending SSDP packets, target: %s, data: %s", remote_addr, responses
-        )
+        _LOGGER_TRAFFIC_SSDP.debug("Sending SSDP packets, target: %s, data: %s", remote_addr, responses)
         for response in responses:
             try:
                 protocol = cast(SsdpProtocol, self._response_transport.get_protocol())
@@ -735,11 +685,7 @@ def _build_advertisements(
     #              USN: uuid:device-UUID::urn:schemas-upnp-org:service:serviceType:ver
     advertisements: list[CaseInsensitiveDict] = []
 
-    host = (
-        f"[{target[0]}]:{target[1]}"
-        if is_ipv6_address(target)
-        else f"{target[0]}:{target[1]}"
-    )
+    host = f"[{target[0]}]:{target[1]}" if is_ipv6_address(target) else f"{target[0]}:{target[1]}"
     base_headers = {
         "NTS": nts.value,
         "HOST": host,
@@ -863,10 +809,7 @@ class SsdpAdvertisementAnnouncer:
     async def async_wait_for_transport_protocol(self) -> None:
         """Wait for the protocol to become available."""
         for _ in range(0, 5):
-            if (
-                self._transport is not None
-                and self._transport.get_protocol() is not None
-            ):
+            if self._transport is not None and self._transport.get_protocol() is not None:
                 break
 
             await asyncio.sleep(0.1)
@@ -902,9 +845,7 @@ class SsdpAdvertisementAnnouncer:
         assert self._transport
 
         start_line = "NOTIFY * HTTP/1.1"
-        advertisements = _build_advertisements(
-            self.target, self.device, NotificationSubType.SSDP_BYEBYE
-        )
+        advertisements = _build_advertisements(self.target, self.device, NotificationSubType.SSDP_BYEBYE)
         for headers in advertisements:
             packet = build_ssdp_packet(start_line, headers)
             protocol = cast(SsdpProtocol, self._transport.get_protocol())
@@ -1030,17 +971,13 @@ class UpnpXmlSerializer:
         arg_el = ET.Element("argument")
         ET.SubElement(arg_el, "name").text = argument.name
         ET.SubElement(arg_el, "direction").text = argument.direction
-        ET.SubElement(arg_el, "relatedStateVariable").text = (
-            argument.related_state_variable.name
-        )
+        ET.SubElement(arg_el, "relatedStateVariable").text = argument.related_state_variable.name
         return arg_el
 
     @classmethod
     def _state_variable_to_xml(cls, state_variable: UpnpStateVariable) -> ET.Element:
         """Convert state variable to service description XML."""
-        state_var_el = ET.Element(
-            "stateVariable", sendEvents="yes" if state_variable.send_events else "no"
-        )
+        state_var_el = ET.Element("stateVariable", sendEvents="yes" if state_variable.send_events else "no")
         ET.SubElement(state_var_el, "name").text = state_variable.name
         ET.SubElement(state_var_el, "dataType").text = state_variable.data_type
 
@@ -1051,24 +988,16 @@ class UpnpXmlSerializer:
 
         if None not in (state_variable.min_value, state_variable.max_value):
             value_range_el = ET.SubElement(state_var_el, "allowedValueRange")
-            ET.SubElement(value_range_el, "minimum").text = str(
-                state_variable.min_value
-            )
-            ET.SubElement(value_range_el, "maximum").text = str(
-                state_variable.max_value
-            )
+            ET.SubElement(value_range_el, "minimum").text = str(state_variable.min_value)
+            ET.SubElement(value_range_el, "maximum").text = str(state_variable.max_value)
 
         if state_variable.default_value is not None:
-            ET.SubElement(state_var_el, "defaultValue").text = str(
-                state_variable.default_value
-            )
+            ET.SubElement(state_var_el, "defaultValue").text = str(state_variable.default_value)
 
         return state_var_el
 
 
-def callable_action(
-    name: str, in_args: Mapping[str, str], out_args: Mapping[str, str]
-) -> Callable:
+def callable_action(name: str, in_args: Mapping[str, str], out_args: Mapping[str, str]) -> Callable:
     """Declare method as a callable UpnpAction."""
 
     def decorator(func: Callable) -> Callable:
@@ -1083,9 +1012,7 @@ def callable_action(
     return decorator
 
 
-async def _parse_action_body(
-    service: UpnpServerService, request: Request
-) -> tuple[str, dict[str, Any]]:
+async def _parse_action_body(service: UpnpServerService, request: Request) -> tuple[str, dict[str, Any]]:
     """Parse action body."""
     # Parse call.
     soap_action = request.headers.get("SOAPAction", "").strip('"')
@@ -1114,9 +1041,7 @@ async def _parse_action_body(
     return action_name, kwargs
 
 
-def _create_action_response(
-    service: UpnpServerService, action_name: str, result: dict[str, Any]
-) -> Response:
+def _create_action_response(service: UpnpServerService, action_name: str, result: dict[str, Any]) -> Response:
     """Create action call response."""
     envelope_el = ET.Element(
         "s:Envelope",
@@ -1127,13 +1052,8 @@ def _create_action_response(
     )
     body_el = ET.SubElement(envelope_el, "s:Body")
 
-    response_el = ET.SubElement(
-        body_el, f"st:{action_name}Response", attrib={"xmlns:st": service.service_type}
-    )
-    out_state_vars = {
-        var.name: var.related_state_variable
-        for var in service.actions[action_name].out_arguments()
-    }
+    response_el = ET.SubElement(body_el, f"st:{action_name}Response", attrib={"xmlns:st": service.service_type})
+    out_state_vars = {var.name: var.related_state_variable for var in service.actions[action_name].out_arguments()}
     for key, value in result.items():
         if isinstance(value, UpnpStateVariable):
             ET.SubElement(response_el, key).text = value.upnp_value
@@ -1164,13 +1084,13 @@ def _create_error_action_response(
     ET.SubElement(fault_el, "faultcode").text = "s:Client"
     ET.SubElement(fault_el, "faultstring").text = "UPnPError"
     detail_el = ET.SubElement(fault_el, "detail")
-    error_el = ET.SubElement(
-        detail_el, "UPnPError", xmlns="urn:schemas-upnp-org:control-1-0"
-    )
+    error_el = ET.SubElement(detail_el, "UPnPError", xmlns="urn:schemas-upnp-org:control-1-0")
     error_code = (
         exception.error_code or UpnpActionErrorCode.ACTION_FAILED.value
         if isinstance(exception, UpnpActionError)
-        else 402 if isinstance(exception, UpnpValueError) else 501
+        else 402
+        if isinstance(exception, UpnpValueError)
+        else 501
     )
     ET.SubElement(error_el, "errorCode").text = str(error_code)
     ET.SubElement(error_el, "errorDescription").text = "Action Failed"
@@ -1252,9 +1172,7 @@ async def unsubscribe_handler(service: UpnpServerService, request: Request) -> R
     return Response(status=412)
 
 
-async def to_xml(
-    thing: UpnpServerDevice | UpnpServerService, _request: Request
-) -> Response:
+async def to_xml(thing: UpnpServerDevice | UpnpServerService, _request: Request) -> Response:
     """Construct device/service description."""
     serializer = UpnpXmlSerializer()
     thing_el = serializer.to_xml(thing)
@@ -1345,13 +1263,9 @@ class UpnpServer:
         requester = AiohttpRequester()
         is_ipv6 = ":" in self.source[0]
         self.base_uri = (
-            f"http://[{self.source[0]}]:{self.http_port}"
-            if is_ipv6
-            else f"http://{self.source[0]}:{self.http_port}"
+            f"http://[{self.source[0]}]:{self.http_port}" if is_ipv6 else f"http://{self.source[0]}:{self.http_port}"
         )
-        self._device = self.server_device(
-            requester, self.base_uri, self.boot_id, self.config_id
-        )
+        self._device = self.server_device(requester, self.base_uri, self.boot_id, self.config_id)
 
     async def _async_start_http_server(self) -> None:
         """Start http server."""
@@ -1363,12 +1277,8 @@ class UpnpServer:
 
         for service in self._device.all_services:
             service = cast(UpnpServerService, service)
-            app.router.add_get(
-                service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service)
-            )
-            app.router.add_post(
-                service.SERVICE_DEFINITION.control_url, partial(action_handler, service)
-            )
+            app.router.add_get(service.SERVICE_DEFINITION.scpd_url, partial(to_xml, service))
+            app.router.add_post(service.SERVICE_DEFINITION.control_url, partial(action_handler, service))
             app.router.add_route(
                 "SUBSCRIBE",
                 service.SERVICE_DEFINITION.event_sub_url,
@@ -1394,15 +1304,11 @@ class UpnpServer:
         await self._site.start()
 
         assert self._device
-        _LOGGER.debug(
-            "Device listening at %s%s", self._site.name, self._device.device_url
-        )
+        _LOGGER.debug("Device listening at %s%s", self._site.name, self._device.device_url)
 
     async def _async_start_ssdp(self) -> None:
         """Start SSDP handling."""
-        _LOGGER.debug(
-            "Starting SSDP handling, source: %s, target: %s", self.source, self.target
-        )
+        _LOGGER.debug("Starting SSDP handling, source: %s, target: %s", self.source, self.target)
         assert self._device
         self._search_responder = SsdpSearchResponder(
             self._device,

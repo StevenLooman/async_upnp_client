@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.exceptions module."""
 
 import asyncio
@@ -127,10 +126,7 @@ class UpnpActionResponseError(UpnpActionError, UpnpResponseError):
     ) -> None:
         """Initialize."""
         if not message:
-            message = (
-                f"Received HTTP error code {status}, UPnP error code"
-                f" {error_code} ({error_desc})"
-            )
+            message = f"Received HTTP error code {status}, UPnP error code {error_code} ({error_desc})"
         super().__init__(
             *args,
             status=status,
@@ -153,9 +149,7 @@ class UpnpConnectionError(UpnpCommunicationError, aiohttp.ClientConnectionError)
     """
 
 
-class UpnpConnectionTimeoutError(
-    UpnpConnectionError, aiohttp.ServerTimeoutError, asyncio.TimeoutError
-):
+class UpnpConnectionTimeoutError(UpnpConnectionError, aiohttp.ServerTimeoutError, asyncio.TimeoutError):
     """Timeout while communicating with the device."""
 
 

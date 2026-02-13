@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.const module."""
 
 from dataclasses import dataclass
@@ -13,9 +12,7 @@ from async_upnp_client.utils import parse_date_time, require_tzinfo
 IPvXAddress = IPv4Address | IPv6Address  # pylint: disable=invalid-name
 AddressTupleV4Type = tuple[str, int]
 AddressTupleV6Type = tuple[str, int, int, int]
-AddressTupleVXType = (
-    AddressTupleV4Type | AddressTupleV6Type
-)  # pylint: disable=invalid-name
+AddressTupleVXType = AddressTupleV4Type | AddressTupleV6Type  # pylint: disable=invalid-name
 
 NS = {
     "soap_envelope": "http://schemas.xmlsoap.org/soap/envelope/",

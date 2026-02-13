@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Dummy mediaseerver."""
 # Instructions:
 # - Change `SOURCE``. When using IPv6, be sure to set the scope_id, the last value in the tuple.

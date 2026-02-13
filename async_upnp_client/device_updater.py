@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.device_updater module."""
 
 import logging
@@ -104,9 +103,7 @@ class DeviceUpdater:
         # Handle LOCATION.
         location = headers.get("LOCATION")
         if location and self._device.device_url != location:
-            _LOGGER.debug(
-                "New location: %s, old location: %s", location, self._device.device_url
-            )
+            _LOGGER.debug("New location: %s, old location: %s", location, self._device.device_url)
             do_reinit = True
 
         if location and do_reinit:
@@ -115,9 +112,7 @@ class DeviceUpdater:
         # We heard from it, so mark it available.
         self._device.available = True
 
-    async def _reinit_device(
-        self, location: str, ssdp_headers: CaseInsensitiveDict
-    ) -> None:
+    async def _reinit_device(self, location: str, ssdp_headers: CaseInsensitiveDict) -> None:
         """Reinitialize device."""
         # pylint: disable=protected-access
         _LOGGER.debug("Reinitializing device, location: %s", location)

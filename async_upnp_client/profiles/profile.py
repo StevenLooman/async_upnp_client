@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.profiles.profile module."""
 
 import asyncio
@@ -99,17 +98,13 @@ class UpnpProfileDevice:
             return False
 
         # Check that every service required by the subclass is declared by the device
-        device_service_ids = {
-            service.service_id for service in profile_device.all_services
-        }
+        device_service_ids = {service.service_id for service in profile_device.all_services}
         if not cls.SERVICE_IDS.issubset(device_service_ids):
             return False
 
         return True
 
-    def __init__(
-        self, device: UpnpDevice, event_handler: UpnpEventHandler | None
-    ) -> None:
+    def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler | None) -> None:
         """Initialize."""
         self.device = device
         self.profile_device = find_device_of_type(device, self.DEVICE_TYPES)
@@ -198,9 +193,7 @@ class UpnpProfileDevice:
 
         return None
 
-    def _state_variable(
-        self, service_name: str, state_variable_name: str
-    ) -> UpnpStateVariable | None:
+    def _state_variable(self, service_name: str, state_variable_name: str) -> UpnpStateVariable | None:
         """Get state_variable from service."""
         service = self._service(service_name)
         if not service:
@@ -231,9 +224,7 @@ class UpnpProfileDevice:
 
         return False
 
-    async def _async_resubscribe_services(
-        self, now: float | None = None, notify_errors: bool = False
-    ) -> None:
+    async def _async_resubscribe_services(self, now: float | None = None, notify_errors: bool = False) -> None:
         """Renew existing subscriptions.
 
         :param now: time.monotonic reference for current time
@@ -262,9 +253,7 @@ class UpnpProfileDevice:
                 continue
 
             try:
-                new_sid, timeout = await self._event_handler.async_resubscribe(
-                    sid, timeout=SUBSCRIBE_TIMEOUT
-                )
+                new_sid, timeout = await self._event_handler.async_resubscribe(sid, timeout=SUBSCRIBE_TIMEOUT)
             except UpnpError as err:
                 if isinstance(err, UpnpConnectionError):
                     # Device has gone offline
@@ -315,9 +304,7 @@ class UpnpProfileDevice:
                 pass
             self._resubscriber_task = None
 
-    async def async_subscribe_services(
-        self, auto_resubscribe: bool = False
-    ) -> timedelta | None:
+    async def async_subscribe_services(self, auto_resubscribe: bool = False) -> timedelta | None:
         """(Re-)Subscribe to services.
 
         :param auto_resubscribe: Automatically resubscribe to subscriptions
@@ -350,9 +337,7 @@ class UpnpProfileDevice:
 
                     _LOGGER.debug("Subscribing to service: %s", service)
                     service.on_event = self._on_event
-                    new_sid, timeout = await self._event_handler.async_subscribe(
-                        service, timeout=SUBSCRIBE_TIMEOUT
-                    )
+                    new_sid, timeout = await self._event_handler.async_subscribe(service, timeout=SUBSCRIBE_TIMEOUT)
                     self._subscriptions[new_sid] = now + timeout.total_seconds()
         except UpnpError as err:
             if isinstance(err, UpnpResponseError) and not self._subscriptions:
@@ -374,9 +359,7 @@ class UpnpProfileDevice:
             return None
 
         lowest_timeout_delta = min(self._subscriptions.values()) - now
-        resubcription_timeout = (
-            timedelta(seconds=lowest_timeout_delta) - RESUBSCRIBE_TOLERANCE
-        )
+        resubcription_timeout = timedelta(seconds=lowest_timeout_delta) - RESUBSCRIBE_TOLERANCE
         return max(resubcription_timeout, timedelta(seconds=0))
 
     async def _async_unsubscribe_service(self, sid: str) -> None:
@@ -389,8 +372,7 @@ class UpnpProfileDevice:
             _LOGGER.debug("Failed unsubscribing from: %s, reason: %r", sid, err)
         except KeyError:
             _LOGGER.warning(
-                "%s was already unsubscribed. AiohttpNotifyServer was "
-                "probably stopped before we could unsubscribe.",
+                "%s was already unsubscribed. AiohttpNotifyServer was probably stopped before we could unsubscribe.",
                 sid,
             )
 
@@ -465,9 +447,7 @@ class UpnpProfileDevice:
         if changed_state_variables:
             self._on_event(service, changed_state_variables)
 
-    def _on_event(
-        self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]
-    ) -> None:
+    def _on_event(self, service: UpnpService, state_variables: Sequence[UpnpStateVariable]) -> None:
         """
         State variable(s) changed. Override to handle events.
 

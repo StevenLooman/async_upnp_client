@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.utils module."""
 
 import asyncio
@@ -24,32 +23,20 @@ _UNCOMPILED_MATCHERS: dict[str, Callable] = {
     r"\d{4}-\d{2}-\d{2}$": lambda value: datetime.strptime(value, "%Y-%m-%d").date(),
     r"\d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(value, "%H:%M:%S").time(),
     # datetime
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(
-        value, "%Y-%m-%dT%H:%M:%S"
-    ),
-    r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(
-        value, "%Y-%m-%d %H:%M:%S"
-    ),
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S"),
+    r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$": lambda value: datetime.strptime(value, "%Y-%m-%d %H:%M:%S"),
     # time.tz
-    r"\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda value: datetime.strptime(
-        value, "%H:%M:%S%z"
-    ).timetz(),
-    r"\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda value: datetime.strptime(
-        value, "%H:%M:%S %z"
-    ).timetz(),
+    r"\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda value: datetime.strptime(value, "%H:%M:%S%z").timetz(),
+    r"\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda value: datetime.strptime(value, "%H:%M:%S %z").timetz(),
     # datetime.tz
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$": lambda value: datetime.strptime(
-        value, "%Y-%m-%dT%H:%M:%Sz"
-    ).replace(tzinfo=UTC),
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$": lambda value: datetime.strptime(
-        value, "%Y-%m-%dT%H:%M:%Sz"
-    ).replace(tzinfo=UTC),
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda value: datetime.strptime(
-        value, "%Y-%m-%dT%H:%M:%S%z"
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}z$": lambda value: datetime.strptime(value, "%Y-%m-%dT%H:%M:%Sz").replace(
+        tzinfo=UTC
     ),
-    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda value: datetime.strptime(
-        value, "%Y-%m-%dT%H:%M:%S %z"
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$": lambda value: datetime.strptime(value, "%Y-%m-%dT%H:%M:%Sz").replace(
+        tzinfo=UTC
     ),
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$": lambda value: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S%z"),
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2} [+-]\d{4}$": lambda value: datetime.strptime(value, "%Y-%m-%dT%H:%M:%S %z"),
 }
 
 COMPILED_MATCHERS: dict[re.Pattern, Callable] = {
@@ -103,9 +90,7 @@ class CaseInsensitiveDict(abcMutableMapping):
         _combined._case_map = {**self._case_map, **other._case_map}
         return _combined
 
-    def combine_lower_dict(
-        self, lower_dict: dict[lowerstr, Any]
-    ) -> "CaseInsensitiveDict":
+    def combine_lower_dict(self, lower_dict: dict[lowerstr, Any]) -> "CaseInsensitiveDict":
         """Combine a CaseInsensitiveDict with a dict where all the keys are lowerstr.
 
         Returns a brand new CaseInsensitiveDict that is the combination
@@ -202,9 +187,7 @@ class CaseInsensitiveDict(abcMutableMapping):
             return self.as_lower_dict() == other.as_lower_dict()
 
         if isinstance(other, abcMapping):
-            return self.as_lower_dict() == {
-                key.lower(): value for key, value in other.items()
-            }
+            return self.as_lower_dict() == {key.lower(): value for key, value in other.items()}
 
         return NotImplemented
 
@@ -239,9 +222,7 @@ def str_to_time(string: str) -> timedelta | None:
         msec = int(match.group("ms"))
     else:
         msec = 0
-    return sign * timedelta(
-        hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec
-    )
+    return sign * timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=msec)
 
 
 def absolute_url(device_url: str, url: str) -> str:
@@ -320,16 +301,12 @@ async def async_get_local_ip(
 
     # Create a UDP connection to the target. This won't cause any network
     # traffic but will assign a local IP to the socket.
-    transport, _ = await loop.create_datagram_endpoint(
-        asyncio.protocols.DatagramProtocol, remote_addr=target_addr
-    )
+    transport, _ = await loop.create_datagram_endpoint(asyncio.protocols.DatagramProtocol, remote_addr=target_addr)
 
     try:
         sock = transport.get_extra_info("socket")
         sockname = sock.getsockname()
-        host, _ = socket.getnameinfo(
-            sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV
-        )
+        host, _ = socket.getnameinfo(sockname, socket.NI_NUMERICHOST | socket.NI_NUMERICSERV)
         return sock.family, host
     finally:
         transport.close()
@@ -343,18 +320,14 @@ def etree_to_dict(tree: DET) -> dict[str, dict[str, Any] | None]:
     # strip namespace
     tag_name = tree.tag[tree.tag.find("}") + 1 :]
 
-    tree_dict: dict[str, dict[str, Any] | None] = {
-        tag_name: {} if tree.attrib else None
-    }
+    tree_dict: dict[str, dict[str, Any] | None] = {tag_name: {} if tree.attrib else None}
     children = list(tree)
     if children:
         child_dict: dict[str, list] = defaultdict(list)
         for child in map(etree_to_dict, children):
             for k, val in child.items():
                 child_dict[k].append(val)
-        tree_dict = {
-            tag_name: {k: v[0] if len(v) == 1 else v for k, v in child_dict.items()}
-        }
+        tree_dict = {tag_name: {k: v[0] if len(v) == 1 else v for k, v in child_dict.items()}}
     dict_meta = tree_dict[tag_name]
     if tree.attrib:
         assert dict_meta is not None
