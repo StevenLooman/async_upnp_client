@@ -63,7 +63,11 @@ min-similarity-lines = 8
 [tool.deptry]
 known_first_party = ["async_upnp_client"]
 
+[tool.deptry.package_module_name_map]
+python-didl-lite = ["didl_lite"]
+
 [tool.deptry.per_rule_ignores]
+DEP001 = ["multidict"]
 DEP003 = ["multidict"]
 
 [tool.setuptools.dynamic]
