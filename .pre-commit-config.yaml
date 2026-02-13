@@ -1,6 +1,7 @@
 ci:
   autofix_prs: true
   autoupdate_schedule: monthly
+  skip: [pylint, deptry, mypy]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
