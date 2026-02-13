@@ -1,6 +1,11 @@
+ci:
+  autofix_prs: true
+  autoupdate_schedule: weekly
+  skip: [pylint, deptry, mypy]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: 'v4.6.0'
+    rev: 'v6.0.0'
     hooks:
     - id: check-ast
     - id: check-case-conflict
@@ -11,16 +16,16 @@ repos:
     - id: mixed-line-ending
     - id: trailing-whitespace
       exclude: setup.cfg
-  - repo: https://github.com/psf/black
-    rev: '24.8.0'
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: 'v0.15.1'
     hooks:
-      - id: black
-        args:
-          - --safe
-          - --quiet
+      - id: ruff
+        args: [--fix]
+        files: ^(async_upnp_client|tests)/.+\.py$
+      - id: ruff-format
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/codespell-project/codespell
-    rev: 'v2.3.0'
+    rev: 'v2.4.1'
     hooks:
       - id: codespell
         args:
@@ -28,43 +33,38 @@ repos:
           - --quiet-level=2
         exclude_types: [csv, json]
         files: ^(async_upnp_client|tests)/.+\.py$
-  - repo: https://github.com/PyCQA/flake8
-    rev: '7.1.1'
-    hooks:
-      - id: flake8
-        additional_dependencies:
-          - flake8-docstrings~=1.7.0
-          - pydocstyle~=6.3.0
-        files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/PyCQA/pylint
-    rev: 'v3.3.1'
+    rev: 'v4.0.4'
     hooks:
       - id: pylint
         additional_dependencies:
-          - pytest~=8.3.3
-          - voluptuous~=0.15.2
+          - pytest~=9.0.2
+          - voluptuous~=0.16.0
           - aiohttp>3.9.0,<4.0
-          - python-didl-lite~=1.4.0
-          - defusedxml~=0.6.0
-          - pytest-asyncio >= 0.24,< 0.27
+          - python-didl-lite~=1.5.0
+          - defusedxml~=0.7.1
+          - pytest-asyncio >= 1.0,< 1.4
           - pytest-aiohttp >=1.0.5,<1.2.0
         files: ^(async_upnp_client|tests)/.+\.py$
-  - repo: https://github.com/PyCQA/isort
-    rev: '5.13.2'
+  - repo: https://github.com/fpgmaas/deptry
+    rev: '0.24.0'
     hooks:
-      - id: isort
-        args:
-          - --profile=black
-        files: ^(async_upnp_client|tests)/.+\.py$
+      - id: deptry
+        additional_dependencies:
+          - aiohttp>3.9.0,<4.0
+          - defusedxml>=0.6.0
+          - python-didl-lite~=1.5.0
+          - voluptuous>=0.15.2
+        files: ^async_upnp_client/.+\.py$
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.11.2'
+    rev: 'v1.19.1'
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
         additional_dependencies:
-          - python-didl-lite~=1.4.0
-          - pytest~=8.3.3
-          - aiohttp~=3.12.14
-          - pytest-asyncio >= 0.24,< 0.27
+          - python-didl-lite~=1.5.0
+          - pytest~=9.0.2
+          - aiohttp~=3.13.3
+          - pytest-asyncio >= 1.0,< 1.4
           - pytest-aiohttp >=1.0.5,<1.2.0
         files: ^(async_upnp_client|tests)/.+\.py$
