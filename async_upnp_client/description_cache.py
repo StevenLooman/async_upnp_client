@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.description_cache module."""
 
 import asyncio
@@ -55,9 +54,7 @@ class DescriptionCache:
 
         return None
 
-    def peek_description_dict(
-        self, location: str | None
-    ) -> tuple[bool, DescriptionType]:
+    def peek_description_dict(self, location: str | None) -> tuple[bool, DescriptionType]:
         """Peek a description as dict, only try the cache."""
         if location is None:
             return True, None
@@ -87,9 +84,7 @@ class DescriptionCache:
                 self._cache_dict[location] = None
             else:
                 if description_xml:
-                    self._cache_dict[location] = _description_xml_to_dict(
-                        description_xml
-                    )
+                    self._cache_dict[location] = _description_xml_to_dict(description_xml)
                 else:
                     self._cache_dict[location] = None
             evt.set()
@@ -108,9 +103,7 @@ class DescriptionCache:
                 request = HttpRequest("GET", location, {}, None)
                 response = await self._requester.async_http_request(request)
                 if response.status_code != 200:
-                    raise UpnpResponseError(
-                        status=response.status_code, headers=response.headers
-                    )
+                    raise UpnpResponseError(status=response.status_code, headers=response.headers)
 
                 return response.body
                 # Samsung Smart TV sometimes returns an empty document the

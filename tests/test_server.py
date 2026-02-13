@@ -69,15 +69,14 @@ class ServerServiceTest(UpnpServerService):
         },
     )
     async def set_values(
-        self, In_Var1_str: str  # pylint: disable=invalid-name
+        self,
+        In_Var1_str: str,  # pylint: disable=invalid-name
     ) -> dict[str, UpnpStateVariable]:
         """Handle action."""
         self.state_variable("TestVariable_str").value = In_Var1_str
         return {
             "TestVariable_str": self.state_variable("TestVariable_str"),
-            "EventableTextVariable_ui4": self.state_variable(
-                "EventableTextVariable_ui4"
-            ),
+            "EventableTextVariable_ui4": self.state_variable("EventableTextVariable_ui4"),
         }
 
     def set_eventable(self, value: int) -> None:
@@ -143,9 +142,7 @@ class Callback:
 
     def __init__(self) -> None:
         """Initialize."""
-        self.callback: (
-            Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]] | None
-        ) = None
+        self.callback: Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]] | None = None
         self.session: TestClient[Request, Application] | None = None
         self.app = aiohttp.web.Application()
         self.app.router.add_route("NOTIFY", "/{tail:.*}", self.handler)
@@ -154,9 +151,7 @@ class Callback:
         """Generate session."""
         self.session = await aiohttp_client(self.app)
 
-    def set_callback(
-        self, callback: Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]]
-    ) -> None:
+    def set_callback(self, callback: Callable[[aiohttp.web.Request], Awaitable[aiohttp.web.Response]]) -> None:
         """Assign callback."""
         self.callback = callback
 
@@ -183,18 +178,14 @@ class UpnpServerTuple(NamedTuple):
 
 
 @pytest_asyncio.fixture
-async def upnp_server(
-    monkeypatch: Any, aiohttp_client: AiohttpClient
-) -> AsyncGenerator[UpnpServerTuple, None]:
+async def upnp_server(monkeypatch: Any, aiohttp_client: AiohttpClient) -> AsyncGenerator[UpnpServerTuple, None]:
     """Fixture to initialize device."""
     # pylint: disable=too-few-public-methods
 
     ssdp_sockets: list[socket.socket] = []
     http_client = None
 
-    def get_ssdp_socket_mock(
-        *_args: Any, **_kwargs: Any
-    ) -> tuple[MockSocket, None, None]:
+    def get_ssdp_socket_mock(*_args: Any, **_kwargs: Any) -> tuple[MockSocket, None, None]:
         sock1, sock2 = socket.socketpair(socket.AF_UNIX, socket.SOCK_DGRAM)
         ssdp_sockets.append(sock2)
         return MockSocket(sock1), None, None
@@ -202,9 +193,7 @@ async def upnp_server(
     class TCPSiteMock:
         """Mock TCP connection."""
 
-        def __init__(
-            self, runner: aiohttp.web.AppRunner, *_args: Any, **_kwargs: Any
-        ) -> None:
+        def __init__(self, runner: aiohttp.web.AppRunner, *_args: Any, **_kwargs: Any) -> None:
             self.app = runner.app
             self.name = "TCPSiteMock"
 
@@ -217,15 +206,9 @@ async def upnp_server(
     callback = Callback()
     monkeypatch.setattr(async_upnp_client.server, "AppRunner", AppRunnerMock)
     monkeypatch.setattr(async_upnp_client.server, "TCPSite", TCPSiteMock)
-    monkeypatch.setattr(
-        async_upnp_client.server, "get_ssdp_socket", get_ssdp_socket_mock
-    )
-    monkeypatch.setattr(
-        async_upnp_client.aiohttp, "ClientSession", callback.ClientSession
-    )
-    server = UpnpServer(
-        ServerDeviceTest, ("127.0.0.1", 0), http_port=80, boot_id=1, config_id=1
-    )
+    monkeypatch.setattr(async_upnp_client.server, "get_ssdp_socket", get_ssdp_socket_mock)
+    monkeypatch.setattr(async_upnp_client.aiohttp, "ClientSession", callback.ClientSession)
+    server = UpnpServer(ServerDeviceTest, ("127.0.0.1", 0), http_port=80, boot_id=1, config_id=1)
     await server.async_start()
 
     assert http_client
@@ -277,10 +260,7 @@ async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
     async def on_callback(request: aiohttp.web.Request) -> aiohttp.web.Response:
         nonlocal expect
         data = await request.read()
-        assert (
-            data
-            == read_file(f"server/subscribe_response_{expect}.xml").strip().encode()
-        )
+        assert data == read_file(f"server/subscribe_response_{expect}.xml").strip().encode()
         expect += 1
         event.set()
         return aiohttp.web.Response(status=200)

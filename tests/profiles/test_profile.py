@@ -79,12 +79,8 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        embedded = await factory.async_create_device(
-            "http://dlna_dmr:1234/device_embedded.xml"
-        )
-        no_services = await factory.async_create_device(
-            "http://dlna_dmr:1234/device_incomplete.xml"
-        )
+        embedded = await factory.async_create_device("http://dlna_dmr:1234/device_embedded.xml")
+        no_services = await factory.async_create_device("http://dlna_dmr:1234/device_incomplete.xml")
         igd_device = await factory.async_create_device("http://igd:1234/device.xml")
 
         assert DmrDevice.is_profile_device(device) is True
@@ -103,15 +99,9 @@ class TestUpnpProfileDevice:
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester, non_strict=True)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
-        embedded = await factory.async_create_device(
-            "http://dlna_dmr:1234/device_embedded.xml"
-        )
-        no_services = await factory.async_create_device(
-            "http://dlna_dmr:1234/device_incomplete.xml"
-        )
-        empty_descriptor = await factory.async_create_device(
-            "http://dlna_dmr:1234/device_with_empty_descriptor.xml"
-        )
+        embedded = await factory.async_create_device("http://dlna_dmr:1234/device_embedded.xml")
+        no_services = await factory.async_create_device("http://dlna_dmr:1234/device_incomplete.xml")
+        empty_descriptor = await factory.async_create_device("http://dlna_dmr:1234/device_with_empty_descriptor.xml")
         igd_device = await factory.async_create_device("http://igd:1234/device.xml")
 
         assert DmrDevice.is_profile_device(device) is True
@@ -158,12 +148,8 @@ class TestUpnpProfileDevice:
         assert timeouts[2] == pytest.approx(now + 300, abs=1)
 
         # Tweak timeouts to check resubscription did something
-        entry = requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ]
-        requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ] = HttpResponse(
+        entry = requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")]
+        requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")] = HttpResponse(
             entry.status_code, {**entry.headers, "timeout": "Second-90"}, entry.body
         )
 
@@ -200,12 +186,8 @@ class TestUpnpProfileDevice:
 
         # Tweak timeouts to get a resubscription in a time suitable for testing.
         # Resubscription tolerance (60 seconds) + 1 second to get set up
-        entry = requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ]
-        requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ] = HttpResponse(
+        entry = requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")]
+        requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")] = HttpResponse(
             entry.status_code,
             {
                 **entry.headers,
@@ -235,12 +217,8 @@ class TestUpnpProfileDevice:
         assert not profile._resubscriber_task.done()
 
         # Re-tweak timeouts to check resubscription did something
-        entry = requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")
-        ]
-        requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")
-        ] = HttpResponse(
+        entry = requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")]
+        requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/AVTransport1")] = HttpResponse(
             entry.status_code,
             {
                 **entry.headers,
@@ -344,12 +322,8 @@ class TestUpnpProfileDevice:
         profile.on_event = on_event_mock
 
         # Setup for auto-resubscription
-        entry = requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ]
-        requester.response_map[
-            ("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")
-        ] = HttpResponse(
+        entry = requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")]
+        requester.response_map[("SUBSCRIBE", "http://dlna_dmr:1234/upnp/event/RenderingControl1")] = HttpResponse(
             entry.status_code, {**entry.headers, "timeout": "Second-61"}, entry.body
         )
         await profile.async_subscribe_services(auto_resubscribe=True)
@@ -363,9 +337,7 @@ class TestUpnpProfileDevice:
 
         # Device should now be offline, and an event notification sent
         assert device.available is False
-        on_event_mock.assert_called_once_with(
-            device.services["urn:schemas-upnp-org:service:RenderingControl:1"], []
-        )
+        on_event_mock.assert_called_once_with(device.services["urn:schemas-upnp-org:service:RenderingControl:1"], [])
         # Device will still be subscribed because a notification was sent via
         # on_event instead of raising an exception.
         assert profile.is_subscribed is True
@@ -394,9 +366,9 @@ class TestUpnpProfileDevice:
     async def test_poll_state_variables(self) -> None:
         """Test polling state variables by calling a Get* action."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        requester.response_map[
-            ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = HttpResponse(200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
+            200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml")
+        )
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -422,9 +394,7 @@ class TestUpnpProfileDevice:
         assert profile.media_artist is None
 
         # Call the Get action
-        await profile._async_poll_state_variables(
-            "AVT", ["GetPositionInfo"], InstanceID=0
-        )
+        await profile._async_poll_state_variables("AVT", ["GetPositionInfo"], InstanceID=0)
 
         # on_event should be called with all changed variables
         expected_service = device.services["urn:schemas-upnp-org:service:AVTransport:1"]
@@ -455,9 +425,9 @@ class TestUpnpProfileDevice:
     async def test_poll_state_variables_missing_action(self) -> None:
         """Test missing action used when polling state variables is handled gracefully."""
         requester = UpnpTestRequester(RESPONSE_MAP)
-        requester.response_map[
-            ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = HttpResponse(200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
+            200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml")
+        )
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -478,9 +448,7 @@ class TestUpnpProfileDevice:
         assert profile.media_artist is None
 
         # Call an invalid and a valid Get action, in one function call
-        await profile._async_poll_state_variables(
-            "AVT", ["GetInvalidAction", "GetPositionInfo"], InstanceID=0
-        )
+        await profile._async_poll_state_variables("AVT", ["GetInvalidAction", "GetPositionInfo"], InstanceID=0)
 
         # Missing (invalid) action should have no effect on valid action
 
@@ -514,9 +482,9 @@ class TestUpnpProfileDevice:
         """Test failed action used when polling state variables is handled gracefully."""
         requester = UpnpTestRequester(RESPONSE_MAP)
         # Good action response
-        requester.response_map[
-            ("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")
-        ] = HttpResponse(200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml"))
+        requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
+            200, {}, read_file("dlna/dmr/action_GetPositionInfo.xml")
+        )
 
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -537,16 +505,10 @@ class TestUpnpProfileDevice:
         assert profile.media_artist is None
 
         # Failed GetTransportInfo action resulting in an exception
-        requester.exceptions.append(
-            UpnpActionResponseError(
-                status=500, error_code=602, error_desc="Not implemented"
-            )
-        )
+        requester.exceptions.append(UpnpActionResponseError(status=500, error_code=602, error_desc="Not implemented"))
 
         # Call a failing and a valid Get action, in one function call
-        await profile._async_poll_state_variables(
-            "AVT", ["GetTransportInfo", "GetPositionInfo"], InstanceID=0
-        )
+        await profile._async_poll_state_variables("AVT", ["GetTransportInfo", "GetPositionInfo"], InstanceID=0)
 
         # Missing (invalid) action should have no effect on valid action
 

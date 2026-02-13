@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.event_handler module."""
 
 import asyncio
@@ -82,9 +81,7 @@ class UpnpEventHandler:
         self._requester = requester
         self.on_pre_notify = on_pre_notify
 
-        self._subscriptions: weakref.WeakValueDictionary[ServiceId, UpnpService] = (
-            weakref.WeakValueDictionary()
-        )
+        self._subscriptions: weakref.WeakValueDictionary[ServiceId, UpnpService] = weakref.WeakValueDictionary()
         self._backlog: dict[ServiceId, HttpRequest] = {}
 
     @property
@@ -104,9 +101,7 @@ class UpnpEventHandler:
         """Get a UpnpService for SID."""
         return self._subscriptions.get(sid)
 
-    def _sid_and_service(
-        self, service_or_sid: UpnpService | ServiceId
-    ) -> tuple[ServiceId, UpnpService]:
+    def _sid_and_service(self, service_or_sid: UpnpService | ServiceId) -> tuple[ServiceId, UpnpService]:
         """
         Resolve a SID or service to both SID and service.
 
@@ -188,9 +183,7 @@ class UpnpEventHandler:
         :raise UpnpCommunicationError (or subclass): Error while performing
             subscription request.
         """
-        _LOGGER.debug(
-            "Subscribing to: %s, callback URL: %s", service, self.callback_url
-        )
+        _LOGGER.debug("Subscribing to: %s, callback URL: %s", service, self.callback_url)
 
         # do SUBSCRIBE request
         headers = {
@@ -205,9 +198,7 @@ class UpnpEventHandler:
         # check results
         if response.status_code != 200:
             _LOGGER.debug("Did not receive 200, but %s", response.status_code)
-            raise UpnpResponseError(
-                status=response.status_code, headers=response.headers
-            )
+            raise UpnpResponseError(status=response.status_code, headers=response.headers)
 
         if "sid" not in response.headers:
             _LOGGER.debug("No SID received, aborting subscribe")
@@ -225,9 +216,7 @@ class UpnpEventHandler:
 
         sid: ServiceId = response.headers["sid"]
         self._subscriptions[sid] = service
-        _LOGGER.debug(
-            "Subscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout
-        )
+        _LOGGER.debug("Subscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout)
 
         # replay any backlog we have for this service
         if sid in self._backlog:
@@ -257,9 +246,7 @@ class UpnpEventHandler:
         # check results
         if response.status_code != 200:
             _LOGGER.debug("Did not receive 200, but %s", response.status_code)
-            raise UpnpResponseError(
-                status=response.status_code, headers=response.headers
-            )
+            raise UpnpResponseError(status=response.status_code, headers=response.headers)
 
         # Devices should return the SID when re-subscribe,
         # but in case it doesn't, use the new SID.
@@ -280,9 +267,7 @@ class UpnpEventHandler:
             timeout = timedelta(seconds=timeout_seconds)
 
         self._subscriptions[sid] = service
-        _LOGGER.debug(
-            "Resubscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout
-        )
+        _LOGGER.debug("Resubscribed, service: %s, SID: %s, timeout: %s", service, sid, timeout)
 
         return sid, timeout
 
@@ -332,9 +317,7 @@ class UpnpEventHandler:
 
     async def async_resubscribe_all(self) -> None:
         """Renew all current subscription."""
-        await asyncio.gather(
-            *(self.async_resubscribe(sid) for sid in self._subscriptions)
-        )
+        await asyncio.gather(*(self.async_resubscribe(sid) for sid in self._subscriptions))
 
     async def async_unsubscribe(
         self,
@@ -364,9 +347,7 @@ class UpnpEventHandler:
         # check results
         if response.status_code != 200:
             _LOGGER.debug("Did not receive 200, but %s", response.status_code)
-            raise UpnpResponseError(
-                status=response.status_code, headers=response.headers
-            )
+            raise UpnpResponseError(status=response.status_code, headers=response.headers)
 
         return sid
 
@@ -391,13 +372,9 @@ class UpnpEventHandlerRegister:
         """Initialize."""
         self.requester = requester
         self.notify_server_type = notify_server_type
-        self._event_handlers: dict[
-            IPvXAddress, tuple[UpnpEventHandler, set[UpnpDevice]]
-        ] = {}
+        self._event_handlers: dict[IPvXAddress, tuple[UpnpEventHandler, set[UpnpDevice]]] = {}
 
-    def _get_event_handler_for_device(
-        self, device: UpnpDevice
-    ) -> UpnpEventHandler | None:
+    def _get_event_handler_for_device(self, device: UpnpDevice) -> UpnpEventHandler | None:
         """Get the event handler for the device, if known."""
         local_ip_str = get_local_ip(device.device_url)
         local_ip = ip_address(local_ip_str)
@@ -428,15 +405,11 @@ class UpnpEventHandlerRegister:
 
         return event_handler
 
-    async def _create_event_handler_for_device(
-        self, device: UpnpDevice
-    ) -> UpnpEventHandler:
+    async def _create_event_handler_for_device(self, device: UpnpDevice) -> UpnpEventHandler:
         """Create a new event handler for a device."""
         local_ip_str = get_local_ip(device.device_url)
         source_addr = (local_ip_str, 0)
-        notify_server: UpnpNotifyServer = self.notify_server_type(
-            requester=self.requester, source=source_addr
-        )
+        notify_server: UpnpNotifyServer = self.notify_server_type(requester=self.requester, source=source_addr)
         await notify_server.async_start_server()
         return UpnpEventHandler(notify_server, self.requester)
 

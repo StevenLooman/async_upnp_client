@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.profiles.igd module."""
 
 import asyncio
@@ -203,9 +202,7 @@ class IgdDevice(UpnpProfileDevice):
         },
     }
 
-    def __init__(
-        self, device: UpnpDevice, event_handler: UpnpEventHandler | None
-    ) -> None:
+    def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler | None) -> None:
         """Initialize."""
         super().__init__(device, event_handler)
 
@@ -225,9 +222,7 @@ class IgdDevice(UpnpProfileDevice):
         self._offset_packets_received = 0
         self._offset_packets_sent = 0
 
-    def _any_action(
-        self, service_names: Sequence[str], action_name: str
-    ) -> UpnpAction | None:
+    def _any_action(self, service_names: Sequence[str], action_name: str) -> UpnpAction | None:
         for service_name in service_names:
             action = self._action(service_name, action_name)
             if action is not None:
@@ -236,17 +231,13 @@ class IgdDevice(UpnpProfileDevice):
         _LOGGER.debug("Could not find action %s/%s", service_names, action_name)
         return None
 
-    def _any_state_variable(
-        self, service_names: Sequence[str], variable_name: str
-    ) -> UpnpStateVariable | None:
+    def _any_state_variable(self, service_names: Sequence[str], variable_name: str) -> UpnpStateVariable | None:
         for service_name in service_names:
             state_var = self._state_variable(service_name, variable_name)
             if state_var is not None:
                 return state_var
 
-        _LOGGER.debug(
-            "Could not find state variable %s/%s", service_names, variable_name
-        )
+        _LOGGER.debug("Could not find state variable %s/%s", service_names, variable_name)
         return None
 
     @property
@@ -398,9 +389,7 @@ class IgdDevice(UpnpProfileDevice):
             result["NewPhysicalLinkStatus"],
         )
 
-    async def async_get_external_ip_address(
-        self, services: Sequence[str] | None = None
-    ) -> str | None:
+    async def async_get_external_ip_address(self, services: Sequence[str] | None = None) -> str | None:
         """
         Get the external IP address.
 
@@ -433,22 +422,14 @@ class IgdDevice(UpnpProfileDevice):
 
         result = await action.async_call(NewPortMappingIndex=port_mapping_index)
         return PortMappingEntry(
-            (
-                IPv4Address(result["NewRemoteHost"])
-                if result.get("NewRemoteHost")
-                else None
-            ),
+            (IPv4Address(result["NewRemoteHost"]) if result.get("NewRemoteHost") else None),
             result["NewExternalPort"],
             result["NewProtocol"],
             result["NewInternalPort"],
             IPv4Address(result["NewInternalClient"]),
             result["NewEnabled"],
             result["NewPortMappingDescription"],
-            (
-                timedelta(seconds=result["NewLeaseDuration"])
-                if result.get("NewLeaseDuration")
-                else None
-            ),
+            (timedelta(seconds=result["NewLeaseDuration"]) if result.get("NewLeaseDuration") else None),
         )
 
     async def async_get_specific_port_mapping_entry(
@@ -485,11 +466,7 @@ class IgdDevice(UpnpProfileDevice):
             IPv4Address(result["NewInternalClient"]),
             result["NewEnabled"],
             result["NewPortMappingDescription"],
-            (
-                timedelta(seconds=result["NewLeaseDuration"])
-                if result.get("NewLeaseDuration")
-                else None
-            ),
+            (timedelta(seconds=result["NewLeaseDuration"]) if result.get("NewLeaseDuration") else None),
         )
 
     async def async_add_port_mapping(
@@ -631,9 +608,7 @@ class IgdDevice(UpnpProfileDevice):
         )
         return cast(int, result["PinholePackets"])
 
-    async def async_get_connection_type_info(
-        self, services: Sequence[str] | None = None
-    ) -> ConnectionTypeInfo | None:
+    async def async_get_connection_type_info(self, services: Sequence[str] | None = None) -> ConnectionTypeInfo | None:
         """
         Get connection type info.
 
@@ -646,13 +621,9 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        return ConnectionTypeInfo(
-            result["NewConnectionType"], result["NewPossibleConnectionTypes"]
-        )
+        return ConnectionTypeInfo(result["NewConnectionType"], result["NewPossibleConnectionTypes"])
 
-    async def async_set_connection_type(
-        self, connection_type: str, services: list[str] | None = None
-    ) -> None:
+    async def async_set_connection_type(self, connection_type: str, services: list[str] | None = None) -> None:
         """
         Set connection type.
 
@@ -667,9 +638,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call(NewConnectionType=connection_type)
 
-    async def async_request_connection(
-        self, services: Sequence[str] | None = None
-    ) -> None:
+    async def async_request_connection(self, services: Sequence[str] | None = None) -> None:
         """
         Request connection.
 
@@ -683,9 +652,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call()
 
-    async def async_request_termination(
-        self, services: Sequence[str] | None = None
-    ) -> None:
+    async def async_request_termination(self, services: Sequence[str] | None = None) -> None:
         """
         Request connection termination.
 
@@ -699,9 +666,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call()
 
-    async def async_force_termination(
-        self, services: Sequence[str] | None = None
-    ) -> None:
+    async def async_force_termination(self, services: Sequence[str] | None = None) -> None:
         """
         Force connection termination.
 
@@ -715,9 +680,7 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call()
 
-    async def async_get_status_info(
-        self, services: Sequence[str] | None = None
-    ) -> StatusInfo | None:
+    async def async_get_status_info(self, services: Sequence[str] | None = None) -> StatusInfo | None:
         """
         Get status info.
 
@@ -741,9 +704,7 @@ class IgdDevice(UpnpProfileDevice):
             result["NewUptime"],
         )
 
-    async def async_get_port_mapping_number_of_entries(
-        self, services: Sequence[str] | None = None
-    ) -> int | None:
+    async def async_get_port_mapping_number_of_entries(self, services: Sequence[str] | None = None) -> int | None:
         """
         Get number of port mapping entries.
 
@@ -758,16 +719,12 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        number_of_entries: str | None = result.get(
-            "NewPortMappingNumberOfEntries"
-        )  # str?
+        number_of_entries: str | None = result.get("NewPortMappingNumberOfEntries")  # str?
         if number_of_entries is None:
             return None
         return int(number_of_entries)
 
-    async def async_get_nat_rsip_status(
-        self, services: Sequence[str] | None = None
-    ) -> NatRsipStatusInfo | None:
+    async def async_get_nat_rsip_status(self, services: Sequence[str] | None = None) -> NatRsipStatusInfo | None:
         """
         Get NAT enabled and RSIP availability statuses.
 
@@ -789,9 +746,7 @@ class IgdDevice(UpnpProfileDevice):
             return None
 
         result = await action.async_call()
-        default_connection_service: str | None = result.get(
-            "NewDefaultConnectionService"
-        )
+        default_connection_service: str | None = result.get("NewDefaultConnectionService")
         return default_connection_service
 
     async def async_set_default_connection_service(self, service: str) -> None:
@@ -845,18 +800,12 @@ class IgdDevice(UpnpProfileDevice):
             ):
                 items.remove(IgdStateItem.EXTERNAL_IP_ADDRESS)
 
-            if (
-                IgdStateItem.CONNECTION_STATUS in items
-                and (connection_status := self.connection_status) is not None
-            ):
+            if IgdStateItem.CONNECTION_STATUS in items and (connection_status := self.connection_status) is not None:
                 items.remove(IgdStateItem.CONNECTION_STATUS)
 
             if (
                 IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES in items
-                and (
-                    port_mapping_number_of_entries := self.port_mapping_number_of_entries
-                )
-                is not None
+                and (port_mapping_number_of_entries := self.port_mapping_number_of_entries) is not None
             ):
                 items.remove(IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES)
 
@@ -864,26 +813,22 @@ class IgdDevice(UpnpProfileDevice):
         values = await asyncio.gather(
             (
                 self.async_get_total_bytes_received()
-                if IgdStateItem.BYTES_RECEIVED in items
-                or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
+                if IgdStateItem.BYTES_RECEIVED in items or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
                 else nop()
             ),
             (
                 self.async_get_total_bytes_sent()
-                if IgdStateItem.BYTES_SENT in items
-                or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
+                if IgdStateItem.BYTES_SENT in items or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
                 else nop()
             ),
             (
                 self.async_get_total_packets_received()
-                if IgdStateItem.PACKETS_RECEIVED in items
-                or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
+                if IgdStateItem.PACKETS_RECEIVED in items or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
                 else nop()
             ),
             (
                 self.async_get_total_packets_sent()
-                if IgdStateItem.PACKETS_SENT in items
-                or IgdStateItem.PACKETS_PER_SEC_SENT in items
+                if IgdStateItem.PACKETS_SENT in items or IgdStateItem.PACKETS_PER_SEC_SENT in items
                 else nop()
             ),
             (
@@ -893,11 +838,7 @@ class IgdDevice(UpnpProfileDevice):
                 or IgdStateItem.UPTIME in items
                 else nop()
             ),
-            (
-                self.async_get_external_ip_address()
-                if IgdStateItem.EXTERNAL_IP_ADDRESS in items
-                else nop()
-            ),
+            (self.async_get_external_ip_address() if IgdStateItem.EXTERNAL_IP_ADDRESS in items else nop()),
             (
                 self.async_get_port_mapping_number_of_entries()
                 if IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES in items
@@ -948,9 +889,7 @@ class IgdDevice(UpnpProfileDevice):
         )
 
         # Test if any of the calls were ok. If not, raise the exception.
-        non_exceptions = [
-            value for value in values if not isinstance(value, BaseException)
-        ]
+        non_exceptions = [value for value in values if not isinstance(value, BaseException)]
         if not non_exceptions:
             # Raise any exception to indicate something was very wrong.
             exc = cast(BaseException, values[0])
@@ -967,20 +906,10 @@ class IgdDevice(UpnpProfileDevice):
             packets_per_sec_received=packets_per_sec_received,
             packets_per_sec_sent=packets_per_sec_sent,
             connection_status=(
-                values[4].connection_status
-                if isinstance(values[4], StatusInfo)
-                else connection_status
+                values[4].connection_status if isinstance(values[4], StatusInfo) else connection_status
             ),
-            last_connection_error=(
-                values[4].last_connection_error
-                if isinstance(values[4], StatusInfo)
-                else None
-            ),
+            last_connection_error=(values[4].last_connection_error if isinstance(values[4], StatusInfo) else None),
             uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None,
-            external_ip_address=cast(
-                None | BaseException | str, values[5] or external_ip_address
-            ),
-            port_mapping_number_of_entries=cast(
-                None | int, values[6] or port_mapping_number_of_entries
-            ),
+            external_ip_address=cast(None | BaseException | str, values[5] or external_ip_address),
+            port_mapping_number_of_entries=cast(None | int, values[6] or port_mapping_number_of_entries),
         )

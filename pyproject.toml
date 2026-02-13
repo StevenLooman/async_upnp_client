@@ -43,6 +43,33 @@ dynamic = ["version"]
 [project.scripts]
 upnp-client = "async_upnp_client.cli:main"
 
+[tool.ruff]
+line-length = 119
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "D", "I"]
+ignore = ["E501", "D202"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.pylint.format]
+max-line-length = 119
+
+[tool.pylint.similarities]
+min-similarity-lines = 8
+
+[tool.deptry]
+known_first_party = ["async_upnp_client"]
+
+[tool.deptry.package_module_name_map]
+python-didl-lite = ["didl_lite"]
+
+[tool.deptry.per_rule_ignores]
+DEP001 = ["multidict"]
+DEP003 = ["multidict"]
+
 [tool.setuptools.dynamic]
 version = { attr = "async_upnp_client.__version__" }
 

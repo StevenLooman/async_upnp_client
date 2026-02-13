@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.ssdp_listener module."""
 
 import asyncio
@@ -54,23 +53,17 @@ _INVALID_LOCATIONS = (
 @lru_cache(maxsize=128)
 def is_valid_location(location: str) -> bool:
     """Validate if this location is usable."""
-    return location.startswith("http") and not any(
-        invalid in location for invalid in _INVALID_LOCATIONS
-    )
+    return location.startswith("http") and not any(invalid in location for invalid in _INVALID_LOCATIONS)
 
 
 def valid_search_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this search is usable."""
-    return headers.lower_values_true(("_udn", "st")) and is_valid_location(
-        headers.get_lower("location", "")
-    )
+    return headers.lower_values_true(("_udn", "st")) and is_valid_location(headers.get_lower("location", ""))
 
 
 def valid_advertisement_headers(headers: CaseInsensitiveDict) -> bool:
     """Validate if this advertisement is usable for connecting to a device."""
-    return headers.lower_values_true(("_udn", "nt", "nts")) and is_valid_location(
-        headers.get_lower("location", "")
-    )
+    return headers.lower_values_true(("_udn", "nt", "nts")) and is_valid_location(headers.get_lower("location", ""))
 
 
 def valid_byebye_headers(headers: CaseInsensitiveDict) -> bool:
@@ -139,9 +132,7 @@ class SsdpDevice:
         """Purge locations which are no longer valid/timed out."""
         if not now:
             now = datetime.now()
-        to_remove = [
-            location for location, valid_to in self._locations.items() if now > valid_to
-        ]
+        to_remove = [location for location, valid_to in self._locations.items() if now > valid_to]
         for location in to_remove:
             del self._locations[location]
 
@@ -167,9 +158,7 @@ class SsdpDevice:
         as well.
         """
         search_headers = self.search_headers.get(device_or_service_type, _SENTINEL)
-        advertisement_headers = self.advertisement_headers.get(
-            device_or_service_type, _SENTINEL
-        )
+        advertisement_headers = self.advertisement_headers.get(device_or_service_type, _SENTINEL)
         if search_headers is not _SENTINEL and advertisement_headers is not _SENTINEL:
             if TYPE_CHECKING:
                 assert isinstance(search_headers, CaseInsensitiveDict)
@@ -198,9 +187,7 @@ class SsdpDevice:
         return f"<{type(self).__name__}({self.udn})>"
 
 
-def same_headers_differ(
-    current_headers: CaseInsensitiveDict, new_headers: CaseInsensitiveDict
-) -> bool:
+def same_headers_differ(current_headers: CaseInsensitiveDict, new_headers: CaseInsensitiveDict) -> bool:
     """Compare headers present in both to see if anything interesting has changed."""
     current_headers_dict = current_headers.as_dict()
     new_headers_dict = new_headers.as_dict()
@@ -208,9 +195,7 @@ def same_headers_differ(
     current_headers_case_map = current_headers.case_map()
 
     for lower_header, current_header in current_headers_case_map.items():
-        if (
-            lower_header != "" and lower_header[0] == "_"
-        ) or lower_header in IGNORED_HEADERS:
+        if (lower_header != "" and lower_header[0] == "_") or lower_header in IGNORED_HEADERS:
             continue
         new_header = new_headers_case_map.get(lower_header, _SENTINEL)
 
@@ -288,9 +273,7 @@ def location_changed(ssdp_device: SsdpDevice, headers: CaseInsensitiveDict) -> b
     # was not seen before. If we have any location
     # saved that is the same ip version, we
     # consider the location changed
-    return any(
-        ip_version_from_location(location) == new_ip_version for location in locations
-    )
+    return any(ip_version_from_location(location) == new_ip_version for location in locations)
 
 
 class SsdpDeviceTracker:
@@ -322,8 +305,7 @@ class SsdpDeviceTracker:
 
         search_target: SearchTarget = headers.get_lower("st")
         is_new_service = (
-            search_target not in ssdp_device.advertisement_headers
-            and search_target not in ssdp_device.search_headers
+            search_target not in ssdp_device.advertisement_headers and search_target not in ssdp_device.search_headers
         )
         if is_new_service:
             _LOGGER.debug("See new service: %s, type: %s", ssdp_device, search_target)
@@ -366,9 +348,7 @@ class SsdpDeviceTracker:
             and notification_type not in ssdp_device.search_headers
         )
         if is_new_service:
-            _LOGGER.debug(
-                "See new service: %s, type: %s", ssdp_device, notification_type
-            )
+            _LOGGER.debug("See new service: %s, type: %s", ssdp_device, notification_type)
 
         notification_sub_type: NotificationSubType = headers.get_lower("nts")
         propagate = (
@@ -376,9 +356,7 @@ class SsdpDeviceTracker:
             or is_new_device
             or is_new_service
             or new_location
-            or headers_differ_from_existing_advertisement(
-                ssdp_device, notification_type, headers
-            )
+            or headers_differ_from_existing_advertisement(ssdp_device, notification_type, headers)
         )
 
         # Update stored headers.
@@ -390,9 +368,7 @@ class SsdpDeviceTracker:
 
         return propagate, ssdp_device, notification_type
 
-    def _see_device(
-        self, headers: CaseInsensitiveDict
-    ) -> tuple[SsdpDevice | None, bool]:
+    def _see_device(self, headers: CaseInsensitiveDict) -> tuple[SsdpDevice | None, bool]:
         """See a device through a search or advertisement."""
         # Purge any old devices.
         now = headers.get_lower("_timestamp")
@@ -481,14 +457,9 @@ class SsdpListener:
     def __init__(
         self,
         async_callback: (
-            Callable[
-                [SsdpDevice, DeviceOrServiceType, SsdpSource], Coroutine[Any, Any, None]
-            ]
-            | None
+            Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], Coroutine[Any, Any, None]] | None
         ) = None,
-        callback: (
-            Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], None] | None
-        ) = None,
+        callback: (Callable[[SsdpDevice, DeviceOrServiceType, SsdpSource], None] | None) = None,
         source: AddressTupleVXType | None = None,
         target: AddressTupleVXType | None = None,
         loop: AbstractEventLoop | None = None,
@@ -540,9 +511,7 @@ class SsdpListener:
         if self._search_listener:
             self._search_listener.async_stop()
 
-    async def async_search(
-        self, override_target: AddressTupleVXType | None = None
-    ) -> None:
+    async def async_search(self, override_target: AddressTupleVXType | None = None) -> None:
         """Send a SSDP Search packet."""
         assert self._search_listener is not None, "Call async_start() first"
         self._search_listener.async_search(override_target)
@@ -559,9 +528,7 @@ class SsdpListener:
         if propagate and ssdp_device and device_or_service_type:
             assert ssdp_source is not None
             if self.async_callback:
-                coro = self.async_callback(
-                    ssdp_device, device_or_service_type, ssdp_source
-                )
+                coro = self.async_callback(ssdp_device, device_or_service_type, ssdp_source)
                 self.loop.create_task(coro)
             if self.callback:
                 self.callback(ssdp_device, device_or_service_type, ssdp_source)
@@ -576,14 +543,10 @@ class SsdpListener:
 
         if propagate and ssdp_device and device_or_service_type:
             if self.async_callback:
-                coro = self.async_callback(
-                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
-                )
+                coro = self.async_callback(ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE)
                 self.loop.create_task(coro)
             if self.callback:
-                self.callback(
-                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE
-                )
+                self.callback(ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_ALIVE)
 
     def _on_byebye(self, headers: CaseInsensitiveDict) -> None:
         """On byebye."""
@@ -595,14 +558,10 @@ class SsdpListener:
 
         if propagate and ssdp_device and device_or_service_type:
             if self.async_callback:
-                coro = self.async_callback(
-                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
-                )
+                coro = self.async_callback(ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE)
                 self.loop.create_task(coro)
             if self.callback:
-                self.callback(
-                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE
-                )
+                self.callback(ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_BYEBYE)
 
     def _on_update(self, headers: CaseInsensitiveDict) -> None:
         """On update."""
@@ -614,14 +573,10 @@ class SsdpListener:
 
         if propagate and ssdp_device and device_or_service_type:
             if self.async_callback:
-                coro = self.async_callback(
-                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
-                )
+                coro = self.async_callback(ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE)
                 self.loop.create_task(coro)
             if self.callback:
-                self.callback(
-                    ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE
-                )
+                self.callback(ssdp_device, device_or_service_type, SsdpSource.ADVERTISEMENT_UPDATE)
 
     @property
     def devices(self) -> Mapping[str, SsdpDevice]:

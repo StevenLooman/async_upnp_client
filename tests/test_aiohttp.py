@@ -22,9 +22,7 @@ def test_fixed_host_header() -> None:
     # pylint: disable=C1803
     assert _fixed_host_header("http://192.168.1.1:8000/desc") == {}
     assert _fixed_host_header("http://router.local:8000/desc") == {}
-    assert _fixed_host_header("http://[fe80::1%10]:8000/desc") == {
-        "Host": "[fe80::1]:8000"
-    }
+    assert _fixed_host_header("http://[fe80::1%10]:8000/desc") == {"Host": "[fe80::1]:8000"}
 
     assert _fixed_host_header("http://192.168.1.1/desc") == {}
     assert _fixed_host_header("http://router.local/desc") == {}
@@ -50,9 +48,7 @@ async def test_server_init() -> None:
     assert server.callback_url == "http://192.168.1.2:8090/notify"
     assert server.event_handler is not None
 
-    server = AiohttpNotifyServer(
-        requester, ("192.168.1.2", 8090), "http://1.2.3.4:8091/"
-    )
+    server = AiohttpNotifyServer(requester, ("192.168.1.2", 8090), "http://1.2.3.4:8091/")
     assert server.callback_url == "http://1.2.3.4:8091/"
 
 

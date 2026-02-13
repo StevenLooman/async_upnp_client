@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.profiles.printer module."""
 
 import logging

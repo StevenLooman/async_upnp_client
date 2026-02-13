@@ -26,9 +26,7 @@ def test_case_insensitive_dict() -> None:
     assert ci_dict["KEY"] == "value"
 
     assert CaseInsensitiveDict(key="value") == {"key": "value"}
-    assert CaseInsensitiveDict({"key": "value"}, key="override_value") == {
-        "key": "override_value"
-    }
+    assert CaseInsensitiveDict({"key": "value"}, key="override_value") == {"key": "override_value"}
 
 
 def test_case_insensitive_dict_dict_equality() -> None:
@@ -44,10 +42,7 @@ def test_case_insensitive_dict_dict_equality() -> None:
 def test_case_insensitive_dict_profile() -> None:
     """Test CaseInsensitiveDict under load, for profiling."""
     for _ in range(0, 10000):
-        assert (
-            CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT)
-            == ADVERTISEMENT_HEADERS_DEFAULT
-        )
+        assert CaseInsensitiveDict(ADVERTISEMENT_HEADERS_DEFAULT) == ADVERTISEMENT_HEADERS_DEFAULT
 
 
 def test_case_insensitive_dict_equality() -> None:
@@ -61,9 +56,7 @@ def test_str_to_time() -> None:
     assert str_to_time("0:10:0") == timedelta(hours=0, minutes=10, seconds=0)
     assert str_to_time("10:0:0") == timedelta(hours=10, minutes=0, seconds=0)
 
-    assert str_to_time("0:0:10.10") == timedelta(
-        hours=0, minutes=0, seconds=10, milliseconds=10
-    )
+    assert str_to_time("0:0:10.10") == timedelta(hours=0, minutes=0, seconds=10, milliseconds=10)
 
     assert str_to_time("+0:0:10") == timedelta(hours=0, minutes=0, seconds=10)
     assert str_to_time("-0:0:10") == timedelta(hours=0, minutes=0, seconds=-10)
@@ -82,18 +75,10 @@ def test_parse_date_time() -> None:
     assert parse_date_time("2012-07-19T12:28:14") == datetime(2012, 7, 19, 12, 28, 14)
     assert parse_date_time("12:28:14+01:00") == time(12, 28, 14, tzinfo=tz1)
     assert parse_date_time("12:28:14 +01:00") == time(12, 28, 14, tzinfo=tz1)
-    assert parse_date_time("2012-07-19T12:28:14z") == datetime(
-        2012, 7, 19, 12, 28, 14, tzinfo=tz0
-    )
-    assert parse_date_time("2012-07-19T12:28:14Z") == datetime(
-        2012, 7, 19, 12, 28, 14, tzinfo=tz0
-    )
-    assert parse_date_time("2012-07-19T12:28:14+01:00") == datetime(
-        2012, 7, 19, 12, 28, 14, tzinfo=tz1
-    )
-    assert parse_date_time("2012-07-19T12:28:14 +01:00") == datetime(
-        2012, 7, 19, 12, 28, 14, tzinfo=tz1
-    )
+    assert parse_date_time("2012-07-19T12:28:14z") == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz0)
+    assert parse_date_time("2012-07-19T12:28:14Z") == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz0)
+    assert parse_date_time("2012-07-19T12:28:14+01:00") == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz1)
+    assert parse_date_time("2012-07-19T12:28:14 +01:00") == datetime(2012, 7, 19, 12, 28, 14, tzinfo=tz1)
 
 
 TEST_ADDRESSES = [

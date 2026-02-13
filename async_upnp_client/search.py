@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.search module."""
 
 import asyncio
@@ -35,9 +34,7 @@ class SsdpSearchListener:
 
     def __init__(
         self,
-        async_callback: (
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
-        ) = None,
+        async_callback: (Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None) = None,
         callback: Callable[[CaseInsensitiveDict], None] | None = None,
         loop: AbstractEventLoop | None = None,
         source: AddressTupleVXType | None = None,
@@ -49,9 +46,7 @@ class SsdpSearchListener:
     ) -> None:
         """Init the ssdp listener class."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
-        assert (
-            callback is not None or async_callback is not None
-        ), "Provide at least one callback"
+        assert callback is not None or async_callback is not None, "Provide at least one callback"
 
         self.async_callback = async_callback
         self.callback = callback
@@ -88,9 +83,7 @@ class SsdpSearchListener:
             # Ignore discover packets.
             return
         if headers.get_lower("nts"):
-            _LOGGER.debug(
-                "Got non-search response packet: %s, %s", request_line, headers
-            )
+            _LOGGER.debug("Got non-search response packet: %s, %s", request_line, headers)
             return
 
         if _LOGGER.isEnabledFor(logging.DEBUG):

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Profiles for upnp_client."""
 
 import asyncio
@@ -29,9 +28,7 @@ class UpnpTestRequester(UpnpRequester):
         response_map: Mapping[tuple[str, str], HttpResponse],
     ) -> None:
         """Class initializer."""
-        self.response_map: MutableMapping[tuple[str, str], HttpResponse] = deepcopy(
-            cast(MutableMapping, response_map)
-        )
+        self.response_map: MutableMapping[tuple[str, str], HttpResponse] = deepcopy(cast(MutableMapping, response_map))
         self.exceptions: Deque[Exception | None] = deque()
 
     async def async_http_request(
@@ -172,9 +169,7 @@ RESPONSE_MAP: Mapping[tuple[str, str], HttpResponse] = {
         "",
     ),
     # IGD
-    ("GET", "http://igd:1234/device.xml"): HttpResponse(
-        200, {}, read_file("igd/device.xml")
-    ),
+    ("GET", "http://igd:1234/device.xml"): HttpResponse(200, {}, read_file("igd/device.xml")),
     ("GET", "http://igd:1234/Layer3Forwarding.xml"): HttpResponse(
         200,
         {},
@@ -211,9 +206,7 @@ class UpnpTestNotifyServer(UpnpNotifyServer):
     @property
     def callback_url(self) -> str:
         """Return callback URL on which we are callable."""
-        return (
-            self._callback_url or f"http://{self._source[0]}:{self._source[1]}/notify"
-        )
+        return self._callback_url or f"http://{self._source[0]}:{self._source[1]}/notify"
 
     async def async_start_server(self) -> None:
         """Start the server."""

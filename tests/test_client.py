@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for client_factory and client modules."""
 
 from datetime import datetime, timedelta, timezone
@@ -58,13 +57,9 @@ class TestUpnpStateVariable:
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://igd:1234/device.xml")
         assert device
-        assert (
-            device.device_type == "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
-        )
+        assert device.device_type == "urn:schemas-upnp-org:device:InternetGatewayDevice:1"
 
-        embedded_device = device.embedded_devices[
-            "urn:schemas-upnp-org:device:WANDevice:1"
-        ]
+        embedded_device = device.embedded_devices["urn:schemas-upnp-org:device:WANDevice:1"]
         assert embedded_device
         assert embedded_device.device_type == "urn:schemas-upnp-org:device:WANDevice:1"
         assert embedded_device.parent_device == device
@@ -287,9 +282,7 @@ class TestUpnpStateVariable:
 
         # should be ok
         state_var.upnp_value = "1985-04-12T10:15:30+0400"
-        assert state_var.value == datetime(
-            1985, 4, 12, 10, 15, 30, tzinfo=timezone(timedelta(hours=4))
-        )
+        assert state_var.value == datetime(1985, 4, 12, 10, 15, 30, tzinfo=timezone(timedelta(hours=4)))
         assert state_var.value.tzinfo is not None
 
     @pytest.mark.asyncio
@@ -316,12 +309,10 @@ class TestUpnpStateVariable:
     async def test_big_ints(self) -> None:
         """Test state variable types i8 and ui8."""
         responses = dict(RESPONSE_MAP)
-        responses[("GET", "http://dlna_dms:1234/ContentDirectory_1.xml")] = (
-            HttpResponse(
-                200,
-                {},
-                read_file("scpd_i8.xml"),
-            )
+        responses[("GET", "http://dlna_dms:1234/ContentDirectory_1.xml")] = HttpResponse(
+            200,
+            {},
+            read_file("scpd_i8.xml"),
         )
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester)
@@ -358,9 +349,7 @@ class TestUpnpAction:
 
         # invalid type for InstanceID
         try:
-            action.validate_arguments(
-                InstanceID="0", Channel="Master", DesiredVolume=10
-            )
+            action.validate_arguments(InstanceID="0", Channel="Master", DesiredVolume=10)
             assert False
         except UpnpValueError:
             pass
@@ -382,9 +371,7 @@ class TestUpnpAction:
         action = service.action("SetVolume")
 
         service_type = "urn:schemas-upnp-org:service:RenderingControl:1"
-        request = action.create_request(
-            InstanceID=0, Channel="Master", DesiredVolume=10
-        )
+        request = action.create_request(InstanceID=0, Channel="Master", DesiredVolume=10)
 
         root = DET.fromstring(request.body)
         namespace = {"rc_service": service_type}
@@ -412,10 +399,7 @@ class TestUpnpAction:
         namespace = {"avt_service": service_type}
         assert root.find(".//avt_service:SetAVTransportURI", namespace) is not None
         assert root.find(".//CurrentURIMetaData", namespace) is not None
-        assert (
-            root.findtext(".//CurrentURIMetaData", None, namespace)
-            == "<item>test thing</item>"
-        )
+        assert root.findtext(".//CurrentURIMetaData", None, namespace) == "<item>test thing</item>"
 
         current_uri_metadata_el = root.find(".//CurrentURIMetaData", namespace)
         assert current_uri_metadata_el is not None
@@ -532,9 +516,7 @@ class TestUpnpAction:
         action = service.action("GetTransportInfo")
 
         service_type = "urn:schemas-upnp-org:service:AVTransport:1"
-        response_body = read_file(
-            "dlna/dmr/action_GetTransportInfoInvalidServiceType.xml"
-        )
+        response_body = read_file("dlna/dmr/action_GetTransportInfoInvalidServiceType.xml")
         response = HttpResponse(200, {}, response_body)
         try:
             action.parse_response(service_type, response)
@@ -751,12 +733,10 @@ class TestUpnpService:
     async def test_bad_scpd_strict(self, rc_doc: str) -> None:
         """Test handling of bad service descriptions in strict mode."""
         responses = dict(RESPONSE_MAP)
-        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = (
-            HttpResponse(
-                200,
-                {},
-                read_file(rc_doc),
-            )
+        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = HttpResponse(
+            200,
+            {},
+            read_file(rc_doc),
         )
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester)
@@ -775,12 +755,10 @@ class TestUpnpService:
     async def test_bad_scpd_non_strict_fails(self, rc_doc: str) -> None:
         """Test bad SCPD in non-strict mode."""
         responses = dict(RESPONSE_MAP)
-        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = (
-            HttpResponse(
-                200,
-                {},
-                read_file(rc_doc),
-            )
+        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = HttpResponse(
+            200,
+            {},
+            read_file(rc_doc),
         )
         requester = UpnpTestRequester(responses)
         factory = UpnpFactory(requester, non_strict=True)

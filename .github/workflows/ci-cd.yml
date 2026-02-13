@@ -4,6 +4,10 @@ on:
   - push
   - pull_request
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   publish-python-version: 3.12
 
@@ -20,6 +24,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
+          cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip

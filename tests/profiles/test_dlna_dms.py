@@ -24,12 +24,10 @@ async def test_async_browse_metadata() -> None:
     profile = DmsDevice(device, event_handler=event_handler)
 
     # Object 0 is the root and must always exist
-    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = (
-        HttpResponse(
-            200,
-            {},
-            read_file("dlna/dms/action_Browse_metadata_0.xml"),
-        )
+    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = HttpResponse(
+        200,
+        {},
+        read_file("dlna/dms/action_Browse_metadata_0.xml"),
     )
     metadata = await profile.async_browse_metadata("0")
     assert metadata.parent_id == "-1"
@@ -39,12 +37,10 @@ async def test_async_browse_metadata() -> None:
     assert metadata.child_count == "4"
 
     # Object 2 will give some different results
-    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = (
-        HttpResponse(
-            200,
-            {},
-            read_file("dlna/dms/action_Browse_metadata_2.xml"),
-        )
+    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = HttpResponse(
+        200,
+        {},
+        read_file("dlna/dms/action_Browse_metadata_2.xml"),
     )
     metadata = await profile.async_browse_metadata("2")
     assert metadata.parent_id == "0"
@@ -54,12 +50,10 @@ async def test_async_browse_metadata() -> None:
     assert metadata.child_count == "3"
 
     # Object that is an item and not a container
-    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = (
-        HttpResponse(
-            200,
-            {},
-            read_file("dlna/dms/action_Browse_metadata_item.xml"),
-        )
+    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = HttpResponse(
+        200,
+        {},
+        read_file("dlna/dms/action_Browse_metadata_item.xml"),
     )
     metadata = await profile.async_browse_metadata("1$6$35$1$1")
     assert metadata.parent_id == "1$6$35$1"
@@ -71,8 +65,7 @@ async def test_async_browse_metadata() -> None:
     assert len(metadata.resources) == 1
     assert metadata.resources[0].uri == "http://dlna_dms:1234/media/2483.mp3"
     assert (
-        metadata.resources[0].protocol_info
-        == "http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0;"
+        metadata.resources[0].protocol_info == "http-get:*:audio/mpeg:DLNA.ORG_PN=MP3;DLNA.ORG_OP=01;DLNA.ORG_CI=0;"
         "DLNA.ORG_FLAGS=01700000000000000000000000000000"
     )
     assert metadata.resources[0].size == "2905191"
@@ -101,12 +94,10 @@ async def test_async_browse_children() -> None:
     profile = DmsDevice(device, event_handler=event_handler)
 
     # Object 0 is the root and must always exist
-    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = (
-        HttpResponse(
-            200,
-            {},
-            read_file("dlna/dms/action_Browse_children_0.xml"),
-        )
+    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = HttpResponse(
+        200,
+        {},
+        read_file("dlna/dms/action_Browse_children_0.xml"),
     )
     result = await profile.async_browse_direct_children("0")
     assert result.number_returned == 4
@@ -128,12 +119,10 @@ async def test_async_browse_children() -> None:
     assert children[3].child_count == "3"
 
     # Object 2 will give some different results
-    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = (
-        HttpResponse(
-            200,
-            {},
-            read_file("dlna/dms/action_Browse_children_2.xml"),
-        )
+    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = HttpResponse(
+        200,
+        {},
+        read_file("dlna/dms/action_Browse_children_2.xml"),
     )
     result = await profile.async_browse_direct_children("2")
     assert result.number_returned == 3
@@ -152,12 +141,10 @@ async def test_async_browse_children() -> None:
     assert children[2].child_count == "50"
 
     # Object that is an item and not a container
-    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = (
-        HttpResponse(
-            200,
-            {},
-            read_file("dlna/dms/action_Browse_children_item.xml"),
-        )
+    requester.response_map[("POST", "http://dlna_dms:1234/upnp/control/ContentDir")] = HttpResponse(
+        200,
+        {},
+        read_file("dlna/dms/action_Browse_children_item.xml"),
     )
     result = await profile.async_browse_direct_children("1$6$35$1$1")
     assert result.number_returned == 0

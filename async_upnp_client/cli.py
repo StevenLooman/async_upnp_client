@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.cli module."""
 # pylint: disable=invalid-name
 
@@ -35,34 +34,22 @@ _LOGGER_TRAFFIC.setLevel(logging.ERROR)
 parser = argparse.ArgumentParser(description="upnp_client")
 parser.add_argument("--debug", action="store_true", help="Show debug messages")
 parser.add_argument("--debug-traffic", action="store_true", help="Show network traffic")
-parser.add_argument(
-    "--pprint", action="store_true", help="Pretty-print (indent) JSON output"
-)
+parser.add_argument("--pprint", action="store_true", help="Pretty-print (indent) JSON output")
 parser.add_argument("--timeout", type=int, help="Timeout for connection", default=4)
-parser.add_argument(
-    "--strict", action="store_true", help="Be strict about invalid data received"
-)
-parser.add_argument(
-    "--iso8601", action="store_true", help="Print timestamp in ISO8601 format"
-)
+parser.add_argument("--strict", action="store_true", help="Be strict about invalid data received")
+parser.add_argument("--iso8601", action="store_true", help="Print timestamp in ISO8601 format")
 
 subparsers = parser.add_subparsers(title="Command", dest="command")
 subparsers.required = True
 
 subparser = subparsers.add_parser("call-action", help="Call an action")
 subparser.add_argument("device", help="URL to device description XML")
-subparser.add_argument(
-    "call-action", nargs="+", help="service/action param1=val1 param2=val2"
-)
+subparser.add_argument("call-action", nargs="+", help="service/action param1=val1 param2=val2")
 
 subparser = subparsers.add_parser("subscribe", help="Subscribe to services")
 subparser.add_argument("device", help="URL to device description XML")
-subparser.add_argument(
-    "service", nargs="+", help="service type or part or abbreviation"
-)
-subparser.add_argument(
-    "--nolastchange", action="store_true", help="Do not show LastChange events"
-)
+subparser.add_argument("service", nargs="+", help="service type or part or abbreviation")
+subparser.add_argument("--nolastchange", action="store_true", help="Do not show LastChange events")
 
 subparser = subparsers.add_parser("search", help="Search for devices")
 subparser.add_argument("--bind", help="ip to bind to, e.g., 192.168.0.10")
@@ -131,9 +118,7 @@ def service_from_device(device: UpnpDevice, service_name: str) -> UpnpService | 
     return None
 
 
-def on_event(
-    service: UpnpService, service_variables: Sequence[UpnpStateVariable]
-) -> None:
+def on_event(service: UpnpService, service_variables: Sequence[UpnpStateVariable]) -> None:
     """Handle a UPnP event."""
     _LOGGER.debug(
         "State variable change for %s, variables: %s",
@@ -180,10 +165,7 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
     service = service_from_device(device, service_name)
     if not service:
         services_str = "\n".join(
-            [
-                "  " + device_service.service_id.split(":")[-1]
-                for device_service in device.all_services
-            ]
+            ["  " + device_service.service_id.split(":")[-1] for device_service in device.all_services]
         )
         print(f"Unknown service: {service_name}")
         print(f"Available services:\n{services_str}")
@@ -212,12 +194,7 @@ async def call_action(description_url: str, call_action_args: Sequence) -> None:
     for in_arg in action.in_arguments():
         if in_arg.name not in action_args:
             in_args = "\n".join(
-                [
-                    f"  {in_arg.name}"
-                    for in_arg in sorted(
-                        action.in_arguments(), key=operator.attrgetter("name")
-                    )
-                ]
+                [f"  {in_arg.name}" for in_arg in sorted(action.in_arguments(), key=operator.attrgetter("name"))]
             )
             print("Missing in-arguments")
             print(f"Known in-arguments:\n{in_args}")
@@ -356,9 +333,7 @@ async def search(search_args: Any) -> None:
     """Discover devices."""
     timeout = args.timeout
     search_target = search_args.search_target
-    source, target = source_target(
-        search_args.bind, search_args.target, search_args.target_port
-    )
+    source, target = source_target(search_args.bind, search_args.target, search_args.target_port)
 
     async def on_response(headers: CaseInsensitiveDict) -> None:
         print(

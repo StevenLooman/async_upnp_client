@@ -56,9 +56,7 @@ async def mock_start_listeners() -> AsyncGenerator:
         yield mock
 
 
-async def see_advertisement(
-    ssdp_listener: SsdpListener, request_line: str, headers: CaseInsensitiveDict
-) -> None:
+async def see_advertisement(ssdp_listener: SsdpListener, request_line: str, headers: CaseInsensitiveDict) -> None:
     """See advertisement."""
     # pylint: disable=protected-access
     advertisement_listener = ssdp_listener._advertisement_listener
@@ -67,9 +65,7 @@ async def see_advertisement(
     await asyncio.sleep(0)  # Allow callback to run, if called.
 
 
-async def see_search(
-    ssdp_listener: SsdpListener, request_line: str, headers: CaseInsensitiveDict
-) -> None:
+async def see_search(ssdp_listener: SsdpListener, request_line: str, headers: CaseInsensitiveDict) -> None:
     """See search."""
     # pylint: disable=protected-access
     search_listener = ssdp_listener._search_listener
@@ -548,9 +544,7 @@ async def test_see_search_invalid_usn() -> None:
 
     # See device for the first time through alive-advertisement.
     headers = CaseInsensitiveDict(SEARCH_HEADERS_DEFAULT)
-    headers["ST"] = (
-        "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal"
-    )
+    headers["ST"] = "urn:Microsoft Windows Peer Name Resolution Protocol: V4:IPV6:LinkLocal"
     headers["USN"] = "[fe80::aaaa:bbbb:cccc:dddd]:3540"
     del headers["_udn"]
     advertisement_listener._on_data(SEARCH_REQUEST_LINE, headers)
@@ -619,9 +613,7 @@ async def test_combined_headers() -> None:
 
     # See device for the first time through search.
     async_callback.reset_mock()
-    headers = CaseInsensitiveDict(
-        {**SEARCH_HEADERS_DEFAULT, "booTID.UPNP.ORG": "0", "Original": "2"}
-    )
+    headers = CaseInsensitiveDict({**SEARCH_HEADERS_DEFAULT, "booTID.UPNP.ORG": "0", "Original": "2"})
     await see_search(listener, SEARCH_REQUEST_LINE, headers)
     async_callback.assert_awaited_once_with(
         ANY,
@@ -635,9 +627,7 @@ async def test_combined_headers() -> None:
 
     # See device for the second time through alive-advertisement, not triggering callback.
     async_callback.reset_mock()
-    headers = CaseInsensitiveDict(
-        {**ADVERTISEMENT_HEADERS_DEFAULT, "BooTID.UPNP.ORG": "2"}
-    )
+    headers = CaseInsensitiveDict({**ADVERTISEMENT_HEADERS_DEFAULT, "BooTID.UPNP.ORG": "2"})
     headers["NTS"] = "ssdp:alive"
     await see_advertisement(listener, ADVERTISEMENT_REQUEST_LINE, headers)
 
@@ -697,9 +687,7 @@ async def test_see_search_device_ipv4_and_ipv6() -> None:
         }
     )
     await see_search(listener, SEARCH_REQUEST_LINE, headers)
-    async_callback.assert_awaited_once_with(
-        ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_CHANGED
-    )
+    async_callback.assert_awaited_once_with(ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_CHANGED)
 
     # See device via IPv6, callback should be called with SsdpSource.SEARCH_ALIVE,
     # not SEARCH_UPDATE.
@@ -712,8 +700,6 @@ async def test_see_search_device_ipv4_and_ipv6() -> None:
         }
     )
     await see_search(listener, SEARCH_REQUEST_LINE, headers)
-    async_callback.assert_awaited_once_with(
-        ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_ALIVE
-    )
+    async_callback.assert_awaited_once_with(ANY, SEARCH_HEADERS_DEFAULT["ST"], SsdpSource.SEARCH_ALIVE)
 
     assert listener.devices[SEARCH_HEADERS_DEFAULT["_udn"]].locations

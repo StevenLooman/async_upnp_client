@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.advertisement module."""
 
 import asyncio
@@ -27,15 +26,9 @@ class SsdpAdvertisementListener:
 
     def __init__(
         self,
-        async_on_alive: (
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
-        ) = None,
-        async_on_byebye: (
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
-        ) = None,
-        async_on_update: (
-            Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None
-        ) = None,
+        async_on_alive: (Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None) = None,
+        async_on_byebye: (Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None) = None,
+        async_on_update: (Callable[[CaseInsensitiveDict], Coroutine[Any, Any, None]] | None) = None,
         on_alive: Callable[[CaseInsensitiveDict], None] | None = None,
         on_byebye: Callable[[CaseInsensitiveDict], None] | None = None,
         on_update: Callable[[CaseInsensitiveDict], None] | None = None,
@@ -45,14 +38,9 @@ class SsdpAdvertisementListener:
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
-        assert (
-            async_on_alive
-            or async_on_byebye
-            or async_on_update
-            or on_alive
-            or on_byebye
-            or on_update
-        ), "Provide at least one callback"
+        assert async_on_alive or async_on_byebye or async_on_update or on_alive or on_byebye or on_update, (
+            "Provide at least one callback"
+        )
 
         self.async_on_alive = async_on_alive
         self.async_on_byebye = async_on_byebye

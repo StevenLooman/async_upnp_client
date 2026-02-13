@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client.client_factory module."""
 
 import logging
@@ -61,24 +60,14 @@ class UpnpFactory:
         self,
         requester: UpnpRequester,
         non_strict: bool = False,
-        on_pre_receive_device_spec: Callable[
-            [HttpRequest], HttpRequest
-        ] = default_on_pre_receive_device_spec,
-        on_post_receive_device_spec: Callable[
-            [HttpResponse], HttpResponse
-        ] = default_on_post_receive_device_spec,
-        on_pre_receive_service_spec: Callable[
-            [HttpRequest], HttpRequest
-        ] = default_on_pre_receive_service_spec,
-        on_post_receive_service_spec: Callable[
-            [HttpResponse], HttpResponse
-        ] = default_on_post_receive_service_spec,
+        on_pre_receive_device_spec: Callable[[HttpRequest], HttpRequest] = default_on_pre_receive_device_spec,
+        on_post_receive_device_spec: Callable[[HttpResponse], HttpResponse] = default_on_post_receive_device_spec,
+        on_pre_receive_service_spec: Callable[[HttpRequest], HttpRequest] = default_on_pre_receive_service_spec,
+        on_post_receive_service_spec: Callable[[HttpResponse], HttpResponse] = default_on_post_receive_service_spec,
         on_pre_call_action: Callable[
             [UpnpAction, Mapping[str, Any], HttpRequest], HttpRequest
         ] = default_on_pre_call_action,
-        on_post_call_action: Callable[
-            [UpnpAction, HttpResponse], HttpResponse
-        ] = default_on_post_call_action,
+        on_post_call_action: Callable[[UpnpAction, HttpResponse], HttpResponse] = default_on_post_call_action,
     ) -> None:
         """Initialize."""
         # pylint: disable=too-many-arguments,too-many-positional-arguments
@@ -106,27 +95,19 @@ class UpnpFactory:
 
         return await self._async_create_device(device_el, description_url)
 
-    async def _async_create_device(
-        self, device_el: ET.Element, description_url: str
-    ) -> UpnpDevice:
+    async def _async_create_device(self, device_el: ET.Element, description_url: str) -> UpnpDevice:
         """Create a device."""
         device_info = self._parse_device_el(device_el, description_url)
 
         # get services
         services = []
-        for service_desc_el in device_el.findall(
-            "./device:serviceList/device:service", NS
-        ):
+        for service_desc_el in device_el.findall("./device:serviceList/device:service", NS):
             service = await self._async_create_service(service_desc_el, description_url)
             services.append(service)
 
         embedded_devices = []
-        for embedded_device_el in device_el.findall(
-            "./device:deviceList/device:device", NS
-        ):
-            embedded_device = await self._async_create_device(
-                embedded_device_el, description_url
-            )
+        for embedded_device_el in device_el.findall("./device:deviceList/device:device", NS):
+            embedded_device = await self._async_create_device(embedded_device_el, description_url)
             embedded_devices.append(embedded_device)
 
         return UpnpDevice(
@@ -138,9 +119,7 @@ class UpnpFactory:
             self._on_post_receive_device_spec,
         )
 
-    def _parse_device_el(
-        self, device_desc_el: ET.Element, description_url: str
-    ) -> DeviceInfo:
+    def _parse_device_el(self, device_desc_el: ET.Element, description_url: str) -> DeviceInfo:
         """Parse device description XML."""
         icons = []
         for icon_el in device_desc_el.iterfind("./device:iconList/device:icon", NS):
@@ -159,29 +138,21 @@ class UpnpFactory:
             device_type=device_desc_el.findtext("./device:deviceType", "", NS),
             friendly_name=device_desc_el.findtext("./device:friendlyName", "", NS),
             manufacturer=device_desc_el.findtext("./device:manufacturer", "", NS),
-            manufacturer_url=device_desc_el.findtext(
-                "./device:manufacturerURL", "", NS
-            ),
-            model_description=device_desc_el.findtext(
-                "./device:modelDescription", None, NS
-            ),
+            manufacturer_url=device_desc_el.findtext("./device:manufacturerURL", "", NS),
+            model_description=device_desc_el.findtext("./device:modelDescription", None, NS),
             model_name=device_desc_el.findtext("./device:modelName", "", NS),
             model_number=device_desc_el.findtext("./device:modelNumber", None, NS),
             model_url=device_desc_el.findtext("./device:modelURL", None, NS),
             serial_number=device_desc_el.findtext("./device:serialNumber", None, NS),
             udn=device_desc_el.findtext("./device:UDN", "", NS),
             upc=device_desc_el.findtext("./device:UPC", "", NS),
-            presentation_url=device_desc_el.findtext(
-                "./device:presentationURL", "", NS
-            ),
+            presentation_url=device_desc_el.findtext("./device:presentationURL", "", NS),
             url=description_url,
             icons=icons,
             xml=device_desc_el,
         )
 
-    async def _async_create_service(
-        self, service_description_el: ET.Element, base_url: str
-    ) -> UpnpService:
+    async def _async_create_service(self, service_description_el: ET.Element, base_url: str) -> UpnpService:
         """Retrieve the SCPD for a service and create a UpnpService from it."""
         scpd_url = service_description_el.findtext("device:SCPDURL", None, NS)
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
@@ -230,35 +201,26 @@ class UpnpFactory:
             raise UpnpXmlContentError("Could not find service state table element")
 
         state_vars = []
-        for state_var_el in service_state_table_el.findall(
-            "./service:stateVariable", NS
-        ):
+        for state_var_el in service_state_table_el.findall("./service:stateVariable", NS):
             state_var = self._create_state_variable(state_var_el)
             state_vars.append(state_var)
         return state_vars
 
-    def _create_state_variable(
-        self, state_variable_el: ET.Element
-    ) -> UpnpStateVariable:
+    def _create_state_variable(self, state_variable_el: ET.Element) -> UpnpStateVariable:
         """Create UpnpStateVariable from state_variable_el."""
         state_variable_info = self._parse_state_variable_el(state_variable_el)
         type_info = state_variable_info.type_info
         schema = self._state_variable_create_schema(type_info)
         return UpnpStateVariable(state_variable_info, schema)
 
-    def _parse_state_variable_el(
-        self, state_variable_el: ET.Element
-    ) -> StateVariableInfo:
+    def _parse_state_variable_el(self, state_variable_el: ET.Element) -> StateVariableInfo:
         """Parse XML for state variable."""
         # send events
         send_events = False
         if "sendEvents" in state_variable_el.attrib:
             send_events = state_variable_el.attrib["sendEvents"] == "yes"
         elif state_variable_el.find("service:sendEventsAttribute", NS) is not None:
-            send_events = (
-                state_variable_el.findtext("service:sendEventsAttribute", None, NS)
-                == "yes"
-            )
+            send_events = state_variable_el.findtext("service:sendEventsAttribute", None, NS) == "yes"
         else:
             _LOGGER.debug(
                 "Invalid XML for state variable/send events: %s",
@@ -290,9 +252,7 @@ class UpnpFactory:
         allowed_value_list_el = state_variable_el.find("service:allowedValueList", NS)
         if allowed_value_list_el is not None:
             allowed_values = [
-                v.text
-                for v in allowed_value_list_el.findall("service:allowedValue", NS)
-                if v.text is not None
+                v.text for v in allowed_value_list_el.findall("service:allowedValue", NS) if v.text is not None
             ]
 
         type_info = StateVariableTypeInfo(
@@ -311,9 +271,7 @@ class UpnpFactory:
             xml=state_variable_el,
         )
 
-    def _state_variable_create_schema(
-        self, type_info: StateVariableTypeInfo
-    ) -> vol.Schema:
+    def _state_variable_create_schema(self, type_info: StateVariableTypeInfo) -> vol.Schema:
         """Create schema."""
         # construct validators
         validators = []
@@ -330,10 +288,7 @@ class UpnpFactory:
         if not self._non_strict:
             in_coercer = data_type_mapping["in"]
             if type_info.allowed_values:
-                allowed_values = [
-                    in_coercer(allowed_value)
-                    for allowed_value in type_info.allowed_values
-                ]
+                allowed_values = [in_coercer(allowed_value) for allowed_value in type_info.allowed_values]
                 in_ = vol.In(allowed_values)
                 validators.append(in_)
 
@@ -351,7 +306,7 @@ class UpnpFactory:
 
         if type_info.default_value is not None and type_info.default_value != "":
             default_value: Any = type_info.default_value
-            if data_type == bool:
+            if data_type is bool:
                 default_value = default_value == "1"
             else:
                 default_value = data_type(default_value)
@@ -359,9 +314,7 @@ class UpnpFactory:
 
         return vol.Schema(vol.All(*validators))
 
-    def _create_actions(
-        self, scpd_el: ET.Element, state_variables: Sequence[UpnpStateVariable]
-    ) -> list[UpnpAction]:
+    def _create_actions(self, scpd_el: ET.Element, state_variables: Sequence[UpnpStateVariable]) -> list[UpnpAction]:
         """Create UpnpActions from scpd_el."""
         action_list_el = scpd_el.find("./service:actionList", NS)
         if action_list_el is None:
@@ -373,15 +326,12 @@ class UpnpFactory:
             actions.append(action)
         return actions
 
-    def _create_action(
-        self, action_el: ET.Element, state_variables: Sequence[UpnpStateVariable]
-    ) -> UpnpAction:
+    def _create_action(self, action_el: ET.Element, state_variables: Sequence[UpnpStateVariable]) -> UpnpAction:
         """Create a UpnpAction from action_el."""
         action_info = self._parse_action_el(action_el)
         svs = {sv.name: sv for sv in state_variables}
         arguments = [
-            UpnpAction.Argument(arg_info, svs[arg_info.state_variable_name])
-            for arg_info in action_info.arguments
+            UpnpAction.Argument(arg_info, svs[arg_info.state_variable_name]) for arg_info in action_info.arguments
         ]
         return UpnpAction(action_info, arguments, non_strict=self._non_strict)
 
@@ -389,9 +339,7 @@ class UpnpFactory:
         """Parse XML for action."""
         # build arguments
         args: list[ActionArgumentInfo] = []
-        for argument_el in action_el.findall(
-            "./service:argumentList/service:argument", NS
-        ):
+        for argument_el in action_el.findall("./service:argumentList/service:argument", NS):
             argument_name = argument_el.findtext("service:name", None, NS)
             if argument_name is None:
                 _LOGGER.debug("Caught Action Argument without a name, ignoring")
@@ -402,13 +350,9 @@ class UpnpFactory:
                 _LOGGER.debug("Caught Action Argument without a direction, ignoring")
                 continue
 
-            state_variable_name = argument_el.findtext(
-                "service:relatedStateVariable", None, NS
-            )
+            state_variable_name = argument_el.findtext("service:relatedStateVariable", None, NS)
             if state_variable_name is None:
-                _LOGGER.debug(
-                    "Caught Action Argument without a State Variable name, ignoring"
-                )
+                _LOGGER.debug("Caught Action Argument without a State Variable name, ignoring")
                 continue
 
             argument_info = ActionArgumentInfo(
@@ -445,9 +389,7 @@ class UpnpFactory:
     def _read_spec_from_reponse(self, response: HttpResponse) -> ET.Element:
         """Read XML specification from response."""
         if response.status_code != 200:
-            raise UpnpResponseError(
-                status=response.status_code, headers=response.headers
-            )
+            raise UpnpResponseError(status=response.status_code, headers=response.headers)
 
         description: str = response.body or ""
         try:

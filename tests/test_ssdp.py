@@ -22,7 +22,8 @@ def test_ssdp_search_packet() -> None:
     """Test SSDP search packet generation."""
     msg = build_ssdp_search_packet(("239.255.255.250", 1900), 4, "ssdp:all")
     assert (
-        msg == "M-SEARCH * HTTP/1.1\r\n"
+        msg
+        == "M-SEARCH * HTTP/1.1\r\n"
         "HOST:239.255.255.250:1900\r\n"
         'MAN:"ssdp:discover"\r\n'
         "MX:4\r\n"
@@ -35,7 +36,8 @@ def test_ssdp_search_packet_v6() -> None:
     """Test SSDP search packet generation."""
     msg = build_ssdp_search_packet(("FF02::C", 1900, 0, 2), 4, "ssdp:all")
     assert (
-        msg == "M-SEARCH * HTTP/1.1\r\n"
+        msg
+        == "M-SEARCH * HTTP/1.1\r\n"
         "HOST:[FF02::C%2]:1900\r\n"
         'MAN:"ssdp:discover"\r\n'
         "MX:4\r\n"
@@ -73,9 +75,7 @@ def test_decode_ssdp_packet() -> None:
         b"EXT:\r\n"
         b"\r\n"
     )
-    request_line, headers = decode_ssdp_packet(
-        msg, ("local_addr", 1900), ("remote_addr", 12345)
-    )
+    request_line, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
     assert request_line == "HTTP/1.1 200 OK"
 
@@ -109,9 +109,7 @@ def test_decode_ssdp_packet_missing_ending() -> None:
         b"USN: uuid:...::urn:myharmony-com:device:harmony:1\r\n"
         b"BOOTID.UPNP.ORG:1619366886\r\n"
     )
-    request_line, headers = decode_ssdp_packet(
-        msg, ("local_addr", 1900), ("remote_addr", 12345)
-    )
+    request_line, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
     assert request_line == "HTTP/1.1 200 OK"
 
@@ -136,12 +134,7 @@ def test_decode_ssdp_packet_missing_ending() -> None:
 
 def test_decode_ssdp_packet_duplicate_header() -> None:
     """Test SSDP response decoding with a duplicate header."""
-    msg = (
-        b"HTTP/1.1 200 OK\r\n"
-        b"CACHE-CONTROL: max-age = 1800\r\n"
-        b"CACHE-CONTROL: max-age = 1800\r\n"
-        b"\r\n"
-    )
+    msg = b"HTTP/1.1 200 OK\r\nCACHE-CONTROL: max-age = 1800\r\nCACHE-CONTROL: max-age = 1800\r\n\r\n"
     _, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
     assert headers == {
@@ -156,12 +149,7 @@ def test_decode_ssdp_packet_duplicate_header() -> None:
 
 def test_decode_ssdp_packet_empty_location() -> None:
     """Test SSDP response decoding with an empty location."""
-    msg = (
-        b"HTTP/1.1 200 OK\r\n"
-        b"LOCATION: \r\n"
-        b"CACHE-CONTROL: max-age = 1800\r\n"
-        b"\r\n"
-    )
+    msg = b"HTTP/1.1 200 OK\r\nLOCATION: \r\nCACHE-CONTROL: max-age = 1800\r\n\r\n"
     _, headers = decode_ssdp_packet(msg, ("local_addr", 1900), ("remote_addr", 12345))
 
     assert headers == {
@@ -178,12 +166,7 @@ def test_decode_ssdp_packet_empty_location() -> None:
 @pytest.mark.asyncio
 async def test_ssdp_protocol_handles_broken_headers() -> None:
     """Test SsdpProtocol is able to handle broken headers."""
-    msg = (
-        b"HTTP/1.1 200 OK\r\n"
-        b"DEFUNCT\r\n"
-        b"CACHE-CONTROL: max-age = 1800\r\n"
-        b"\r\n"
-    )
+    msg = b"HTTP/1.1 200 OK\r\nDEFUNCT\r\nCACHE-CONTROL: max-age = 1800\r\n\r\n"
     addr = ("addr", 123)
     loop = asyncio.get_event_loop()
 
@@ -207,9 +190,7 @@ def test_decode_ssdp_packet_v6() -> None:
         b"\r\n"
     )
 
-    request_line, headers = decode_ssdp_packet(
-        msg, ("FF02::C", 1900, 0, 3), ("fe80::1", 123, 0, 3)
-    )
+    request_line, headers = decode_ssdp_packet(msg, ("FF02::C", 1900, 0, 3), ("fe80::1", 123, 0, 3))
 
     assert request_line == "HTTP/1.1 200 OK"
 
@@ -261,9 +242,7 @@ def test_microsoft_butchers_ssdp() -> None:
         b"Ext:\r\n"
     )
 
-    request_line, headers = decode_ssdp_packet(
-        msg, ("239.255.255.250", 1900), ("192.168.1.1", 12345)
-    )
+    request_line, headers = decode_ssdp_packet(msg, ("239.255.255.250", 1900), ("192.168.1.1", 12345))
 
     assert request_line == "HTTP/1.1 200 OK"
     assert headers == {
