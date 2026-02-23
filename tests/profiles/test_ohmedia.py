@@ -1,11 +1,10 @@
-import asyncio
 import os
-import pytest
 from copy import copy
-from multidict import CIMultiDict
 from typing import Mapping, Tuple
 
-from async_upnp_client.client import UpnpService, UpnpStateVariable
+import pytest
+from multidict import CIMultiDict
+
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError
@@ -19,11 +18,13 @@ from async_upnp_client.profiles.ohmedia import (
 
 from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
 
+
 def read_file(filename: str) -> str:
     """Read file."""
     path = os.path.join("tests", "fixtures", "ohmedia", filename)
     with open(path, encoding="utf-8") as file:
         return file.read()
+
 
 NOTIFY_PROPERTY_BODY = """
 <e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
@@ -33,9 +34,7 @@ NOTIFY_PROPERTY_BODY = """
 </e:propertyset>
 """
 
-NOTIFY_HEADERS: CIMultiDict = CIMultiDict(
-    [("Nt", "upnp:event"), ("Nts", "upnp:propchange"), ("SID", "dummy-sid")]
-)
+NOTIFY_HEADERS: CIMultiDict = CIMultiDict([("Nt", "upnp:event"), ("Nts", "upnp:propchange"), ("SID", "dummy-sid")])
 
 RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
     # OpenHomeMedia
@@ -182,9 +181,7 @@ async def test_async_call_action_one_param() -> None:
     )
 
     # playlist_id_array_changed
-    assert (
-        await profile._async_call_action("Playlist", "IdArrayChanged", Token=42)
-    ) == {"Value": True}
+    assert (await profile._async_call_action("Playlist", "IdArrayChanged", Token=42)) == {"Value": True}
 
 
 @pytest.mark.asyncio
@@ -297,7 +294,7 @@ async def test_async_call_action_bad_action() -> None:
 @pytest.mark.asyncio
 async def test_async_call_action_bad_param_value() -> None:
     """Test _async_call_action with no kwargs"""
-    with pytest.raises(UpnpActionResponseError) as exinfo:   # call action expecting 800 upnp error
+    with pytest.raises(UpnpActionResponseError) as exinfo:  # call action expecting 800 upnp error
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -349,9 +346,7 @@ async def test_subscribe_events() -> None:
     result = await event_handler.handle_notify(http_request)
     assert result == 200
 
-    state_var = profile._state_variable(
-        service_name="Volume", state_variable_name="Volume"
-    )
+    state_var = profile._state_variable(service_name="Volume", state_variable_name="Volume")
     assert state_var.value == expected
 
 
