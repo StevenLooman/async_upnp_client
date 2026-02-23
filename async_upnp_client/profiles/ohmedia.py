@@ -1,0 +1,1446 @@
+# -*- coding: utf-8 -*-
+"""
+async_upnp_client profile for Open Home Media players
+"""
+
+# pylint: disable=too-many-lines
+import base64
+import binascii
+import struct
+
+from enum import StrEnum
+import logging
+import xml.etree.ElementTree as ET
+from typing import (
+    Any,
+    Optional,
+    Sequence,
+)
+
+from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
+from async_upnp_client.event_handler import UpnpEventHandler
+from async_upnp_client.profiles.profile import UpnpProfileDevice
+
+_LOGGER = logging.getLogger(__name__)
+
+
+# region Service and other enums
+class Service(StrEnum):
+    CREDENTIALS = "Credentials"
+    INFO = "Info"
+    PINS = "Pins"
+    PLAYLIST = "Playlist"
+    PRODUCT = "Product"
+    RADIO = "Radio"
+    RECEIVER = "Receiver"
+    SENDER = "Sender"
+    TIME = "Time"
+    TRANSPORT = "Transport"
+    UPDATE = "Update"
+    VOLUME = "Volume"
+
+
+class ServiceId(StrEnum):
+    # OPENHOME
+    CREDENTIALS = "urn:av-openhome-org:serviceId:Credentials"
+    INFO = "urn:av-openhome-org:serviceId:Info"
+    PINS = "urn:av-openhome-org:serviceId:Pins"
+    PLAYLIST = "urn:av-openhome-org:serviceId:Playlist"
+    PLAYLISTMANAGER = "urn:av-openhome-org:serviceId:PlaylistManager"
+    PRODUCT = "urn:av-openhome-org:serviceId:Product"
+    RADIO = "urn:av-openhome-org:serviceId:Radio"
+    RECEIVER = "urn:av-openhome-org:serviceId:Receiver"
+    SENDER = "urn:av-openhome-org:serviceId:Sender"
+    TIME = "urn:av-openhome-org:serviceId:Time"
+    TRANSPORT = "urn:av-openhome-org:serviceId:Transport"
+    VOLUME = "urn:av-openhome-org:serviceId:Volume"
+    # LINN
+    UPDATE = "urn:linn-co-uk:serviceId:Update"
+    DIAGNOSTICS = "urn:linn-co-uk:serviceId:Diagnostics"
+    VOLKANO = "urn:linn-co-uk:serviceId:Volkano"
+    PRIVACY = "urn:linn-co-uk:serviceId:Privacy"
+
+
+class ProductSourceType(StrEnum):
+    ANALOG = "Analog"  # Specifies an analog external input
+    DIGITAL = "Digital"  # Specifies a digital external input
+    HDMI = "Hdmi"  # Specifies a HDMI external input
+    NETAUX = "NetAux"  # Specifies 3rd party, non OpenHome controllable, network protocols such as AirPlay
+    PLAYLIST = "Playlist"  # the av.openhome.org:Playlist:1 service must be available
+    RADIO = "Radio"  # the av.openhome.org:Radio:1 service must be available
+    RECEIVER = "Receiver"  # the av.openhome.org:Receiver:1 service must be available
+    UPNPAV = "UpnpAv"  # the upnp.org:MediaRenderer:1 device must be available
+
+
+# endregion
+
+
+# region Action Enums
+class Credentials(StrEnum):
+	SET = "Set"
+	CLEAR = "Clear"
+	SET_ENABLED = "SetEnabled"
+	GET = "Get"
+	LOGIN = "Login"
+	RE_LOGIN = "ReLogin"
+	GET_IDS = "GetIds"
+	GET_PUBLIC_KEY = "GetPublicKey"
+	GET_SEQUENCE_NUMBER = "GetSequenceNumber"
+class Info(StrEnum):
+    COUNTERS = "Counters"
+    TRACK = "Track"
+    DETAILS = "Details"
+    METATEXT = "Metatext"
+
+
+class Pins(StrEnum):
+    GET_DEVICE_MAX = "GetDeviceMax"
+    GET_ACCOUNT_MAX = "GetAccountMax"
+    GET_MODES = "GetModes"
+    GET_ID_ARRAY = "GetIdArray"
+    GET_CLOUD_CONNECTED = "GetCloudConnected"
+    READ_LIST = "ReadList"
+    INVOKE_ID = "InvokeId"
+    INVOKE_INDEX = "InvokeIndex"
+    INVOKE_URI = "InvokeUri"
+    SET_DEVICE = "SetDevice"
+    SET_ACCOUNT = "SetAccount"
+    CLEAR = "Clear"
+    SWAP = "Swap"
+
+
+class Playlist(StrEnum):
+    # Actions
+    PLAY = "Play"
+    PAUSE = "Pause"
+    STOP = "Stop"
+    NEXT = "Next"
+    PREVIOUS = "Previous"
+    SET_REPEAT = "SetRepeat"
+    REPEAT = "Repeat"
+    SET_SHUFFLE = "SetShuffle"
+    SHUFFLE = "Shuffle"
+    SEEK_SECOND_ABSOLUTE = "SeekSecondAbsolute"
+    SEEK_SECOND_RELATIVE = "SeekSecondRelative"
+    SEEK_ID = "SeekId"
+    SEEK_INDEX = "SeekIndex"
+    TRANSPORT_STATE = "TransportState"
+    ID = "Id"
+    READ = "Read"
+    READ_LIST = "ReadList"
+    INSERT = "Insert"
+    DELETE_ID = "DeleteId"
+    DELETE_ALL = "DeleteAll"
+    TRACKS_MAX = "TracksMax"
+    ID_ARRAY = "IdArray"
+    ID_ARRAY_CHANGED = "IdArrayChanged"
+    PROTOCOL_INFO = "ProtocolInfo"
+
+
+class Product(StrEnum):
+    MANUFACTURER = "Manufacturer"
+    MODEL = "Model"
+    PRODUCT = "Product"
+    STANDBY = "Standby"
+    STANDBY_TRANSITIONING = "StandbyTransitioning"
+    SET_STANDBY = "SetStandby"
+    SOURCE_COUNT = "SourceCount"
+    SOURCE_XML = "SourceXml"
+    SOURCE_INDEX = "SourceIndex"
+    SET_SOURCE_INDEX = "SetSourceIndex"
+    SET_SOURCE_INDEX_BY_NAME = "SetSourceIndexByName"
+    SET_SOURCE_BY_SYSTEM_NAME = "SetSourceBySystemName"
+    SOURCE = "Source"
+    ATTRIBUTES = "Attributes"
+    SOURCE_XML_CHANGE_COUNT = "SourceXmlChangeCount"
+    GET_IMAGE_URI = "GetImageUri"
+
+
+class Radio(StrEnum):
+    REFRESH_PRESETS = "RefreshPresets"
+    PLAY = "Play"
+    PAUSE = "Pause"
+    STOP = "Stop"
+    SEEK_SECOND_ABSOLUTE = "SeekSecondAbsolute"
+    SEEK_SECOND_RELATIVE = "SeekSecondRelative"
+    CHANNEL = "Channel"
+    SET_CHANNEL = "SetChannel"
+    TRANSPORT_STATE = "TransportState"
+    ID = "Id"
+    SET_ID = "SetId"
+    READ = "Read"
+    READ_LIST = "ReadList"
+    ID_ARRAY = "IdArray"
+    ID_ARRAY_CHANGED = "IdArrayChanged"
+    CHANNELS_MAX = "ChannelsMax"
+    PROTOCOL_INFO = "ProtocolInfo"
+
+
+class Receiver(StrEnum):
+    PLAY = "Play"
+    STOP = "Stop"
+    SET_SENDER = "SetSender"
+    SENDER = "Sender"
+    PROTOCOL_INFO = "ProtocolInfo"
+    TRANSPORT_STATE = "TransportState"
+
+
+class Sender(StrEnum):
+    PRESENTATION_URL = "PresentationUrl"
+    METADATA = "Metadata"
+    AUDIO = "Audio"
+    STATUS = "Status"
+    STATUS2 = "Status2"
+    ENABLED = "Enabled"
+    ATTRIBUTES = "Attributes"
+
+
+class Time(StrEnum):
+    TIME = "Time"
+
+
+class Transport(StrEnum):
+    PLAY_AS = "PlayAs"
+    PLAY = "Play"
+    PAUSE = "Pause"
+    STOP = "Stop"
+    SKIP_NEXT = "SkipNext"
+    SKIP_PREVIOUS = "SkipPrevious"
+    SET_REPEAT = "SetRepeat"
+    SET_SHUFFLE = "SetShuffle"
+    SEEK_SECOND_ABSOLUTE = "SeekSecondAbsolute"
+    SEEK_SECOND_RELATIVE = "SeekSecondRelative"
+    TRANSPORT_STATE = "TransportState"
+    MODES = "Modes"
+    MODE_INFO = "ModeInfo"
+    STREAM_INFO = "StreamInfo"
+    STREAM_ID = "StreamId"
+    REPEAT = "Repeat"
+    SHUFFLE = "Shuffle"
+
+
+# TODO: decide how to cope with different versions
+# TODO: should Linn specific be included?
+class Update(StrEnum):
+    GET_SOFTWARE_STATUS = "GetSoftwareStatus"
+    GET_EXECUTOR_STATUS = "GetExecutorStatus"
+    GET_JOB_STATUS = "GetJobStatus"
+    # PUSH_MANIFEST = "PushManifest"
+    PUSH_MANIFEST = "PushManifest2"
+    # APPLY = "Apply"
+    APPLY = "Apply2"
+    # RECOVER = "Recover"
+    RECOVER = "Recover2"
+    # RECOVER_KEEP_STORE = "RecoverKeepStore"
+    RECOVER_KEEP_STORE = "RecoverKeepStore2"
+    CHECK_NOW = "CheckNow"
+    GET_RECOVER_SUPPORTED = "GetRecoverSupported"
+
+
+class Volume(StrEnum):
+    CHARACTERISTICS = "Characteristics"
+    SET_VOLUME = "SetVolume"
+    VOLUME_INC = "VolumeInc"
+    VOLUME_DEC = "VolumeDec"
+    SET_VOLUME_NO_UNMUTE = "SetVolumeNoUnmute"
+    VOLUME_INC_NO_UNMUTE = "VolumeIncNoUnmute"
+    VOLUME_DEC_NO_UNMUTE = "VolumeDecNoUnmute"
+    VOLUME = "Volume"
+    SET_BALANCE = "SetBalance"
+    BALANCE_INC = "BalanceInc"
+    BALANCE_DEC = "BalanceDec"
+    BALANCE = "Balance"
+    SET_FADE = "SetFade"
+    FADE_INC = "FadeInc"
+    FADE_DEC = "FadeDec"
+    FADE = "Fade"
+    SET_MUTE = "SetMute"
+    MUTE = "Mute"
+    VOLUME_LIMIT = "VolumeLimit"
+    UNITY_GAIN = "UnityGain"
+    VOLUME_OFFSET = "VolumeOffset"
+    SET_VOLUME_OFFSET = "SetVolumeOffset"
+    TRIM = "Trim"
+    SET_TRIM = "SetTrim"
+
+
+# endregion
+
+
+# region State Variable Enums
+class CredentialsState(StrEnum):
+    IDS = "Ids"
+    PUBLIC_KEY = "PublicKey"
+    SEQUENCE_NUMBER = "SequenceNumber"
+
+class InfoState(StrEnum):
+    TRACK_COUNT = "TrackCount"
+    DETAILS_COUNT = "DetailsCount"
+    METATEXT_COUNT = "MetatextCount"
+    URI = "Uri"
+    METADATA = "Metadata"
+    DURATION = "Duration"
+    BIT_RATE = "BitRate"
+    BIT_DEPTH = "BitDepth"
+    SAMPLE_RATE = "SampleRate"
+    LOSSLESS = "Lossless"
+    CODEC_NAME = "CodecName"
+    METATEXT = "Metatext"
+
+
+class PlaylistState(StrEnum):
+    # State Variables
+    TRANSPORT_STATE = "TransportState"
+    REPEAT = "Repeat"
+    SHUFFLE = "Shuffle"
+    ID = "Id"
+    ID_ARRAY = "IdArray"
+    TRACKS_MAX = "TracksMax"
+    PROTOCOL_INFO = "ProtocolInfo"
+
+
+class PlaylistStateAllowedValues(StrEnum):
+    BUFFERING = "Buffering"
+    PAUSED = "Paused"
+    PLAYING = "Playing"
+    STOPPED = "Stopped"
+
+
+class ProductState(StrEnum):
+    ATTRIBUTES = "Attributes"
+    MANUFACTURER_IMAGE_URI = "ManufacturerImageUri"
+    MANUFACTURER_INFO = "ManufacturerInfo"
+    MANUFACTURER_NAME = "ManufacturerName"
+    MANUFACTURER_URL = "ManufacturerUrl"
+    MODEL_IMAGE_URI = "ModelImageUri"
+    MODEL_INFO = "ModelInfo"
+    MODEL_NAME = "ModelName"
+    MODEL_URL = "ModelUrl"
+    PRODUCT_IMAGE_HIRES_URI = "ProductImageHiresUri"
+    PRODUCT_IMAGE_URI = "ProductImageUri"
+    PRODUCT_INFO = "ProductInfo"
+    PRODUCT_NAME = "ProductName"
+    PRODUCT_ROOM = "ProductRoom"
+    PRODUCT_URL = "ProductUrl"
+    SOURCE_COUNT = "SourceCount"
+    SOURCE_INDEX = "SourceIndex"
+    SOURCE_NAME = "A_ARG_TYPE_Source_Name"
+    SOURCE_SYSTEM_NAME = "A_ARG_TYPE_Source_SystemName"
+    SOURCE_TYPE = "A_ARG_TYPE_Source_Type"
+    SOURCE_VISIBLE = "A_ARG_TYPE_Source_Visible"
+    SOURCE_XML = "SourceXml"
+    SOURCE_XML_CHANGE_COUNT_VALUE = "A_ARG_TYPE_SourceXmlChangeCount_Value"
+    STANDBY = "Standby"
+    STANDBY_TRANSITIONING = "StandbyTransitioning"
+
+
+class TimeState(StrEnum):
+    DURATION = "Duration"
+    SECONDS = "Seconds"
+    TRACK_COUNT = "TrackCount"
+
+
+class TransportState(StrEnum):
+    CAN_PAUSE = "CanPause"
+    CAN_REPEAT = "CanRepeat"
+    CAN_SEEK = "CanSeek"
+    CAN_SHUFFLE = "CanShuffle"
+    CAN_SKIP_NEXT = "CanSkipNext"
+    CAN_SKIP_PREVIOUS = "CanSkipPrevious"
+    MODES = "Modes"
+    REPEAT = "Repeat"
+    SHUFFLE = "Shuffle"
+    STREAM_ID = "StreamId"
+    TRANSPORT_STATE = "TransportState"
+
+
+class TransportStateAllowedValues(StrEnum):
+    BUFFERING = "Buffering"
+    PAUSED = "Paused"
+    PLAYING = "Playing"
+    STOPPED = "Stopped"
+    WAITING = "Waiting"
+
+
+class VolumeState(StrEnum):
+    BALANCE = "Balance"
+    BALANCE_MAX = "BalanceMax"
+    FADE = "Fade"
+    FADE_MAX = "FadeMax"
+    MUTE = "Mute"
+    TRIM = "A_ARG_TYPE_Trim_TrimBinaryMilliDb"
+    UNITY_GAIN = "UnityGain"
+    VOLUME = "Volume"
+    VOLUME_LIMIT = "VolumeLimit"
+    VOLUME_MAX = "VolumeMax"
+    VOLUME_MILLI_DB_PER_STEP = "VolumeMilliDbPerStep"
+    VOLUME_OFFSET = "A_ARG_TYPE_VolumeOffset_VolumeOffsetBinaryMilliDb"
+    VOLUME_STEPS = "VolumeSteps"
+    VOLUME_UNITY = "VolumeUnity"
+
+
+# endregion
+
+class OhmDevice(UpnpProfileDevice):
+    """Representation of an OpenHome Media (ohMedia) device."""
+
+    def __init__(
+        self, device: UpnpDevice, event_handler: Optional[UpnpEventHandler]
+    ) -> None:
+        """Initialize."""
+        super().__init__(device, event_handler)
+        self.__did_first_update: bool = False
+
+    # region helpful open home device functions and properties
+    # use properties where upnp provides properties
+    # return value if single data item
+    # provide single data value for some common entries from a dictionary
+    # use existing sv if available (and current?)
+    # match openhomedevice to ensure compatibility
+    @property
+    def uuid(self) -> str:
+        return self.device.udn
+
+    @property
+    def manufacturer(self) -> str:
+        return self.device.manufacturer
+
+    @property
+    def model_name(self) -> str:
+        return self.device.model_name
+
+    @property
+    def friendly_name(self) -> str:
+        return self.device.friendly_name
+
+    # TODO read the state var if it exists?
+    async def name(self) -> dict:
+        product = await self.product()
+        return product["Name"]
+
+    # TODO just read the state var if it exists?
+    async def room(self) -> dict:
+        product = await self.product()
+        return product["Room"]
+
+    # endregion
+
+    # region enums and constants
+    DEVICE_TYPES = [
+        "urn:linn-co-uk:device:Source:1",
+    ]
+
+    SERVICE_IDS = frozenset(
+        (
+            "urn:av-openhome-org:serviceId:Credentials",
+            "urn:av-openhome-org:serviceId:Info",
+            "urn:av-openhome-org:serviceId:Pins",
+            "urn:av-openhome-org:serviceId:Playlist",
+            "urn:av-openhome-org:serviceId:PlaylistManager",
+            "urn:av-openhome-org:serviceId:Product",
+            "urn:av-openhome-org:serviceId:Radio",
+            "urn:av-openhome-org:serviceId:Receiver",
+            "urn:av-openhome-org:serviceId:Sender",
+            "urn:av-openhome-org:serviceId:Time",
+            "urn:av-openhome-org:serviceId:Transport",
+            "urn:av-openhome-org:serviceId:Volume",
+            "urn:linn-co-uk:serviceId:Update",
+        )
+    )
+
+    _SERVICE_TYPES = {
+        "Credentials": {"urn:av-openhome-org:service:Credentials:1"},
+        "Info": {"urn:av-openhome-org:service:Info:1"},
+        "Pins": {"urn:av-openhome-org:service:Pins:1"},
+        "Playlist": {"urn:av-openhome-org:service:Playlist:1"},
+        "Product": {
+            "urn:av-openhome-org:service:Product:4",
+            "urn:av-openhome-org:service:Product:3",
+            "urn:av-openhome-org:service:Product:2",
+            "urn:av-openhome-org:service:Product:1",
+        },
+        "Radio": {
+            "urn:av-openhome-org:service:Radio:2",
+            "urn:av-openhome-org:service:Radio:1",
+        },
+        "Receiver": {"urn:av-openhome-org:service:Receiver:1"},
+        "Sender": {
+            "urn:av-openhome-org:service:Sender:2",
+            "urn:av-openhome-org:service:Sender:1",
+        },
+        "Time": {"urn:av-openhome-org:service:Time:1"},
+        "Transport": {"urn:av-openhome-org:service:Transport:1"},
+        "Volume": {
+            "urn:av-openhome-org:service:Volume:4",
+            "urn:av-openhome-org:service:Volume:3",
+            "urn:av-openhome-org:service:Volume:2",
+            "urn:av-openhome-org:service:Volume:1",
+        },
+        "Update": {
+            "urn:linn-co-uk:service:Update:4",
+        },
+    }
+    # endregion
+
+    # functions
+
+    def _on_event(
+        self,
+        service: UpnpService,
+        state_variables: Sequence[UpnpStateVariable[Any]],
+    ) -> None:
+        """Handle state variable(s) changed event from OHM device."""
+        _LOGGER.debug(f"PROFILE_ON_EVENT {service.service_id}")
+        # print(f"PROFILE_ON_EVENT {service.service_id}")
+        for sv in state_variables:
+            state_var = service.state_variable(sv.name)
+            state_var._value = sv._value
+        if self.on_event:
+            # pylint: disable=not-callable
+            # pass control to calling event handler if on_event is overridden
+            self.on_event(service, state_variables)
+
+    # endregion
+
+    # region Credentials Service actions
+    async def credentials_set(self, id, username, password) -> None:
+        """ Perform the action Set """
+        await self._async_call_action(Service.CREDENTIALS, Credentials.SET, Id=id, UserName=username, Password=password)
+
+    async def credentials_clear(self, id) -> None:
+        """ Perform the action Clear """
+        await self._async_call_action(Service.CREDENTIALS, Credentials.CLEAR, Id=id)
+
+    async def credentials_set_enabled(self, id, enabled) -> None:
+        """ Perform the action SetEnabled """
+        await self._async_call_action(Service.CREDENTIALS, Credentials.SET_ENABLED, Id=id, Enabled=enabled)
+
+    async def credentials_get(self, id) -> dict:
+        """ Get the state variables for Get """
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.GET, Id=id)
+
+    async def credentials_login(self, id) -> dict:
+        """ Get the state variables for Login """
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.LOGIN, Id=id)
+
+    async def credentials_re_login(self, id, currenttoken) -> dict:
+        """ Get the state variables for ReLogin """
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.RE_LOGIN, Id=id, CurrentToken=currenttoken)
+
+    async def credentials_get_ids(self) -> dict:
+        """ Get the state variables for GetIds """
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_IDS)
+
+    async def credentials_get_public_key(self) -> dict:
+        """ Get the state variables for GetPublicKey """
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_PUBLIC_KEY)
+
+    async def credentials_get_sequence_number(self) -> dict:
+        """ Get the state variables for GetSequenceNumber """
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
+    # endregion
+    # region Info Service actions
+    async def info_counters(self) -> dict:
+        return await self._async_call_action(Service.INFO, Info.COUNTERS)
+
+    async def info_track(self) -> dict:
+        return await self._async_call_action(Service.INFO, Info.TRACK)
+
+    async def info_details(self) -> dict:
+        return await self._async_call_action(Service.INFO, Info.DETAILS)
+
+    async def info_metatext(self) -> dict:
+        return await self._async_call_action(Service.INFO, Info.METATEXT)
+
+    # endregion
+
+    # region Pins Service actions
+    async def pins_get_id_array(self) -> dict:
+        """Get pins get id array."""
+        return await self._async_call_action(Service.PINS, Pins.GET_ID_ARRAY)
+
+    async def pins_read_list(self, ids) -> dict:
+        """Get pins read list."""
+        return await self._async_call_action(Service.PINS, Pins.READ_LIST)
+
+    async def pins_get_device_max(self) -> dict:
+        """Get pins get max number of devices."""
+        return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
+
+    async def pins_invoke_index(self, index) -> None:
+        """Select Pin by index."""
+        await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, index - 1)
+
+    # endregion
+
+    # region Playlist Service actions
+    async def playlist_stop(self) -> None:
+        """Playlist Stop"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.STOP)
+
+    async def playlist_pause(self) -> None:
+        """Playlist Pause"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.PAUSE)
+
+    async def playlist_play(self) -> None:
+        """Playlist Play"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.PLAY)
+
+    async def playlist_next(self) -> None:
+        """Perform the action Next"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.NEXT)
+
+    async def playlist_previous(self) -> None:
+        """Perform the action Previous"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.PREVIOUS)
+
+    async def playlist_set_repeat(self, value) -> None:
+        """Perform the action SetRepeat"""
+        await self._async_call_action(
+            Service.PLAYLIST, Playlist.SET_REPEAT, Value=value
+        )
+
+    async def playlist_repeat(self) -> dict:
+        """Get the state variables for Repeat"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.REPEAT)
+
+    async def playlist_set_shuffle(self, value) -> None:
+        """Perform the action SetShuffle"""
+        await self._async_call_action(
+            Service.PLAYLIST, Playlist.SET_SHUFFLE, Value=value
+        )
+
+    async def playlist_shuffle(self) -> dict:
+        """Get the state variables for Shuffle"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.SHUFFLE)
+
+    async def playlist_seek_second_absolute(self, value) -> None:
+        """Perform the action SeekSecondAbsolute"""
+        await self._async_call_action(
+            Service.PLAYLIST, Playlist.SEEK_SECOND_ABSOLUTE, Value=value
+        )
+
+    async def playlist_seek_second_relative(self, value) -> None:
+        """Perform the action SeekSecondRelative"""
+        await self._async_call_action(
+            Service.PLAYLIST, Playlist.SEEK_SECOND_RELATIVE, Value=value
+        )
+
+    async def playlist_seek_id(self, value) -> None:
+        """Perform the action SeekId"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_ID, Value=value)
+
+    async def playlist_seek_index(self, value) -> None:
+        """Perform the action SeekIndex"""
+        await self._async_call_action(
+            Service.PLAYLIST, Playlist.SEEK_INDEX, Value=value
+        )
+
+    async def playlist_transport_state(self) -> dict:
+        """Get the state variables for TransportState"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.TRANSPORT_STATE)
+
+    async def playlist_id(self) -> dict:
+        """Get the state variables for Id"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.ID)
+
+    async def playlist_read(self, id) -> dict:
+        """Get the state variables for Read"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.READ, Id=id)
+
+    async def playlist_read_list(self, idlist) -> dict:
+        """Get the state variables for ReadList"""
+        return await self._async_call_action(
+            Service.PLAYLIST, Playlist.READ_LIST, IdList=idlist
+        )
+
+    async def playlist_insert(self, afterid, uri, metadata) -> dict:
+        """Get the state variables for Insert"""
+        return await self._async_call_action(
+            Service.PLAYLIST,
+            Playlist.INSERT,
+            AfterId=afterid,
+            Uri=uri,
+            Metadata=metadata,
+        )
+
+    async def playlist_delete_id(self, value) -> None:
+        """Perform the action DeleteId"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.DELETE_ID, Value=value)
+
+    async def playlist_delete_all(self) -> None:
+        """Perform the action DeleteAll"""
+        await self._async_call_action(Service.PLAYLIST, Playlist.DELETE_ALL)
+
+    async def playlist_tracks_max(self) -> dict:
+        """Get the state variables for TracksMax"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.TRACKS_MAX)
+
+    async def playlist_id_array(self) -> dict:
+        """Get the state variables for IdArray"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.ID_ARRAY)
+
+    async def playlist_id_array_changed(self, token) -> dict:
+        """Get the state variables for IdArrayChanged"""
+        return await self._async_call_action(
+            Service.PLAYLIST, Playlist.ID_ARRAY_CHANGED, Tokenzzz=token
+        )
+
+    async def playlist_protocol_info(self) -> dict:
+        """Get the state variables for ProtocolInfo"""
+        return await self._async_call_action(Service.PLAYLIST, Playlist.PROTOCOL_INFO)
+
+    # endregion
+    # region Product Service actions
+
+    async def product_attributes(self) -> dict:
+        """Get the state variables for Attributes"""
+        return await self._async_call_action(Service.PRODUCT, Product.ATTRIBUTES)
+
+    async def product(self) -> dict:
+        """Get the product details."""
+        return await self._async_call_action(Service.PRODUCT, Product.PRODUCT)
+
+    async def product_manufacturer(self) -> dict:
+        """Get the product manufacturer details."""
+        return await self._async_call_action(Service.PRODUCT, Product.MANUFACTURER)
+
+    async def product_model(self) -> dict:
+        """Get the product model details."""
+        return await self._async_call_action(Service.PRODUCT, Product.MODEL)
+
+    async def product_set_source_index(self, index: int):
+        """Set the product source index."""
+        await self._async_call_action(
+            Service.PRODUCT, Product.SET_SOURCE_INDEX, Index=index
+        )
+
+    async def product_set_standby(self, standby: bool):
+        """Set the product to standby."""
+        await self._async_call_action(
+            Service.PRODUCT, Product.SET_STANDBY, Value=standby
+        )
+
+    async def product_source_count(self) -> dict:
+        """Get the state variables for SourceCount"""
+        return await self._async_call_action(Service.PRODUCT, Product.SOURCE_COUNT)
+
+    async def product_source(self, index: int) -> dict:
+        """Get the source details for source at index."""
+        return await self._async_call_action(
+            Service.PRODUCT, Product.SOURCE, Index=index
+        )
+
+    async def product_source_index(self) -> dict:
+        """Get the current source index."""
+        return await self._async_call_action(Service.PRODUCT, Product.SOURCE_INDEX)
+
+    async def product_source_xml(self) -> dict:
+        """Get the product source xml."""
+        return await self._async_call_action(Service.PRODUCT, Product.SOURCE_XML)
+
+    async def product_standby(self) -> dict:
+        """Get the product standby status."""
+        return await self._async_call_action(Service.PRODUCT, Product.STANDBY)
+
+    # endregion
+    # region Radio Service actions
+    async def radio_channel(self) -> dict:
+        """Radio Channel"""
+        return await self._async_call_action(Service.RADIO, Radio.CHANNEL)
+
+    async def radio_pause(self) -> None:
+        """Radio Pause"""
+        await self._async_call_action(Service.RADIO, Radio.PAUSE)
+
+    async def radio_play(self) -> None:
+        """Radio Play"""
+        await self._async_call_action(Service.RADIO, Radio.PLAY)
+
+    async def radio_set_channel(self, uri, metadata) -> None:
+        """Radio Set Channel
+        uri: uri for channel
+        metadata: metadata for radio channel
+            must be valid metadata
+        """
+        await self._async_call_action(
+            Service.RADIO, Radio.SET_CHANNEL, Uri=uri, Metadata=metadata
+        )
+
+    async def radio_stop(self) -> None:
+        """Radio Stop"""
+        await self._async_call_action(Service.RADIO, Radio.STOP)
+
+    async def radio_transport_state(self) -> dict:
+        """Get the state variables for TransportState"""
+        return await self._async_call_action(Service.RADIO, Radio.TRANSPORT_STATE)
+
+    async def radio_id(self) -> dict:
+        """Get the state variables for Id"""
+        return await self._async_call_action(Service.RADIO, Radio.ID)
+
+    async def radio_set_id(self, value, uri) -> None:
+        """Perform the action SetId"""
+        await self._async_call_action(Service.RADIO, Radio.SET_ID, Value=value, Uri=uri)
+
+    async def radio_read(self, id) -> dict:
+        """Get the state variables for Read"""
+        return await self._async_call_action(Service.RADIO, Radio.READ, Id=id)
+
+    async def radio_read_list(self, idlist) -> dict:
+        """Get the state variables for ReadList"""
+        return await self._async_call_action(
+            Service.RADIO, Radio.READ_LIST, IdList=idlist
+        )
+
+    async def radio_id_array(self) -> dict:
+        """Get the state variables for IdArray"""
+        return await self._async_call_action(Service.RADIO, Radio.ID_ARRAY)
+
+    async def radio_id_array_changed(self, token) -> dict:
+        """Get the state variables for IdArrayChanged"""
+        return await self._async_call_action(
+            Service.RADIO, Radio.ID_ARRAY_CHANGED, Token=token
+        )
+
+    async def radio_channels_max(self) -> dict:
+        """Get the state variables for ChannelsMax"""
+        return await self._async_call_action(Service.RADIO, Radio.CHANNELS_MAX)
+
+    async def radio_protocol_info(self) -> dict:
+        """Get the state variables for ProtocolInfo"""
+        return await self._async_call_action(Service.RADIO, Radio.PROTOCOL_INFO)
+
+    async def radio_refresh_presets(self) -> None:
+        """Perform the action RefreshPresets"""
+        await self._async_call_action(Service.RADIO, Radio.REFRESH_PRESETS)
+
+    async def radio_seek_second_absolute(self, value) -> None:
+        """Perform the action SeekSecondAbsolute"""
+        await self._async_call_action(
+            Service.RADIO, Radio.SEEK_SECOND_ABSOLUTE, Value=value
+        )
+
+    async def radio_seek_second_relative(self, value) -> None:
+        """Perform the action SeekSecondRelative"""
+        await self._async_call_action(
+            Service.RADIO, Radio.SEEK_SECOND_RELATIVE, Value=value
+        )
+
+    # endregion
+
+    # region Receiver Service actions
+    async def receiver_play(self) -> None:
+        """Perform the action Play"""
+        await self._async_call_action(Service.RECEIVER, Receiver.PLAY)
+
+    async def receiver_stop(self) -> None:
+        """Perform the action Stop"""
+        await self._async_call_action(Service.RECEIVER, Receiver.STOP)
+
+    async def receiver_set_sender(self, uri, metadata) -> None:
+        """Perform the action SetSender"""
+        await self._async_call_action(
+            Service.RECEIVER, Receiver.SET_SENDER, Uri=uri, Metadata=metadata
+        )
+
+    async def receiver_sender(self) -> dict:
+        """Get the state variables for Sender"""
+        return await self._async_call_action(Service.RECEIVER, Receiver.SENDER)
+
+    async def receiver_protocol_info(self) -> dict:
+        """Get the state variables for ProtocolInfo"""
+        return await self._async_call_action(Service.RECEIVER, Receiver.PROTOCOL_INFO)
+
+    async def receiver_transport_state(self) -> dict:
+        """Get the state variables for TransportState"""
+        return await self._async_call_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
+
+    # endregion
+
+    # region Sender Service actions
+    async def sender_presentation_url(self) -> dict:
+        """Get the state variables for PresentationUrl"""
+        return await self._async_call_action(Service.SENDER, Sender.PRESENTATION_URL)
+
+    async def sender_metadata(self) -> dict:
+        """Get the state variables for Metadata"""
+        return await self._async_call_action(Service.SENDER, Sender.METADATA)
+
+    async def sender_audio(self) -> dict:
+        """Get the state variables for Audio"""
+        return await self._async_call_action(Service.SENDER, Sender.AUDIO)
+
+    async def sender_status(self) -> dict:
+        """Get the state variables for Status"""
+        return await self._async_call_action(Service.SENDER, Sender.STATUS)
+
+    async def sender_status2(self) -> dict:
+        """Get the state variables for Status2"""
+        return await self._async_call_action(Service.SENDER, Sender.STATUS2)
+
+    async def sender_enabled(self) -> dict:
+        """Get the state variables for Enabled"""
+        return await self._async_call_action(Service.SENDER, Sender.ENABLED)
+
+    async def sender_attributes(self) -> dict:
+        """Get the state variables for Attributes"""
+        return await self._async_call_action(Service.SENDER, Sender.ATTRIBUTES)
+
+    # endregion
+
+    # region Time Service actions
+    async def time(self) -> dict:
+        """Report time information about progress through a track"""
+        return await self._async_call_action(Service.TIME, Time.TIME)
+
+    # endregion
+    # region Transport Service actions
+    async def transport_pause(self):
+        """Transport pause"""
+        await self._async_call_action(Service.TRANSPORT, Transport.PAUSE)
+
+    async def transport_play(self):
+        """Transport pause"""
+        await self._async_call_action(Service.TRANSPORT, Transport.PLAY)
+
+    async def transport_skip_next(self):
+        """Transport skip next"""
+        await self._async_call_action(Service.TRANSPORT, Transport.SKIP_NEXT)
+
+    async def transport_skip_previous(self):
+        """Transport skip previous"""
+        await self._async_call_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
+
+    async def transport_state(self) -> dict:
+        """Get the transport state"""
+        return await self._async_call_action(
+            Service.TRANSPORT, Transport.TRANSPORT_STATE
+        )
+
+    async def transport_stop(self):
+        """Transport stop"""
+        await self._async_call_action(Service.TRANSPORT, Transport.STOP)
+
+    async def transport_set_repeat(self, repeat) -> None:
+        """Perform the action SetRepeat"""
+        await self._async_call_action(
+            Service.TRANSPORT, Transport.SET_REPEAT, Repeat=repeat
+        )
+
+    async def transport_set_shuffle(self, shuffle) -> None:
+        """Perform the action SetShuffle"""
+        await self._async_call_action(
+            Service.TRANSPORT, Transport.SET_SHUFFLE, Shuffle=shuffle
+        )
+
+    async def transport_seek_second_absolute(self, streamid, secondabsolute) -> None:
+        """Perform the action SeekSecondAbsolute"""
+        await self._async_call_action(
+            Service.TRANSPORT,
+            Transport.SEEK_SECOND_ABSOLUTE,
+            StreamId=streamid,
+            SecondAbsolute=secondabsolute,
+        )
+
+    async def transport_seek_second_relative(self, streamid, secondrelative) -> None:
+        """Perform the action SeekSecondRelative"""
+        await self._async_call_action(
+            Service.TRANSPORT,
+            Transport.SEEK_SECOND_RELATIVE,
+            StreamId=streamid,
+            SecondRelative=secondrelative,
+        )
+
+    async def transport_modes(self) -> dict:
+        """Get the state variables for Modes"""
+        return await self._async_call_action(Service.TRANSPORT, Transport.MODES)
+
+    async def transport_mode_info(self) -> dict:
+        """Get the state variables for ModeInfo"""
+        return await self._async_call_action(Service.TRANSPORT, Transport.MODE_INFO)
+
+    async def transport_stream_info(self) -> dict:
+        """Get the state variables for StreamInfo"""
+        return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_INFO)
+
+    async def transport_stream_id(self) -> dict:
+        """Get the state variables for StreamId"""
+        return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_ID)
+
+    async def transport_repeat(self) -> dict:
+        """Get the state variables for Repeat"""
+        return await self._async_call_action(Service.TRANSPORT, Transport.REPEAT)
+
+    async def transport_shuffle(self) -> dict:
+        """Get the state variables for Shuffle"""
+        return await self._async_call_action(Service.TRANSPORT, Transport.SHUFFLE)
+
+    async def transport_play_as(self, mode, command) -> None:
+        """Perform the action PlayAs"""
+        return await self._async_call_action(
+            Service.TRANSPORT, Transport.PLAY_AS, Mode=mode, Command=command
+        )
+
+    # endregion
+    # region Update Service actions
+    async def update_apply(self):
+        """Update Apply"""
+        await self._async_call_action(Service.UPDATE, Update.APPLY)
+
+    async def update_check_now(self) -> dict:
+        """Update Check Now"""
+        return await self._async_call_action(Service.UPDATE, Update.CHECK_NOW)
+
+    async def update_get_software_status(self) -> dict:
+        """Update Get Software Status"""
+        return await self._async_call_action(Service.UPDATE, Update.GET_SOFTWARE_STATUS)
+
+    # endregion
+    # region Volume Service actions
+    async def volume_set(self, volume_level: int) -> None:
+        """Set the volume to a level"""
+        await self._async_call_action(
+            Service.VOLUME, Volume.SET_VOLUME, Value=volume_level
+        )
+
+    async def volume_set_mute(self, is_muted: bool) -> None:
+        # do not unmute by inadvertently sending a 'Falsy'
+        is_muted = self._strict_false(is_muted)
+        # is_muted = bool(is_muted) # it behaves this way anyway
+        await self._async_call_action(Service.VOLUME, Volume.SET_MUTE, Value=is_muted)
+
+    async def volume_inc(self) -> None:
+        await self._async_call_action(Service.VOLUME, Volume.VOLUME_INC)
+
+    async def volume_dec(self) -> None:
+        await self._async_call_action(Service.VOLUME, Volume.VOLUME_DEC)
+
+    # these actions return the values of state variables having been polled
+    async def volume_volume(self) -> dict | None:
+        return await self._async_call_action(Service.VOLUME, Volume.VOLUME)
+
+    async def volume_mute(self) -> dict | None:
+        return await self._async_call_action(Service.VOLUME, Volume.MUTE)
+
+    async def volume_characteristics(self) -> dict:
+        """Get the state variables for Characteristics"""
+        return await self._async_call_action(Service.VOLUME, Volume.CHARACTERISTICS)
+
+    async def volume_set_no_unmute(self, value) -> None:
+        """Perform the action SetVolumeNoUnmute"""
+        await self._async_call_action(
+            Service.VOLUME, Volume.SET_VOLUME_NO_UNMUTE, Value=value
+        )
+
+    async def volume_inc_no_unmute(self) -> None:
+        """Perform the action VolumeIncNoUnmute"""
+        await self._async_call_action(Service.VOLUME, Volume.VOLUME_INC_NO_UNMUTE)
+
+    async def volume_dec_no_unmute(self) -> None:
+        """Perform the action VolumeDecNoUnmute"""
+        await self._async_call_action(Service.VOLUME, Volume.VOLUME_DEC_NO_UNMUTE)
+
+    async def volume_set_balance(self, value) -> None:
+        """Perform the action SetBalance"""
+        await self._async_call_action(Service.VOLUME, Volume.SET_BALANCE, Value=value)
+
+    async def volume_balance_inc(self) -> None:
+        """Perform the action BalanceInc"""
+        await self._async_call_action(Service.VOLUME, Volume.BALANCE_INC)
+
+    async def volume_balance_dec(self) -> None:
+        """Perform the action BalanceDec"""
+        await self._async_call_action(Service.VOLUME, Volume.BALANCE_DEC)
+
+    async def volume_balance(self) -> dict:
+        """Get the state variables for Balance"""
+        return await self._async_call_action(Service.VOLUME, Volume.BALANCE)
+
+    async def volume_set_fade(self, value) -> None:
+        """Perform the action SetFade"""
+        await self._async_call_action(Service.VOLUME, Volume.SET_FADE, Value=value)
+
+    async def volume_fade_inc(self) -> None:
+        """Perform the action FadeInc"""
+        await self._async_call_action(Service.VOLUME, Volume.FADE_INC)
+
+    async def volume_fade_dec(self) -> None:
+        """Perform the action FadeDec"""
+        await self._async_call_action(Service.VOLUME, Volume.FADE_DEC)
+
+    async def volume_fade(self) -> dict:
+        """Get the state variables for Fade"""
+        return await self._async_call_action(Service.VOLUME, Volume.FADE)
+
+    async def volume_limit(self) -> dict:
+        """Get the state variables for VolumeLimit"""
+        return await self._async_call_action(Service.VOLUME, Volume.VOLUME_LIMIT)
+
+    async def volume_unity_gain(self) -> dict:
+        """Get the state variables for UnityGain"""
+        return await self._async_call_action(Service.VOLUME, Volume.UNITY_GAIN)
+
+    async def volume_offset(self, channel) -> dict:
+        """Get the state variables for VolumeOffset"""
+        return await self._async_call_action(
+            Service.VOLUME, Volume.VOLUME_OFFSET, Channel=channel
+        )
+
+    async def volume_set_offset(self, channel, volumeoffsetbinarymillidb) -> None:
+        """Perform the action SetVolumeOffset"""
+        await self._async_call_action(
+            Service.VOLUME,
+            Volume.SET_VOLUME_OFFSET,
+            Channel=channel,
+            VolumeOffsetBinaryMilliDb=volumeoffsetbinarymillidb,
+        )
+
+    async def volume_trim(self, channel) -> dict:
+        """Get the state variables for Trim"""
+        return await self._async_call_action(
+            Service.VOLUME, Volume.TRIM, Channel=channel
+        )
+
+    async def volume_set_trim(self, channel, trimbinarymillidb) -> None:
+        """Perform the action SetTrim"""
+        await self._async_call_action(
+            Service.VOLUME,
+            Volume.SET_TRIM,
+            Channel=channel,
+            TrimBinaryMilliDb=trimbinarymillidb,
+        )
+
+    # endregion
+
+    # region syntactic helpers
+    async def active_source_index(self) -> int:
+        return int((await self.product_source_index())["Value"])
+
+    async def active_source_name(self) -> str:
+        return (await self.product_source(await self.active_source_index()))[
+            "Name"
+        ] or "N/A"
+
+    async def sources(self):
+        result = (await self.product_source_xml())["Value"]
+        sources_list_xml = ET.fromstring(result)
+        sources = []
+        index = 0
+        for source_xml in sources_list_xml:
+            # print(source_xml)
+            visible = source_xml.find("Visible").text == "true"
+            if visible:
+                sources.append(
+                    {
+                        "Index": index,
+                        "Name": source_xml.find("Name").text,
+                        "Type": source_xml.find("Type").text,
+                    }
+                )
+            index = index + 1
+
+        return sources
+
+    @property
+    async def is_standby(self) -> str:
+        return (await self.product_standby())["Value"]
+
+    @property
+    async def is_muted(self) -> bool:
+        return (await self.volume_mute())["Value"]
+
+    @property
+    async def volume(self) -> int:
+        return await self._state_var_value(Service.VOLUME, VolumeState.VOLUME)
+
+    @property
+    async def product_room(self) -> str:
+        return await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
+
+    @property
+    async def product_name(self) -> str:
+        return await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
+
+    async def play(self) -> None:
+        await self.transport_play()
+
+    async def stop(self) -> None:
+        await self.transport_stop()
+
+    async def pause(self) -> None:
+        await self.transport_pause()
+
+    # endregion
+
+    # region other
+
+    async def _state_var_value(
+        self, service_name, state_variable_name, **kwargs
+    ) -> bool | dict | int | str | None:
+        """return value of state variable"""
+        state_var = self._state_variable(service_name, state_variable_name)
+        if state_var is None:  # state variable not listed in Service XML description
+            _LOGGER.debug(
+                f"Missing State Variable {service_name}:{state_variable_name}"
+            )
+            return None
+
+        if state_var.value == None:  # state variable not populated
+            # TODO Sort out Subscribe/Resubscribe first
+            # then if still None try directly calling corresponding action
+            # print(f"Polling {state_variable_name} value")
+            # TODO lookup action that has sv
+            action = _action_for_state_var(service_name, state_var.name)
+            await self._async_poll_state_variables(service_name, action)
+            state_var = self._state_variable(service_name, state_variable_name)
+            # NOTE some calls will need more arguments
+            # print(self._state_variable(service_name, state_variable_name).value)
+            # perhaps check and resubscribe to service here
+            if state_var.value is None:
+                _LOGGER.debug(
+                    f"State variable {service_name}:{state_variable_name} is None after polling"
+                )
+
+        return state_var.value
+
+    async def async_update(self, do_ping: bool = True) -> None:
+        """Retrieve the latest data.
+
+        :param do_ping: Poll device to check if it is available (online).
+        """
+        # pylint: disable=arguments-differ
+        await super().async_update()
+        # TODO add all the services and actions here?
+        product_service = self._service(Service.PRODUCT)
+        if product_service:
+            if not self.is_subscribed:
+                # populate state variables by calling specific actions
+                await self._async_poll_state_variables(
+                    Service.PRODUCT,
+                    [
+                        Product.PRODUCT,
+                        Product.MODEL,
+                        Product.MANUFACTURER,
+                        Product.STANDBY,
+                        Product.SOURCE_XML,
+                        Product.SOURCE_COUNT,
+                        Product.SOURCE_INDEX,
+                    ],
+                )
+        transport_service = self._service(Service.TRANSPORT)
+        if transport_service:
+            if not self.is_subscribed or do_ping:
+                # populate state variables by calling specific actions
+                await self._async_poll_state_variables(
+                    Service.TRANSPORT,
+                    [
+                        Transport.TRANSPORT_STATE,
+                    ],
+                )
+        self.__did_first_update = True
+
+    async def _async_call_action(
+        self, service_name: str, action_name: str, **kwargs: Any
+    ) -> dict | None:
+        """Call service action with arguments."""
+        service = self._service(service_name)
+        # print(f"_async_call_action {service_name}:{action_name}")
+        if not service:
+            _LOGGER.warning(f"{service_name} service was not found")
+            return None
+
+        if not service.has_action(action_name):
+            _LOGGER.warning(
+                f"{service_name} service does not have action {action_name}"
+            )
+            return None
+        action = service.action(action_name)
+        result = await action.async_call(**kwargs)
+        return result if result else None
+
+    async def playlist_last_id(self):
+        id_array = (await self.playlist_id_array())["Array"]
+        decoded = _decode_id_array(self, id_array)
+        if len(decoded) > 0:
+            last_id = decoded[-1]
+        else:
+            last_id = 0
+        return last_id
+
+    # pin_metadata = {
+    #   "index": 0,
+    #   "mode":"radio",
+    #   "type":"preset",
+    #   "uri":"http:\/\/lsn.lv\/bbcradio.m3u8?station=bbc_radio_three&amp;bitrate=320000",
+    #   "title":"BBC Radio 3",
+    #   "description":"",
+    #   "artworkUri":"http:\/\/static.airable.io\/50\/81\/595998.png",
+    #   "shuffle":False}
+
+    async def pins_set_device(self, pin_metadata):
+        # TODO validate pin_data
+        await self._async_call_action(
+            Service.PINS,
+            Pins.SET_DEVICE,
+            Index=(pin_metadata["id"]),
+            Mode=pin_metadata["mode"],
+            Type=pin_metadata["type"],
+            Uri=pin_metadata["uri"],
+            Title=pin_metadata["title"],
+            Description=pin_metadata["description"],
+            ArtworkUri=pin_metadata["artworkUri"],
+            Shuffle=pin_metadata["shuffle"],
+        )
+
+
+# endregion
+
+
+# region functions independent of class
+def _action_for_state_var(service_name, state_variable_name):
+        """lookup action which returns state variable"""
+
+        info_sv_action = {
+            "BitDepth": "Details",
+            "BitRate": "Details",
+            "CodecName": "Details",
+            "DetailsCount": "Counters",
+            "Duration": "Details",
+            "Lossless": "Details",
+            "Metadata": "Track",
+            "MetatextCount": "Counters",
+            "SampleRate": "Details",
+            "TrackCount": "Counters",
+            "Uri": "Track",
+        }
+
+        pins_sv_action = {
+            "A_ARG_TYPE_ReadList_List": "ReadList",
+            "AccountMax": "GetAccountMax",
+            "CloudConnected": "GetCloudConnected",
+            "DeviceMax": "GetDeviceMax",
+            "IdArray": "GetIdArray",
+            "Modes": "GetModes",
+        }
+
+        playlist_sv_action = {
+            "A_ARG_TYPE_IdArray_Token": "IdArray",
+            "A_ARG_TYPE_IdArrayChanged_Value": "IdArrayChanged",
+            "A_ARG_TYPE_Read_Metadata": "Read",
+            "A_ARG_TYPE_Read_Uri": "Read",
+            "A_ARG_TYPE_ReadList_TrackList": "ReadList",
+            "Id": "Insert",
+        }
+
+        product_sv_action = {
+            "A_ARG_TYPE_Source_Name": "Source",
+            "A_ARG_TYPE_Source_SystemName": "Source",
+            "A_ARG_TYPE_Source_Type": "Source",
+            "A_ARG_TYPE_Source_Visible": "Source",
+            "A_ARG_TYPE_SourceXmlChangeCount_Value": "SourceXmlChangeCount",
+            "ManufacturerImageUri": "Manufacturer",
+            "ManufacturerInfo": "Manufacturer",
+            "ManufacturerName": "Manufacturer",
+            "ManufacturerUrl": "Manufacturer",
+            "ModelImageUri": "Model",
+            "ModelInfo": "Model",
+            "ModelName": "Model",
+            "ModelUrl": "Model",
+            "ProductImageHiresUri": "Product",
+            "ProductImageUri": "GetImageUri",
+            "ProductImageUri": "Product",
+            "ProductInfo": "Product",
+            "ProductName": "Product",
+            "ProductRoom": "Product",
+            "ProductUrl": "Product",
+        }
+
+        radio_sv_action = {
+            "A_ARG_TYPE_IdArray_Token": "IdArray",
+            "A_ARG_TYPE_IdArrayChanged_Value": "IdArrayChanged",
+            "A_ARG_TYPE_ReadList_ChannelList": "ReadList",
+            "Metadata": "Channel",
+            "Metadata": "Read",
+            "Uri": "Channel",
+        }
+
+        volume_sv_action = {
+            "A_ARG_TYPE_Trim_TrimBinaryMilliDb": "Trim",
+            "A_ARG_TYPE_VolumeOffset_VolumeOffsetBinaryMilliDb": "VolumeOffset",
+            "BalanceMax": "Characteristics",
+            "FadeMax": "Characteristics",
+            "VolumeMax": "Characteristics",
+            "VolumeMilliDbPerStep": "Characteristics",
+            "VolumeSteps": "Characteristics",
+            "VolumeUnity": "Characteristics",
+        }
+
+        transport_sv_action = {
+            "CanPause": "StreamInfo",
+            "CanRepeat": "ModeInfo",
+            "CanSeek": "StreamInfo",
+            "CanShuffle": "ModeInfo",
+            "CanSkipNext": "ModeInfo",
+            "CanSkipPrevious": "ModeInfo",
+            "StreamId": "StreamInfo",
+        }
+
+        match service_name:
+            case Service.INFO:
+                mapping = info_sv_action
+            case Service.PINS:
+                mapping = pins_sv_action
+            case Service.PLAYLIST:
+                mapping = playlist_sv_action
+            case Service.PRODUCT:
+                mapping = product_sv_action
+            case Service.RADIO:
+                mapping = radio_sv_action
+            case Service.TRANSPORT:
+                mapping = transport_sv_action
+            case Service.VOLUME:
+                mapping = volume_sv_action
+            case _:
+                mapping = None
+
+        if state_variable_name in mapping:
+            return mapping[state_variable_name]
+        else:
+            return state_variable_name
+
+def _strict_false(val: bool) -> bool:
+    """
+    No Falsey False
+        Only False if val is explicitly False, "False" or 0
+    """
+    if val is None:
+        return True  # counter-intuitive but insist on False means False
+    match val:
+        case False | "False" | 0:
+            return False
+        case _:
+            return True
+
+
+def _list_to_string(list_int):
+    return " ".join(map(str, filter(lambda x: x > 0, list_int)))
+
+
+def _decode_id_array(b64_id_array):
+    try:
+        decoded = base64.b64decode(b64_id_array, validate=True)
+    except binascii.Error:
+        raise ValueError("Invalid base64 encoding.")
+
+    array_int = list(struct.unpack(">" + "I" * (len(decoded) // 4), decoded))
+    # quick sanity check on first 4 bytes
+    if not int.from_bytes(decoded[0:4]) < 1000:
+        array_int = []
+
+    return array_int
+
+
+
+
+# endregion
