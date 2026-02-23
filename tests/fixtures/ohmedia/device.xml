@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns="urn:schemas-upnp-org:device-1-0">
+    <specVersion>
+        <major>1</major>
+        <minor>0</minor>
+    </specVersion>
+    <device>
+        <deviceType>urn:linn-co-uk:device:Source:1</deviceType>
+        <friendlyName>Main Room</friendlyName>
+        <manufacturer>Open Home Media</manufacturer>
+        <modelName>System Hub</modelName>
+        <UDN>uuid:dummy_device_udn</UDN>
+        <iconList>
+            <icon>
+                <mimetype>image/png</mimetype>
+                <width>120</width>
+                <height>50</height>
+                <depth>32</depth>
+                <url>
+                    http://ohmedia:55178/dummy_device_udn/Upnp/resource/res/icons/Device.png</url>
+            </icon>
+        </iconList>
+        <serviceList>
+            <service>
+                <serviceType>urn:av-openhome-org:service:ConfigApp:1</serviceType>
+                <serviceId>urn:av-openhome-org:serviceId:ConfigApp</serviceId>
+                <SCPDURL>
+                    /dummy_device_udn/Upnp/av.openhome.org-ConfigApp-1/service.xml</SCPDURL>
+                <controlURL>
+                    /dummy_device_udn/av.openhome.org-ConfigApp-1/control</controlURL>
+                <eventSubURL>/dummy_device_udn/av.openhome.org-ConfigApp-1/event</eventSubURL>
+            </service>
+            <service>
+                <serviceType>urn:av-openhome-org:service:Product:4</serviceType>
+                <serviceId>urn:av-openhome-org:serviceId:Product</serviceId>
+                <SCPDURL>
+                    /dummy_device_udn/Upnp/av.openhome.org-Product-4/service.xml</SCPDURL>
+                <controlURL>/dummy_device_udn/av.openhome.org-Product-4/control</controlURL>
+                <eventSubURL>/dummy_device_udn/av.openhome.org-Product-4/event</eventSubURL>
+            </service>
+            <service>
+                <serviceType>urn:av-openhome-org:service:Volume:4</serviceType>
+                <serviceId>urn:av-openhome-org:serviceId:Volume</serviceId>
+                <SCPDURL>
+                    /dummy_device_udn/Upnp/av.openhome.org-Volume-4/service.xml</SCPDURL>
+                <controlURL>/dummy_device_udn/av.openhome.org-Volume-4/control</controlURL>
+                <eventSubURL>/dummy_device_udn/av.openhome.org-Volume-4/event</eventSubURL>
+            </service>
+            <service>
+                <serviceType>urn:av-openhome-org:service:Playlist:1</serviceType>
+                <serviceId>urn:av-openhome-org:serviceId:Playlist</serviceId>
+                <SCPDURL>
+                    /dummy_device_udn/Upnp/av.openhome.org-Playlist-1/service.xml</SCPDURL>
+                <controlURL>/dummy_device_udn/av.openhome.org-Playlist-1/control</controlURL>
+                <eventSubURL>/dummy_device_udn/av.openhome.org-Playlist-1/event</eventSubURL>
+            </service>
+        </serviceList>
+        <presentationURL>http://ohmedia:80/Ds/index.html</presentationURL>
+    </device>
+</root>

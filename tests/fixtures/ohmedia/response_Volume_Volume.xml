@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+	<s:Body>
+		<u:VolumeResponse xmlns:u="urn:av-openhome-org:service:Volume:4">
+			<Value>42</Value>
+		</u:VolumeResponse>
+	</s:Body>
+</s:Envelope>

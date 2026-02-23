@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+  s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+  <s:Body>
+    <u:IdArrayChangedResponse xmlns:u="urn:av-openhome-org:service:Playlist:1">
+      <Value>1</Value>
+    </u:IdArrayChangedResponse>
+  </s:Body>
+</s:Envelope>
