@@ -9,12 +9,11 @@ import binascii
 import logging
 import struct
 import xml.etree.ElementTree as ET
-from enum import StrEnum
-from typing import (
-    Any,
-    Optional,
-    Sequence,
-)
+try:
+    from enum import StrEnum
+except ImportError:
+    from backports.strenum import StrEnum
+from typing import Any, Optional, Sequence
 
 from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
 from async_upnp_client.event_handler import UpnpEventHandler
