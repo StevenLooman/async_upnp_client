@@ -350,8 +350,6 @@ async def test_subscribe_events() -> None:
 
     state_var = profile._state_variable(service_name="Volume", state_variable_name="Volume")
     assert state_var.value == expected
-
-
 # endregion
 
 
