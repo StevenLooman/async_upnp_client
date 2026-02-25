@@ -389,19 +389,21 @@ def test_list_to_string() -> None:
 
 
 def test_strict_false() -> None:
-    assert _strict_false(False) == False
-    assert _strict_false("False") == False
-    assert _strict_false(0) == False
-    assert _strict_false("any string (other than False)") == True
-    assert _strict_false("false") == True
-    assert _strict_false("true") == True
-    assert _strict_false(True) == True
-    assert _strict_false(1) == True
-    assert _strict_false([]) == True
-    assert _strict_false({}) == True
-    assert _strict_false("") == True
-    assert _strict_false(None) == True
-    assert _strict_false(set()) == True
+    """Test _strict_false() for a range of inputs."""
+
+    assert _strict_false(False) == False # noqa: E712
+    assert _strict_false("False") == False # noqa: E712
+    assert _strict_false(0) == False # noqa: E712
+    assert _strict_false("any string (other than False)") == True # noqa: E712
+    assert _strict_false("false") == True # noqa: E712
+    assert _strict_false("true") == True # noqa: E712
+    assert _strict_false(True) == True # noqa: E712
+    assert _strict_false(1) == True # noqa: E712
+    assert _strict_false([]) == True # noqa: E712
+    assert _strict_false({}) == True # noqa: E712
+    assert _strict_false("") == True # noqa: E712
+    assert _strict_false(None) == True # noqa: E712
+    assert _strict_false(set()) == True # noqa: E712
 
 
 # endregion
