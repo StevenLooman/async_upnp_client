@@ -72,8 +72,6 @@ class ProductSourceType(StrEnum):
     RADIO = "Radio"  # the av.openhome.org:Radio:1 service must be available
     RECEIVER = "Receiver"  # the av.openhome.org:Receiver:1 service must be available
     UPNPAV = "UpnpAv"  # the upnp.org:MediaRenderer:1 device must be available
-
-
 # endregion
 
 
@@ -287,8 +285,6 @@ class Volume(StrEnum):
     SET_VOLUME_OFFSET = "SetVolumeOffset"
     TRIM = "Trim"
     SET_TRIM = "SetTrim"
-
-
 # endregion
 
 
@@ -420,25 +416,17 @@ class VolumeState(StrEnum):
     VOLUME_OFFSET = "A_ARG_TYPE_VolumeOffset_VolumeOffsetBinaryMilliDb"
     VOLUME_STEPS = "VolumeSteps"
     VOLUME_UNITY = "VolumeUnity"
-
-
 # endregion
-
 
 class OhmDevice(UpnpProfileDevice):
     """Representation of an OpenHome Media (ohMedia) device."""
 
     def __init__(self, device: UpnpDevice, event_handler: Optional[UpnpEventHandler]) -> None:
         """Initialize."""
+
         super().__init__(device, event_handler)
         self.__did_first_update: bool = False
 
-    # region helpful open home device functions and properties
-    # use properties where upnp provides properties
-    # return value if single data item
-    # provide single data value for some common entries from a dictionary
-    # use existing sv if available (and current?)
-    # match openhomedevice to ensure compatibility
     @property
     def uuid(self) -> str:
         """Return the unique device name."""
@@ -536,7 +524,6 @@ class OhmDevice(UpnpProfileDevice):
     ) -> None:
         """Handle state variable(s) changed event from OHM device."""
         _LOGGER.debug(f"PROFILE_ON_EVENT {service.service_id}")
-        # print(f"PROFILE_ON_EVENT {service.service_id}")
         for sv in state_variables:
             state_var = service.state_variable(sv.name)
             state_var._value = sv._value
@@ -556,7 +543,11 @@ class OhmDevice(UpnpProfileDevice):
         :param password: must be encrypted using the RSA public key in the PublicKey state variable
         """
         await self._async_call_action(
-            Service.CREDENTIALS, Credentials.SET, Id=id, UserName=username, Password=password
+            Service.CREDENTIALS,
+            Credentials.SET,
+            Id=id,
+            UserName=username,
+            Password=password,
         )
 
     async def credentials_clear(self, id: str) -> None:
@@ -605,8 +596,8 @@ class OhmDevice(UpnpProfileDevice):
     async def credentials_get_sequence_number(self) -> dict:
         """Return Sequence Number."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
-
     # endregion
+
     # region Info Service actions
     async def info_counters(self) -> dict:
         """Return the counters used to version Track, Details, and Metatext information."""
@@ -623,7 +614,6 @@ class OhmDevice(UpnpProfileDevice):
     async def info_metatext(self) -> dict:
         """Return dynamic textual information concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.METATEXT)
-
     # endregion
 
     # region Pins Service actions
@@ -632,13 +622,13 @@ class OhmDevice(UpnpProfileDevice):
         return await self._async_call_action(Service.PINS, Pins.GET_ID_ARRAY)
 
     async def pins_read_list(self, ids) -> dict:
-        return await self._async_call_action(Service.PINS, Pins.READ_LIST)
         """Get pins read list.
 
         :param ids: integer array, specifying ids of pins to be read
 
         :return dict of pins metadata
         """
+        return await self._async_call_action(Service.PINS, Pins.READ_LIST, Ids=ids)
 
     async def pins_get_device_max(self) -> dict:
         """Get pins get max number of devices."""
@@ -910,7 +900,6 @@ class OhmDevice(UpnpProfileDevice):
     async def receiver_transport_state(self) -> dict:
         """Get the state variables for TransportState."""
         return await self._async_call_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
-
     # endregion
 
     # region Sender Service actions
@@ -941,7 +930,6 @@ class OhmDevice(UpnpProfileDevice):
     async def sender_attributes(self) -> dict:
         """Get the state variables for Attributes."""
         return await self._async_call_action(Service.SENDER, Sender.ATTRIBUTES)
-
     # endregion
 
     # region Time Service actions
@@ -1223,7 +1211,6 @@ class OhmDevice(UpnpProfileDevice):
     async def pause(self) -> None:
         """Pause."""
         await self.transport_pause()
-
     # endregion
 
     # region other
@@ -1290,6 +1277,7 @@ class OhmDevice(UpnpProfileDevice):
 
     async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> dict | None:
         """Call service action with arguments."""
+
         service = self._service(service_name)
         # print(f"_async_call_action {service_name}:{action_name}")
         if not service:
@@ -1305,6 +1293,7 @@ class OhmDevice(UpnpProfileDevice):
 
     async def playlist_last_id(self) -> int:
         """Return the last id of the playlist."""
+
         id_array = (await self.playlist_id_array())["Array"]
         decoded = _decode_id_array(self, id_array)
         if len(decoded) > 0:
@@ -1341,8 +1330,6 @@ class OhmDevice(UpnpProfileDevice):
             ArtworkUri=pin_metadata["artworkUri"],
             Shuffle=pin_metadata["shuffle"],
         )
-
-
 # endregion
 
 
@@ -1489,6 +1476,4 @@ def _decode_id_array(b64_id_array):
         array_int = []
 
     return array_int
-
-
 # endregion
