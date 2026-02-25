@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-"""
-async_upnp_client profile for Open Home Media players
-"""
+"""async_upnp_client profile for Open Home Media players."""
 
 # pylint: disable=too-many-lines
 import base64
@@ -24,6 +22,8 @@ _LOGGER = logging.getLogger(__name__)
 
 # region Service and other enums
 class Service(StrEnum):
+    """Linn/Open Home Network Services."""
+
     CREDENTIALS = "Credentials"
     INFO = "Info"
     PINS = "Pins"
@@ -39,6 +39,8 @@ class Service(StrEnum):
 
 
 class ServiceId(StrEnum):
+    """Linn/Open Home Network Service Ids."""
+
     # OPENHOME
     CREDENTIALS = "urn:av-openhome-org:serviceId:Credentials"
     INFO = "urn:av-openhome-org:serviceId:Info"
@@ -60,6 +62,8 @@ class ServiceId(StrEnum):
 
 
 class ProductSourceType(StrEnum):
+    """Supported values for Product Source Type."""
+
     ANALOG = "Analog"  # Specifies an analog external input
     DIGITAL = "Digital"  # Specifies a digital external input
     HDMI = "Hdmi"  # Specifies a HDMI external input
@@ -75,6 +79,8 @@ class ProductSourceType(StrEnum):
 
 # region Action Enums
 class Credentials(StrEnum):
+    """Actions for Credentials Service."""
+
     SET = "Set"
     CLEAR = "Clear"
     SET_ENABLED = "SetEnabled"
@@ -87,6 +93,8 @@ class Credentials(StrEnum):
 
 
 class Info(StrEnum):
+    """Actions for Info Service."""
+
     COUNTERS = "Counters"
     TRACK = "Track"
     DETAILS = "Details"
@@ -94,6 +102,8 @@ class Info(StrEnum):
 
 
 class Pins(StrEnum):
+    """Actions for Pins Service."""
+
     GET_DEVICE_MAX = "GetDeviceMax"
     GET_ACCOUNT_MAX = "GetAccountMax"
     GET_MODES = "GetModes"
@@ -110,7 +120,8 @@ class Pins(StrEnum):
 
 
 class Playlist(StrEnum):
-    # Actions
+    """Actions for Playlist Service."""
+
     PLAY = "Play"
     PAUSE = "Pause"
     STOP = "Stop"
@@ -138,6 +149,8 @@ class Playlist(StrEnum):
 
 
 class Product(StrEnum):
+    """Actions for Product Service."""
+
     MANUFACTURER = "Manufacturer"
     MODEL = "Model"
     PRODUCT = "Product"
@@ -157,6 +170,8 @@ class Product(StrEnum):
 
 
 class Radio(StrEnum):
+    """Actions for Radio Service."""
+
     REFRESH_PRESETS = "RefreshPresets"
     PLAY = "Play"
     PAUSE = "Pause"
@@ -177,6 +192,8 @@ class Radio(StrEnum):
 
 
 class Receiver(StrEnum):
+    """Actions for Receiver Service."""
+
     PLAY = "Play"
     STOP = "Stop"
     SET_SENDER = "SetSender"
@@ -186,6 +203,8 @@ class Receiver(StrEnum):
 
 
 class Sender(StrEnum):
+    """Actions for Sender Service."""
+
     PRESENTATION_URL = "PresentationUrl"
     METADATA = "Metadata"
     AUDIO = "Audio"
@@ -196,10 +215,14 @@ class Sender(StrEnum):
 
 
 class Time(StrEnum):
+    """Actions for Time Service."""
+
     TIME = "Time"
 
 
 class Transport(StrEnum):
+    """Actions for Transport Service."""
+
     PLAY_AS = "PlayAs"
     PLAY = "Play"
     PAUSE = "Pause"
@@ -222,6 +245,8 @@ class Transport(StrEnum):
 # TODO: decide how to cope with different versions
 # TODO: should Linn specific be included?
 class Update(StrEnum):
+    """Actions for Update Service."""
+
     GET_SOFTWARE_STATUS = "GetSoftwareStatus"
     GET_EXECUTOR_STATUS = "GetExecutorStatus"
     GET_JOB_STATUS = "GetJobStatus"
@@ -238,6 +263,8 @@ class Update(StrEnum):
 
 
 class Volume(StrEnum):
+    """Action names for Volume service."""
+
     CHARACTERISTICS = "Characteristics"
     SET_VOLUME = "SetVolume"
     VOLUME_INC = "VolumeInc"
@@ -269,12 +296,16 @@ class Volume(StrEnum):
 
 # region State Variable Enums
 class CredentialsState(StrEnum):
+    """State variable names for Credentials service."""
+
     IDS = "Ids"
     PUBLIC_KEY = "PublicKey"
     SEQUENCE_NUMBER = "SequenceNumber"
 
 
 class InfoState(StrEnum):
+    """State variable names for Info service."""
+
     TRACK_COUNT = "TrackCount"
     DETAILS_COUNT = "DetailsCount"
     METATEXT_COUNT = "MetatextCount"
@@ -290,7 +321,8 @@ class InfoState(StrEnum):
 
 
 class PlaylistState(StrEnum):
-    # State Variables
+    """State variable names for Playlist service."""
+
     TRANSPORT_STATE = "TransportState"
     REPEAT = "Repeat"
     SHUFFLE = "Shuffle"
@@ -301,6 +333,8 @@ class PlaylistState(StrEnum):
 
 
 class PlaylistStateAllowedValues(StrEnum):
+    """Allowed values for Playlist service."""
+
     BUFFERING = "Buffering"
     PAUSED = "Paused"
     PLAYING = "Playing"
@@ -308,6 +342,8 @@ class PlaylistStateAllowedValues(StrEnum):
 
 
 class ProductState(StrEnum):
+    """State variable names for Product service."""
+
     ATTRIBUTES = "Attributes"
     MANUFACTURER_IMAGE_URI = "ManufacturerImageUri"
     MANUFACTURER_INFO = "ManufacturerInfo"
@@ -336,12 +372,16 @@ class ProductState(StrEnum):
 
 
 class TimeState(StrEnum):
+    """State variable names for Time service."""
+
     DURATION = "Duration"
     SECONDS = "Seconds"
     TRACK_COUNT = "TrackCount"
 
 
 class TransportState(StrEnum):
+    """State variable names for Transport service."""
+
     CAN_PAUSE = "CanPause"
     CAN_REPEAT = "CanRepeat"
     CAN_SEEK = "CanSeek"
@@ -356,6 +396,8 @@ class TransportState(StrEnum):
 
 
 class TransportStateAllowedValues(StrEnum):
+    """Allowed values for Transport service."""
+
     BUFFERING = "Buffering"
     PAUSED = "Paused"
     PLAYING = "Playing"
@@ -364,6 +406,8 @@ class TransportStateAllowedValues(StrEnum):
 
 
 class VolumeState(StrEnum):
+    """State variable names for Volume service."""
+
     BALANCE = "Balance"
     BALANCE_MAX = "BalanceMax"
     FADE = "Fade"
@@ -399,27 +443,33 @@ class OhmDevice(UpnpProfileDevice):
     # match openhomedevice to ensure compatibility
     @property
     def uuid(self) -> str:
+        """Return the unique device name."""
         return self.device.udn
 
     @property
     def manufacturer(self) -> str:
+        """Return the manufacturer name."""
         return self.device.manufacturer
 
     @property
     def model_name(self) -> str:
+        """Return the model name."""
         return self.device.model_name
 
     @property
     def friendly_name(self) -> str:
+        """Return the friendly name of the product."""
         return self.device.friendly_name
 
     # TODO read the state var if it exists?
     async def name(self) -> dict:
+        """Return the name of the product."""
         product = await self.product()
         return product["Name"]
 
     # TODO just read the state var if it exists?
     async def room(self) -> dict:
+        """Return the room where product is located."""
         product = await self.product()
         return product["Room"]
 
@@ -505,56 +555,80 @@ class OhmDevice(UpnpProfileDevice):
     # region Credentials Service actions
     async def credentials_set(self, id, username, password) -> None:
         """Perform the action Set"""
+        """Set the username and password for a given service.
+
+        :param id: the identifier for the service
+        :param username: username for the service
+        :param password: must be encrypted using the RSA public key in the PublicKey state variable
+        """
         await self._async_call_action(
             Service.CREDENTIALS, Credentials.SET, Id=id, UserName=username, Password=password
         )
 
     async def credentials_clear(self, id) -> None:
         """Perform the action Clear"""
+        """Remove both username and password for a given service.
+
+        :param id: the identifier for the service
+        """
         await self._async_call_action(Service.CREDENTIALS, Credentials.CLEAR, Id=id)
 
     async def credentials_set_enabled(self, id, enabled) -> None:
-        """Perform the action SetEnabled"""
+        """Set or clear the enabled state of a service."""
         await self._async_call_action(Service.CREDENTIALS, Credentials.SET_ENABLED, Id=id, Enabled=enabled)
 
     async def credentials_get(self, id) -> dict:
-        """Get the state variables for Get"""
+        """Retrieve username, password, status and enabled state for a service.
+
+        :param id: the identifier for the service
+        """
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET, Id=id)
 
     async def credentials_login(self, id) -> dict:
-        """Get the state variables for Login"""
+        """Read a token indicating that a registered user has logged in to a remote service.
+
+        :param id: the identifier for the service
+        """
         return await self._async_call_action(Service.CREDENTIALS, Credentials.LOGIN, Id=id)
 
     async def credentials_re_login(self, id, currenttoken) -> dict:
-        """Get the state variables for ReLogin"""
+        """Refresh an existing token returned from Login().
+
+        :param id: the identifier for the service
+        :param currenttoken: the current token for the service
+        """
         return await self._async_call_action(
             Service.CREDENTIALS, Credentials.RE_LOGIN, Id=id, CurrentToken=currenttoken
         )
 
     async def credentials_get_ids(self) -> dict:
-        """Get the state variables for GetIds"""
+        """Return list of identifiers for services whose credentials can be set."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_IDS)
 
     async def credentials_get_public_key(self) -> dict:
-        """Get the state variables for GetPublicKey"""
+        """Return RSA public key that must be used to encrypt any/all passwords."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_PUBLIC_KEY)
 
     async def credentials_get_sequence_number(self) -> dict:
-        """Get the state variables for GetSequenceNumber"""
+        """Return Sequence Number."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
 
     # endregion
     # region Info Service actions
     async def info_counters(self) -> dict:
+        """Return the counters used to version Track, Details, and Metatext information."""
         return await self._async_call_action(Service.INFO, Info.COUNTERS)
 
     async def info_track(self) -> dict:
+        """Return current track information concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.TRACK)
 
     async def info_details(self) -> dict:
+        """Return details concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.DETAILS)
 
     async def info_metatext(self) -> dict:
+        """Return dynamic textual information concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.METATEXT)
 
     # endregion
@@ -565,90 +639,105 @@ class OhmDevice(UpnpProfileDevice):
         return await self._async_call_action(Service.PINS, Pins.GET_ID_ARRAY)
 
     async def pins_read_list(self, ids) -> dict:
-        """Get pins read list."""
         return await self._async_call_action(Service.PINS, Pins.READ_LIST)
+        """Get pins read list.
+
+        :param ids: integer array, specifying ids of pins to be read
+
+        :return dict of pins metadata
+        """
 
     async def pins_get_device_max(self) -> dict:
         """Get pins get max number of devices."""
         return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
 
     async def pins_invoke_index(self, index) -> None:
-        """Select Pin by index."""
+        """Invoke the pin at the specified index.
+
+        :param index: the specified index in the IdArray
+        """
         await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, index - 1)
 
     # endregion
 
     # region Playlist Service actions
     async def playlist_stop(self) -> None:
-        """Playlist Stop"""
+        """Playlist Stop."""
         await self._async_call_action(Service.PLAYLIST, Playlist.STOP)
 
     async def playlist_pause(self) -> None:
-        """Playlist Pause"""
+        """Playlist Pause."""
         await self._async_call_action(Service.PLAYLIST, Playlist.PAUSE)
 
     async def playlist_play(self) -> None:
-        """Playlist Play"""
+        """Playlist Play."""
         await self._async_call_action(Service.PLAYLIST, Playlist.PLAY)
 
     async def playlist_next(self) -> None:
-        """Perform the action Next"""
+        """Perform the action Next."""
         await self._async_call_action(Service.PLAYLIST, Playlist.NEXT)
 
     async def playlist_previous(self) -> None:
-        """Perform the action Previous"""
+        """Start playing the previous item in the playlist."""
         await self._async_call_action(Service.PLAYLIST, Playlist.PREVIOUS)
 
     async def playlist_set_repeat(self, value) -> None:
-        """Perform the action SetRepeat"""
+        """Enable or disable repeat mode.
+
+        :param value: repeat mode
+        """
         await self._async_call_action(Service.PLAYLIST, Playlist.SET_REPEAT, Value=value)
 
     async def playlist_repeat(self) -> dict:
-        """Get the state variables for Repeat"""
+        """Return the value of the Repeat state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.REPEAT)
 
     async def playlist_set_shuffle(self, value) -> None:
-        """Perform the action SetShuffle"""
+    async def playlist_set_shuffle(self, value: bool) -> None:
+        """Enable or disable shuffle mode.
+
+        :param value: to shuffle or not to shuffle
+        """
         await self._async_call_action(Service.PLAYLIST, Playlist.SET_SHUFFLE, Value=value)
 
     async def playlist_shuffle(self) -> dict:
-        """Get the state variables for Shuffle"""
+        """Return the value of the Shuffle state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.SHUFFLE)
 
     async def playlist_seek_second_absolute(self, value) -> None:
-        """Perform the action SeekSecondAbsolute"""
+        """Seek to an absolute second within the current track."""
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_SECOND_ABSOLUTE, Value=value)
 
     async def playlist_seek_second_relative(self, value) -> None:
-        """Perform the action SeekSecondRelative"""
+        """Seek to a relative second within the current track."""
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_SECOND_RELATIVE, Value=value)
 
     async def playlist_seek_id(self, value) -> None:
-        """Perform the action SeekId"""
+        """Perform the action SeekId."""
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_ID, Value=value)
 
     async def playlist_seek_index(self, value) -> None:
-        """Perform the action SeekIndex"""
+        """Perform the action SeekIndex."""
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_INDEX, Value=value)
 
     async def playlist_transport_state(self) -> dict:
-        """Get the state variables for TransportState"""
+        """Get the state variables for TransportState."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.TRANSPORT_STATE)
 
     async def playlist_id(self) -> dict:
-        """Get the state variables for Id"""
+        """Get the state variables for Id."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID)
 
     async def playlist_read(self, id) -> dict:
-        """Get the state variables for Read"""
+        """Get the state variables for Read."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.READ, Id=id)
 
     async def playlist_read_list(self, idlist) -> dict:
-        """Get the state variables for ReadList"""
+        """Get the state variables for ReadList."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.READ_LIST, IdList=idlist)
 
     async def playlist_insert(self, afterid, uri, metadata) -> dict:
-        """Get the state variables for Insert"""
+        """Get the state variables for Insert."""
         return await self._async_call_action(
             Service.PLAYLIST,
             Playlist.INSERT,
@@ -658,34 +747,34 @@ class OhmDevice(UpnpProfileDevice):
         )
 
     async def playlist_delete_id(self, value) -> None:
-        """Perform the action DeleteId"""
+        """Perform the action DeleteId."""
         await self._async_call_action(Service.PLAYLIST, Playlist.DELETE_ID, Value=value)
 
     async def playlist_delete_all(self) -> None:
-        """Perform the action DeleteAll"""
+        """Perform the action DeleteAll."""
         await self._async_call_action(Service.PLAYLIST, Playlist.DELETE_ALL)
 
     async def playlist_tracks_max(self) -> dict:
-        """Get the state variables for TracksMax"""
+        """Get the state variables for TracksMax."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.TRACKS_MAX)
 
     async def playlist_id_array(self) -> dict:
-        """Get the state variables for IdArray"""
+        """Get the state variables for IdArray."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID_ARRAY)
 
     async def playlist_id_array_changed(self, token) -> dict:
-        """Get the state variables for IdArrayChanged"""
+        """Get the state variables for IdArrayChanged."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID_ARRAY_CHANGED, Tokenzzz=token)
 
     async def playlist_protocol_info(self) -> dict:
-        """Get the state variables for ProtocolInfo"""
+        """Get the state variables for ProtocolInfo."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.PROTOCOL_INFO)
 
     # endregion
     # region Product Service actions
 
     async def product_attributes(self) -> dict:
-        """Get the state variables for Attributes"""
+        """Get the state variables for Attributes."""
         return await self._async_call_action(Service.PRODUCT, Product.ATTRIBUTES)
 
     async def product(self) -> dict:
@@ -709,7 +798,7 @@ class OhmDevice(UpnpProfileDevice):
         await self._async_call_action(Service.PRODUCT, Product.SET_STANDBY, Value=standby)
 
     async def product_source_count(self) -> dict:
-        """Get the state variables for SourceCount"""
+        """Get the state variables for SourceCount."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_COUNT)
 
     async def product_source(self, index: int) -> dict:
@@ -731,19 +820,20 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Radio Service actions
     async def radio_channel(self) -> dict:
-        """Radio Channel"""
+        """Radio Channel."""
         return await self._async_call_action(Service.RADIO, Radio.CHANNEL)
 
     async def radio_pause(self) -> None:
-        """Radio Pause"""
+        """Radio Pause."""
         await self._async_call_action(Service.RADIO, Radio.PAUSE)
 
     async def radio_play(self) -> None:
-        """Radio Play"""
+        """Radio Play."""
         await self._async_call_action(Service.RADIO, Radio.PLAY)
 
     async def radio_set_channel(self, uri, metadata) -> None:
-        """Radio Set Channel
+        """Radio Set Channel.
+
         uri: uri for channel
         metadata: metadata for radio channel
             must be valid metadata
@@ -751,158 +841,158 @@ class OhmDevice(UpnpProfileDevice):
         await self._async_call_action(Service.RADIO, Radio.SET_CHANNEL, Uri=uri, Metadata=metadata)
 
     async def radio_stop(self) -> None:
-        """Radio Stop"""
+        """Radio Stop."""
         await self._async_call_action(Service.RADIO, Radio.STOP)
 
     async def radio_transport_state(self) -> dict:
-        """Get the state variables for TransportState"""
+        """Get the state variables for TransportState."""
         return await self._async_call_action(Service.RADIO, Radio.TRANSPORT_STATE)
 
     async def radio_id(self) -> dict:
-        """Get the state variables for Id"""
+        """Get the state variables for Id."""
         return await self._async_call_action(Service.RADIO, Radio.ID)
 
     async def radio_set_id(self, value, uri) -> None:
-        """Perform the action SetId"""
+        """Perform the action SetId."""
         await self._async_call_action(Service.RADIO, Radio.SET_ID, Value=value, Uri=uri)
 
     async def radio_read(self, id) -> dict:
-        """Get the state variables for Read"""
+        """Get the state variables for Read."""
         return await self._async_call_action(Service.RADIO, Radio.READ, Id=id)
 
     async def radio_read_list(self, idlist) -> dict:
-        """Get the state variables for ReadList"""
+        """Get the state variables for ReadList."""
         return await self._async_call_action(Service.RADIO, Radio.READ_LIST, IdList=idlist)
 
     async def radio_id_array(self) -> dict:
-        """Get the state variables for IdArray"""
+        """Get the state variables for IdArray."""
         return await self._async_call_action(Service.RADIO, Radio.ID_ARRAY)
 
     async def radio_id_array_changed(self, token) -> dict:
-        """Get the state variables for IdArrayChanged"""
+        """Get the state variables for IdArrayChanged."""
         return await self._async_call_action(Service.RADIO, Radio.ID_ARRAY_CHANGED, Token=token)
 
     async def radio_channels_max(self) -> dict:
-        """Get the state variables for ChannelsMax"""
+        """Get the state variables for ChannelsMax."""
         return await self._async_call_action(Service.RADIO, Radio.CHANNELS_MAX)
 
     async def radio_protocol_info(self) -> dict:
-        """Get the state variables for ProtocolInfo"""
+        """Get the state variables for ProtocolInfo."""
         return await self._async_call_action(Service.RADIO, Radio.PROTOCOL_INFO)
 
     async def radio_refresh_presets(self) -> None:
-        """Perform the action RefreshPresets"""
+        """Perform the action RefreshPresets."""
         await self._async_call_action(Service.RADIO, Radio.REFRESH_PRESETS)
 
     async def radio_seek_second_absolute(self, value) -> None:
-        """Perform the action SeekSecondAbsolute"""
+        """Perform the action SeekSecondAbsolute."""
         await self._async_call_action(Service.RADIO, Radio.SEEK_SECOND_ABSOLUTE, Value=value)
 
     async def radio_seek_second_relative(self, value) -> None:
-        """Perform the action SeekSecondRelative"""
+        """Perform the action SeekSecondRelative."""
         await self._async_call_action(Service.RADIO, Radio.SEEK_SECOND_RELATIVE, Value=value)
 
     # endregion
 
     # region Receiver Service actions
     async def receiver_play(self) -> None:
-        """Perform the action Play"""
+        """Perform the action Play."""
         await self._async_call_action(Service.RECEIVER, Receiver.PLAY)
 
     async def receiver_stop(self) -> None:
-        """Perform the action Stop"""
+        """Perform the action Stop."""
         await self._async_call_action(Service.RECEIVER, Receiver.STOP)
 
     async def receiver_set_sender(self, uri, metadata) -> None:
-        """Perform the action SetSender"""
+        """Perform the action SetSender."""
         await self._async_call_action(Service.RECEIVER, Receiver.SET_SENDER, Uri=uri, Metadata=metadata)
 
     async def receiver_sender(self) -> dict:
-        """Get the state variables for Sender"""
+        """Get the state variables for Sender."""
         return await self._async_call_action(Service.RECEIVER, Receiver.SENDER)
 
     async def receiver_protocol_info(self) -> dict:
-        """Get the state variables for ProtocolInfo"""
+        """Get the state variables for ProtocolInfo."""
         return await self._async_call_action(Service.RECEIVER, Receiver.PROTOCOL_INFO)
 
     async def receiver_transport_state(self) -> dict:
-        """Get the state variables for TransportState"""
+        """Get the state variables for TransportState."""
         return await self._async_call_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
 
     # endregion
 
     # region Sender Service actions
     async def sender_presentation_url(self) -> dict:
-        """Get the state variables for PresentationUrl"""
+        """Get the state variables for PresentationUrl."""
         return await self._async_call_action(Service.SENDER, Sender.PRESENTATION_URL)
 
     async def sender_metadata(self) -> dict:
-        """Get the state variables for Metadata"""
+        """Get the state variables for Metadata."""
         return await self._async_call_action(Service.SENDER, Sender.METADATA)
 
     async def sender_audio(self) -> dict:
-        """Get the state variables for Audio"""
+        """Get the state variables for Audio."""
         return await self._async_call_action(Service.SENDER, Sender.AUDIO)
 
     async def sender_status(self) -> dict:
-        """Get the state variables for Status"""
+        """Get the state variables for Status."""
         return await self._async_call_action(Service.SENDER, Sender.STATUS)
 
     async def sender_status2(self) -> dict:
-        """Get the state variables for Status2"""
+        """Get the state variables for Status2."""
         return await self._async_call_action(Service.SENDER, Sender.STATUS2)
 
     async def sender_enabled(self) -> dict:
-        """Get the state variables for Enabled"""
+        """Get the state variables for Enabled."""
         return await self._async_call_action(Service.SENDER, Sender.ENABLED)
 
     async def sender_attributes(self) -> dict:
-        """Get the state variables for Attributes"""
+        """Get the state variables for Attributes."""
         return await self._async_call_action(Service.SENDER, Sender.ATTRIBUTES)
 
     # endregion
 
     # region Time Service actions
     async def time(self) -> dict:
-        """Report time information about progress through a track"""
+        """Report time information about progress through a track."""
         return await self._async_call_action(Service.TIME, Time.TIME)
 
     # endregion
     # region Transport Service actions
     async def transport_pause(self):
-        """Transport pause"""
+        """Transport pause."""
         await self._async_call_action(Service.TRANSPORT, Transport.PAUSE)
 
     async def transport_play(self):
-        """Transport pause"""
+        """Transport pause."""
         await self._async_call_action(Service.TRANSPORT, Transport.PLAY)
 
     async def transport_skip_next(self):
-        """Transport skip next"""
+        """Transport skip next."""
         await self._async_call_action(Service.TRANSPORT, Transport.SKIP_NEXT)
 
     async def transport_skip_previous(self):
-        """Transport skip previous"""
+        """Transport skip previous."""
         await self._async_call_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
 
     async def transport_state(self) -> dict:
-        """Get the transport state"""
+        """Get the transport state."""
         return await self._async_call_action(Service.TRANSPORT, Transport.TRANSPORT_STATE)
 
     async def transport_stop(self):
-        """Transport stop"""
+        """Transport stop."""
         await self._async_call_action(Service.TRANSPORT, Transport.STOP)
 
     async def transport_set_repeat(self, repeat) -> None:
-        """Perform the action SetRepeat"""
+        """Perform the action SetRepeat."""
         await self._async_call_action(Service.TRANSPORT, Transport.SET_REPEAT, Repeat=repeat)
 
     async def transport_set_shuffle(self, shuffle) -> None:
-        """Perform the action SetShuffle"""
+        """Perform the action SetShuffle."""
         await self._async_call_action(Service.TRANSPORT, Transport.SET_SHUFFLE, Shuffle=shuffle)
 
     async def transport_seek_second_absolute(self, streamid, secondabsolute) -> None:
-        """Perform the action SeekSecondAbsolute"""
+        """Perform the action SeekSecondAbsolute."""
         await self._async_call_action(
             Service.TRANSPORT,
             Transport.SEEK_SECOND_ABSOLUTE,
@@ -911,7 +1001,7 @@ class OhmDevice(UpnpProfileDevice):
         )
 
     async def transport_seek_second_relative(self, streamid, secondrelative) -> None:
-        """Perform the action SeekSecondRelative"""
+        """Perform the action SeekSecondRelative."""
         await self._async_call_action(
             Service.TRANSPORT,
             Transport.SEEK_SECOND_RELATIVE,
@@ -920,134 +1010,139 @@ class OhmDevice(UpnpProfileDevice):
         )
 
     async def transport_modes(self) -> dict:
-        """Get the state variables for Modes"""
+        """Get the state variables for Modes."""
         return await self._async_call_action(Service.TRANSPORT, Transport.MODES)
 
     async def transport_mode_info(self) -> dict:
-        """Get the state variables for ModeInfo"""
+        """Get the state variables for ModeInfo."""
         return await self._async_call_action(Service.TRANSPORT, Transport.MODE_INFO)
 
     async def transport_stream_info(self) -> dict:
-        """Get the state variables for StreamInfo"""
+        """Get the state variables for StreamInfo."""
         return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_INFO)
 
     async def transport_stream_id(self) -> dict:
-        """Get the state variables for StreamId"""
+        """Get the state variables for StreamI."""
         return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_ID)
 
     async def transport_repeat(self) -> dict:
-        """Get the state variables for Repeat"""
+        """Get the state variables for Repeat."""
         return await self._async_call_action(Service.TRANSPORT, Transport.REPEAT)
 
     async def transport_shuffle(self) -> dict:
-        """Get the state variables for Shuffle"""
+        """Get the state variables for Shuffle."""
         return await self._async_call_action(Service.TRANSPORT, Transport.SHUFFLE)
 
     async def transport_play_as(self, mode, command) -> None:
-        """Perform the action PlayAs"""
+        """Perform the action PlayAs."""
         return await self._async_call_action(Service.TRANSPORT, Transport.PLAY_AS, Mode=mode, Command=command)
 
     # endregion
     # region Update Service actions
     async def update_apply(self):
-        """Update Apply"""
+        """Update Apply."""
         await self._async_call_action(Service.UPDATE, Update.APPLY)
 
     async def update_check_now(self) -> dict:
-        """Update Check Now"""
+        """Update Check Now."""
         return await self._async_call_action(Service.UPDATE, Update.CHECK_NOW)
 
     async def update_get_software_status(self) -> dict:
-        """Update Get Software Status"""
+        """Update Get Software Status."""
         return await self._async_call_action(Service.UPDATE, Update.GET_SOFTWARE_STATUS)
 
     # endregion
     # region Volume Service actions
     async def volume_set(self, volume_level: int) -> None:
-        """Set the volume to a level"""
+        """Set the volume level."""
         await self._async_call_action(Service.VOLUME, Volume.SET_VOLUME, Value=volume_level)
 
     async def volume_set_mute(self, is_muted: bool) -> None:
+        """Set the volume mute state."""
         # do not unmute by inadvertently sending a 'Falsy'
         is_muted = self._strict_false(is_muted)
         # is_muted = bool(is_muted) # it behaves this way anyway
         await self._async_call_action(Service.VOLUME, Volume.SET_MUTE, Value=is_muted)
 
     async def volume_inc(self) -> None:
+        """Increase the volume level."""
         await self._async_call_action(Service.VOLUME, Volume.VOLUME_INC)
 
     async def volume_dec(self) -> None:
+        """Decrease the volume level."""
         await self._async_call_action(Service.VOLUME, Volume.VOLUME_DEC)
 
     # these actions return the values of state variables having been polled
     async def volume_volume(self) -> dict | None:
+        """Get the volume level."""
         return await self._async_call_action(Service.VOLUME, Volume.VOLUME)
 
     async def volume_mute(self) -> dict | None:
+        """Get the volume mute state."""
         return await self._async_call_action(Service.VOLUME, Volume.MUTE)
 
     async def volume_characteristics(self) -> dict:
-        """Get the state variables for Characteristics"""
+        """Get the state variables for Characteristics."""
         return await self._async_call_action(Service.VOLUME, Volume.CHARACTERISTICS)
 
     async def volume_set_no_unmute(self, value) -> None:
-        """Perform the action SetVolumeNoUnmute"""
+        """Perform the action SetVolumeNoUnmute."""
         await self._async_call_action(Service.VOLUME, Volume.SET_VOLUME_NO_UNMUTE, Value=value)
 
     async def volume_inc_no_unmute(self) -> None:
-        """Perform the action VolumeIncNoUnmute"""
+        """Perform the action VolumeIncNoUnmute."""
         await self._async_call_action(Service.VOLUME, Volume.VOLUME_INC_NO_UNMUTE)
 
     async def volume_dec_no_unmute(self) -> None:
-        """Perform the action VolumeDecNoUnmute"""
+        """Perform the action VolumeDecNoUnmute."""
         await self._async_call_action(Service.VOLUME, Volume.VOLUME_DEC_NO_UNMUTE)
 
     async def volume_set_balance(self, value) -> None:
-        """Perform the action SetBalance"""
+        """Perform the action SetBalance."""
         await self._async_call_action(Service.VOLUME, Volume.SET_BALANCE, Value=value)
 
     async def volume_balance_inc(self) -> None:
-        """Perform the action BalanceInc"""
+        """Perform the action BalanceInc."""
         await self._async_call_action(Service.VOLUME, Volume.BALANCE_INC)
 
     async def volume_balance_dec(self) -> None:
-        """Perform the action BalanceDec"""
+        """Perform the action BalanceDec."""
         await self._async_call_action(Service.VOLUME, Volume.BALANCE_DEC)
 
     async def volume_balance(self) -> dict:
-        """Get the state variables for Balance"""
+        """Get the state variables for Balance."""
         return await self._async_call_action(Service.VOLUME, Volume.BALANCE)
 
     async def volume_set_fade(self, value) -> None:
-        """Perform the action SetFade"""
+        """Perform the action SetFade."""
         await self._async_call_action(Service.VOLUME, Volume.SET_FADE, Value=value)
 
     async def volume_fade_inc(self) -> None:
-        """Perform the action FadeInc"""
+        """Perform the action FadeInc."""
         await self._async_call_action(Service.VOLUME, Volume.FADE_INC)
 
     async def volume_fade_dec(self) -> None:
-        """Perform the action FadeDec"""
+        """Perform the action FadeDec."""
         await self._async_call_action(Service.VOLUME, Volume.FADE_DEC)
 
     async def volume_fade(self) -> dict:
-        """Get the state variables for Fade"""
+        """Get the state variables for Fade."""
         return await self._async_call_action(Service.VOLUME, Volume.FADE)
 
     async def volume_limit(self) -> dict:
-        """Get the state variables for VolumeLimit"""
+        """Get the state variables for VolumeLimit."""
         return await self._async_call_action(Service.VOLUME, Volume.VOLUME_LIMIT)
 
     async def volume_unity_gain(self) -> dict:
-        """Get the state variables for UnityGain"""
+        """Get the state variables for UnityGain."""
         return await self._async_call_action(Service.VOLUME, Volume.UNITY_GAIN)
 
     async def volume_offset(self, channel) -> dict:
-        """Get the state variables for VolumeOffset"""
+        """Get the state variables for VolumeOffset."""
         return await self._async_call_action(Service.VOLUME, Volume.VOLUME_OFFSET, Channel=channel)
 
     async def volume_set_offset(self, channel, volumeoffsetbinarymillidb) -> None:
-        """Perform the action SetVolumeOffset"""
+        """Perform the action SetVolumeOffset."""
         await self._async_call_action(
             Service.VOLUME,
             Volume.SET_VOLUME_OFFSET,
@@ -1056,11 +1151,11 @@ class OhmDevice(UpnpProfileDevice):
         )
 
     async def volume_trim(self, channel) -> dict:
-        """Get the state variables for Trim"""
+        """Get the state variables for Trim."""
         return await self._async_call_action(Service.VOLUME, Volume.TRIM, Channel=channel)
 
     async def volume_set_trim(self, channel, trimbinarymillidb) -> None:
-        """Perform the action SetTrim"""
+        """Perform the action SetTrim."""
         await self._async_call_action(
             Service.VOLUME,
             Volume.SET_TRIM,
@@ -1072,12 +1167,15 @@ class OhmDevice(UpnpProfileDevice):
 
     # region syntactic helpers
     async def active_source_index(self) -> int:
+        """Get the active source index."""
         return int((await self.product_source_index())["Value"])
 
     async def active_source_name(self) -> str:
+        """Get the active source name."""
         return (await self.product_source(await self.active_source_index()))["Name"] or "N/A"
 
     async def sources(self):
+        """Get list of active sources."""
         result = (await self.product_source_xml())["Value"]
         sources_list_xml = ET.fromstring(result)
         sources = []
@@ -1099,31 +1197,39 @@ class OhmDevice(UpnpProfileDevice):
 
     @property
     async def is_standby(self) -> str:
+        """Get standby status."""
         return (await self.product_standby())["Value"]
 
     @property
     async def is_muted(self) -> bool:
+        """Get mute status."""
         return (await self.volume_mute())["Value"]
 
     @property
     async def volume(self) -> int:
+        """Return the Volume level."""
         return await self._state_var_value(Service.VOLUME, VolumeState.VOLUME)
 
     @property
     async def product_room(self) -> str:
+        """Return the room where product is located."""
         return await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
 
     @property
     async def product_name(self) -> str:
+        """Return the name of product."""
         return await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
 
     async def play(self) -> None:
+        """Play."""
         await self.transport_play()
 
     async def stop(self) -> None:
+        """Stop."""
         await self.transport_stop()
 
     async def pause(self) -> None:
+        """Pause."""
         await self.transport_pause()
 
     # endregion
@@ -1131,7 +1237,8 @@ class OhmDevice(UpnpProfileDevice):
     # region other
 
     async def _state_var_value(self, service_name, state_variable_name, **kwargs) -> bool | dict | int | str | None:
-        """Return value of state variable"""
+        """Return value of state variable."""
+
         state_var = self._state_variable(service_name, state_variable_name)
         if state_var is None:  # state variable not listed in Service XML description
             _LOGGER.debug(f"Missing State Variable {service_name}:{state_variable_name}")
@@ -1205,6 +1312,7 @@ class OhmDevice(UpnpProfileDevice):
         return result if result else None
 
     async def playlist_last_id(self):
+        """Return the last id of the playlist."""
         id_array = (await self.playlist_id_array())["Array"]
         decoded = _decode_id_array(self, id_array)
         if len(decoded) > 0:
@@ -1225,6 +1333,11 @@ class OhmDevice(UpnpProfileDevice):
 
     async def pins_set_device(self, pin_metadata):
         # TODO validate pin_data
+        """Set Pins service device using single metadata dictionary.
+
+        :param pin_metadata: dictionary containing necessary metadata
+        """
+
         await self._async_call_action(
             Service.PINS,
             Pins.SET_DEVICE,
@@ -1244,7 +1357,7 @@ class OhmDevice(UpnpProfileDevice):
 
 # region functions independent of class
 def _action_for_state_var(service_name, state_variable_name):
-    """Lookup action which returns state variable"""
+    """Lookup action corresponding to state variable."""
 
     info_sv_action = {
         "BitDepth": "Details",
@@ -1356,10 +1469,8 @@ def _action_for_state_var(service_name, state_variable_name):
 
 
 def _strict_false(val: bool) -> bool:
-    """
-    No Falsey False
-        Only False if val is explicitly False, "False" or 0
-    """
+    """Only False if val is explicitly False, "False" or 0."""
+
     if val is None:
         return True  # counter-intuitive but insist on False means False
     match val:
@@ -1370,10 +1481,12 @@ def _strict_false(val: bool) -> bool:
 
 
 def _list_to_string(list_int):
+    """Convert list to space separated string."""
     return " ".join(map(str, filter(lambda x: x > 0, list_int)))
 
 
 def _decode_id_array(b64_id_array):
+    """Convert base64 encoded list to list of integers."""
     try:
         decoded = base64.b64decode(b64_id_array, validate=True)
     except binascii.Error:
