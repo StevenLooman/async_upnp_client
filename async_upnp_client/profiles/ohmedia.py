@@ -7,6 +7,7 @@ import binascii
 import logging
 import struct
 import xml.etree.ElementTree as ET
+
 try:
     from enum import StrEnum
 except ImportError:
@@ -72,6 +73,8 @@ class ProductSourceType(StrEnum):
     RADIO = "Radio"  # the av.openhome.org:Radio:1 service must be available
     RECEIVER = "Receiver"  # the av.openhome.org:Receiver:1 service must be available
     UPNPAV = "UpnpAv"  # the upnp.org:MediaRenderer:1 device must be available
+
+
 # endregion
 
 
@@ -285,6 +288,8 @@ class Volume(StrEnum):
     SET_VOLUME_OFFSET = "SetVolumeOffset"
     TRIM = "Trim"
     SET_TRIM = "SetTrim"
+
+
 # endregion
 
 
@@ -416,7 +421,10 @@ class VolumeState(StrEnum):
     VOLUME_OFFSET = "A_ARG_TYPE_VolumeOffset_VolumeOffsetBinaryMilliDb"
     VOLUME_STEPS = "VolumeSteps"
     VOLUME_UNITY = "VolumeUnity"
+
+
 # endregion
+
 
 class OhmDevice(UpnpProfileDevice):
     """Representation of an OpenHome Media (ohMedia) device."""
@@ -456,6 +464,7 @@ class OhmDevice(UpnpProfileDevice):
         """Return the room where product is located."""
         product = await self.product()
         return product["Room"]
+
     # endregion
 
     # region enums and constants
@@ -596,6 +605,7 @@ class OhmDevice(UpnpProfileDevice):
     async def credentials_get_sequence_number(self) -> dict:
         """Return Sequence Number."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
+
     # endregion
 
     # region Info Service actions
@@ -614,6 +624,7 @@ class OhmDevice(UpnpProfileDevice):
     async def info_metatext(self) -> dict:
         """Return dynamic textual information concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.METATEXT)
+
     # endregion
 
     # region Pins Service actions
@@ -900,6 +911,7 @@ class OhmDevice(UpnpProfileDevice):
     async def receiver_transport_state(self) -> dict:
         """Get the state variables for TransportState."""
         return await self._async_call_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
+
     # endregion
 
     # region Sender Service actions
@@ -930,6 +942,7 @@ class OhmDevice(UpnpProfileDevice):
     async def sender_attributes(self) -> dict:
         """Get the state variables for Attributes."""
         return await self._async_call_action(Service.SENDER, Sender.ATTRIBUTES)
+
     # endregion
 
     # region Time Service actions
@@ -1211,6 +1224,7 @@ class OhmDevice(UpnpProfileDevice):
     async def pause(self) -> None:
         """Pause."""
         await self.transport_pause()
+
     # endregion
 
     # region other
@@ -1330,6 +1344,8 @@ class OhmDevice(UpnpProfileDevice):
             ArtworkUri=pin_metadata["artworkUri"],
             Shuffle=pin_metadata["shuffle"],
         )
+
+
 # endregion
 
 
@@ -1474,4 +1490,6 @@ def _decode_id_array(b64_id_array):
         array_int = []
 
     return array_int
+
+
 # endregion
