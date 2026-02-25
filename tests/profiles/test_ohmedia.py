@@ -141,7 +141,7 @@ async def test_instantiate_ohmdevice_no_handler() -> None:
 
 @pytest.mark.asyncio
 async def test_async_call_action_no_params() -> None:
-    """Test _async_call_action with no kwargs"""
+    """Test _async_call_action with no kwargs."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -163,7 +163,7 @@ async def test_async_call_action_no_params() -> None:
 
 @pytest.mark.asyncio
 async def test_async_call_action_one_param() -> None:
-    """Test _async_call_action with one kwarg"""
+    """Test _async_call_action with one kwarg."""
     # following the zero, one, many principle
 
     requester = UpnpTestRequester(RESPONSE_MAP)
@@ -188,7 +188,7 @@ async def test_async_call_action_one_param() -> None:
 
 @pytest.mark.asyncio
 async def test_async_call_action_many_params() -> None:
-    """Test _async_call_action with several kwargs"""
+    """Test _async_call_action with several kwargs."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -215,7 +215,7 @@ async def test_async_call_action_many_params() -> None:
 @pytest.mark.asyncio
 async def test_state_var_value_from_state_var() -> None:
     # got from cache
-    """Test _async_call_action with several kwargs"""
+    """Test _async_call_action with several kwargs."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -235,7 +235,7 @@ async def test_state_var_value_from_state_var() -> None:
 @pytest.mark.asyncio
 async def test_state_var_value_from_polled() -> None:
     # got from cache
-    """Test _state_variable with call to device"""
+    """Test _state_variable with call to device."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -273,7 +273,7 @@ async def test_subscribe_no_event_handler() -> None:
 
 @pytest.mark.asyncio
 async def test_async_call_action_bad_service() -> None:
-    """Test _async_call_action with non-existent service"""
+    """Test _async_call_action with non-existent service."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -284,7 +284,7 @@ async def test_async_call_action_bad_service() -> None:
 
 @pytest.mark.asyncio
 async def test_async_call_action_bad_action() -> None:
-    """Test _async_call_action with non-existent action for service"""
+    """Test _async_call_action with non-existent action for service."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -295,7 +295,7 @@ async def test_async_call_action_bad_action() -> None:
 
 @pytest.mark.asyncio
 async def test_async_call_action_bad_param_value() -> None:
-    """Test _async_call_action with no kwargs"""
+    """Test _async_call_action with no kwargs."""
     with pytest.raises(UpnpActionResponseError) as exinfo:  # call action expecting 800 upnp error
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
@@ -357,33 +357,43 @@ async def test_subscribe_events() -> None:
 
 # region tests of functions not requiring a profile
 def test_action_for_state_var_mapped() -> None:
+    """Test action returned correctly when state variable has no action of same name."""
     # what action needs to be called to populate specified state variable
     actual = _action_for_state_var("Info", "TrackCount")
     assert actual == "Counters"
 
 
 def test_action_for_state_var_not_mapped() -> None:
-    # action has same name as specified state variable
+    """Test action returned correctly when action has same name as specified state variable."""
+
     actual = _action_for_state_var("Playlist", "TransportState")
     assert actual == "TransportState"
 
 
 def test_decode_id_array() -> None:
+    """Test _decode_id_array correctly decodes base64 encoded list."""
+
     data = "AAAAEwAAABQAAAAVAAAAFgAAABcAAAAdAAAAHgAAAB8="
     assert _decode_id_array(data) == [19, 20, 21, 22, 23, 29, 30, 31]
 
 
 def test_decode_id_array_empty() -> None:
+    """Test _decode_id_array returns empty array on empty input."""
+
     data = ""
     assert _decode_id_array(data) == []
 
 
 def test_decode_id_array_not_an_array() -> None:
+    """Test _decode_id_array does not error but returns empty array on bad input."""
+
     data = b"Tm90IEFuIEFycmF5"
     assert _decode_id_array(data) == []
 
 
 def test_list_to_string() -> None:
+    """Test list converts to space separated string."""
+
     idlist = [1, 2, 3, 4, 5]
     assert _list_to_string(idlist) == "1 2 3 4 5"
     idlist = []
