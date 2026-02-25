@@ -548,8 +548,7 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region Credentials Service actions
-    async def credentials_set(self, id, username, password) -> None:
-        """Perform the action Set"""
+    async def credentials_set(self, id: str, username: str, password: str) -> None:
         """Set the username and password for a given service.
 
         :param id: the identifier for the service
@@ -560,8 +559,7 @@ class OhmDevice(UpnpProfileDevice):
             Service.CREDENTIALS, Credentials.SET, Id=id, UserName=username, Password=password
         )
 
-    async def credentials_clear(self, id) -> None:
-        """Perform the action Clear"""
+    async def credentials_clear(self, id: str) -> None:
         """Remove both username and password for a given service.
 
         :param id: the identifier for the service
@@ -572,21 +570,21 @@ class OhmDevice(UpnpProfileDevice):
         """Set or clear the enabled state of a service."""
         await self._async_call_action(Service.CREDENTIALS, Credentials.SET_ENABLED, Id=id, Enabled=enabled)
 
-    async def credentials_get(self, id) -> dict:
+    async def credentials_get(self, id: str) -> dict:
         """Retrieve username, password, status and enabled state for a service.
 
         :param id: the identifier for the service
         """
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET, Id=id)
 
-    async def credentials_login(self, id) -> dict:
+    async def credentials_login(self, id: str) -> dict:
         """Read a token indicating that a registered user has logged in to a remote service.
 
         :param id: the identifier for the service
         """
         return await self._async_call_action(Service.CREDENTIALS, Credentials.LOGIN, Id=id)
 
-    async def credentials_re_login(self, id, currenttoken) -> dict:
+    async def credentials_re_login(self, id: str, currenttoken: str) -> dict:
         """Refresh an existing token returned from Login().
 
         :param id: the identifier for the service
@@ -646,7 +644,7 @@ class OhmDevice(UpnpProfileDevice):
         """Get pins get max number of devices."""
         return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
 
-    async def pins_invoke_index(self, index) -> None:
+    async def pins_invoke_index(self, index: int) -> None:
         """Invoke the pin at the specified index.
 
         :param index: the specified index in the IdArray
@@ -676,7 +674,7 @@ class OhmDevice(UpnpProfileDevice):
         """Start playing the previous item in the playlist."""
         await self._async_call_action(Service.PLAYLIST, Playlist.PREVIOUS)
 
-    async def playlist_set_repeat(self, value) -> None:
+    async def playlist_set_repeat(self, value: bool) -> None:
         """Enable or disable repeat mode.
 
         :param value: repeat mode
@@ -687,7 +685,6 @@ class OhmDevice(UpnpProfileDevice):
         """Return the value of the Repeat state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.REPEAT)
 
-    async def playlist_set_shuffle(self, value) -> None:
     async def playlist_set_shuffle(self, value: bool) -> None:
         """Enable or disable shuffle mode.
 
@@ -1306,7 +1303,7 @@ class OhmDevice(UpnpProfileDevice):
         result = await action.async_call(**kwargs)
         return result if result else None
 
-    async def playlist_last_id(self):
+    async def playlist_last_id(self) -> int:
         """Return the last id of the playlist."""
         id_array = (await self.playlist_id_array())["Array"]
         decoded = _decode_id_array(self, id_array)
@@ -1326,8 +1323,7 @@ class OhmDevice(UpnpProfileDevice):
     #   "artworkUri":"http:\/\/static.airable.io\/50\/81\/595998.png",
     #   "shuffle":False}
 
-    async def pins_set_device(self, pin_metadata):
-        # TODO validate pin_data
+    async def pins_set_device(self, pin_metadata: dict):
         """Set Pins service device using single metadata dictionary.
 
         :param pin_metadata: dictionary containing necessary metadata
