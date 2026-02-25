@@ -242,22 +242,20 @@ class Transport(StrEnum):
     SHUFFLE = "Shuffle"
 
 
-# TODO: decide how to cope with different versions
-# TODO: should Linn specific be included?
 class Update(StrEnum):
     """Actions for Update Service."""
 
     GET_SOFTWARE_STATUS = "GetSoftwareStatus"
     GET_EXECUTOR_STATUS = "GetExecutorStatus"
     GET_JOB_STATUS = "GetJobStatus"
-    # PUSH_MANIFEST = "PushManifest"
-    PUSH_MANIFEST = "PushManifest2"
-    # APPLY = "Apply"
-    APPLY = "Apply2"
-    # RECOVER = "Recover"
-    RECOVER = "Recover2"
-    # RECOVER_KEEP_STORE = "RecoverKeepStore"
-    RECOVER_KEEP_STORE = "RecoverKeepStore2"
+    PUSH_MANIFEST = "PushManifest"
+    PUSH_MANIFEST2 = "PushManifest2"
+    APPLY = "Apply"
+    APPLY2 = "Apply2"
+    RECOVER = "Recover"
+    RECOVER2 = "Recover2"
+    RECOVER_KEEP_STORE = "RecoverKeepStore"
+    RECOVER_KEEP_STORE2 = "RecoverKeepStore2"
     CHECK_NOW = "CheckNow"
     GET_RECOVER_SUPPORTED = "GetRecoverSupported"
 
