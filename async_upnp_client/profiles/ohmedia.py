@@ -1385,7 +1385,6 @@ def _action_for_state_var(service_name, state_variable_name):
         "ModelUrl": "Model",
         "ProductImageHiresUri": "Product",
         "ProductImageUri": "GetImageUri",
-        "ProductImageUri": "Product",
         "ProductInfo": "Product",
         "ProductName": "Product",
         "ProductRoom": "Product",
@@ -1397,7 +1396,6 @@ def _action_for_state_var(service_name, state_variable_name):
         "A_ARG_TYPE_IdArrayChanged_Value": "IdArrayChanged",
         "A_ARG_TYPE_ReadList_ChannelList": "ReadList",
         "Metadata": "Channel",
-        "Metadata": "Read",
         "Uri": "Channel",
     }
 
