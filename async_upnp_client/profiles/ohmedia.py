@@ -459,18 +459,15 @@ class OhmDevice(UpnpProfileDevice):
         """Return the friendly name of the product."""
         return self.device.friendly_name
 
-    # TODO read the state var if it exists?
-    async def name(self) -> dict:
+    async def name(self) -> str:
         """Return the name of the product."""
         product = await self.product()
         return product["Name"]
 
-    # TODO just read the state var if it exists?
-    async def room(self) -> dict:
+    async def room(self) -> str:
         """Return the room where product is located."""
         product = await self.product()
         return product["Room"]
-
     # endregion
 
     # region enums and constants
