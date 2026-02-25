@@ -1223,7 +1223,7 @@ class OhmDevice(UpnpProfileDevice):
             _LOGGER.debug(f"Missing State Variable {service_name}:{state_variable_name}")
             return None
 
-        if state_var.value == None:  # state variable not populated
+        if state_var.value is None:  # state variable not populated
             # TODO Sort out Subscribe/Resubscribe first
             # then if still None try directly calling corresponding action
             # print(f"Polling {state_variable_name} value")
