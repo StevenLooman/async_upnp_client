@@ -1,9 +1,11 @@
+"""Unit tests for the Linn/Open Home Media profile."""
+# ruff noqa I001
 import os
-from copy import copy
-from typing import Mapping, Tuple
-
 import pytest
+
+from copy import copy
 from multidict import CIMultiDict
+from typing import Mapping, Tuple
 
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
