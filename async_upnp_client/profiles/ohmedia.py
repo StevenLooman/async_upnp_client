@@ -823,7 +823,7 @@ class OhmDevice(UpnpProfileDevice):
         await self._async_call_action(Service.PRODUCT, Product.SET_STANDBY, Value=standby)
 
     async def product_source_count(self) -> dict:
-        """Retrun the SourceCount state variable."""
+        """Return the SourceCount state variable."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_COUNT)
 
     async def product_source(self, index: int) -> dict:
