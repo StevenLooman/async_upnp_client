@@ -350,6 +350,8 @@ async def test_subscribe_events() -> None:
 
     state_var = profile._state_variable(service_name="Volume", state_variable_name="Volume")
     assert state_var.value == expected
+
+
 # endregion
 
 
@@ -401,19 +403,19 @@ def test_list_to_string() -> None:
 def test_strict_false() -> None:
     """Test _strict_false() for a range of inputs."""
 
-    assert _strict_false(False) == False # noqa: E712
-    assert _strict_false("False") == False # noqa: E712
-    assert _strict_false(0) == False # noqa: E712
-    assert _strict_false("any string (other than False)") == True # noqa: E712
-    assert _strict_false("false") == True # noqa: E712
-    assert _strict_false("true") == True # noqa: E712
-    assert _strict_false(True) == True # noqa: E712
-    assert _strict_false(1) == True # noqa: E712
-    assert _strict_false([]) == True # noqa: E712
-    assert _strict_false({}) == True # noqa: E712
-    assert _strict_false("") == True # noqa: E712
-    assert _strict_false(None) == True # noqa: E712
-    assert _strict_false(set()) == True # noqa: E712
+    assert _strict_false(False) == False  # noqa: E712
+    assert _strict_false("False") == False  # noqa: E712
+    assert _strict_false(0) == False  # noqa: E712
+    assert _strict_false("any string (other than False)") == True  # noqa: E712
+    assert _strict_false("false") == True  # noqa: E712
+    assert _strict_false("true") == True  # noqa: E712
+    assert _strict_false(True) == True  # noqa: E712
+    assert _strict_false(1) == True  # noqa: E712
+    assert _strict_false([]) == True  # noqa: E712
+    assert _strict_false({}) == True  # noqa: E712
+    assert _strict_false("") == True  # noqa: E712
+    assert _strict_false(None) == True  # noqa: E712
+    assert _strict_false(set()) == True  # noqa: E712
 
 
 # endregion

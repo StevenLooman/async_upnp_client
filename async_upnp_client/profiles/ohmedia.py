@@ -25,6 +25,7 @@ from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 _LOGGER = logging.getLogger(__name__)
 
+
 # region Service and other enums
 class Service(StrEnum):
     """Linn/Open Home Network Services."""
@@ -64,6 +65,7 @@ class ServiceId(StrEnum):
     PRIVACY = "urn:linn-co-uk:serviceId:Privacy"
     UPDATE = "urn:linn-co-uk:serviceId:Update"
     VOLKANO = "urn:linn-co-uk:serviceId:Volkano"
+
 
 class ProductSourceType(StrEnum):
     """Supported values for Product Source Type."""
@@ -1368,7 +1370,6 @@ class OhmDevice(UpnpProfileDevice):
         else:
             last_id = 0
         return last_id
-
 
     async def pins_set_device(self, pin_metadata: dict):
         """Set Pins service device using single metadata dictionary.
