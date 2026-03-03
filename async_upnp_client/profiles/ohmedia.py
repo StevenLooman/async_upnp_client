@@ -429,7 +429,6 @@ class OhmDevice(UpnpProfileDevice):
         """Initialize."""
 
         super().__init__(device, event_handler)
-        self.__did_first_update: bool = False
 
     @property
     def uuid(self) -> str:
