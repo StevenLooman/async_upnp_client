@@ -645,6 +645,10 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, index - 1)
 
+    async def pins_get_modes(self) -> dict:
+        """Get the value for Modes."""
+        return await self._async_call_action(Service.PINS, Pins.GET_MODES)
+
     # endregion
 
     # region Playlist Service actions
