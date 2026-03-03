@@ -7,6 +7,7 @@ import binascii
 import logging
 import struct
 import xml.etree.ElementTree as ET
+
 try:
     from enum import StrEnum
 except ImportError:
