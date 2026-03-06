@@ -357,14 +357,14 @@ async def test_subscribe_events() -> None:
 
 # region tests of functions not requiring a profile
 def test_action_for_state_var_mapped() -> None:
-    """Test action returned correctly when state variable has no action of same name."""
+    """Test action returned as mapped action when state variable is mapped to action."""
     # what action needs to be called to populate specified state variable
     actual = _action_for_state_var("Info", "TrackCount")
     assert actual == "Counters"
 
 
 def test_action_for_state_var_not_mapped() -> None:
-    """Test action returned correctly when action has same name as specified state variable."""
+    """Test action returned as same name when action has same name as specified state variable."""
 
     actual = _action_for_state_var("Playlist", "TransportState")
     assert actual == "TransportState"
