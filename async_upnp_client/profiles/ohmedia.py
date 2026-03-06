@@ -1385,9 +1385,17 @@ class OhmDevice(UpnpProfileDevice):
             has_state_var = service.has_state_variable(state_variable_name)
         if has_state_var:
             state_var = self._state_variable(service_name, state_variable_name)
-
-    async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> dict | None:
+            if state_var is not None:
+                if state_var.value is not None:
+                    return state_var.value
+                # try polling
+                action = _action_for_state_var(service_name, state_var.name)
+                await self._async_poll_state_variables(service_name, action)
+                state_var = self._state_variable(service_name, state_variable_name)
+                if state_var is not None:
+                    return state_var.value
         _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
+        return None
         """Call service action with arguments."""
 
         service = self._service(service_name)
