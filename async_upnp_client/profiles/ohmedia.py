@@ -426,8 +426,6 @@ class VolumeState(StrEnum):
     VOLUME_OFFSET = "A_ARG_TYPE_VolumeOffset_VolumeOffsetBinaryMilliDb"
     VOLUME_STEPS = "VolumeSteps"
     VOLUME_UNITY = "VolumeUnity"
-
-
 # endregion
 
 
@@ -1116,7 +1114,7 @@ class OhmDevice(UpnpProfileDevice):
         :param mode: source or group of related sources
         :param command: mode specific command
         """
-        return await self._async_call_action(Service.TRANSPORT, Transport.PLAY_AS, Mode=mode, Command=command)
+        await self._async_call_action(Service.TRANSPORT, Transport.PLAY_AS, Mode=mode, Command=command)
 
     # endregion
     # region Update Service actions
