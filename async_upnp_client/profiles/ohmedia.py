@@ -652,7 +652,7 @@ class OhmDevice(UpnpProfileDevice):
 
         :param index: the specified index in the IdArray
         """
-        await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, index - 1)
+        await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, Index = index - 1)
 
     async def pins_get_modes(self) -> Mapping[str, Any] | None:
         """Get the value for Modes."""
