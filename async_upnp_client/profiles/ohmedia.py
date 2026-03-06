@@ -543,54 +543,58 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region Credentials Service actions
-    async def credentials_set(self, id: str, username: str, password: str) -> None:
+    async def credentials_set(self, ident: str, username: str, password: str) -> None:
         """Set the username and password for a given service.
 
-        :param id: the identifier for the service
+        :param ident: the identifier for the service
         :param username: username for the service
         :param password: must be encrypted using the RSA public key in the PublicKey state variable
         """
         await self._async_call_action(
             Service.CREDENTIALS,
             Credentials.SET,
-            Id=id,
+            Id=ident,
             UserName=username,
             Password=password,
         )
 
-    async def credentials_clear(self, id: str) -> None:
+    async def credentials_clear(self, ident: str) -> None:
         """Remove both username and password for a given service.
 
-        :param id: the identifier for the service
+        :param ident: the identifier for the service
         """
-        await self._async_call_action(Service.CREDENTIALS, Credentials.CLEAR, Id=id)
+        await self._async_call_action(Service.CREDENTIALS, Credentials.CLEAR, Id=ident)
 
-    async def credentials_set_enabled(self, id, enabled) -> None:
-        """Set or clear the enabled state of a service."""
-        await self._async_call_action(Service.CREDENTIALS, Credentials.SET_ENABLED, Id=id, Enabled=enabled)
+    async def credentials_set_enabled(self, ident: int, enabled: bool) -> None:
+        """Set or clear the enabled state of a service.
 
-    async def credentials_get(self, id: str) -> dict:
+        :param ident: the identifier of the credentials
+        :param enabled: whether enabled or not
+        """
+        await self._async_call_action(Service.CREDENTIALS, Credentials.SET_ENABLED, Id=ident, Enabled=enabled)
+
+    async def credentials_get(self, ident: str) -> Mapping[str, Any] | None:
         """Retrieve username, password, status and enabled state for a service.
 
-        :param id: the identifier for the service
+        :param ident: the identifier for the service
         """
-        return await self._async_call_action(Service.CREDENTIALS, Credentials.GET, Id=id)
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.GET, Id=ident)
 
-    async def credentials_login(self, id: str) -> dict:
+    async def credentials_login(self, ident: str) -> Mapping[str, Any] | None:
         """Read a token indicating that a registered user has logged in to a remote service.
 
-        :param id: the identifier for the service
+        :param ident: the identifier for the service
         """
-        return await self._async_call_action(Service.CREDENTIALS, Credentials.LOGIN, Id=id)
+        return await self._async_call_action(Service.CREDENTIALS, Credentials.LOGIN, Id=ident)
 
-    async def credentials_re_login(self, id: str, currenttoken: str) -> dict:
+    async def credentials_re_login(self, ident: str, currenttoken: str) -> Mapping[str, Any] | None:
         """Refresh an existing token returned from Login().
 
-        :param id: the identifier for the service
+        :param ident: the identifier for the service
         :param currenttoken: the current token for the service
         """
         return await self._async_call_action(
-            Service.CREDENTIALS, Credentials.RE_LOGIN, Id=id, CurrentToken=currenttoken
+            Service.CREDENTIALS, Credentials.RE_LOGIN, Id=ident, CurrentToken=currenttoken
         )
 
     async def credentials_get_ids(self) -> dict:
