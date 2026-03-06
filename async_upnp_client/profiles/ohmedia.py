@@ -1514,7 +1514,7 @@ def _action_for_state_var(service_name: str, state_variable_name: str) -> str:
         return state_variable_name
 
 
-def _strict_false(val: bool) -> bool:
+def _strict_false(val: Any) -> bool:
     """Only False if val is explicitly False, "False" or 0."""
 
     if val is None:
