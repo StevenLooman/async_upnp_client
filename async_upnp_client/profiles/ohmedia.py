@@ -1372,15 +1372,18 @@ class OhmDevice(UpnpProfileDevice):
     async def playlist_last_id(self) -> int:
         """Return the last id of the playlist."""
 
-        id_array = (await self.playlist_id_array())["Array"]
-        decoded = _decode_id_array(self, id_array)
-        if len(decoded) > 0:
-            last_id = decoded[-1]
-        else:
-            last_id = 0
+        decoded = []
+        last_id: int = 0
+        id_array = await self.playlist_id_array()
+        if id_array is not None:
+            id_array_value = id_array.get("Array")
+            if id_array_value is not None:
+                decoded = _decode_id_array(id_array_value)
+            if len(decoded) > 0:
+                last_id = decoded[-1]
         return last_id
 
-    async def pins_set_device(self, pin_metadata: dict):
+    async def pins_set_device(self, pin_metadata: dict) -> None:
         """Set Pins service device using single metadata dictionary.
 
         :param pin_metadata: dictionary containing necessary metadata
