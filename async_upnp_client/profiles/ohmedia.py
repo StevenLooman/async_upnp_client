@@ -1372,20 +1372,19 @@ class OhmDevice(UpnpProfileDevice):
 
     # region other
 
-    async def _state_var_value(self, service_name, state_variable_name, **kwargs) -> bool | dict | int | str | None:
-        """Return value of state variable."""
+    async def _state_var_value(self,
+                               service_name: str,
+                               state_variable_name: str) -> Any | None:
+        """Return value of state variable.
 
-        state_var = self._state_variable(service_name, state_variable_name)
-        if state_var is None:  # state variable not listed in Service XML description
-            return None
-
-        if state_var.value is None:  # state variable not populated
-            action = _action_for_state_var(service_name, state_var.name)
-            await self._async_poll_state_variables(service_name, action)
+        Return value if it exists otherwise poll for value
+        """
+        has_state_var = False
+        service = self._service(service_name)
+        if service is not None:
+            has_state_var = service.has_state_variable(state_variable_name)
+        if has_state_var:
             state_var = self._state_variable(service_name, state_variable_name)
-            if state_var.value is None:
-
-        return state_var.value
 
     async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> dict | None:
         _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
