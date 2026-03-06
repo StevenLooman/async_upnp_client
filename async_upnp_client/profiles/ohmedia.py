@@ -828,7 +828,7 @@ class OhmDevice(UpnpProfileDevice):
 
     async def product_set_source_index(self, index: int) -> None:
         """Set the currently active source."""
-        await self._async_call_action(Service.PRODUCT, Product.SET_SOURCE_INDEX, Index=index)
+        await self._async_call_action(Service.PRODUCT, Product.SET_SOURCE_INDEX, Value=index)
 
     async def product_set_standby(self, standby: bool) -> None:
         """Set the product to standby."""
