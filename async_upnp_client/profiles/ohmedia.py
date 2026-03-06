@@ -1506,7 +1506,7 @@ def _action_for_state_var(service_name: str, state_variable_name: str) -> str:
         case Service.VOLUME:
             mapping = volume_sv_action
         case _:
-            mapping = None
+            mapping = {}
 
     if state_variable_name in mapping:
         return mapping[state_variable_name]
