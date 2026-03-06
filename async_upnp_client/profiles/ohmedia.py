@@ -902,12 +902,12 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.RADIO, Radio.SET_ID, Value=value, Uri=uri)
 
-    async def radio_read(self, id: int) -> dict:
+    async def radio_read(self, ident: int) -> Mapping[str, Any] | None:
         """Given a channel preset Id, return its associated metadata.
 
         :param ident: the preset identifier
         """
-        return await self._async_call_action(Service.RADIO, Radio.READ, Id=id)
+        return await self._async_call_action(Service.RADIO, Radio.READ, Id=ident)
 
     async def radio_read_list(self, idlist: str) -> Mapping[str, Any] | None:
         """Return associated metadata for a list of Ids.
