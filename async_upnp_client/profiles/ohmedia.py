@@ -530,7 +530,7 @@ class OhmDevice(UpnpProfileDevice):
         state_variables: Sequence[UpnpStateVariable[Any]],
     ) -> None:
         """Handle state variable(s) changed event from OHM device."""
-        _LOGGER.debug(f"PROFILE_ON_EVENT {service.service_id}")
+        _LOGGER.debug("PROFILE_ON_EVENT %s", service.service_id)
         for sv in state_variables:
             state_var = service.state_variable(sv.name)
             state_var._value = sv._value
@@ -1331,7 +1331,6 @@ class OhmDevice(UpnpProfileDevice):
 
         state_var = self._state_variable(service_name, state_variable_name)
         if state_var is None:  # state variable not listed in Service XML description
-            _LOGGER.debug(f"Missing State Variable {service_name}:{state_variable_name}")
             return None
 
         if state_var.value is None:  # state variable not populated
@@ -1339,20 +1338,20 @@ class OhmDevice(UpnpProfileDevice):
             await self._async_poll_state_variables(service_name, action)
             state_var = self._state_variable(service_name, state_variable_name)
             if state_var.value is None:
-                _LOGGER.debug(f"State variable {service_name}:{state_variable_name} is None after polling")
 
         return state_var.value
 
     async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> dict | None:
+        _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
         """Call service action with arguments."""
 
         service = self._service(service_name)
         if not service:
-            _LOGGER.warning(f"{service_name} device does not offer service")
+            _LOGGER.warning("%s device does not offer service", service_name)
             return None
 
         if not service.has_action(action_name):
-            _LOGGER.warning(f"{service_name} service does not offer action {action_name}")
+            _LOGGER.warning("%s service does not offer action %s", service_name, action_name)
             return None
         action = service.action(action_name)
         result = await action.async_call(**kwargs)
