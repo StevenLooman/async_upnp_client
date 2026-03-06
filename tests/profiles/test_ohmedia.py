@@ -369,6 +369,11 @@ def test_action_for_state_var_not_mapped() -> None:
     actual = _action_for_state_var("Playlist", "TransportState")
     assert actual == "TransportState"
 
+def test_action_for_state_var_service_not_found() -> None:
+    """Test action returned as given when service is not in list of mappings."""
+
+    actual = _action_for_state_var("NotAService", "TransportState")
+    assert actual == "TransportState"
 
 def test_decode_id_array() -> None:
     """Test _decode_id_array correctly decodes base64 encoded list."""
