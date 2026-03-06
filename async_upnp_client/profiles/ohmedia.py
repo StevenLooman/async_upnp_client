@@ -1288,7 +1288,6 @@ class OhmDevice(UpnpProfileDevice):
 
     async def active_source_name(self) -> str:
         """Get the active source name."""
-        return (await self.product_source(await self.active_source_index()))["Name"] or "N/A"
 
     async def sources(self):
         """Get list of active sources."""
