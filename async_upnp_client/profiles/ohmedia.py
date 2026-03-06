@@ -703,20 +703,32 @@ class OhmDevice(UpnpProfileDevice):
         """Return the value of the Shuffle state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.SHUFFLE)
 
-    async def playlist_seek_second_absolute(self, value) -> None:
-        """Seek to an absolute second within the current track."""
+    async def playlist_seek_second_absolute(self, value: int) -> None:
+        """Seek to an absolute second within the current track.
+
+        :param value: number of seconds to seek to
+        """
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_SECOND_ABSOLUTE, Value=value)
 
-    async def playlist_seek_second_relative(self, value) -> None:
-        """Seek to a relative second within the current track."""
+    async def playlist_seek_second_relative(self, value: int) -> None:
+        """Seek to a relative second within the current track.
+
+        :param value: number of seconds to seek to
+        """
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_SECOND_RELATIVE, Value=value)
 
-    async def playlist_seek_id(self, value) -> None:
-        """Switch to the track with the specified id."""
+    async def playlist_seek_id(self, value: int) -> None:
+        """Switch to the track with the specified id.
+
+        :param value: id
+        """
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_ID, Value=value)
 
-    async def playlist_seek_index(self, value) -> None:
-        """Switch to the track with the specified index."""
+    async def playlist_seek_index(self, value: int) -> None:
+        """Switch to the track with the specified index.
+
+        :param value: index
+        """
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_INDEX, Value=value)
 
     async def playlist_transport_state(self) -> Mapping[str, Any] | None:
@@ -727,12 +739,12 @@ class OhmDevice(UpnpProfileDevice):
         """Return the value of the Id state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID)
 
-    async def playlist_read(self, id: int) -> dict:
+    async def playlist_read(self, ident: int) -> Mapping[str, Any] | None:
         """Return the uri and metadata for a given track id.
 
-        :param id: track id
+        :param ident: track identifier
         """
-        return await self._async_call_action(Service.PLAYLIST, Playlist.READ, Id=id)
+        return await self._async_call_action(Service.PLAYLIST, Playlist.READ, Id=ident)
 
     async def playlist_read_list(self, idlist: str) -> Mapping[str, Any] | None:
         """Return associated uri and metadata for a list of track ids.
@@ -814,11 +826,11 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.PRODUCT, Product.MODEL)
 
-    async def product_set_source_index(self, index: int):
+    async def product_set_source_index(self, index: int) -> None:
         """Set the currently active source."""
         await self._async_call_action(Service.PRODUCT, Product.SET_SOURCE_INDEX, Index=index)
 
-    async def product_set_standby(self, standby: bool):
+    async def product_set_standby(self, standby: bool) -> None:
         """Set the product to standby."""
         await self._async_call_action(Service.PRODUCT, Product.SET_STANDBY, Value=standby)
 
@@ -861,7 +873,7 @@ class OhmDevice(UpnpProfileDevice):
         """Play the previously selected stream (set via either SetChannel or SetId)."""
         await self._async_call_action(Service.RADIO, Radio.PLAY)
 
-    async def radio_set_channel(self, uri, metadata) -> None:
+    async def radio_set_channel(self, uri: str, metadata: str) -> None:
         """Set the uri and metadata for a new stream.
 
         uri: uri for channel
@@ -1002,19 +1014,19 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
     # region Transport Service actions
-    async def transport_pause(self):
+    async def transport_pause(self) -> None:
         """Pause the current track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.PAUSE)
 
-    async def transport_play(self):
+    async def transport_play(self) -> None:
         """Play the current track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.PLAY)
 
-    async def transport_skip_next(self):
+    async def transport_skip_next(self) -> None:
         """Move to the next track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.SKIP_NEXT)
 
-    async def transport_skip_previous(self):
+    async def transport_skip_previous(self) -> None:
         """Move to the previous track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
 
@@ -1022,7 +1034,7 @@ class OhmDevice(UpnpProfileDevice):
         """Return the current value of the TransportState state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.TRANSPORT_STATE)
 
-    async def transport_stop(self):
+    async def transport_stop(self) -> None:
         """Stop the current track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.STOP)
 
@@ -1098,7 +1110,7 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
     # region Update Service actions
-    async def update_apply(self):
+    async def update_apply(self) -> None:
         """Apply a software update."""
         await self._async_call_action(Service.UPDATE, Update.APPLY)
 
@@ -1257,7 +1269,7 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region syntactic helpers
-    async def active_source_index(self) -> int:
+    async def active_source_index(self) -> int | None:
         """Get the active source index."""
         return int((await self.product_source_index())["Value"])
 
@@ -1286,27 +1298,27 @@ class OhmDevice(UpnpProfileDevice):
         return sources
 
     @property
-    async def is_standby(self) -> str:
+    async def is_standby(self) -> str | None:
         """Get standby status."""
         return (await self.product_standby())["Value"]
 
     @property
-    async def is_muted(self) -> bool:
+    async def is_muted(self) -> bool | None:
         """Get mute status."""
         return (await self.volume_mute())["Value"]
 
     @property
-    async def volume(self) -> int:
+    async def volume(self) -> int | None:
         """Return the Volume level."""
         return await self._state_var_value(Service.VOLUME, VolumeState.VOLUME)
 
     @property
-    async def product_room(self) -> str:
+    async def product_room(self) -> str | None:
         """Return the room where product is located."""
         return await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
 
     @property
-    async def product_name(self) -> str:
+    async def product_name(self) -> str | None:
         """Return the name of product."""
         return await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
 
@@ -1392,7 +1404,7 @@ class OhmDevice(UpnpProfileDevice):
 
 
 # region functions independent of class
-def _action_for_state_var(service_name, state_variable_name):
+def _action_for_state_var(service_name: str, state_variable_name: str) -> str:
     """Lookup action corresponding to state variable."""
 
     info_sv_action = {
@@ -1514,12 +1526,12 @@ def _strict_false(val: bool) -> bool:
             return True
 
 
-def _list_to_string(list_int):
+def _list_to_string(list_int: list) -> str:
     """Convert list to space separated string."""
     return " ".join(map(str, filter(lambda x: x > 0, list_int)))
 
 
-def _decode_id_array(b64_id_array):
+def _decode_id_array(b64_id_array: str) -> list:
     """Convert base64 encoded list to list of integers."""
     try:
         decoded = base64.b64decode(b64_id_array, validate=True)
