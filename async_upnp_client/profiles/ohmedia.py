@@ -1289,23 +1289,32 @@ class OhmDevice(UpnpProfileDevice):
     async def active_source_name(self) -> str:
         """Get the active source name."""
 
-    async def sources(self):
+        index = await self.active_source_index()
+        source_name = "N/A" # cover the else cases
+        if index is not None:
+            source = await self.product_source(index)
+            if source is not None:
+                source_name = source["Name"]
+        return source_name
+
+    async def sources(self) -> list:
         """Get list of active sources."""
-        result = (await self.product_source_xml())["Value"]
-        sources_list_xml = ET.fromstring(result)
         sources = []
-        index = 0
-        for source_xml in sources_list_xml:
-            visible = source_xml.find("Visible").text == "true"
-            if visible:
-                sources.append(
-                    {
-                        "Index": index,
-                        "Name": source_xml.find("Name").text,
-                        "Type": source_xml.find("Type").text,
-                    }
-                )
-            index = index + 1
+        xml = await self.product_source_xml()
+        if xml is not None:
+            sources_list_xml = ET.fromstring(xml["Value"])
+            index = 0
+            for source_xml in sources_list_xml:
+                visible = source_xml.findtext("Visible")
+                if visible == "true":
+                    sources.append(
+                        {
+                            "Index": index,
+                            "Name": source_xml.findtext("Name"),
+                            "Type": source_xml.findtext("Type"),
+                        }
+                    )
+                index = index + 1
 
         return sources
 
