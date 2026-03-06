@@ -1510,8 +1510,7 @@ def _action_for_state_var(service_name: str, state_variable_name: str) -> str:
 
     if state_variable_name in mapping:
         return mapping[state_variable_name]
-    else:
-        return state_variable_name
+    return state_variable_name
 
 
 def _strict_false(val: Any) -> bool:
