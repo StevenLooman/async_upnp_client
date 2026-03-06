@@ -1281,7 +1281,10 @@ class OhmDevice(UpnpProfileDevice):
     # region syntactic helpers
     async def active_source_index(self) -> int | None:
         """Get the active source index."""
-        return int((await self.product_source_index())["Value"])
+        index = await self.product_source_index()
+        if index:
+            return int(index["Value"])
+        return None
 
     async def active_source_name(self) -> str:
         """Get the active source name."""
