@@ -459,11 +459,6 @@ class OhmDevice(UpnpProfileDevice):
         """Return the friendly name of the product."""
         return self.device.friendly_name
 
-    async def name(self) -> str:
-        """Return the name of the product."""
-        product = await self.product()
-        return product["Name"]
-
     async def room(self) -> str:
         """Return the room where product is located."""
         product = await self.product()
