@@ -387,7 +387,7 @@ def test_decode_id_array_empty() -> None:
 def test_decode_id_array_not_an_array() -> None:
     """Test _decode_id_array does not error but returns empty array on bad input."""
 
-    data = b"Tm90IEFuIEFycmF5"
+    data = "Tm90IEFuIEFycmF5"
     assert _decode_id_array(data) == []
 
 
