@@ -1367,7 +1367,7 @@ class OhmDevice(UpnpProfileDevice):
             return None
         action = service.action(action_name)
         result = await action.async_call(**kwargs)
-        return result if result else None
+        return result if result is not None else None
 
     async def playlist_last_id(self) -> int:
         """Return the last id of the playlist."""
