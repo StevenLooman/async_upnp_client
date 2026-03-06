@@ -756,7 +756,7 @@ class OhmDevice(UpnpProfileDevice):
     async def playlist_insert(self, afterid: int, uri: str, metadata: str) -> Mapping[str, Any] | None:
         """Add the given uri and metadata as a new track to the playlist.
 
-        :param afterid: insert track after this id; set to 0 to insert at start
+        :param afterid: insert track after this identifier; set to 0 to insert at start
         :param uri: uri of the track
         :param metadata: metadata of the track
         """
@@ -895,9 +895,9 @@ class OhmDevice(UpnpProfileDevice):
         return await self._async_call_action(Service.RADIO, Radio.ID)
 
     async def radio_set_id(self, value: int, uri: str) -> None:
-        """Set the preset id and uri for a new stream.
+        """Set the preset Id and uri for a new stream.
 
-        :param value: the preset id
+        :param value: the preset identifier
         :param uri: the uri of the stream
         """
         await self._async_call_action(Service.RADIO, Radio.SET_ID, Value=value, Uri=uri)
@@ -905,7 +905,7 @@ class OhmDevice(UpnpProfileDevice):
     async def radio_read(self, id: int) -> dict:
         """Given a channel preset Id, return its associated metadata.
 
-        :param id: the preset id
+        :param ident: the preset identifier
         """
         return await self._async_call_action(Service.RADIO, Radio.READ, Id=id)
 
@@ -939,12 +939,18 @@ class OhmDevice(UpnpProfileDevice):
         """Perform the action RefreshPresets."""
         await self._async_call_action(Service.RADIO, Radio.REFRESH_PRESETS)
 
-    async def radio_seek_second_absolute(self, value) -> None:
-        """Seek to an absolute second within the current stream, if permitted."""
+    async def radio_seek_second_absolute(self, value: int) -> None:
+        """Seek to an absolute second within the current stream, if permitted.
+
+        :param value: second to seek
+        """
         await self._async_call_action(Service.RADIO, Radio.SEEK_SECOND_ABSOLUTE, Value=value)
 
-    async def radio_seek_second_relative(self, value) -> None:
-        """Seek to a relative second within the current stream, if permitted."""
+    async def radio_seek_second_relative(self, value: int) -> None:
+        """Seek to a relative second within the current stream, if permitted.
+
+        :param value: second to seek
+        """
         await self._async_call_action(Service.RADIO, Radio.SEEK_SECOND_RELATIVE, Value=value)
 
     # endregion
@@ -958,8 +964,12 @@ class OhmDevice(UpnpProfileDevice):
         """Perform the action Stop."""
         await self._async_call_action(Service.RECEIVER, Receiver.STOP)
 
-    async def receiver_set_sender(self, uri, metadata) -> None:
-        """Perform the action SetSender."""
+    async def receiver_set_sender(self, uri: str, metadata: str) -> None:
+        """Set the uri and metadata of the sender to listen to.
+
+        :param uri: uri of the sender
+        :param metadata: metadata of the sender
+        """
         await self._async_call_action(Service.RECEIVER, Receiver.SET_SENDER, Uri=uri, Metadata=metadata)
 
     async def receiver_sender(self) -> Mapping[str, Any] | None:
