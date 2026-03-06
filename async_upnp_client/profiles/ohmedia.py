@@ -1396,6 +1396,8 @@ class OhmDevice(UpnpProfileDevice):
                     return state_var.value
         _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
         return None
+
+    async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> Mapping[str, Any] | None:
         """Call service action with arguments."""
 
         service = self._service(service_name)
