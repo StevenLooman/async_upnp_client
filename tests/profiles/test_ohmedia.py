@@ -36,7 +36,9 @@ NOTIFY_PROPERTY_BODY = """
 </e:propertyset>
 """
 
-NOTIFY_HEADERS: CIMultiDict = CIMultiDict([("Nt", "upnp:event"), ("Nts", "upnp:propchange"), ("SID", "dummy-sid")])
+NOTIFY_HEADERS: CIMultiDict = CIMultiDict(
+    [("Nt", "upnp:event"), ("Nts", "upnp:propchange"), ("SID", "dummy-sid")]
+)
 
 RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
     # OpenHomeMedia
@@ -183,7 +185,9 @@ async def test_async_call_action_one_param() -> None:
     )
 
     # playlist_id_array_changed
-    assert (await profile._async_call_action("Playlist", "IdArrayChanged", Token=42)) == {"Value": True}
+    assert (
+        await profile._async_call_action("Playlist", "IdArrayChanged", Token=42)
+    ) == {"Value": True}
 
 
 @pytest.mark.asyncio
@@ -296,7 +300,9 @@ async def test_async_call_action_bad_action() -> None:
 @pytest.mark.asyncio
 async def test_async_call_action_bad_param_value() -> None:
     """Test _async_call_action with no kwargs."""
-    with pytest.raises(UpnpActionResponseError) as exinfo:  # call action expecting 800 upnp error
+    with pytest.raises(
+        UpnpActionResponseError
+    ) as exinfo:  # call action expecting 800 upnp error
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://ohmedia:1234/device.xml")
@@ -348,7 +354,9 @@ async def test_subscribe_events() -> None:
     result = await event_handler.handle_notify(http_request)
     assert result == 200
 
-    state_var = profile._state_variable(service_name="Volume", state_variable_name="Volume")
+    state_var = profile._state_variable(
+        service_name="Volume", state_variable_name="Volume"
+    )
     assert state_var.value == expected
 
 
@@ -369,11 +377,13 @@ def test_action_for_state_var_not_mapped() -> None:
     actual = _action_for_state_var("Playlist", "TransportState")
     assert actual == "TransportState"
 
+
 def test_action_for_state_var_service_not_found() -> None:
     """Test action returned as given when service is not in list of mappings."""
 
     actual = _action_for_state_var("NotAService", "TransportState")
     assert actual == "TransportState"
+
 
 def test_decode_id_array() -> None:
     """Test _decode_id_array correctly decodes base64 encoded list."""
