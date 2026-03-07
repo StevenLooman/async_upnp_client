@@ -6,22 +6,23 @@ Not all devices will offer all services and actions. If a service or action is n
 then a warning will be issued and no error or action will be taken
 """
 
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-public-methods,disable=too-many-lines
 import base64
 import binascii
 import logging
 import struct
+import sys
 import xml.etree.ElementTree as ET
-
-try:
-    from enum import StrEnum
-except ImportError:
-    from backports.strenum import StrEnum
 from typing import Any, Mapping, Sequence
 
 from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
 from async_upnp_client.event_handler import UpnpEventHandler
 from async_upnp_client.profiles.profile import UpnpProfileDevice
+
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    from strenum import StrEnum
 
 _LOGGER = logging.getLogger(__name__)
 
