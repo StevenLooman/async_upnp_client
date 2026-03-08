@@ -435,6 +435,8 @@ class VolumeState(StrEnum):
 class OhmDevice(UpnpProfileDevice):
     """Representation of an OpenHome Media (ohMedia) device."""
 
+    # pylint: disable=useless-parent-delegation
+
     def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler | None) -> None:
         """Initialize."""
         super().__init__(device, event_handler)
@@ -533,7 +535,7 @@ class OhmDevice(UpnpProfileDevice):
         _LOGGER.debug("PROFILE_ON_EVENT %s", service.service_id)
         for sv in state_variables:
             state_var = service.state_variable(sv.name)
-            state_var._value = sv._value
+            state_var._value = sv._value  # pylint: disable=protected-access
         if self.on_event:
             # pylint: disable=not-callable
             # pass control to calling event handler if on_event is overridden
@@ -1583,8 +1585,8 @@ def _decode_id_array(b64_id_array: str) -> list:
     encoded_as_bytes = b64_id_array.encode("utf-8")
     try:
         decoded = base64.b64decode(encoded_as_bytes, validate=True)
-    except binascii.Error:
-        raise ValueError("Invalid base64 encoding.")
+    except binascii.Error as exception:
+        raise ValueError("Invalid base64 encoding.") from exception
 
     array_int = list(struct.unpack(">" + "I" * (len(decoded) // 4), decoded))
     # quick sanity check on first 4 bytes
