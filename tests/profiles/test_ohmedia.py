@@ -1,6 +1,9 @@
 """Unit tests for the Linn/Open Home Media profile."""
 
+# pylint: disable=protected-access
+
 import os
+import sys
 from copy import copy
 from typing import Mapping, Tuple
 
@@ -19,6 +22,12 @@ from async_upnp_client.profiles.ohmedia import (
 )
 
 from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
+
+# pylint: disable=unused-import
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:
+    from strenum import StrEnum  # noqa: F401
 
 
 def read_file(filename: str) -> str:
@@ -214,7 +223,7 @@ async def test_async_call_action_many_params() -> None:
 
 @pytest.mark.asyncio
 async def test_state_var_value_from_state_var() -> None:
-    # got from cache
+    # get from cache
     """Test _async_call_action with several kwargs."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
@@ -222,10 +231,12 @@ async def test_state_var_value_from_state_var() -> None:
     profile = OhmDevice(device, event_handler=None)
 
     state_var = profile._state_variable("Volume", "Volume")
+    assert state_var is not None
     assert state_var.value is None
 
     state_var.value = 49
     actual = await profile._state_var_value("Volume", "Volume")
+    assert actual is not None
     assert actual == 49
 
 
@@ -234,7 +245,7 @@ async def test_state_var_value_from_state_var() -> None:
 
 @pytest.mark.asyncio
 async def test_state_var_value_from_polled() -> None:
-    # got from cache
+    # get from cache
     """Test _state_variable with call to device."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
@@ -253,9 +264,11 @@ async def test_state_var_value_from_polled() -> None:
     )
 
     state_var = profile._state_variable("Volume", "Volume")
+    assert state_var is not None
     assert state_var.value is None
 
     actual = await profile._state_var_value("Volume", "Volume")
+    assert actual is not None
     assert actual == 42
 
 
@@ -335,7 +348,7 @@ async def test_subscribe_events() -> None:
     timeout = await profile.async_subscribe_services()
     assert timeout is not None
 
-    headers = copy(NOTIFY_HEADERS)  # hey teacher, leave them constants alone
+    headers = copy(NOTIFY_HEADERS)
     headers["SID"] = "uuid:dummy-volume-4"
     expected = 49
     body = NOTIFY_PROPERTY_BODY.format(prop_value=f"<Volume>{expected}</Volume>")
@@ -388,14 +401,14 @@ def test_decode_id_array_empty() -> None:
     """Test _decode_id_array returns empty array on empty input."""
 
     data = ""
-    assert _decode_id_array(data) == []
+    assert _decode_id_array(data) == []  # pylint: disable=use-implicit-booleaness-not-comparison
 
 
 def test_decode_id_array_not_an_array() -> None:
     """Test _decode_id_array does not error but returns empty array on bad input."""
 
     data = "Tm90IEFuIEFycmF5"
-    assert _decode_id_array(data) == []
+    assert _decode_id_array(data) == []  # pylint: disable=use-implicit-booleaness-not-comparison
 
 
 def test_list_to_string() -> None:
@@ -410,19 +423,19 @@ def test_list_to_string() -> None:
 def test_strict_false() -> None:
     """Test _strict_false() for a range of inputs."""
 
-    assert _strict_false(False) == False  # noqa: E712
-    assert _strict_false("False") == False  # noqa: E712
-    assert _strict_false(0) == False  # noqa: E712
-    assert _strict_false("any string (other than False)") == True  # noqa: E712
-    assert _strict_false("false") == True  # noqa: E712
-    assert _strict_false("true") == True  # noqa: E712
-    assert _strict_false(True) == True  # noqa: E712
-    assert _strict_false(1) == True  # noqa: E712
-    assert _strict_false([]) == True  # noqa: E712
-    assert _strict_false({}) == True  # noqa: E712
-    assert _strict_false("") == True  # noqa: E712
-    assert _strict_false(None) == True  # noqa: E712
-    assert _strict_false(set()) == True  # noqa: E712
+    assert _strict_false(False) is False  # noqa: E712
+    assert _strict_false("False") is False  # noqa: E712
+    assert _strict_false(0) is False  # noqa: E712
+    assert _strict_false("any string (other than False)") is True  # noqa: E712
+    assert _strict_false("false") is True  # noqa: E712
+    assert _strict_false("true") is True  # noqa: E712
+    assert _strict_false(True) is True  # noqa: E712
+    assert _strict_false(1) is True  # noqa: E712
+    assert _strict_false([]) is True  # noqa: E712
+    assert _strict_false({}) is True  # noqa: E712
+    assert _strict_false("") is True  # noqa: E712
+    assert _strict_false(None) is True  # noqa: E712
+    assert _strict_false(set()) is True  # noqa: E712
 
 
 # endregion
