@@ -362,6 +362,7 @@ async def test_subscribe_events() -> None:
     assert result == 200
 
     state_var = profile._state_variable(service_name="Volume", state_variable_name="Volume")
+    assert state_var is not None
     assert state_var.value == expected
 
 
