@@ -165,7 +165,7 @@ def _derive_value_per_second(
     if last_value > current_value:
         # Value has overflowed, work around since it's a uint32
         _LOGGER.warning("Assuming 32-bit rollover on %s", value_name)
-        last_value -= (1<<32)
+        last_value -= 1 << 32
 
     delta_time = current_timestamp - last_timestamp
     delta_value: int | float = current_value - last_value
