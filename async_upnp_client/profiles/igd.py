@@ -92,6 +92,7 @@ class TrafficCounterState(NamedTuple):
     """Traffic state."""
 
     timestamp: datetime
+    uptime: None | BaseException | int
     bytes_received: None | BaseException | int
     bytes_sent: None | BaseException | int
     packets_received: None | BaseException | int
@@ -149,23 +150,37 @@ class IgdStateItem(Enum):
 def _derive_value_per_second(
     value_name: str,
     current_timestamp: datetime,
+    current_uptime: None | BaseException | int,
     current_value: None | BaseException | StatusInfo | int | str,
     last_timestamp: None | BaseException | datetime,
+    last_uptime: None | BaseException | int,
     last_value: None | BaseException | StatusInfo | int | str,
 ) -> None | float:
     """Calculate average based on current and last value."""
     if (
         not isinstance(current_timestamp, datetime)
         or not isinstance(current_value, int)
+        or not isinstance(current_uptime, int)
         or not isinstance(last_timestamp, datetime)
+        or not isinstance(last_uptime, int)
         or not isinstance(last_value, int)
     ):
         return None
 
     if last_value > current_value:
-        # Value has overflowed, work around since it's a uint32
-        _LOGGER.debug("Assuming 32-bit rollover on %s", value_name)
-        last_value -= 1 << 32
+        if (
+            1 << 31 < last_value and last_value < 1 << 32
+            and 0 <= current_value and current_value < 1 << 31
+            and current_uptime > last_uptime
+        ):
+            # Looks like value has overflowed a 32-bit uint, work around it
+            _LOGGER.debug("Assuming 32-bit rollover on %s", value_name)
+            last_value -= 1 << 32
+        else:
+            # Value has overflowed, but doesn't look like an unsigned 32-bit
+            # overflow, or (if the uptime decreased) there was a reset.
+            _LOGGER.warning("Bad 32-bit rollover on %s", value_name)
+            return None
 
     delta_time = current_timestamp - last_timestamp
     delta_value: int | float = current_value - last_value
@@ -209,6 +224,7 @@ class IgdDevice(UpnpProfileDevice):
 
         self._last_traffic_state = TrafficCounterState(
             timestamp=datetime.now(),
+            uptime=None,
             bytes_received=None,
             bytes_sent=None,
             packets_received=None,
@@ -848,37 +864,47 @@ class IgdDevice(UpnpProfileDevice):
             return_exceptions=True,
         )
 
+        uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None
         kibibytes_per_sec_received = _derive_value_per_second(
             BYTES_RECEIVED,
             timestamp,
+            uptime,
             values[0],
             self._last_traffic_state.timestamp,
+            self._last_traffic_state.uptime,
             self._last_traffic_state.bytes_received,
         )
         kibibytes_per_sec_sent = _derive_value_per_second(
             BYTES_SENT,
             timestamp,
+            uptime,
             values[1],
             self._last_traffic_state.timestamp,
+            self._last_traffic_state.uptime,
             self._last_traffic_state.bytes_sent,
         )
         packets_per_sec_received = _derive_value_per_second(
             PACKETS_RECEIVED,
             timestamp,
+            uptime,
             values[2],
             self._last_traffic_state.timestamp,
+            self._last_traffic_state.uptime,
             self._last_traffic_state.packets_received,
         )
         packets_per_sec_sent = _derive_value_per_second(
             PACKETS_SENT,
             timestamp,
+            uptime,
             values[3],
             self._last_traffic_state.timestamp,
+            self._last_traffic_state.uptime,
             self._last_traffic_state.packets_sent,
         )
 
         self._last_traffic_state = TrafficCounterState(
             timestamp=timestamp,
+            uptime=uptime,
             bytes_received=cast(int | BaseException | None, values[0]),
             bytes_sent=cast(int | BaseException | None, values[1]),
             packets_received=cast(int | BaseException | None, values[2]),
@@ -910,7 +936,7 @@ class IgdDevice(UpnpProfileDevice):
                 values[4].connection_status if isinstance(values[4], StatusInfo) else connection_status
             ),
             last_connection_error=(values[4].last_connection_error if isinstance(values[4], StatusInfo) else None),
-            uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None,
+            uptime=uptime,
             external_ip_address=cast(None | BaseException | str, values[5] or external_ip_address),
             port_mapping_number_of_entries=cast(None | int, values[6] or port_mapping_number_of_entries),
         )
