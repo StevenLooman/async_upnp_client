@@ -169,8 +169,10 @@ def _derive_value_per_second(
 
     if last_value > current_value:
         if (
-            1 << 31 < last_value and last_value < 1 << 32
-            and 0 <= current_value and current_value < 1 << 31
+            1 << 31 < last_value
+            and last_value < 1 << 32
+            and 0 <= current_value
+            and current_value < 1 << 31
             and current_uptime > last_uptime
         ):
             # Looks like value has overflowed a 32-bit uint, work around it
@@ -864,7 +866,7 @@ class IgdDevice(UpnpProfileDevice):
             return_exceptions=True,
         )
 
-        uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None
+        uptime = values[4].uptime if isinstance(values[4], StatusInfo) else None
         kibibytes_per_sec_received = _derive_value_per_second(
             BYTES_RECEIVED,
             timestamp,
