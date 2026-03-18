@@ -619,33 +619,149 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region Pins Service actions
+    async def pins_get_device_max(self) -> Mapping[str, int] | None:
+        """Return the the value of the DeviceMax state variable.
+
+        :return: DeviceMax
+        DeviceMax is the maximum number of device-specific pins supported
+        """
+        return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
+
+    async def pins_get_account_max(self) -> Mapping[str, int] | None:
+        """Return the the value of the AccountMax state variable.
+
+        :return: AccountMax
+        AccountMax is the maximum number of account-wide pins supported
+        """
+        return await self._async_call_action(Service.PINS, Pins.GET_ACCOUNT_MAX)
+
+    async def pins_get_modes(self) -> Mapping[str, Any] | None:
+        """Return the value of the Modes state variable.
+
+        :return: Modes
+        Modes is a JSON array of strings identifying the different styles of pins supported
+        """
+        return await self._async_call_action(Service.PINS, Pins.GET_MODES)
+
     async def pins_get_id_array(self) -> Mapping[str, Any] | None:
-        """Get pins id array."""
+        """Get pins id array.
+
+        :return: IdArray
+        """
         return await self._async_call_action(Service.PINS, Pins.GET_ID_ARRAY)
 
     async def pins_read_list(self, ids: str) -> Mapping[str, Any] | None:
         """Get pins metadata.
 
-        :param ids: space separated string integer array, specifying ids of pins to be read
+        :param ids: string representation of integer array of ids of pins
 
-        :return dict of pins metadata
+        :return: List
         """
         return await self._async_call_action(Service.PINS, Pins.READ_LIST, Ids=ids)
 
-    async def pins_get_device_max(self) -> Mapping[str, Any] | None:
-        """Get pins max number of devices."""
-        return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
+    async def pins_invoke_uri(
+        self, mode: str, type: str, uri: str, shuffle: bool
+    ) -> None:
+        """Invoke a pin using data (mode, type, uri, shuffle) from a control point.
+
+        :param mode: one of the modes available from GetModes
+        :param type: the type of the uri
+        :param uri: the uri of the stream/track
+        :param shuffle: whether to shuffle or not
+
+        """
+        await self._async_call_action(
+            Service.PINS,
+            Pins.INVOKE_URI,
+            Mode=mode,
+            Type=type,
+            Uri=uri,
+            Shuffle=shuffle,
+        )
+
+    async def pins_invoke_id(self, id: int) -> None:
+        """Invoke the pin with identifier id.
+
+        :param id: the identifier of the pin in the IdArray
+        """
+        await self._async_call_action(Service.PINS, Pins.INVOKE_ID, Id=id)
 
     async def pins_invoke_index(self, index: int) -> None:
         """Invoke the pin at the specified index in IdArray.
 
-        :param index: the specified index in the IdArray
+        :param index: the index of the pin to invoke
+
+        Note that index expected here corresponds to the 1-based index as presented by the Linn app
+        This normally ranges from 1 to DeviceMax corresponding to a Python 0-based array index from 0 to DeviceMax-1
         """
         await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, Index=index - 1)
 
-    async def pins_get_modes(self) -> Mapping[str, Any] | None:
-        """Get the value for Modes."""
-        return await self._async_call_action(Service.PINS, Pins.GET_MODES)
+    async def pins_set_device(
+        self,
+        index: int,
+        mode: str,
+        type: str,
+        uri: str,
+        title: str,
+        description: str,
+        artworkuri: str,
+        shuffle: bool,
+    ) -> None:
+        """Set a device pin, specifying the parameters of the device pin."""
+        await self._async_call_action(
+            Service.PINS,
+            Pins.SET_DEVICE,
+            Index=index,
+            Mode=mode,
+            Type=type,
+            Uri=uri,
+            Title=title,
+            Description=description,
+            ArtworkUri=artworkuri,
+            Shuffle=shuffle,
+        )
+
+    async def pins_set_account(
+        self,
+        index: int,
+        mode: str,
+        type: str,
+        uri: str,
+        title: str,
+        description: str,
+        artworkuri: str,
+        shuffle: bool,
+    ) -> None:
+        """Set an account pin, specifying the parameters of the account pin."""
+        await self._async_call_action(
+            Service.PINS,
+            Pins.SET_ACCOUNT,
+            Index=index,
+            Mode=mode,
+            Type=type,
+            Uri=uri,
+            Title=title,
+            Description=description,
+            ArtworkUri=artworkuri,
+            Shuffle=shuffle,
+        )
+
+    async def pins_clear(self, id: int) -> None:
+        """Clear any content in the pin with the specified id.
+
+        :param id: the id of the pin to clear
+        """
+        await self._async_call_action(Service.PINS, Pins.CLEAR, Id=id)
+
+    async def pins_swap(self, index1: int, index2: int) -> None:
+        """Swap contents of the 2 pins at the specified indices.
+
+        :param index1: the index to swap
+        :param index2: the index to swap
+        """
+        await self._async_call_action(
+            Service.PINS, Pins.SWAP, Index1=index1, Index2=index2
+        )
 
     # endregion
 
