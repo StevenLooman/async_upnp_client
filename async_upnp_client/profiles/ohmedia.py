@@ -12,7 +12,7 @@ import binascii
 import logging
 import struct
 import sys
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as DET
 from typing import Any, Mapping, Sequence
 
 from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
@@ -1291,9 +1291,10 @@ class OhmDevice(UpnpProfileDevice):
         sources = []
         xml = await self.product_source_xml()
         if xml is not None:
-            sources_list_xml = ET.fromstring(xml["Value"])
-            index = 0
-            for source_xml in sources_list_xml:
+            # try:
+            sources_list_xml = DET.fromstring(xml["Value"])
+
+            for index, source_xml in enumerate(sources_list_xml):
                 visible = source_xml.findtext("Visible")
                 if visible == "true":
                     sources.append(
@@ -1303,7 +1304,6 @@ class OhmDevice(UpnpProfileDevice):
                             "Type": source_xml.findtext("Type"),
                         }
                     )
-                index = index + 1
 
         return sources
 
