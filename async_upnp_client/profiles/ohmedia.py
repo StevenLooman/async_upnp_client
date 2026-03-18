@@ -1576,16 +1576,15 @@ def _list_to_string(list_int: list) -> str:
 def _decode_id_array(b64_id_array: str) -> list:
     """Convert base64 encoded list to list of integers."""
 
+    array_int = []
     encoded_as_bytes = b64_id_array.encode("utf-8")
     try:
         decoded = base64.b64decode(encoded_as_bytes, validate=True)
     except binascii.Error as exception:
         raise ValueError("Invalid base64 encoding.") from exception
 
-    array_int = list(struct.unpack(">" + "I" * (len(decoded) // 4), decoded))
-    # quick sanity check on first 4 bytes
-    if not int.from_bytes(decoded[0:4], "big") < 1000:
-        array_int = []
+    if len(decoded) % 4 == 0:  # must be interpreted as 4 byte integers
+        array_int = list(struct.unpack(">" + "I" * (len(decoded) // 4), decoded))
 
     return array_int
 
