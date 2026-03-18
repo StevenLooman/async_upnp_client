@@ -12,8 +12,9 @@ import binascii
 import logging
 import struct
 import sys
-import defusedxml.ElementTree as DET
 from typing import Any, Mapping, Sequence
+
+import defusedxml.ElementTree as DET
 
 from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
 from async_upnp_client.event_handler import UpnpEventHandler
@@ -659,9 +660,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.PINS, Pins.READ_LIST, Ids=ids)
 
-    async def pins_invoke_uri(
-        self, mode: str, type: str, uri: str, shuffle: bool
-    ) -> None:
+    async def pins_invoke_uri(self, mode: str, type: str, uri: str, shuffle: bool) -> None:
         """Invoke a pin using data (mode, type, uri, shuffle) from a control point.
 
         :param mode: one of the modes available from GetModes
@@ -759,9 +758,7 @@ class OhmDevice(UpnpProfileDevice):
         :param index1: the index to swap
         :param index2: the index to swap
         """
-        await self._async_call_action(
-            Service.PINS, Pins.SWAP, Index1=index1, Index2=index2
-        )
+        await self._async_call_action(Service.PINS, Pins.SWAP, Index1=index1, Index2=index2)
 
     # endregion
 
