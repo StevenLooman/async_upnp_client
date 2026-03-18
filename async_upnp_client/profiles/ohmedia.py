@@ -550,7 +550,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.CREDENTIALS, Credentials.CLEAR, Id=ident)
 
-    async def credentials_set_enabled(self, ident: int, enabled: bool) -> None:
+    async def credentials_set_enabled(self, ident: str, enabled: bool) -> None:
         """Set or clear the enabled state of a service.
 
         :param ident: the identifier of the credentials
