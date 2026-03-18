@@ -1333,7 +1333,7 @@ class OhmDevice(UpnpProfileDevice):
     async def product_room(self) -> str | None:
         """Return the room where product is located."""
         room = await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
-        if isinstance(room, str):
+        if not isinstance(room, str):
             room = None
         return room
 
@@ -1341,7 +1341,7 @@ class OhmDevice(UpnpProfileDevice):
     async def product_name(self) -> str | None:
         """Return the name of product."""
         name = await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
-        if isinstance(name, str):
+        if not isinstance(name, str):
             name = None
         return name
 
