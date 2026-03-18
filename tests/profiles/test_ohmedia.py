@@ -365,6 +365,31 @@ async def test_subscribe_events() -> None:
     assert state_var is not None
     assert state_var.value == expected
 
+@pytest.mark.asyncio
+async def test_sources_valid_input() -> None:
+    """Test sources with valid input returns correct value"""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("response_Product_SourceXml_valid.xml"),
+    )
+
+    expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>true</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
+    actual = await profile._async_call_action("Product", "SourceXml")
+    assert str(actual) == expected
+
+
 
 # endregion
 
