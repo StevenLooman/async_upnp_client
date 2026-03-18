@@ -1418,19 +1418,29 @@ class OhmDevice(UpnpProfileDevice):
 
         :param pin_metadata: dictionary containing necessary metadata
         """
-
-        await self._async_call_action(
-            Service.PINS,
-            Pins.SET_DEVICE,
-            Index=(pin_metadata["id"]),
-            Mode=pin_metadata["mode"],
-            Type=pin_metadata["type"],
-            Uri=pin_metadata["uri"],
-            Title=pin_metadata["title"],
-            Description=pin_metadata["description"],
-            ArtworkUri=pin_metadata["artworkUri"],
-            Shuffle=pin_metadata["shuffle"],
+        keys = (
+            "id",
+            "mode",
+            "type",
+            "uri",
+            "title",
+            "description",
+            "artworkUri",
+            "shuffle",
         )
+        if all(key in pin_metadata for key in keys):
+            await self._async_call_action(
+                Service.PINS,
+                Pins.SET_DEVICE,
+                Index=(pin_metadata["id"]),
+                Mode=pin_metadata["mode"],
+                Type=pin_metadata["type"],
+                Uri=pin_metadata["uri"],
+                Title=pin_metadata["title"],
+                Description=pin_metadata["description"],
+                ArtworkUri=pin_metadata["artworkUri"],
+                Shuffle=pin_metadata["shuffle"],
+            )
 
 
 # endregion
