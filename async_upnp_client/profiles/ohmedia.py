@@ -836,7 +836,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE, Index=index)
 
-    async def product_source_index(self) -> Mapping[str, Any] | None:
+    async def product_source_index(self) -> Mapping[str, int] | None:
         """Get the current source index."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_INDEX)
 
