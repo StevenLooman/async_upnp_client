@@ -472,23 +472,7 @@ class OhmDevice(UpnpProfileDevice):
         "urn:linn-co-uk:device:Source:1",
     ]
 
-    SERVICE_IDS = frozenset(
-        (
-            "urn:av-openhome-org:serviceId:Credentials",
-            "urn:av-openhome-org:serviceId:Info",
-            "urn:av-openhome-org:serviceId:Pins",
-            "urn:av-openhome-org:serviceId:Playlist",
-            "urn:av-openhome-org:serviceId:PlaylistManager",
-            "urn:av-openhome-org:serviceId:Product",
-            "urn:av-openhome-org:serviceId:Radio",
-            "urn:av-openhome-org:serviceId:Receiver",
-            "urn:av-openhome-org:serviceId:Sender",
-            "urn:av-openhome-org:serviceId:Time",
-            "urn:av-openhome-org:serviceId:Transport",
-            "urn:av-openhome-org:serviceId:Volume",
-            "urn:linn-co-uk:serviceId:Update",
-        )
-    )
+    SERVICE_IDS = frozenset(("urn:av-openhome-org:serviceId:Product",))
 
     _SERVICE_TYPES = {
         "Credentials": {"urn:av-openhome-org:service:Credentials:1"},
