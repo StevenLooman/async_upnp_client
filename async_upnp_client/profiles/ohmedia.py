@@ -1271,7 +1271,7 @@ class OhmDevice(UpnpProfileDevice):
     async def active_source_index(self) -> int | None:
         """Get the active source index."""
         index = await self.product_source_index()
-        if index:
+        if index is not None:
             return int(index["Value"])
         return None
 
