@@ -408,7 +408,7 @@ def test_decode_id_array_empty() -> None:
 def test_decode_id_array_not_an_array() -> None:
     """Test _decode_id_array does not error but returns empty array on bad input."""
 
-    data = "Tm90IEFuIEFycmF5"
+    data = "Tm90IGV2ZXIgYW4gQXJyYXk="
     assert _decode_id_array(data) == []  # pylint: disable=use-implicit-booleaness-not-comparison
 
 
