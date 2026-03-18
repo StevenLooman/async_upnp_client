@@ -362,6 +362,7 @@ async def test_subscribe_events() -> None:
     assert state_var is not None
     assert state_var.value == expected
 
+
 @pytest.mark.asyncio
 async def test_sources_valid_input() -> None:
     """Test sources with valid input returns correct value"""
@@ -385,7 +386,6 @@ async def test_sources_valid_input() -> None:
     expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>true</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
     actual = await profile._async_call_action("Product", "SourceXml")
     assert str(actual) == expected
-
 
 
 # endregion
@@ -459,5 +459,6 @@ def test_strict_false() -> None:
     assert _strict_false("") is True  # noqa: E712
     assert _strict_false(None) is True  # noqa: E712
     assert _strict_false(set()) is True  # noqa: E712
+
 
 # endregion
