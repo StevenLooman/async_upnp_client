@@ -240,9 +240,6 @@ async def test_state_var_value_from_state_var() -> None:
     assert actual == 49
 
 
-# endregion
-
-
 @pytest.mark.asyncio
 async def test_state_var_value_from_polled() -> None:
     # get from cache
@@ -462,6 +459,5 @@ def test_strict_false() -> None:
     assert _strict_false("") is True  # noqa: E712
     assert _strict_false(None) is True  # noqa: E712
     assert _strict_false(set()) is True  # noqa: E712
-
 
 # endregion
