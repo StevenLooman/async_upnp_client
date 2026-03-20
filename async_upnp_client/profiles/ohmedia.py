@@ -1526,7 +1526,7 @@ class OhmDevice(UpnpProfileDevice):
                 last_id = decoded[-1]
         return last_id
 
-    async def pins_set_device(self, pin_metadata: dict) -> None:
+    async def pins_set_device_metadata(self, pin_metadata: dict) -> None:
         """Set Pins service device using single metadata dictionary.
 
         :param pin_metadata: dictionary containing necessary metadata
