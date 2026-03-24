@@ -1477,32 +1477,34 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region syntactic helpers
-    async def active_source_index(self) -> int | None:
+
     @property
     def uuid(self) -> str:
         """Alias for the unique device name."""
         return self.device.udn
+
+    async def async_active_source_index(self) -> int | None:
         """Get the active source index."""
-        index = await self.product_source_index()
+        index = await self.async_product_source_index()
         if index is not None:
             return int(index["Value"])
         return None
 
-    async def active_source_name(self) -> str:
+    async def async_active_source_name(self) -> str:
         """Get the active source name."""
 
-        index = await self.active_source_index()
+        index = await self.async_active_source_index()
         source_name = "N/A"  # cover the else cases
         if index is not None:
-            source = await self.product_source(index)
+            source = await self.async_product_source(index)
             if source is not None:
                 source_name = source["Name"]
         return source_name
 
-    async def sources(self) -> list:
+    async def async_sources(self) -> list:
         """Get list of active sources."""
         sources = []
-        xml = await self.product_source_xml()
+        xml = await self.async_product_source_xml()
         if xml is not None:
             # try:
             sources_list_xml = DET.fromstring(xml["Value"])
@@ -1522,25 +1524,40 @@ class OhmDevice(UpnpProfileDevice):
 
     async def async_play(self) -> None:
         """Play."""
-        await self.transport_play()
+        await self.async_transport_play()
 
     async def async_stop(self) -> None:
         """Stop."""
-        await self.transport_stop()
+        await self.async_transport_stop()
 
     async def async_pause(self) -> None:
         """Pause."""
-        await self.transport_pause()
+        await self.async_transport_pause()
 
     # endregion
 
-    # region other
+    # region core methods
+    async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> Mapping[str, Any] | None:
+        """Call service action by name with arguments."""
 
-    async def _state_var_value(self, service_name: str, state_variable_name: str) -> Any | None:
+        service = self._service(service_name)
+        if not service:
+            _LOGGER.warning("%s device does not offer service", service_name)
+            return None
+
+        if not service.has_action(action_name):
+            _LOGGER.warning("%s service does not offer action %s", service_name, action_name)
+            return None
+
+        result = await service.async_call_action(action_name, **kwargs)
+        return result
+
     def get_state_variable_value(self, service_name: str, state_variable_name: str) -> Any | None:
         """Value of state variable.
 
-        :return: value of state variable
+        :return: value of state variable or None if state variable does not exist
+
+        Note that device should be independently polled or subscribed to assign a value to the variable
         """
         service = self._service(service_name)
 
@@ -1590,12 +1607,13 @@ class OhmDevice(UpnpProfileDevice):
         result = await action.async_call(**kwargs)
         return result
 
-    async def playlist_last_id(self) -> int:
+    # region miscellaneous functions
+    async def async_playlist_last_id(self) -> int:
         """Return the last id of the playlist."""
 
         decoded = []
         last_id: int = 0
-        id_array = await self.playlist_id_array()
+        id_array = await self.async_playlist_id_array()
         if id_array is not None:
             id_array_value = id_array.get("Array")
             if id_array_value is not None:
