@@ -16,8 +16,7 @@ from typing import Any, Mapping, Sequence
 
 import defusedxml.ElementTree as DET
 
-from async_upnp_client.client import UpnpDevice, UpnpService, UpnpStateVariable
-from async_upnp_client.event_handler import UpnpEventHandler
+from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 if sys.version_info >= (3, 11):
@@ -30,7 +29,11 @@ _LOGGER = logging.getLogger(__name__)
 
 # region Service and other enums
 class Service(StrEnum):
-    """Linn/Open Home Network Services."""
+    """Linn/Open Home Network Service Identifiers.
+
+    The Service Identifier from the ServiceId
+    This assumes no collisions if domain namespace is ignored
+    """
 
     CREDENTIALS = "Credentials"
     INFO = "Info"
@@ -47,7 +50,11 @@ class Service(StrEnum):
 
 
 class ServiceId(StrEnum):
-    """Linn/Open Home Network Service Ids."""
+    """Linn/Open Home Network Service Ids.
+
+    A service ID uniquely identifies a service instance within a device.
+    It follows a URI format of urn:<domain-namespace>:serviceId:<ServiceIdentifier>
+    """
 
     # OPENHOME
     CREDENTIALS = "urn:av-openhome-org:serviceId:Credentials"
@@ -325,6 +332,7 @@ class InfoState(StrEnum):
     TRACK_COUNT = "TrackCount"
     URI = "Uri"
 
+
 class PinsState(StrEnum):
     """State variable names for Pins service."""
 
@@ -333,6 +341,8 @@ class PinsState(StrEnum):
     DEVICE_MAX = "DeviceMax"
     ID_ARRAY = "IdArray"
     MODES = "Modes"
+
+
 class PlaylistState(StrEnum):
     """State variable names for Playlist service."""
 
@@ -383,6 +393,7 @@ class ProductState(StrEnum):
     STANDBY = "Standby"
     STANDBY_TRANSITIONING = "StandbyTransitioning"
 
+
 class RadioState(StrEnum):
     """State variable names for Radio service."""
 
@@ -390,9 +401,10 @@ class RadioState(StrEnum):
     ID = "Id"
     ID_ARRAY = "IdArray"
     PROTOCOL_INFO = "ProtocolInfo"
-    METADATA  = "Metadata"
+    METADATA = "Metadata"
     URI = "Uri"
     TRANSPORT_STATE = "TransportState"
+
 
 class ReceiverState(StrEnum):
     """State variable names for Receiver service."""
@@ -401,6 +413,7 @@ class ReceiverState(StrEnum):
     METADATA = "Receiver_Metadata"
     URI = "Receiver_Uri"
     TRANSPORT_STATE = "TransportState"
+
 
 class SenderState(StrEnum):
     """State variable names for Sender service."""
@@ -412,6 +425,7 @@ class SenderState(StrEnum):
     METADATA = "Metadata"
     STATUS = "Status"
     STATUS2 = "Status2"
+
 
 class TimeState(StrEnum):
     """State variable names for Time service."""
@@ -454,6 +468,7 @@ class UpdateState(StrEnum):
     JOB_STATUS = "JobStatus"
     RECOVER_SUPPORT = "RecoverSupported"
     SOFTWARE_STATUS = "SoftwareStatus"
+
 
 class VolumeState(StrEnum):
     """State variable names for Volume service."""
@@ -666,7 +681,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.PINS, Pins.READ_LIST, Ids=ids)
 
-    async def async_pins_invoke_uri(self, mode: str, type: str, uri: str, shuffle: bool) -> None:
+    async def async_pins_invoke_uri(self, mode: str, pin_type: str, uri: str, shuffle: bool) -> None:
         """Invoke a pin using data (mode, type, uri, shuffle) from a control point.
 
         :param mode: one of the modes available from GetModes
@@ -679,17 +694,17 @@ class OhmDevice(UpnpProfileDevice):
             Service.PINS,
             Pins.INVOKE_URI,
             Mode=mode,
-            Type=type,
+            Type=pin_type,
             Uri=uri,
             Shuffle=shuffle,
         )
 
-    async def async_pins_invoke_id(self, id: int) -> None:
-        """Invoke the pin with identifier id.
+    async def async_pins_invoke_id(self, ident: int) -> None:
+        """Invoke the pin with identifier ident.
 
-        :param id: the identifier of the pin in the IdArray
+        :param ident: the identifier of the pin in the IdArray
         """
-        await self._async_call_action(Service.PINS, Pins.INVOKE_ID, Id=id)
+        await self._async_call_action(Service.PINS, Pins.INVOKE_ID, Id=ident)
 
     async def async_pins_invoke_index(self, index: int) -> None:
         """Invoke the pin at the specified index in IdArray.
@@ -701,11 +716,12 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.PINS, Pins.INVOKE_INDEX, Index=index - 1)
 
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     async def async_pins_set_device(
         self,
         index: int,
         mode: str,
-        type: str,
+        pin_type: str,
         uri: str,
         title: str,
         description: str,
@@ -718,7 +734,7 @@ class OhmDevice(UpnpProfileDevice):
             Pins.SET_DEVICE,
             Index=index,
             Mode=mode,
-            Type=type,
+            Type=pin_type,
             Uri=uri,
             Title=title,
             Description=description,
@@ -730,7 +746,7 @@ class OhmDevice(UpnpProfileDevice):
         self,
         index: int,
         mode: str,
-        type: str,
+        pin_type: str,
         uri: str,
         title: str,
         description: str,
@@ -743,7 +759,7 @@ class OhmDevice(UpnpProfileDevice):
             Pins.SET_ACCOUNT,
             Index=index,
             Mode=mode,
-            Type=type,
+            Type=pin_type,
             Uri=uri,
             Title=title,
             Description=description,
@@ -751,12 +767,12 @@ class OhmDevice(UpnpProfileDevice):
             Shuffle=shuffle,
         )
 
-    async def async_pins_clear(self, id: int) -> None:
-        """Clear any content in the pin with the specified id.
+    async def async_pins_clear(self, ident: int) -> None:
+        """Clear any content in the pin with the specified identifier.
 
-        :param id: the id of the pin to clear
+        :param ident: the identifier of the pin to clear
         """
-        await self._async_call_action(Service.PINS, Pins.CLEAR, Id=id)
+        await self._async_call_action(Service.PINS, Pins.CLEAR, Id=ident)
 
     async def async_pins_swap(self, index1: int, index2: int) -> None:
         """Swap contents of the 2 pins at the specified indices.
@@ -1394,12 +1410,14 @@ class OhmDevice(UpnpProfileDevice):
     def track_info(self) -> dict | None:
         """Get track metadata information."""
         return self.get_state_variable_value(Service.INFO, InfoState.METADATA)
+
     # endregion
     # region Pins Service State Variables
     @property
     def pins_id_array(self) -> str | None:
         """Get Pins ID Array."""
         return self.get_state_variable_value(Service.PINS, PinsState.ID_ARRAY)
+
     # endregion
     # region Playlist Service State Variables
     # endregion
@@ -1418,6 +1436,7 @@ class OhmDevice(UpnpProfileDevice):
     def product_name(self) -> str | None:
         """Return the name of the product."""
         return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
+
     # endregion
     # region Radio Service State Variables
     # endregion
@@ -1432,12 +1451,14 @@ class OhmDevice(UpnpProfileDevice):
     def transport_state(self) -> bool | None:
         """Get transport state."""
         return self.get_state_variable_value(Service.TRANSPORT, TransportState.TRANSPORT_STATE)
+
     # endregion
     # region Update Service State Variables
     @property
     def software_status(self) -> dict | None:
         """Return the software status."""
         return self.get_state_variable_value(Service.UPDATE, UpdateState.SOFTWARE_STATUS)
+
     # endregion
     # region Volume Service State Variables
     @property
@@ -1452,7 +1473,9 @@ class OhmDevice(UpnpProfileDevice):
     def is_muted(self) -> bool | None:
         """Get mute status."""
         return self.get_state_variable_value(Service.VOLUME, VolumeState.MUTE)
+
     # endregion
+
     # region syntactic helpers
     async def active_source_index(self) -> int | None:
     @property
