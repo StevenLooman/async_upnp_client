@@ -1,6 +1,6 @@
 """Unit tests for the Linn/Open Home Media profile."""
 
-# pylint: disable=protected-access
+# pylint: disable=protected-access,line-too-long
 
 import os
 import sys
@@ -336,7 +336,7 @@ async def test_subscribe_events() -> None:
 
 @pytest.mark.asyncio
 async def test_sources_valid_input() -> None:
-    """Test sources with valid input returns correct value"""
+    """Test sources with valid input returns correct value."""
 
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
