@@ -312,30 +312,30 @@ class CredentialsState(StrEnum):
 class InfoState(StrEnum):
     """State variable names for Info service."""
 
-    TRACK_COUNT = "TrackCount"
-    DETAILS_COUNT = "DetailsCount"
-    METATEXT_COUNT = "MetatextCount"
-    URI = "Uri"
-    METADATA = "Metadata"
-    DURATION = "Duration"
-    BIT_RATE = "BitRate"
     BIT_DEPTH = "BitDepth"
-    SAMPLE_RATE = "SampleRate"
-    LOSSLESS = "Lossless"
+    BIT_RATE = "BitRate"
     CODEC_NAME = "CodecName"
+    DETAILS_COUNT = "DetailsCount"
+    DURATION = "Duration"
+    LOSSLESS = "Lossless"
+    METADATA = "Metadata"
     METATEXT = "Metatext"
+    METATEXT_COUNT = "MetatextCount"
+    SAMPLE_RATE = "SampleRate"
+    TRACK_COUNT = "TrackCount"
+    URI = "Uri"
 
 
 class PlaylistState(StrEnum):
     """State variable names for Playlist service."""
 
-    TRANSPORT_STATE = "TransportState"
-    REPEAT = "Repeat"
-    SHUFFLE = "Shuffle"
     ID = "Id"
     ID_ARRAY = "IdArray"
-    TRACKS_MAX = "TracksMax"
     PROTOCOL_INFO = "ProtocolInfo"
+    REPEAT = "Repeat"
+    SHUFFLE = "Shuffle"
+    TRACKS_MAX = "TracksMax"
+    TRANSPORT_STATE = "TransportState"
 
 
 class PlaylistStateAllowedValues(StrEnum):
