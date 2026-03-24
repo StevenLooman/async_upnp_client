@@ -480,11 +480,6 @@ class VolumeState(StrEnum):
 class OhmDevice(UpnpProfileDevice):
     """Representation of an OpenHome Media (ohMedia) device."""
 
-    # pylint: disable=useless-parent-delegation
-
-    def __init__(self, device: UpnpDevice, event_handler: UpnpEventHandler | None) -> None:
-        """Initialize."""
-        super().__init__(device, event_handler)
 
     @property
     def uuid(self) -> str:
