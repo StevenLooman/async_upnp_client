@@ -217,7 +217,7 @@ async def test_async_call_action_many_params() -> None:
     afterid = 123
     uri = "uri_for_track"
     metadata = "didl-lite_metadata"
-    actual = await profile.playlist_insert(afterid, uri, metadata)
+    actual = await profile.async_playlist_insert(afterid, uri, metadata)
     assert actual == {"NewId": 50}
 
 
@@ -235,38 +235,9 @@ async def test_state_var_value_from_state_var() -> None:
     assert state_var.value is None
 
     state_var.value = 49
-    actual = await profile._state_var_value("Volume", "Volume")
+    actual = profile.get_state_variable_value("Volume", "Volume")
     assert actual is not None
     assert actual == 49
-
-
-@pytest.mark.asyncio
-async def test_state_var_value_from_polled() -> None:
-    # get from cache
-    """Test _state_variable with call to device."""
-    requester = UpnpTestRequester(RESPONSE_MAP)
-    factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
-    profile = OhmDevice(device, event_handler=None)
-
-    requester.response_map[
-        (
-            "POST",
-            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Volume-4/control",
-        )
-    ] = HttpResponse(
-        200,
-        {},
-        read_file("response_Volume_Volume.xml"),
-    )
-
-    state_var = profile._state_variable("Volume", "Volume")
-    assert state_var is not None
-    assert state_var.value is None
-
-    actual = await profile._state_var_value("Volume", "Volume")
-    assert actual is not None
-    assert actual == 42
 
 
 @pytest.mark.asyncio
