@@ -1455,6 +1455,10 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region syntactic helpers
     async def active_source_index(self) -> int | None:
+    @property
+    def uuid(self) -> str:
+        """Alias for the unique device name."""
+        return self.device.udn
         """Get the active source index."""
         index = await self.product_source_index()
         if index is not None:
