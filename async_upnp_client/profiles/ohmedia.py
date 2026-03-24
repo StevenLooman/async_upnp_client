@@ -480,33 +480,6 @@ class VolumeState(StrEnum):
 class OhmDevice(UpnpProfileDevice):
     """Representation of an OpenHome Media (ohMedia) device."""
 
-
-    @property
-    def uuid(self) -> str:
-        """Return the unique device name."""
-        return self.device.udn
-
-    @property
-    def manufacturer(self) -> str:
-        """Return the manufacturer name."""
-        return self.device.manufacturer
-
-    @property
-    def model_name(self) -> str:
-        """Return the model name."""
-        return self.device.model_name
-
-    @property
-    def friendly_name(self) -> str:
-        """Return the friendly name of the product."""
-        return self.device.friendly_name
-
-    async def room(self) -> str | None:
-        """Return the room where product is located."""
-        return await self.product_room
-
-    # endregion
-
     # region enums and constants
     DEVICE_TYPES = [
         "urn:linn-co-uk:device:Source:1",
