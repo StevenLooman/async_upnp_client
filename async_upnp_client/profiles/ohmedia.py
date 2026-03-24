@@ -1497,43 +1497,6 @@ class OhmDevice(UpnpProfileDevice):
 
         return sources
 
-    @property
-    async def is_standby(self) -> str | None:
-        """Get standby status."""
-
-        standby = await self.product_standby()
-        return standby.get("Value") if standby is not None else None
-
-    @property
-    async def is_muted(self) -> bool | None:
-        """Get mute status."""
-
-        muted = await self.volume_mute()
-        return muted.get("Value") if muted is not None else None
-
-    @property
-    async def volume(self) -> int | None:
-        """Return the Volume level."""
-        volume_level = await self._state_var_value(Service.VOLUME, VolumeState.VOLUME)
-        if not isinstance(volume_level, int):
-            volume_level = None
-        return volume_level
-
-    @property
-    async def product_room(self) -> str | None:
-        """Return the room where product is located."""
-        room = await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
-        if not isinstance(room, str):
-            room = None
-        return room
-
-    @property
-    async def product_name(self) -> str | None:
-        """Return the name of product."""
-        name = await self._state_var_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
-        if not isinstance(name, str):
-            name = None
-        return name
 
     async def play(self) -> None:
         """Play."""
