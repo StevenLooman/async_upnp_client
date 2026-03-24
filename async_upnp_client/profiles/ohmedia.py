@@ -1569,42 +1569,44 @@ class OhmDevice(UpnpProfileDevice):
         _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
         return None
 
-        """Return value of state variable.
+    async def async_update_state_variables(self, do_ping: bool = True) -> None:
+        """Retrieve the latest values for all state variables of interesting services.
 
-        Return value if it exists otherwise poll for value
+        :param do_ping: Poll device to check if it is available (online).
         """
-        has_state_var = False
-        service = self._service(service_name)
-        if service is not None:
-            has_state_var = service.has_state_variable(state_variable_name)
-        if has_state_var:
-            state_var = self._state_variable(service_name, state_variable_name)
-            if state_var is not None:
-                if state_var.value is not None:
-                    return state_var.value
-                # try polling
-                action = _action_for_state_var(service_name, state_var.name)
-                await self._async_poll_state_variables(service_name, action)
-                state_var = self._state_variable(service_name, state_variable_name)
-                if state_var is not None:
-                    return state_var.value
-        _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
-        return None
+        if do_ping:
+            await self.profile_device.async_ping()
 
-    async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> Mapping[str, Any] | None:
-        """Call service action with arguments."""
+        for service in self.device.all_services:
+            if self._interesting_service(service):
+                svc_identifier = service.service_id.split(":")[-1]
+                actions_with_rsv = self.get_actions_with_state_variables(svc_identifier)
+                await self._async_poll_state_variables(svc_identifier, actions_with_rsv)
 
+    def get_actions_with_state_variables(self, service_name: str) -> Sequence[str]:
+        """Create list of actions which have associated related state variables.
+
+        :param service_name: the name of the service to process
+
+        :return: list, possibly empty, of actions which have related state variables
+        """
+        actions = set()
         service = self._service(service_name)
         if not service:
-            _LOGGER.warning("%s device does not offer service", service_name)
-            return None
+            _LOGGER.debug("Can't find service %s", service_name)
+        else:
+            for action_name in service.actions:
+                action = service.action(action_name)
+                for arg in action.arguments:
+                    if arg.direction == "out" and arg.related_state_variable.send_events:
+                        actions.add(action_name)
+                # actions that need input parameters will have to be managed by hand
+                for arg in action.arguments:
+                    if arg.direction == "in":
+                        actions.discard(action_name)
+        return list(actions)
 
-        if not service.has_action(action_name):
-            _LOGGER.warning("%s service does not offer action %s", service_name, action_name)
-            return None
-        action = service.action(action_name)
-        result = await action.async_call(**kwargs)
-        return result
+    # endregion
 
     # region miscellaneous functions
     async def async_playlist_last_id(self) -> int:
