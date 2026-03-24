@@ -1497,16 +1497,15 @@ class OhmDevice(UpnpProfileDevice):
 
         return sources
 
-
-    async def play(self) -> None:
+    async def async_play(self) -> None:
         """Play."""
         await self.transport_play()
 
-    async def stop(self) -> None:
+    async def async_stop(self) -> None:
         """Stop."""
         await self.transport_stop()
 
-    async def pause(self) -> None:
+    async def async_pause(self) -> None:
         """Pause."""
         await self.transport_pause()
 
