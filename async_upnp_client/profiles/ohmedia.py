@@ -1514,6 +1514,22 @@ class OhmDevice(UpnpProfileDevice):
     # region other
 
     async def _state_var_value(self, service_name: str, state_variable_name: str) -> Any | None:
+    def get_state_variable_value(self, service_name: str, state_variable_name: str) -> Any | None:
+        """Value of state variable.
+
+        :return: value of state variable
+        """
+        service = self._service(service_name)
+
+        if service is not None and service.has_state_variable(state_variable_name):
+            state_var = self._state_variable(service_name, state_variable_name)
+            if not state_var:
+                return None
+            if state_var.value is not None:
+                return state_var.value
+        _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
+        return None
+
         """Return value of state variable.
 
         Return value if it exists otherwise poll for value
