@@ -1565,8 +1565,7 @@ class OhmDevice(UpnpProfileDevice):
             state_var = self._state_variable(service_name, state_variable_name)
             if not state_var:
                 return None
-            if state_var.value is not None:
-                return state_var.value
+            return state_var.value
         _LOGGER.debug("Missing State Variable %s:%s", service_name, state_variable_name)
         return None
 
