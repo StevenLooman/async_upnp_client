@@ -325,7 +325,14 @@ class InfoState(StrEnum):
     TRACK_COUNT = "TrackCount"
     URI = "Uri"
 
+class PinsState(StrEnum):
+    """State variable names for Pins service."""
 
+    ACCOUNT_MAX = "AccountMax"
+    CLOUD_CONNECTED = "CloudConnected"
+    DEVICE_MAX = "DeviceMax"
+    ID_ARRAY = "IdArray"
+    MODES = "Modes"
 class PlaylistState(StrEnum):
     """State variable names for Playlist service."""
 
@@ -376,6 +383,35 @@ class ProductState(StrEnum):
     STANDBY = "Standby"
     STANDBY_TRANSITIONING = "StandbyTransitioning"
 
+class RadioState(StrEnum):
+    """State variable names for Radio service."""
+
+    CHANNELS_MAX = "ChannelsMax"
+    ID = "Id"
+    ID_ARRAY = "IdArray"
+    PROTOCOL_INFO = "ProtocolInfo"
+    METADATA  = "Metadata"
+    URI = "Uri"
+    TRANSPORT_STATE = "TransportState"
+
+class ReceiverState(StrEnum):
+    """State variable names for Receiver service."""
+
+    PROTOCOL_INFO = "ProtocolInfo"
+    METADATA = "Receiver_Metadata"
+    URI = "Receiver_Uri"
+    TRANSPORT_STATE = "TransportState"
+
+class SenderState(StrEnum):
+    """State variable names for Sender service."""
+
+    ATTRIBUTES = "Attributes"
+    AUDIO = "Audio"
+    ENABLED = "Enabled"
+    PRESENTATION_URL = "PresentationUrl"
+    METADATA = "Metadata"
+    STATUS = "Status"
+    STATUS2 = "Status2"
 
 class TimeState(StrEnum):
     """State variable names for Time service."""
@@ -410,6 +446,14 @@ class TransportStateAllowedValues(StrEnum):
     STOPPED = "Stopped"
     WAITING = "Waiting"
 
+
+class UpdateState(StrEnum):
+    """State variable names for Update service."""
+
+    EXECUTOR_STATUS = "ExecutorStatus"
+    JOB_STATUS = "JobStatus"
+    RECOVER_SUPPORT = "RecoverSupported"
+    SOFTWARE_STATUS = "SoftwareStatus"
 
 class VolumeState(StrEnum):
     """State variable names for Volume service."""
