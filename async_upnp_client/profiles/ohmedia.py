@@ -1382,6 +1382,77 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
 
+    # region Credentials Service State Variables
+    # endregion
+    # region Info Service State Variables
+    @property
+    def duration(self) -> dict | None:
+        """Get duration of track."""
+        return self.get_state_variable_value(Service.INFO, InfoState.DURATION)
+
+    @property
+    def track_info(self) -> dict | None:
+        """Get track metadata information."""
+        return self.get_state_variable_value(Service.INFO, InfoState.METADATA)
+    # endregion
+    # region Pins Service State Variables
+    @property
+    def pins_id_array(self) -> str | None:
+        """Get Pins ID Array."""
+        return self.get_state_variable_value(Service.PINS, PinsState.ID_ARRAY)
+    # endregion
+    # region Playlist Service State Variables
+    # endregion
+    # region Product Service State Variables
+    @property
+    def is_standby(self) -> str | None:
+        """Get standby status."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY)
+
+    @property
+    def product_room(self) -> str | None:
+        """Return the room where product is located."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
+
+    @property
+    def product_name(self) -> str | None:
+        """Return the name of the product."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
+    # endregion
+    # region Radio Service State Variables
+    # endregion
+    # region Receiver Service State Variables
+    # endregion
+    # region Sender Service State Variables
+    # endregion
+    # region Time Service State Variables
+    # endregion
+    # region Transport Service State Variables
+    @property
+    def transport_state(self) -> bool | None:
+        """Get transport state."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.TRANSPORT_STATE)
+    # endregion
+    # region Update Service State Variables
+    @property
+    def software_status(self) -> dict | None:
+        """Return the software status."""
+        return self.get_state_variable_value(Service.UPDATE, UpdateState.SOFTWARE_STATUS)
+    # endregion
+    # region Volume Service State Variables
+    @property
+    def volume(self) -> int | None:
+        """Return the Volume level."""
+        volume_level = self.get_state_variable_value(Service.VOLUME, VolumeState.VOLUME)
+        if not isinstance(volume_level, int):
+            volume_level = None
+        return volume_level
+
+    @property
+    def is_muted(self) -> bool | None:
+        """Get mute status."""
+        return self.get_state_variable_value(Service.VOLUME, VolumeState.MUTE)
+    # endregion
     # region syntactic helpers
     async def active_source_index(self) -> int | None:
         """Get the active source index."""
