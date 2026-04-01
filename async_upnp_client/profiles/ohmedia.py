@@ -1448,7 +1448,7 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Transport Service State Variables
     @property
-    def transport_state(self) -> bool | None:
+    def transport_state(self) -> str | None:
         """Get transport state."""
         return self.get_state_variable_value(Service.TRANSPORT, TransportState.TRANSPORT_STATE)
 
