@@ -1402,12 +1402,12 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Info Service State Variables
     @property
-    def duration(self) -> dict | None:
+    def duration(self) -> int | None:
         """Get duration of track."""
         return self.get_state_variable_value(Service.INFO, InfoState.DURATION)
 
     @property
-    def track_info(self) -> dict | None:
+    def track_info(self) -> str | None:
         """Get track metadata information."""
         return self.get_state_variable_value(Service.INFO, InfoState.METADATA)
 
