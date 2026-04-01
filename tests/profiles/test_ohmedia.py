@@ -13,12 +13,7 @@ from multidict import CIMultiDict
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError
-from async_upnp_client.profiles.ohmedia import (
-    OhmDevice,
-    _decode_id_array,
-    _list_to_string,
-    _is_not_explicitly_false,
-)
+from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _is_not_explicitly_false, _list_to_string
 
 from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
 
