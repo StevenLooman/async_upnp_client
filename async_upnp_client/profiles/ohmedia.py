@@ -1662,6 +1662,7 @@ class OhmDevice(UpnpProfileDevice):
 
 # region functions independent of class
 
+
 def _is_not_explicitly_false(val: Any) -> bool:
     """Only False if val is explicitly False, "False" or 0."""
 
