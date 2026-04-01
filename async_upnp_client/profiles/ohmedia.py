@@ -1519,8 +1519,8 @@ class OhmDevice(UpnpProfileDevice):
                                 "Type": source_xml.findtext("Type"),
                             }
                         )
-            except Exception as e:
-                _LOGGER.error("Value is not valid XML - %s", e.msg)
+            except DET.ParseError as error:
+                _LOGGER.error("Value is not valid XML - %s", error.msg)
 
         return sources
 
