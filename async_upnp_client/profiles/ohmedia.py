@@ -1160,7 +1160,7 @@ class OhmDevice(UpnpProfileDevice):
         """Move to the previous track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
 
-    async def async_async_transport_state(self) -> Mapping[str, Any] | None:
+    async def async_transport_state(self) -> Mapping[str, Any] | None:
         """Return the current value of the TransportState state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.TRANSPORT_STATE)
 
