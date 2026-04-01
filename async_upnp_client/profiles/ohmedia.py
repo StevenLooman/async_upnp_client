@@ -1267,7 +1267,7 @@ class OhmDevice(UpnpProfileDevice):
         :param is_muted: is the volume muted or not
         """
         # do not unmute by inadvertently sending a 'Falsy'
-        is_muted = _strict_false(is_muted)
+        is_muted = _is_not_explicitly_false(is_muted)
         # is_muted = bool(is_muted) # it behaves this way anyway
         await self._async_call_action(Service.VOLUME, Volume.SET_MUTE, Value=is_muted)
 
@@ -1766,7 +1766,7 @@ def _action_for_state_var(service_name: str, state_variable_name: str) -> str:
     return state_variable_name
 
 
-def _strict_false(val: Any) -> bool:
+def _is_not_explicitly_false(val: Any) -> bool:
     """Only False if val is explicitly False, "False" or 0."""
 
     if val is None:
