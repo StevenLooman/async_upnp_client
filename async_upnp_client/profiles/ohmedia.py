@@ -1544,7 +1544,7 @@ class OhmDevice(UpnpProfileDevice):
 
         service = self._service(service_name)
         if not service:
-            _LOGGER.warning("%s device does not offer service", service_name)
+            _LOGGER.warning("Device _Service_Types does not offer service %s", service_name)
             return None
 
         if not service.has_action(action_name):
