@@ -15,10 +15,9 @@ from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError
 from async_upnp_client.profiles.ohmedia import (
     OhmDevice,
-    _action_for_state_var,
     _decode_id_array,
     _list_to_string,
-    _strict_false,
+    _is_not_explicitly_false,
 )
 
 from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
@@ -363,13 +362,6 @@ async def test_sources_valid_input() -> None:
 
 
 # region tests of functions not requiring a profile
-def test_action_for_state_var_service_not_found() -> None:
-    """Test action returned as given when service is not in list of mappings."""
-
-    actual = _action_for_state_var("NotAService", "TransportState")
-    assert actual == "TransportState"
-
-
 def test_decode_id_array() -> None:
     """Test _decode_id_array correctly decodes base64 encoded list."""
 
@@ -400,22 +392,22 @@ def test_list_to_string() -> None:
     assert _list_to_string(idlist) == ""
 
 
-def test_strict_false() -> None:
-    """Test _strict_false() for a range of inputs."""
+def test_is_not_explicitly_false() -> None:
+    """Test _is_not_explicitly_false() for a range of inputs."""
 
-    assert _strict_false(False) is False  # noqa: E712
-    assert _strict_false("False") is False  # noqa: E712
-    assert _strict_false(0) is False  # noqa: E712
-    assert _strict_false("any string (other than False)") is True  # noqa: E712
-    assert _strict_false("false") is True  # noqa: E712
-    assert _strict_false("true") is True  # noqa: E712
-    assert _strict_false(True) is True  # noqa: E712
-    assert _strict_false(1) is True  # noqa: E712
-    assert _strict_false([]) is True  # noqa: E712
-    assert _strict_false({}) is True  # noqa: E712
-    assert _strict_false("") is True  # noqa: E712
-    assert _strict_false(None) is True  # noqa: E712
-    assert _strict_false(set()) is True  # noqa: E712
+    assert _is_not_explicitly_false(False) is False  # noqa: E712
+    assert _is_not_explicitly_false("False") is False  # noqa: E712
+    assert _is_not_explicitly_false(0) is False  # noqa: E712
+    assert _is_not_explicitly_false("any string (other than False)") is True  # noqa: E712
+    assert _is_not_explicitly_false("false") is True  # noqa: E712
+    assert _is_not_explicitly_false("true") is True  # noqa: E712
+    assert _is_not_explicitly_false(True) is True  # noqa: E712
+    assert _is_not_explicitly_false(1) is True  # noqa: E712
+    assert _is_not_explicitly_false([]) is True  # noqa: E712
+    assert _is_not_explicitly_false({}) is True  # noqa: E712
+    assert _is_not_explicitly_false("") is True  # noqa: E712
+    assert _is_not_explicitly_false(None) is True  # noqa: E712
+    assert _is_not_explicitly_false(set()) is True  # noqa: E712
 
 
 # endregion
