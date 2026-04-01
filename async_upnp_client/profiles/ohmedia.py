@@ -1506,19 +1506,21 @@ class OhmDevice(UpnpProfileDevice):
         sources = []
         xml = await self.async_product_source_xml()
         if xml is not None:
-            # try:
-            sources_list_xml = DET.fromstring(xml["Value"])
+            try:
+                sources_list_xml = DET.fromstring(xml["Value"])
 
-            for index, source_xml in enumerate(sources_list_xml):
-                visible = source_xml.findtext("Visible")
-                if visible == "true":
-                    sources.append(
-                        {
-                            "Index": index,
-                            "Name": source_xml.findtext("Name"),
-                            "Type": source_xml.findtext("Type"),
-                        }
-                    )
+                for index, source_xml in enumerate(sources_list_xml):
+                    visible = source_xml.findtext("Visible")
+                    if visible == "true":
+                        sources.append(
+                            {
+                                "Index": index,
+                                "Name": source_xml.findtext("Name"),
+                                "Type": source_xml.findtext("Type"),
+                            }
+                        )
+            except Exception as e:
+                _LOGGER.error("Value is not valid XML - %s", e.msg)
 
         return sources
 
