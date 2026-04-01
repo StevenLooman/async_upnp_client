@@ -1653,6 +1653,8 @@ class OhmDevice(UpnpProfileDevice):
                 ArtworkUri=pin_metadata["artworkUri"],
                 Shuffle=pin_metadata["shuffle"],
             )
+        else:
+            _LOGGER.warning("pin_metadata has invalid key(s): %s", pin_metadata)
 
 
 # endregion
