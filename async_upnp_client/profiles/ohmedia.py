@@ -1501,7 +1501,7 @@ class OhmDevice(UpnpProfileDevice):
                 source_name = source["Name"]
         return source_name
 
-    async def async_sources(self) -> list:
+    async def async_sources(self) -> list[dict[str, Any]]:
         """Get list of active sources."""
         sources = []
         xml = await self.async_product_source_xml()
