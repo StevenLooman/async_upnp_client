@@ -16,7 +16,6 @@ from typing import Any, Mapping, Sequence
 
 import defusedxml.ElementTree as DET
 
-from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 if sys.version_info >= (3, 11):
@@ -535,21 +534,6 @@ class OhmDevice(UpnpProfileDevice):
         },
     }
     # endregion
-
-    def _on_event(
-        self,
-        service: UpnpService,
-        state_variables: Sequence[UpnpStateVariable[Any]],
-    ) -> None:
-        """Handle state variable(s) changed event from OHM device."""
-        _LOGGER.debug("PROFILE_ON_EVENT %s", service.service_id)
-        for sv in state_variables:
-            state_var = service.state_variable(sv.name)
-            state_var._value = sv._value  # pylint: disable=protected-access
-        if self.on_event:
-            # pylint: disable=not-callable
-            # pass control to calling event handler if on_event is overridden
-            self.on_event(service, state_variables)
 
     # region Credentials Service actions
     async def async_credentials_set(self, ident: str, username: str, password: str) -> None:
