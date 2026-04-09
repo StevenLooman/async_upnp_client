@@ -229,7 +229,18 @@ class UpnpFactory:
 
         # data type
         data_type = state_variable_el.findtext("service:dataType", None, NS)
-        if data_type is None or data_type not in STATE_VARIABLE_TYPE_MAPPING:
+        if data_type is None:
+            raise UpnpXmlContentError(f"Invalid or missing data type: {data_type}")
+
+        if self._non_strict and data_type not in STATE_VARIABLE_TYPE_MAPPING:
+            # Do some effort to fix the data type.
+            data_type = data_type.lower()
+            if data_type == "datetime":
+                data_type = "dateTime"
+            elif data_type == "datetime.tz":
+                data_type = "dateTime.tz"
+
+        if data_type not in STATE_VARIABLE_TYPE_MAPPING:
             raise UpnpError(f"Unsupported data type: {data_type}")
 
         data_type_mapping = STATE_VARIABLE_TYPE_MAPPING[data_type]
