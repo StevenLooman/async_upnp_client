@@ -1383,6 +1383,27 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region Credentials Service State Variables
+    @property
+    def credentials_ids(self) -> dict | None:
+        """Space separated list of identifiers for services whose credentials can be set."""
+        return self.get_state_variable_value(Service.CREDENTIALS, CredentialsState.IDS)
+
+    @property
+    def public_key(self) -> dict | None:
+        """RSA public key.
+
+        Must be used to encrypt any/all passwords.
+        """
+        return self.get_state_variable_value(Service.CREDENTIALS, CredentialsState.PUBLIC_KEY)
+
+    @property
+    def sequence_number(self) -> dict | None:
+        """Sequence number.
+
+        Increases whenever any aspect of state for any user of credentials listed in Ids changes.
+        """
+        return self.get_state_variable_value(Service.CREDENTIALS, CredentialsState.SEQUENCE_NUMBER)
+
     # endregion
     # region Info Service State Variables
     @property
@@ -1395,15 +1416,110 @@ class OhmDevice(UpnpProfileDevice):
         """Get track metadata information."""
         return self.get_state_variable_value(Service.INFO, InfoState.METADATA)
 
+    @property
+    def info_track_count(self) -> int | None:
+        """Return the value of the TrackCount state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.TRACK_COUNT)
+
+    @property
+    def info_details_count(self) -> int | None:
+        """Return the value of the DetailsCount state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.DETAILS_COUNT)
+
+    @property
+    def info_metatext_count(self) -> int | None:
+        """Return the value of the MetatextCount state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.METATEXT_COUNT)
+
+    @property
+    def info_uri(self) -> str | None:
+        """Return the value of the Uri state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.URI)
+
+    @property
+    def info_metadata(self) -> str | None:
+        """Return the value of the Metadata state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.METADATA)
+
+    @property
+    def info_duration(self) -> int | None:
+        """Return the value of the Duration state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.DURATION)
+
+    @property
+    def info_bit_rate(self) -> int | None:
+        """Return the value of the BitRate state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.BIT_RATE)
+
+    @property
+    def info_bit_depth(self) -> int | None:
+        """Return the value of the BitDepth state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.BIT_DEPTH)
+
+    @property
+    def info_sample_rate(self) -> int | None:
+        """Return the value of the SampleRate state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.SAMPLE_RATE)
+
+    @property
+    def info_lossless(self) -> bool | None:
+        """Return the value of the Lossless state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.LOSSLESS)
+
+    @property
+    def info_codec_name(self) -> str | None:
+        """Return the value of the CodecName state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.CODEC_NAME)
+
+    @property
+    def info_metatext(self) -> str | None:
+        """Return the value of the Metatext state variable."""
+        return self.get_state_variable_value(Service.INFO, InfoState.METATEXT)
+
     # endregion
     # region Pins Service State Variables
     @property
+    def pins_device_max(self) -> int | None:
+        """Return the value of the DeviceMax state variable."""
+        return self.get_state_variable_value(Service.PINS, PinsState.DEVICE_MAX)
+
+    @property
+    def pins_account_max(self) -> int | None:
+        """Return the value of the AccountMax state variable."""
+        return self.get_state_variable_value(Service.PINS, PinsState.ACCOUNT_MAX)
+
+    @property
+    def pins_modes(self) -> str | None:
+        """Return the value of the Modes state variable."""
+        return self.get_state_variable_value(Service.PINS, PinsState.MODES)
+
+    @property
     def pins_id_array(self) -> str | None:
-        """Get Pins ID Array."""
+        """Return the value of the IdArray state variable."""
         return self.get_state_variable_value(Service.PINS, PinsState.ID_ARRAY)
+
+    @property
+    def pins_cloud_connected(self) -> bool | None:
+        """Return the value of the CloudConnected state variable."""
+        return self.get_state_variable_value(Service.PINS, PinsState.CLOUD_CONNECTED)
 
     # endregion
     # region Playlist Service State Variables
+    @property
+    def playlist_transport_state(self) -> str | None:
+        """Get playlist transport state."""
+        return self.get_state_variable_value(Service.PLAYLIST, PlaylistState.TRANSPORT_STATE)
+
+    @property
+    def shuffle(self) -> bool | None:
+        """Get playlist shuffle state."""
+        return self.get_state_variable_value(Service.PLAYLIST, PlaylistState.SHUFFLE)
+
+    @property
+    def repeat(self) -> str | None:
+        """Get playlist repeat state."""
+        return self.get_state_variable_value(Service.PLAYLIST, PlaylistState.REPEAT)
+
     # endregion
     # region Product Service State Variables
     @property
@@ -1421,20 +1537,260 @@ class OhmDevice(UpnpProfileDevice):
         """Return the name of the product."""
         return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
 
+    @property
+    def source_xml(self) -> str | None:
+        """Return the source xml of the product."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.SOURCE_XML)
+
+    @property
+    def product_manufacturer_name(self) -> str | None:
+        """Return the value of the ManufacturerName state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MANUFACTURER_NAME)
+
+    @property
+    def product_manufacturer_info(self) -> str | None:
+        """Return the value of the ManufacturerInfo state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MANUFACTURER_INFO)
+
+    @property
+    def product_manufacturer_url(self) -> str | None:
+        """Return the value of the ManufacturerUrl state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MANUFACTURER_URL)
+
+    @property
+    def product_manufacturer_image_uri(self) -> str | None:
+        """Return the value of the ManufacturerImageUri state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MANUFACTURER_IMAGE_URI)
+
+    @property
+    def product_model_name(self) -> str | None:
+        """Return the value of the ModelName state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MODEL_NAME)
+
+    @property
+    def product_model_info(self) -> str | None:
+        """Return the value of the ModelInfo state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MODEL_INFO)
+
+    @property
+    def product_model_url(self) -> str | None:
+        """Return the value of the ModelUrl state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MODEL_URL)
+
+    @property
+    def product_model_image_uri(self) -> str | None:
+        """Return the value of the ModelImageUri state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.MODEL_IMAGE_URI)
+
+    @property
+    def product_info(self) -> str | None:
+        """Return the value of the ProductInfo state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_INFO)
+
+    @property
+    def product_url(self) -> str | None:
+        """Return the value of the ProductUrl state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_URL)
+
+    @property
+    def product_image_uri(self) -> str | None:
+        """Return the value of the ProductImageUri state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_IMAGE_URI)
+
+    @property
+    def product_image_hires_uri(self) -> str | None:
+        """Return the value of the ProductImageHiresUri state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_IMAGE_HIRES_URI)
+
+    @property
+    def product_standby(self) -> bool | None:
+        """Return the value of the Standby state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY)
+
+    @property
+    def product_standby_transitioning(self) -> bool | None:
+        """Return the value of the StandbyTransitioning state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY_TRANSITIONING)
+
+    @property
+    def product_source_index(self) -> int | None:
+        """Return the value of the SourceIndex state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.SOURCE_INDEX)
+
+    @property
+    def product_source_count(self) -> int | None:
+        """Return the value of the SourceCount state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.SOURCE_COUNT)
+
+    @property
+    def product_source_xml(self) -> str | None:
+        """Return the value of the SourceXml state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.SOURCE_XML)
+
+    @property
+    def product_attributes(self) -> str | None:
+        """Return the value of the Attributes state variable."""
+        return self.get_state_variable_value(Service.PRODUCT, ProductState.ATTRIBUTES)
+
     # endregion
     # region Radio Service State Variables
+    @property
+    def radio_uri(self) -> str | None:
+        """Return the value of the Uri state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.URI)
+
+    @property
+    def radio_metadata(self) -> str | None:
+        """Return the value of the Metadata state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.METADATA)
+
+    @property
+    def radio_transport_state(self) -> str | None:
+        """Return the value of the TransportState state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.TRANSPORT_STATE)
+
+    @property
+    def radio_id(self) -> int | None:
+        """Return the value of the Id state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.ID)
+
+    @property
+    def radio_id_array(self) -> str | None:
+        """Return the value of the IdArray state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.ID_ARRAY)
+
+    @property
+    def radio_channels_max(self) -> int | None:
+        """Return the value of the ChannelsMax state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.CHANNELS_MAX)
+
+    @property
+    def radio_protocol_info(self) -> str | None:
+        """Return the value of the ProtocolInfo state variable."""
+        return self.get_state_variable_value(Service.RADIO, RadioState.PROTOCOL_INFO)
+
     # endregion
     # region Receiver Service State Variables
+    @property
+    def receiver_metadata(self) -> str | None:
+        """The metadata of the sender to listen to."""
+        return self.get_state_variable_value(Service.RECEIVER, ReceiverState.METADATA)
+
+    @property
+    def receiver_uri(self) -> str | None:
+        """The URI of the sender to listen to."""
+        return self.get_state_variable_value(Service.RECEIVER, ReceiverState.URI)
+
+    @property
+    def receiver_protocol_info(self) -> str | None:
+        """Reports the protocols supported."""
+        return self.get_state_variable_value(Service.RECEIVER, ReceiverState.PROTOCOL_INFO)
+
+    @property
+    def receiver_transport_state(self) -> str | None:
+        """Reports the receiver transport state."""
+        return self.get_state_variable_value(Service.RECEIVER, ReceiverState.TRANSPORT_STATE)
+
     # endregion
     # region Sender Service State Variables
+    @property
+    def sender_audio(self) -> bool | None:
+        """Is audio currently available from this Sender."""
+        return self.get_state_variable_value(Service.SENDER, SenderState.AUDIO)
+
+    @property
+    def sender_metadata(self) -> str | None:
+        """Provides basic information about the sender in DIDL-Lite format."""
+        return self.get_state_variable_value(Service.SENDER, SenderState.METADATA)
+
+    @property
+    def sender_presentation_url(self) -> str | None:
+        """Reports the url of a presentation page."""
+        return self.get_state_variable_value(Service.SENDER, SenderState.PRESENTATION_URL)
+
+    @property
+    def sender_status2(self) -> str | None:
+        """Reports the status of the sender."""
+        return self.get_state_variable_value(Service.SENDER, SenderState.STATUS2)
+
+    @property
+    def sender_enabled(self) -> bool | None:
+        """Reports if Songcast sending is enabled."""
+        return self.get_state_variable_value(Service.SENDER, SenderState.ENABLED)
+
     # endregion
     # region Time Service State Variables
+    @property
+    def track_count(self) -> int | None:
+        """The number of tracks that have been played."""
+        return self.get_state_variable_value(Service.TIME, TimeState.TRACK_COUNT)
+
+    @property
+    def time_duration(self) -> int | None:
+        """The total length of the current track in seconds."""
+        return self.get_state_variable_value(Service.TIME, TimeState.DURATION)
+
+    @property
+    def seconds(self) -> int | None:
+        """The total length of time in seconds for which the current track has been playing."""
+        return self.get_state_variable_value(Service.TIME, TimeState.SECONDS)
+
     # endregion
     # region Transport Service State Variables
     @property
+    def transport_modes(self) -> str | None:
+        """Return the value of the Modes state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.MODES)
+
+    @property
+    def transport_can_skip_next(self) -> bool | None:
+        """Return the value of the CanSkipNext state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.CAN_SKIP_NEXT)
+
+    @property
+    def transport_can_skip_previous(self) -> bool | None:
+        """Return the value of the CanSkipPrevious state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.CAN_SKIP_PREVIOUS)
+
+    @property
+    def transport_can_repeat(self) -> bool | None:
+        """Return the value of the CanRepeat state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.CAN_REPEAT)
+
+    @property
+    def transport_can_shuffle(self) -> bool | None:
+        """Return the value of the CanShuffle state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.CAN_SHUFFLE)
+
+    @property
+    def transport_stream_id(self) -> int | None:
+        """Return the value of the StreamId state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.STREAM_ID)
+
+    @property
+    def transport_can_seek(self) -> bool | None:
+        """Return the value of the CanSeek state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.CAN_SEEK)
+
+    @property
+    def transport_can_pause(self) -> bool | None:
+        """Return the value of the CanPause state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.CAN_PAUSE)
+
+    @property
     def transport_state(self) -> str | None:
-        """Get transport state."""
+        """Return the value of the TransportState state variable."""
         return self.get_state_variable_value(Service.TRANSPORT, TransportState.TRANSPORT_STATE)
+
+    @property
+    def transport_repeat(self) -> bool | None:
+        """Return the value of the Repeat state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.REPEAT)
+
+    @property
+    def transport_shuffle(self) -> bool | None:
+        """Return the value of the Shuffle state variable."""
+        return self.get_state_variable_value(Service.TRANSPORT, TransportState.SHUFFLE)
 
     # endregion
     # region Update Service State Variables
@@ -1442,6 +1798,26 @@ class OhmDevice(UpnpProfileDevice):
     def software_status(self) -> dict | None:
         """Return the software status."""
         return self.get_state_variable_value(Service.UPDATE, UpdateState.SOFTWARE_STATUS)
+
+    @property
+    def update_software_status(self) -> str | None:
+        """Return the value of the SoftwareStatus state variable."""
+        return self.get_state_variable_value(Service.UPDATE, UpdateState.SOFTWARE_STATUS)
+
+    @property
+    def update_executor_status(self) -> str | None:
+        """Return the value of the ExecutorStatus state variable."""
+        return self.get_state_variable_value(Service.UPDATE, UpdateState.EXECUTOR_STATUS)
+
+    @property
+    def update_job_status(self) -> str | None:
+        """Return the value of the JobStatus state variable."""
+        return self.get_state_variable_value(Service.UPDATE, UpdateState.JOB_STATUS)
+
+    @property
+    def update_recover_supported(self) -> bool | None:
+        """Return the value of the RecoverSupported state variable."""
+        return self.get_state_variable_value(Service.UPDATE, UpdateState.RECOVER_SUPPORTED)
 
     # endregion
     # region Volume Service State Variables
