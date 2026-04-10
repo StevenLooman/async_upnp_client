@@ -2515,11 +2515,15 @@ class OhmDevice(UpnpProfileDevice):
         return result
 
     def get_state_variable_value(self, service_name: str, state_variable_name: str) -> Any | None:
-        """Value of state variable.
+        """Return value of state variable.
+
+        :param service_name: name of the service
+        :param state_variable_name: name of state variable
 
         :return: value of state variable or None if state variable does not exist
 
-        Note that device should be independently polled or subscribed to assign a value to the variable
+        Note that the corresponding service-action should be polled, or service subscribed,
+        to assign a value to the variable
         """
         service = self._service(service_name)
 
@@ -2534,7 +2538,7 @@ class OhmDevice(UpnpProfileDevice):
     async def async_update_state_variables(self, do_ping: bool = True) -> None:
         """Retrieve the latest values for all state variables of interesting services.
 
-        :param do_ping: Poll device to check if it is available (online).
+        :param do_ping: Poll device first to check if it is available (online).
         """
         if do_ping:
             await self.profile_device.async_ping()
@@ -2616,8 +2620,8 @@ class OhmDevice(UpnpProfileDevice):
         else:
             _LOGGER.warning("pin_metadata has invalid key(s): %s", pin_metadata)
 
+    # endregion
 
-# endregion
 
 
 # region functions independent of class
