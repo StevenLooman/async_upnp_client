@@ -964,6 +964,10 @@ class OhmDevice(UpnpProfileDevice):
         """Get the product source xml."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_XML)
 
+    async def async_product_source_xml_change_count(self) -> Mapping[str, Any] | None:
+        """Get the product source xml change count."""
+        return await self._async_call_action(Service.PRODUCT, Product.SOURCE_XML_CHANGE_COUNT)
+
     async def async_product_standby(self) -> Mapping[str, Any] | None:
         """Get the product standby status."""
         return await self._async_call_action(Service.PRODUCT, Product.STANDBY)
@@ -1229,6 +1233,10 @@ class OhmDevice(UpnpProfileDevice):
     async def async_update_apply(self) -> None:
         """Apply a software update."""
         await self._async_call_action(Service.UPDATE, Update.APPLY)
+
+    async def async_update_apply2(self) -> None:
+        """Apply a software update."""
+        await self._async_call_action(Service.UPDATE, Update.APPLY2)
 
     async def async_update_check_now(self) -> Mapping[str, Any] | None:
         """Check the current status of the software."""
@@ -1909,6 +1917,69 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
 
+    # region Pins has action
+    @property
+    def has_pins_get_device_max(self) -> bool:
+        """Service Pins has action GetDeviceMax."""
+        return self.has_service_action(Service.PINS, Pins.GET_DEVICE_MAX)
+
+    @property
+    def has_pins_get_account_max(self) -> bool:
+        """Service Pins has action GetAccountMax."""
+        return self.has_service_action(Service.PINS, Pins.GET_ACCOUNT_MAX)
+
+    @property
+    def has_pins_get_modes(self) -> bool:
+        """Service Pins has action GetModes."""
+        return self.has_service_action(Service.PINS, Pins.GET_MODES)
+
+    @property
+    def has_pins_get_id_array(self) -> bool:
+        """Service Pins has action GetIdArray."""
+        return self.has_service_action(Service.PINS, Pins.GET_ID_ARRAY)
+
+    @property
+    def has_pins_read_list(self) -> bool:
+        """Service Pins has action ReadList."""
+        return self.has_service_action(Service.PINS, Pins.READ_LIST)
+
+    @property
+    def has_pins_invoke_id(self) -> bool:
+        """Service Pins has action InvokeId."""
+        return self.has_service_action(Service.PINS, Pins.INVOKE_ID)
+
+    @property
+    def has_pins_invoke_index(self) -> bool:
+        """Service Pins has action InvokeIndex."""
+        return self.has_service_action(Service.PINS, Pins.INVOKE_INDEX)
+
+    @property
+    def has_pins_invoke_uri(self) -> bool:
+        """Service Pins has action InvokeUri."""
+        return self.has_service_action(Service.PINS, Pins.INVOKE_URI)
+
+    @property
+    def has_pins_set_device(self) -> bool:
+        """Service Pins has action SetDevice."""
+        return self.has_service_action(Service.PINS, Pins.SET_DEVICE)
+
+    @property
+    def has_pins_set_account(self) -> bool:
+        """Service Pins has action SetAccount."""
+        return self.has_service_action(Service.PINS, Pins.SET_ACCOUNT)
+
+    @property
+    def has_pins_clear(self) -> bool:
+        """Service Pins has action Clear."""
+        return self.has_service_action(Service.PINS, Pins.CLEAR)
+
+    @property
+    def has_pins_swap(self) -> bool:
+        """Service Pins has action Swap."""
+        return self.has_service_action(Service.PINS, Pins.SWAP)
+
+    # endregion
+
     # region Playlist has action
     @property
     def has_playlist_play(self) -> bool:
@@ -2054,11 +2125,6 @@ class OhmDevice(UpnpProfileDevice):
         return self.has_service_action(Service.PRODUCT, Product.STANDBY)
 
     @property
-    def has_product_standby_transitioning(self) -> bool:
-        """Service Product has action StandbyTransitioning."""
-        return self.has_service_action(Service.PRODUCT, Product.STANDBY_TRANSITIONING)
-
-    @property
     def has_product_set_standby(self) -> bool:
         """Service Product has action SetStandby."""
         return self.has_service_action(Service.PRODUCT, Product.SET_STANDBY)
@@ -2084,11 +2150,6 @@ class OhmDevice(UpnpProfileDevice):
         return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_INDEX)
 
     @property
-    def has_product_set_source_index_by_name(self) -> bool:
-        """Service Product has action SetSourceIndexByName."""
-        return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_INDEX_BY_NAME)
-
-    @property
     def has_product_set_source_by_system_name(self) -> bool:
         """Service Product has action SetSourceBySystemName."""
         return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_BY_SYSTEM_NAME)
@@ -2107,11 +2168,6 @@ class OhmDevice(UpnpProfileDevice):
     def has_product_source_xml_change_count(self) -> bool:
         """Service Product has action SourceXmlChangeCount."""
         return self.has_service_action(Service.PRODUCT, Product.SOURCE_XML_CHANGE_COUNT)
-
-    @property
-    def has_product_get_image_uri(self) -> bool:
-        """Service Product has action GetImageUri."""
-        return self.has_service_action(Service.PRODUCT, Product.GET_IMAGE_URI)
 
     # endregion
 
@@ -2377,26 +2433,6 @@ class OhmDevice(UpnpProfileDevice):
         return self.has_service_action(Service.UPDATE, Update.GET_SOFTWARE_STATUS)
 
     @property
-    def has_update_get_executor_status(self) -> bool:
-        """Service Update has action GetExecutorStatus."""
-        return self.has_service_action(Service.UPDATE, Update.GET_EXECUTOR_STATUS)
-
-    @property
-    def has_update_get_job_status(self) -> bool:
-        """Service Update has action GetJobStatus."""
-        return self.has_service_action(Service.UPDATE, Update.GET_JOB_STATUS)
-
-    @property
-    def has_update_push_manifest(self) -> bool:
-        """Service Update has action PushManifest."""
-        return self.has_service_action(Service.UPDATE, Update.PUSH_MANIFEST)
-
-    @property
-    def has_update_push_manifest2(self) -> bool:
-        """Service Update has action PushManifest2."""
-        return self.has_service_action(Service.UPDATE, Update.PUSH_MANIFEST2)
-
-    @property
     def has_update_apply(self) -> bool:
         """Service Update has action Apply."""
         return self.has_service_action(Service.UPDATE, Update.APPLY)
@@ -2407,34 +2443,132 @@ class OhmDevice(UpnpProfileDevice):
         return self.has_service_action(Service.UPDATE, Update.APPLY2)
 
     @property
-    def has_update_recover(self) -> bool:
-        """Service Update has action Recover."""
-        return self.has_service_action(Service.UPDATE, Update.RECOVER)
-
-    @property
-    def has_update_recover2(self) -> bool:
-        """Service Update has action Recover2."""
-        return self.has_service_action(Service.UPDATE, Update.RECOVER2)
-
-    @property
-    def has_update_recover_keep_store(self) -> bool:
-        """Service Update has action RecoverKeepStore."""
-        return self.has_service_action(Service.UPDATE, Update.RECOVER_KEEP_STORE)
-
-    @property
-    def has_update_recover_keep_store2(self) -> bool:
-        """Service Update has action RecoverKeepStore2."""
-        return self.has_service_action(Service.UPDATE, Update.RECOVER_KEEP_STORE2)
-
-    @property
     def has_update_check_now(self) -> bool:
         """Service Update has action CheckNow."""
         return self.has_service_action(Service.UPDATE, Update.CHECK_NOW)
 
+    # endregion
+
+    # region Volume has action
     @property
-    def has_update_get_recover_supported(self) -> bool:
-        """Service Update has action GetRecoverSupported."""
-        return self.has_service_action(Service.UPDATE, Update.GET_RECOVER_SUPPORTED)
+    def has_volume_characteristics(self) -> bool:
+        """Service Volume has action Characteristics."""
+        return self.has_service_action(Service.VOLUME, Volume.CHARACTERISTICS)
+
+    @property
+    def has_volume_set(self) -> bool:
+        """Service Volume has action SetVolume."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_VOLUME)
+
+    @property
+    def has_volume_inc(self) -> bool:
+        """Service Volume has action VolumeInc."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME_INC)
+
+    @property
+    def has_volume_dec(self) -> bool:
+        """Service Volume has action VolumeDec."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME_DEC)
+
+    @property
+    def has_volume_set_no_unmute(self) -> bool:
+        """Service Volume has action SetVolumeNoUnmute."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_VOLUME_NO_UNMUTE)
+
+    @property
+    def has_volume_inc_no_unmute(self) -> bool:
+        """Service Volume has action VolumeIncNoUnmute."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME_INC_NO_UNMUTE)
+
+    @property
+    def has_volume_dec_no_unmute(self) -> bool:
+        """Service Volume has action VolumeDecNoUnmute."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME_DEC_NO_UNMUTE)
+
+    @property
+    def has_volume(self) -> bool:
+        """Service Volume has action Volume."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME)
+
+    @property
+    def has_volume_set_balance(self) -> bool:
+        """Service Volume has action SetBalance."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_BALANCE)
+
+    @property
+    def has_volume_balance_inc(self) -> bool:
+        """Service Volume has action BalanceInc."""
+        return self.has_service_action(Service.VOLUME, Volume.BALANCE_INC)
+
+    @property
+    def has_volume_balance_dec(self) -> bool:
+        """Service Volume has action BalanceDec."""
+        return self.has_service_action(Service.VOLUME, Volume.BALANCE_DEC)
+
+    @property
+    def has_volume_balance(self) -> bool:
+        """Service Volume has action Balance."""
+        return self.has_service_action(Service.VOLUME, Volume.BALANCE)
+
+    @property
+    def has_volume_set_fade(self) -> bool:
+        """Service Volume has action SetFade."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_FADE)
+
+    @property
+    def has_volume_fade_inc(self) -> bool:
+        """Service Volume has action FadeInc."""
+        return self.has_service_action(Service.VOLUME, Volume.FADE_INC)
+
+    @property
+    def has_volume_fade_dec(self) -> bool:
+        """Service Volume has action FadeDec."""
+        return self.has_service_action(Service.VOLUME, Volume.FADE_DEC)
+
+    @property
+    def has_volume_fade(self) -> bool:
+        """Service Volume has action Fade."""
+        return self.has_service_action(Service.VOLUME, Volume.FADE)
+
+    @property
+    def has_volume_set_mute(self) -> bool:
+        """Service Volume has action SetMute."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_MUTE)
+
+    @property
+    def has_volume_mute(self) -> bool:
+        """Service Volume has action Mute."""
+        return self.has_service_action(Service.VOLUME, Volume.MUTE)
+
+    @property
+    def has_volume_limit(self) -> bool:
+        """Service Volume has action VolumeLimit."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME_LIMIT)
+
+    @property
+    def has_volume_unity_gain(self) -> bool:
+        """Service Volume has action UnityGain."""
+        return self.has_service_action(Service.VOLUME, Volume.UNITY_GAIN)
+
+    @property
+    def has_volume_offset(self) -> bool:
+        """Service Volume has action VolumeOffset."""
+        return self.has_service_action(Service.VOLUME, Volume.VOLUME_OFFSET)
+
+    @property
+    def has_volume_set_offset(self) -> bool:
+        """Service Volume has action SetVolumeOffset."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_VOLUME_OFFSET)
+
+    @property
+    def has_volume_trim(self) -> bool:
+        """Service Volume has action Trim."""
+        return self.has_service_action(Service.VOLUME, Volume.TRIM)
+
+    @property
+    def has_volume_set_trim(self) -> bool:
+        """Service Volume has action SetTrim."""
+        return self.has_service_action(Service.VOLUME, Volume.SET_TRIM)
 
     # endregion
 
