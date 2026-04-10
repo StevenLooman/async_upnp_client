@@ -2623,6 +2623,40 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
 
+    def get_service_by_name(self, service_name: str) -> UpnpService | None:
+        """Get UpnpService from UpnpDevice by ServiceName.
+
+        :param name: the service name to be found
+
+        include services not in _SERVICE_TYPES
+        """
+        for service in self.device.all_services:
+            svc_name = service.service_id.split(":")[-1]
+            if service_name == svc_name:
+                return service
+        return None
+
+    def has_service_by_name(self, service_name: str) -> bool:
+        """UpnpDevice has UpnpService with ServiceName.
+
+        :param name: the ServiceName to be found
+
+        include services not in _SERVICE_TYPES
+        """
+        for service in self.device.all_services:
+            svc_name = service.service_id.split(":")[-1]
+            if service_name == svc_name:
+                return True
+
+        return False
+
+    def has_service_action(self, service_identifier: str, action_name: str) -> bool:
+        """Return True if the device has both the service and action specified."""
+        if self.has_service_by_name(service_identifier):
+            svc = self.get_service_by_name(service_identifier)
+            if svc is not None and svc.has_action(action_name):
+                return True
+        return False
 
 
 # region functions independent of class
