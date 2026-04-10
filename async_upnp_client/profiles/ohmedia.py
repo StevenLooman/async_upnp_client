@@ -1836,6 +1836,606 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
 
+    # region Credentials has action
+    @property
+    def has_credentials_set(self) -> bool:
+        """Service Credentials has action Set."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.SET)
+
+    @property
+    def has_credentials_clear(self) -> bool:
+        """Service Credentials has action Clear."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.CLEAR)
+
+    @property
+    def has_credentials_set_enabled(self) -> bool:
+        """Service Credentials has action SetEnabled."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.SET_ENABLED)
+
+    @property
+    def has_credentials_get(self) -> bool:
+        """Service Credentials has action Get."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.GET)
+
+    @property
+    def has_credentials_login(self) -> bool:
+        """Service Credentials has action Login."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.LOGIN)
+
+    @property
+    def has_credentials_re_login(self) -> bool:
+        """Service Credentials has action ReLogin."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.RE_LOGIN)
+
+    @property
+    def has_credentials_get_ids(self) -> bool:
+        """Service Credentials has action GetIds."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.GET_IDS)
+
+    @property
+    def has_credentials_get_public_key(self) -> bool:
+        """Service Credentials has action GetPublicKey."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.GET_PUBLIC_KEY)
+
+    @property
+    def has_credentials_get_sequence_number(self) -> bool:
+        """Service Credentials has action GetSequenceNumber."""
+        return self.has_service_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
+
+    # endregion
+
+    # region Info has action
+    @property
+    def has_info_counters(self) -> bool:
+        """Service Info has action Counters."""
+        return self.has_service_action(Service.INFO, Info.COUNTERS)
+
+    @property
+    def has_info_track(self) -> bool:
+        """Service Info has action Track."""
+        return self.has_service_action(Service.INFO, Info.TRACK)
+
+    @property
+    def has_info_details(self) -> bool:
+        """Service Info has action Details."""
+        return self.has_service_action(Service.INFO, Info.DETAILS)
+
+    @property
+    def has_info_metatext(self) -> bool:
+        """Service Info has action Metatext."""
+        return self.has_service_action(Service.INFO, Info.METATEXT)
+
+    # endregion
+
+    # region Playlist has action
+    @property
+    def has_playlist_play(self) -> bool:
+        """Service Playlist has action Play."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.PLAY)
+
+    @property
+    def has_playlist_pause(self) -> bool:
+        """Service Playlist has action Pause."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.PAUSE)
+
+    @property
+    def has_playlist_stop(self) -> bool:
+        """Service Playlist has action Stop."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.STOP)
+
+    @property
+    def has_playlist_next(self) -> bool:
+        """Service Playlist has action Next."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.NEXT)
+
+    @property
+    def has_playlist_previous(self) -> bool:
+        """Service Playlist has action Previous."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.PREVIOUS)
+
+    @property
+    def has_playlist_set_repeat(self) -> bool:
+        """Service Playlist has action SetRepeat."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SET_REPEAT)
+
+    @property
+    def has_playlist_repeat(self) -> bool:
+        """Service Playlist has action Repeat."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.REPEAT)
+
+    @property
+    def has_playlist_set_shuffle(self) -> bool:
+        """Service Playlist has action SetShuffle."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SET_SHUFFLE)
+
+    @property
+    def has_playlist_shuffle(self) -> bool:
+        """Service Playlist has action Shuffle."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SHUFFLE)
+
+    @property
+    def has_playlist_seek_second_absolute(self) -> bool:
+        """Service Playlist has action SeekSecondAbsolute."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_SECOND_ABSOLUTE)
+
+    @property
+    def has_playlist_seek_second_relative(self) -> bool:
+        """Service Playlist has action SeekSecondRelative."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_SECOND_RELATIVE)
+
+    @property
+    def has_playlist_seek_id(self) -> bool:
+        """Service Playlist has action SeekId."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_ID)
+
+    @property
+    def has_playlist_seek_index(self) -> bool:
+        """Service Playlist has action SeekIndex."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_INDEX)
+
+    @property
+    def has_playlist_transport_state(self) -> bool:
+        """Service Playlist has action TransportState."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.TRANSPORT_STATE)
+
+    @property
+    def has_playlist_id(self) -> bool:
+        """Service Playlist has action Id."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.ID)
+
+    @property
+    def has_playlist_read(self) -> bool:
+        """Service Playlist has action Read."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.READ)
+
+    @property
+    def has_playlist_read_list(self) -> bool:
+        """Service Playlist has action ReadList."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.READ_LIST)
+
+    @property
+    def has_playlist_insert(self) -> bool:
+        """Service Playlist has action Insert."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.INSERT)
+
+    @property
+    def has_playlist_delete_id(self) -> bool:
+        """Service Playlist has action DeleteId."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.DELETE_ID)
+
+    @property
+    def has_playlist_delete_all(self) -> bool:
+        """Service Playlist has action DeleteAll."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.DELETE_ALL)
+
+    @property
+    def has_playlist_tracks_max(self) -> bool:
+        """Service Playlist has action TracksMax."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.TRACKS_MAX)
+
+    @property
+    def has_playlist_id_array(self) -> bool:
+        """Service Playlist has action IdArray."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.ID_ARRAY)
+
+    @property
+    def has_playlist_id_array_changed(self) -> bool:
+        """Service Playlist has action IdArrayChanged."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.ID_ARRAY_CHANGED)
+
+    @property
+    def has_playlist_protocol_info(self) -> bool:
+        """Service Playlist has action ProtocolInfo."""
+        return self.has_service_action(Service.PLAYLIST, Playlist.PROTOCOL_INFO)
+
+    # endregion
+
+    # region Product has action
+    @property
+    def has_product_manufacturer(self) -> bool:
+        """Service Product has action Manufacturer."""
+        return self.has_service_action(Service.PRODUCT, Product.MANUFACTURER)
+
+    @property
+    def has_product_model(self) -> bool:
+        """Service Product has action Model."""
+        return self.has_service_action(Service.PRODUCT, Product.MODEL)
+
+    @property
+    def has_product(self) -> bool:
+        """Service Product has action Product."""
+        return self.has_service_action(Service.PRODUCT, Product.PRODUCT)
+
+    @property
+    def has_product_standby(self) -> bool:
+        """Service Product has action Standby."""
+        return self.has_service_action(Service.PRODUCT, Product.STANDBY)
+
+    @property
+    def has_product_standby_transitioning(self) -> bool:
+        """Service Product has action StandbyTransitioning."""
+        return self.has_service_action(Service.PRODUCT, Product.STANDBY_TRANSITIONING)
+
+    @property
+    def has_product_set_standby(self) -> bool:
+        """Service Product has action SetStandby."""
+        return self.has_service_action(Service.PRODUCT, Product.SET_STANDBY)
+
+    @property
+    def has_product_source_count(self) -> bool:
+        """Service Product has action SourceCount."""
+        return self.has_service_action(Service.PRODUCT, Product.SOURCE_COUNT)
+
+    @property
+    def has_product_source_xml(self) -> bool:
+        """Service Product has action SourceXml."""
+        return self.has_service_action(Service.PRODUCT, Product.SOURCE_XML)
+
+    @property
+    def has_product_source_index(self) -> bool:
+        """Service Product has action SourceIndex."""
+        return self.has_service_action(Service.PRODUCT, Product.SOURCE_INDEX)
+
+    @property
+    def has_product_set_source_index(self) -> bool:
+        """Service Product has action SetSourceIndex."""
+        return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_INDEX)
+
+    @property
+    def has_product_set_source_index_by_name(self) -> bool:
+        """Service Product has action SetSourceIndexByName."""
+        return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_INDEX_BY_NAME)
+
+    @property
+    def has_product_set_source_by_system_name(self) -> bool:
+        """Service Product has action SetSourceBySystemName."""
+        return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_BY_SYSTEM_NAME)
+
+    @property
+    def has_product_source(self) -> bool:
+        """Service Product has action Source."""
+        return self.has_service_action(Service.PRODUCT, Product.SOURCE)
+
+    @property
+    def has_product_attributes(self) -> bool:
+        """Service Product has action Attributes."""
+        return self.has_service_action(Service.PRODUCT, Product.ATTRIBUTES)
+
+    @property
+    def has_product_source_xml_change_count(self) -> bool:
+        """Service Product has action SourceXmlChangeCount."""
+        return self.has_service_action(Service.PRODUCT, Product.SOURCE_XML_CHANGE_COUNT)
+
+    @property
+    def has_product_get_image_uri(self) -> bool:
+        """Service Product has action GetImageUri."""
+        return self.has_service_action(Service.PRODUCT, Product.GET_IMAGE_URI)
+
+    # endregion
+
+    # region Radio has action
+    @property
+    def has_radio_refresh_presets(self) -> bool:
+        """Service Radio has action RefreshPresets."""
+        return self.has_service_action(Service.RADIO, Radio.REFRESH_PRESETS)
+
+    @property
+    def has_radio_play(self) -> bool:
+        """Service Radio has action Play."""
+        return self.has_service_action(Service.RADIO, Radio.PLAY)
+
+    @property
+    def has_radio_pause(self) -> bool:
+        """Service Radio has action Pause."""
+        return self.has_service_action(Service.RADIO, Radio.PAUSE)
+
+    @property
+    def has_radio_stop(self) -> bool:
+        """Service Radio has action Stop."""
+        return self.has_service_action(Service.RADIO, Radio.STOP)
+
+    @property
+    def has_radio_seek_second_absolute(self) -> bool:
+        """Service Radio has action SeekSecondAbsolute."""
+        return self.has_service_action(Service.RADIO, Radio.SEEK_SECOND_ABSOLUTE)
+
+    @property
+    def has_radio_seek_second_relative(self) -> bool:
+        """Service Radio has action SeekSecondRelative."""
+        return self.has_service_action(Service.RADIO, Radio.SEEK_SECOND_RELATIVE)
+
+    @property
+    def has_radio_channel(self) -> bool:
+        """Service Radio has action Channel."""
+        return self.has_service_action(Service.RADIO, Radio.CHANNEL)
+
+    @property
+    def has_radio_set_channel(self) -> bool:
+        """Service Radio has action SetChannel."""
+        return self.has_service_action(Service.RADIO, Radio.SET_CHANNEL)
+
+    @property
+    def has_radio_transport_state(self) -> bool:
+        """Service Radio has action TransportState."""
+        return self.has_service_action(Service.RADIO, Radio.TRANSPORT_STATE)
+
+    @property
+    def has_radio_id(self) -> bool:
+        """Service Radio has action Id."""
+        return self.has_service_action(Service.RADIO, Radio.ID)
+
+    @property
+    def has_radio_set_id(self) -> bool:
+        """Service Radio has action SetId."""
+        return self.has_service_action(Service.RADIO, Radio.SET_ID)
+
+    @property
+    def has_radio_read(self) -> bool:
+        """Service Radio has action Read."""
+        return self.has_service_action(Service.RADIO, Radio.READ)
+
+    @property
+    def has_radio_read_list(self) -> bool:
+        """Service Radio has action ReadList."""
+        return self.has_service_action(Service.RADIO, Radio.READ_LIST)
+
+    @property
+    def has_radio_id_array(self) -> bool:
+        """Service Radio has action IdArray."""
+        return self.has_service_action(Service.RADIO, Radio.ID_ARRAY)
+
+    @property
+    def has_radio_id_array_changed(self) -> bool:
+        """Service Radio has action IdArrayChanged."""
+        return self.has_service_action(Service.RADIO, Radio.ID_ARRAY_CHANGED)
+
+    @property
+    def has_radio_channels_max(self) -> bool:
+        """Service Radio has action ChannelsMax."""
+        return self.has_service_action(Service.RADIO, Radio.CHANNELS_MAX)
+
+    @property
+    def has_radio_protocol_info(self) -> bool:
+        """Service Radio has action ProtocolInfo."""
+        return self.has_service_action(Service.RADIO, Radio.PROTOCOL_INFO)
+
+    # endregion
+
+    # region Receiver has action
+    @property
+    def has_receiver_play(self) -> bool:
+        """Service Receiver has action Play."""
+        return self.has_service_action(Service.RECEIVER, Receiver.PLAY)
+
+    @property
+    def has_receiver_stop(self) -> bool:
+        """Service Receiver has action Stop."""
+        return self.has_service_action(Service.RECEIVER, Receiver.STOP)
+
+    @property
+    def has_receiver_set_sender(self) -> bool:
+        """Service Receiver has action SetSender."""
+        return self.has_service_action(Service.RECEIVER, Receiver.SET_SENDER)
+
+    @property
+    def has_receiver_sender(self) -> bool:
+        """Service Receiver has action Sender."""
+        return self.has_service_action(Service.RECEIVER, Receiver.SENDER)
+
+    @property
+    def has_receiver_protocol_info(self) -> bool:
+        """Service Receiver has action ProtocolInfo."""
+        return self.has_service_action(Service.RECEIVER, Receiver.PROTOCOL_INFO)
+
+    @property
+    def has_receiver_transport_state(self) -> bool:
+        """Service Receiver has action TransportState."""
+        return self.has_service_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
+
+    # endregion
+
+    # region Sender has action
+    @property
+    def has_sender_presentation_url(self) -> bool:
+        """Service Sender has action PresentationUrl."""
+        return self.has_service_action(Service.SENDER, Sender.PRESENTATION_URL)
+
+    @property
+    def has_sender_metadata(self) -> bool:
+        """Service Sender has action Metadata."""
+        return self.has_service_action(Service.SENDER, Sender.METADATA)
+
+    @property
+    def has_sender_audio(self) -> bool:
+        """Service Sender has action Audio."""
+        return self.has_service_action(Service.SENDER, Sender.AUDIO)
+
+    @property
+    def has_sender_status(self) -> bool:
+        """Service Sender has action Status."""
+        return self.has_service_action(Service.SENDER, Sender.STATUS)
+
+    @property
+    def has_sender_status2(self) -> bool:
+        """Service Sender has action Status2."""
+        return self.has_service_action(Service.SENDER, Sender.STATUS2)
+
+    @property
+    def has_sender_enabled(self) -> bool:
+        """Service Sender has action Enabled."""
+        return self.has_service_action(Service.SENDER, Sender.ENABLED)
+
+    @property
+    def has_sender_attributes(self) -> bool:
+        """Service Sender has action Attributes."""
+        return self.has_service_action(Service.SENDER, Sender.ATTRIBUTES)
+
+    # endregion
+
+    # region Time has action
+    @property
+    def has_time(self) -> bool:
+        """Service Time has action Time."""
+        return self.has_service_action(Service.TIME, Time.TIME)
+
+    # endregion
+
+    # region Transport has action
+    @property
+    def has_transport_play_as(self) -> bool:
+        """Service Transport has action PlayAs."""
+        return self.has_service_action(Service.TRANSPORT, Transport.PLAY_AS)
+
+    @property
+    def has_transport_play(self) -> bool:
+        """Service Transport has action Play."""
+        return self.has_service_action(Service.TRANSPORT, Transport.PLAY)
+
+    @property
+    def has_transport_pause(self) -> bool:
+        """Service Transport has action Pause."""
+        return self.has_service_action(Service.TRANSPORT, Transport.PAUSE)
+
+    @property
+    def has_transport_stop(self) -> bool:
+        """Service Transport has action Stop."""
+        return self.has_service_action(Service.TRANSPORT, Transport.STOP)
+
+    @property
+    def has_transport_skip_next(self) -> bool:
+        """Service Transport has action SkipNext."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SKIP_NEXT)
+
+    @property
+    def has_transport_skip_previous(self) -> bool:
+        """Service Transport has action SkipPrevious."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
+
+    @property
+    def has_transport_set_repeat(self) -> bool:
+        """Service Transport has action SetRepeat."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SET_REPEAT)
+
+    @property
+    def has_transport_set_shuffle(self) -> bool:
+        """Service Transport has action SetShuffle."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SET_SHUFFLE)
+
+    @property
+    def has_transport_seek_second_absolute(self) -> bool:
+        """Service Transport has action SeekSecondAbsolute."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SEEK_SECOND_ABSOLUTE)
+
+    @property
+    def has_transport_seek_second_relative(self) -> bool:
+        """Service Transport has action SeekSecondRelative."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SEEK_SECOND_RELATIVE)
+
+    @property
+    def has_transport_state(self) -> bool:
+        """Service Transport has action TransportState."""
+        return self.has_service_action(Service.TRANSPORT, Transport.TRANSPORT_STATE)
+
+    @property
+    def has_transport_modes(self) -> bool:
+        """Service Transport has action Modes."""
+        return self.has_service_action(Service.TRANSPORT, Transport.MODES)
+
+    @property
+    def has_transport_mode_info(self) -> bool:
+        """Service Transport has action ModeInfo."""
+        return self.has_service_action(Service.TRANSPORT, Transport.MODE_INFO)
+
+    @property
+    def has_transport_stream_info(self) -> bool:
+        """Service Transport has action StreamInfo."""
+        return self.has_service_action(Service.TRANSPORT, Transport.STREAM_INFO)
+
+    @property
+    def has_transport_stream_id(self) -> bool:
+        """Service Transport has action StreamId."""
+        return self.has_service_action(Service.TRANSPORT, Transport.STREAM_ID)
+
+    @property
+    def has_transport_repeat(self) -> bool:
+        """Service Transport has action Repeat."""
+        return self.has_service_action(Service.TRANSPORT, Transport.REPEAT)
+
+    @property
+    def has_transport_shuffle(self) -> bool:
+        """Service Transport has action Shuffle."""
+        return self.has_service_action(Service.TRANSPORT, Transport.SHUFFLE)
+
+    # endregion
+
+    # region Update has action
+    @property
+    def has_update_get_software_status(self) -> bool:
+        """Service Update has action GetSoftwareStatus."""
+        return self.has_service_action(Service.UPDATE, Update.GET_SOFTWARE_STATUS)
+
+    @property
+    def has_update_get_executor_status(self) -> bool:
+        """Service Update has action GetExecutorStatus."""
+        return self.has_service_action(Service.UPDATE, Update.GET_EXECUTOR_STATUS)
+
+    @property
+    def has_update_get_job_status(self) -> bool:
+        """Service Update has action GetJobStatus."""
+        return self.has_service_action(Service.UPDATE, Update.GET_JOB_STATUS)
+
+    @property
+    def has_update_push_manifest(self) -> bool:
+        """Service Update has action PushManifest."""
+        return self.has_service_action(Service.UPDATE, Update.PUSH_MANIFEST)
+
+    @property
+    def has_update_push_manifest2(self) -> bool:
+        """Service Update has action PushManifest2."""
+        return self.has_service_action(Service.UPDATE, Update.PUSH_MANIFEST2)
+
+    @property
+    def has_update_apply(self) -> bool:
+        """Service Update has action Apply."""
+        return self.has_service_action(Service.UPDATE, Update.APPLY)
+
+    @property
+    def has_update_apply2(self) -> bool:
+        """Service Update has action Apply2."""
+        return self.has_service_action(Service.UPDATE, Update.APPLY2)
+
+    @property
+    def has_update_recover(self) -> bool:
+        """Service Update has action Recover."""
+        return self.has_service_action(Service.UPDATE, Update.RECOVER)
+
+    @property
+    def has_update_recover2(self) -> bool:
+        """Service Update has action Recover2."""
+        return self.has_service_action(Service.UPDATE, Update.RECOVER2)
+
+    @property
+    def has_update_recover_keep_store(self) -> bool:
+        """Service Update has action RecoverKeepStore."""
+        return self.has_service_action(Service.UPDATE, Update.RECOVER_KEEP_STORE)
+
+    @property
+    def has_update_recover_keep_store2(self) -> bool:
+        """Service Update has action RecoverKeepStore2."""
+        return self.has_service_action(Service.UPDATE, Update.RECOVER_KEEP_STORE2)
+
+    @property
+    def has_update_check_now(self) -> bool:
+        """Service Update has action CheckNow."""
+        return self.has_service_action(Service.UPDATE, Update.CHECK_NOW)
+
+    @property
+    def has_update_get_recover_supported(self) -> bool:
+        """Service Update has action GetRecoverSupported."""
+        return self.has_service_action(Service.UPDATE, Update.GET_RECOVER_SUPPORTED)
+
+    # endregion
+
     # region syntactic helpers
 
     @property
