@@ -253,8 +253,9 @@ async def test_async_call_action_bad_service() -> None:
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
-    # doesn't do anything but doesn't error
-    await profile._async_call_action("NoService", "Action")
+    # raises AttributeError
+    with pytest.raises(Exception):
+        await profile._async_call_action("NoService", "Action")
 
 
 @pytest.mark.asyncio
@@ -264,8 +265,9 @@ async def test_async_call_action_bad_action() -> None:
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
-    # doesn't do anything but doesn't error
-    await profile._async_call_action("Volume", "Action")
+    # raises KeyError
+    with pytest.raises(Exception):
+        await profile._async_call_action("Volume", "Action")
 
 
 @pytest.mark.asyncio
@@ -351,6 +353,56 @@ async def test_sources_valid_input() -> None:
     expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>true</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
     actual = await profile._async_call_action("Product", "SourceXml")
     assert str(actual) == expected
+
+
+@pytest.mark.asyncio
+async def test_has_product_source_xml() -> None:
+    """Test has_product_model returns True when product_source_xml is present."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    assert profile.has_product_model
+
+
+@pytest.mark.asyncio
+async def test_has_sender_enabled_when_service_not_present() -> None:
+    """Test has_sender_enabled returns False when service not present."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    assert not profile.has_sender_enabled
+
+
+@pytest.mark.asyncio
+async def test_has_product_attributes_when_action_not_present() -> None:
+    """Test has_sender_enabled returns False when service not present."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    assert not profile.has_product_attributes
+
+
+@pytest.mark.asyncio
+async def test_retrieve_state_variable() -> None:
+    """Test state variable is returned."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    assert profile.product_source_count is None  # not yet initialised
+
+    product_service = profile.device.service("urn:av-openhome-org:service:Product:4")
+    state_var = product_service.state_variable("SourceCount")
+    state_var.value = 12  # could be set by polling or subscribing
+
+    assert profile.product_source_count == 12
 
 
 # endregion
