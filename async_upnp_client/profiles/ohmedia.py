@@ -16,6 +16,8 @@ from typing import Any, Mapping, Sequence
 
 import defusedxml.ElementTree as DET
 
+from async_upnp_client.client import UpnpService
+from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
 if sys.version_info >= (3, 11):
@@ -2499,20 +2501,19 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region core methods
-    async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> Mapping[str, Any] | None:
-        """Call service action by name with arguments."""
+    async def _async_call_action(self, service_name: str, action_name: str, **kwargs: Any) -> Mapping[str, Any]:
+        """Call service action by name with arguments.
 
-        service = self._service(service_name)
-        if not service:
-            _LOGGER.warning("Device _Service_Types does not offer service %s", service_name)
-            return None
+        :param service_name: name of the service
+        :param action_name: name of action to call
 
-        if not service.has_action(action_name):
-            _LOGGER.warning("%s service does not offer action %s", service_name, action_name)
-            return None
+        raise exception if neither service nor action are present
+        """
 
-        result = await service.async_call_action(action_name, **kwargs)
-        return result
+        service = self.get_service_by_name(service_name)
+        if service is None:
+            raise UpnpError(f"Missing service {service_name}")
+        return await service.async_call_action(action_name, **kwargs)
 
     def get_state_variable_value(self, service_name: str, state_variable_name: str) -> Any | None:
         """Return value of state variable.
