@@ -465,7 +465,7 @@ class UpdateState(StrEnum):
 
     EXECUTOR_STATUS = "ExecutorStatus"
     JOB_STATUS = "JobStatus"
-    RECOVER_SUPPORT = "RecoverSupported"
+    RECOVER_SUPPORTED = "RecoverSupported"
     SOFTWARE_STATUS = "SoftwareStatus"
 
 
