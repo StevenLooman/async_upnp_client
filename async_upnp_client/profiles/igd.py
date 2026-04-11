@@ -1,4 +1,5 @@
 """async_upnp_client.profiles.igd module."""
+# pylint: disable=too-many-lines
 
 import asyncio
 import logging
@@ -20,6 +21,10 @@ KIBIBYTES_PER_SEC_RECEIVED = "kibytes_sec_received"
 KIBIBYTES_PER_SEC_SENT = "kibytes_sec_sent"
 PACKETS_SEC_RECEIVED = "packets_sec_received"
 PACKETS_SEC_SENT = "packets_sec_sent"
+KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW = "kibytes_sec_received_uint32_overflow"
+KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW = "kibytes_sec_sent_uint32_overflow"
+PACKETS_SEC_RECEIVED_UINT32_OVERFLOW = "packets_sec_received_uint32_overflow"
+PACKETS_SEC_SENT_UINT32_OVERFLOW = "packets_sec_sent_uint32_overflow"
 STATUS_INFO = "status_info"
 EXTERNAL_IP_ADDRESS = "external_ip_address"
 
@@ -121,6 +126,10 @@ class IgdState(NamedTuple):
     kibibytes_per_sec_sent: None | float
     packets_per_sec_received: None | float
     packets_per_sec_sent: None | float
+    kibibytes_per_sec_received_uint32_overflow: None | float
+    kibibytes_per_sec_sent_uint32_overflow: None | float
+    packets_per_sec_received_uint32_overflow: None | float
+    packets_per_sec_sent_uint32_overflow: None | float
 
 
 class IgdStateItem(Enum):
@@ -144,27 +153,35 @@ class IgdStateItem(Enum):
     KIBIBYTES_PER_SEC_SENT = 12
     PACKETS_PER_SEC_RECEIVED = 13
     PACKETS_PER_SEC_SENT = 14
+    KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW = 15
+    KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW = 16
+    PACKETS_PER_SEC_RECEIVED_UINT32_OVERFLOW = 17
+    PACKETS_PER_SEC_SENT_UINT32_OVERFLOW = 18
 
 
 def _derive_value_per_second(
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
     value_name: str,
     current_timestamp: datetime,
     current_value: None | BaseException | StatusInfo | int | str,
     last_timestamp: None | BaseException | datetime,
     last_value: None | BaseException | StatusInfo | int | str,
+    fix_uint32_overflow: bool = False,
 ) -> None | float:
     """Calculate average based on current and last value."""
     if (
-        not isinstance(current_timestamp, datetime)
-        or not isinstance(current_value, int)
+        not isinstance(current_value, int)
         or not isinstance(last_timestamp, datetime)
         or not isinstance(last_value, int)
     ):
         return None
 
     if last_value > current_value:
-        # Value has overflowed, don't try to calculate anything.
-        return None
+        if not fix_uint32_overflow:
+            # Value has overflowed, don't try to calculate anything.
+            return None
+        # Value overflowed a 32-bit unsigned integer and wrapped around.
+        current_value += 2**32
 
     delta_time = current_timestamp - last_timestamp
     delta_value: int | float = current_value - last_value
@@ -761,6 +778,155 @@ class IgdDevice(UpnpProfileDevice):
 
         await action.async_call(NewDefaultConnectionService=service)
 
+    async def async_poll_traffic_data(
+        self,
+        items: set[IgdStateItem],
+    ) -> TrafficCounterState:
+        """Poll current traffic counter data from the device."""
+
+        async def nop() -> None:
+            """Pass."""
+
+        timestamp = datetime.now()
+        values = await asyncio.gather(
+            (
+                self.async_get_total_bytes_received()
+                if IgdStateItem.BYTES_RECEIVED in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW in items
+                else nop()
+            ),
+            (
+                self.async_get_total_bytes_sent()
+                if IgdStateItem.BYTES_SENT in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW in items
+                else nop()
+            ),
+            (
+                self.async_get_total_packets_received()
+                if IgdStateItem.PACKETS_RECEIVED in items
+                or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
+                or IgdStateItem.PACKETS_PER_SEC_RECEIVED_UINT32_OVERFLOW in items
+                else nop()
+            ),
+            (
+                self.async_get_total_packets_sent()
+                if IgdStateItem.PACKETS_SENT in items
+                or IgdStateItem.PACKETS_PER_SEC_SENT in items
+                or IgdStateItem.PACKETS_PER_SEC_SENT_UINT32_OVERFLOW in items
+                else nop()
+            ),
+            return_exceptions=True,
+        )
+
+        return TrafficCounterState(
+            timestamp=timestamp,
+            bytes_received=values[0],
+            bytes_sent=values[1],
+            packets_received=values[2],
+            packets_sent=values[3],
+            bytes_received_original=values[0],
+            bytes_sent_original=values[1],
+            packets_received_original=values[2],
+            packets_sent_original=values[3],
+        )
+
+    def build_igd_state(
+        # pylint: disable=too-many-arguments,too-many-positional-arguments
+        self,
+        current_traffic: TrafficCounterState,
+        last_traffic: TrafficCounterState,
+        status_info: StatusInfo | BaseException | None = None,
+        external_ip_address: str | BaseException | None = None,
+        port_mapping_number_of_entries: int | BaseException | None = None,
+        connection_status: str | None = None,
+    ) -> IgdState:
+        """Build IgdState with derived rates from two traffic counter states."""
+        kibibytes_per_sec_received = _derive_value_per_second(
+            BYTES_RECEIVED,
+            current_traffic.timestamp,
+            current_traffic.bytes_received,
+            last_traffic.timestamp,
+            last_traffic.bytes_received,
+        )
+        kibibytes_per_sec_sent = _derive_value_per_second(
+            BYTES_SENT,
+            current_traffic.timestamp,
+            current_traffic.bytes_sent,
+            last_traffic.timestamp,
+            last_traffic.bytes_sent,
+        )
+        packets_per_sec_received = _derive_value_per_second(
+            PACKETS_RECEIVED,
+            current_traffic.timestamp,
+            current_traffic.packets_received,
+            last_traffic.timestamp,
+            last_traffic.packets_received,
+        )
+        packets_per_sec_sent = _derive_value_per_second(
+            PACKETS_SENT,
+            current_traffic.timestamp,
+            current_traffic.packets_sent,
+            last_traffic.timestamp,
+            last_traffic.packets_sent,
+        )
+        kibibytes_per_sec_received_uint32_overflow = _derive_value_per_second(
+            BYTES_RECEIVED,
+            current_traffic.timestamp,
+            current_traffic.bytes_received,
+            last_traffic.timestamp,
+            last_traffic.bytes_received,
+            fix_uint32_overflow=True,
+        )
+        kibibytes_per_sec_sent_uint32_overflow = _derive_value_per_second(
+            BYTES_SENT,
+            current_traffic.timestamp,
+            current_traffic.bytes_sent,
+            last_traffic.timestamp,
+            last_traffic.bytes_sent,
+            fix_uint32_overflow=True,
+        )
+        packets_per_sec_received_uint32_overflow = _derive_value_per_second(
+            PACKETS_RECEIVED,
+            current_traffic.timestamp,
+            current_traffic.packets_received,
+            last_traffic.timestamp,
+            last_traffic.packets_received,
+            fix_uint32_overflow=True,
+        )
+        packets_per_sec_sent_uint32_overflow = _derive_value_per_second(
+            PACKETS_SENT,
+            current_traffic.timestamp,
+            current_traffic.packets_sent,
+            last_traffic.timestamp,
+            last_traffic.packets_sent,
+            fix_uint32_overflow=True,
+        )
+
+        return IgdState(
+            timestamp=current_traffic.timestamp,
+            bytes_received=current_traffic.bytes_received,
+            bytes_sent=current_traffic.bytes_sent,
+            packets_received=current_traffic.packets_received,
+            packets_sent=current_traffic.packets_sent,
+            kibibytes_per_sec_received=kibibytes_per_sec_received,
+            kibibytes_per_sec_sent=kibibytes_per_sec_sent,
+            packets_per_sec_received=packets_per_sec_received,
+            packets_per_sec_sent=packets_per_sec_sent,
+            kibibytes_per_sec_received_uint32_overflow=kibibytes_per_sec_received_uint32_overflow,
+            kibibytes_per_sec_sent_uint32_overflow=kibibytes_per_sec_sent_uint32_overflow,
+            packets_per_sec_received_uint32_overflow=packets_per_sec_received_uint32_overflow,
+            packets_per_sec_sent_uint32_overflow=packets_per_sec_sent_uint32_overflow,
+            connection_status=(
+                status_info.connection_status if isinstance(status_info, StatusInfo) else connection_status
+            ),
+            last_connection_error=(status_info.last_connection_error if isinstance(status_info, StatusInfo) else None),
+            uptime=status_info.uptime if isinstance(status_info, StatusInfo) else None,
+            external_ip_address=external_ip_address,
+            port_mapping_number_of_entries=port_mapping_number_of_entries,
+        )
+
     async def async_get_traffic_and_status_data(
         self,
         items: set[IgdStateItem] | None = None,
@@ -778,6 +944,10 @@ class IgdDevice(UpnpProfileDevice):
         * bytes per second sent (derived from last update)
         * packets per second received (derived from last update)
         * packets per second sent (derived from last update)
+        * bytes per second received, with uint32 overflow handling (derived from last update)
+        * bytes per second sent, with uint32 overflow handling (derived from last update)
+        * packets per second received, with uint32 overflow handling (derived from last update)
+        * packets per second sent, with uint32 overflow handling (derived from last update)
         * connection status (status info)
         * last connection error (status info)
         * uptime (status info)
@@ -809,28 +979,9 @@ class IgdDevice(UpnpProfileDevice):
             ):
                 items.remove(IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES)
 
-        timestamp = datetime.now()
-        values = await asyncio.gather(
-            (
-                self.async_get_total_bytes_received()
-                if IgdStateItem.BYTES_RECEIVED in items or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
-                else nop()
-            ),
-            (
-                self.async_get_total_bytes_sent()
-                if IgdStateItem.BYTES_SENT in items or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
-                else nop()
-            ),
-            (
-                self.async_get_total_packets_received()
-                if IgdStateItem.PACKETS_RECEIVED in items or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
-                else nop()
-            ),
-            (
-                self.async_get_total_packets_sent()
-                if IgdStateItem.PACKETS_SENT in items or IgdStateItem.PACKETS_PER_SEC_SENT in items
-                else nop()
-            ),
+        current_traffic_state = await self.async_poll_traffic_data(items)
+
+        status_values = await asyncio.gather(
             (
                 self.async_get_status_info()
                 if IgdStateItem.CONNECTION_STATUS in items
@@ -847,69 +998,28 @@ class IgdDevice(UpnpProfileDevice):
             return_exceptions=True,
         )
 
-        kibibytes_per_sec_received = _derive_value_per_second(
-            BYTES_RECEIVED,
-            timestamp,
-            values[0],
-            self._last_traffic_state.timestamp,
-            self._last_traffic_state.bytes_received,
-        )
-        kibibytes_per_sec_sent = _derive_value_per_second(
-            BYTES_SENT,
-            timestamp,
-            values[1],
-            self._last_traffic_state.timestamp,
-            self._last_traffic_state.bytes_sent,
-        )
-        packets_per_sec_received = _derive_value_per_second(
-            PACKETS_RECEIVED,
-            timestamp,
-            values[2],
-            self._last_traffic_state.timestamp,
-            self._last_traffic_state.packets_received,
-        )
-        packets_per_sec_sent = _derive_value_per_second(
-            PACKETS_SENT,
-            timestamp,
-            values[3],
-            self._last_traffic_state.timestamp,
-            self._last_traffic_state.packets_sent,
-        )
-
-        self._last_traffic_state = TrafficCounterState(
-            timestamp=timestamp,
-            bytes_received=cast(int | BaseException | None, values[0]),
-            bytes_sent=cast(int | BaseException | None, values[1]),
-            packets_received=cast(int | BaseException | None, values[2]),
-            packets_sent=cast(int | BaseException | None, values[3]),
-            bytes_received_original=cast(int | BaseException | None, values[0]),
-            bytes_sent_original=cast(int | BaseException | None, values[1]),
-            packets_received_original=cast(int | BaseException | None, values[2]),
-            packets_sent_original=cast(int | BaseException | None, values[3]),
-        )
+        last_traffic_state = self._last_traffic_state
+        self._last_traffic_state = current_traffic_state
 
         # Test if any of the calls were ok. If not, raise the exception.
-        non_exceptions = [value for value in values if not isinstance(value, BaseException)]
+        all_values: list[object] = [
+            current_traffic_state.bytes_received,
+            current_traffic_state.bytes_sent,
+            current_traffic_state.packets_received,
+            current_traffic_state.packets_sent,
+            *status_values,
+        ]
+        non_exceptions = [value for value in all_values if not isinstance(value, BaseException)]
         if not non_exceptions:
-            # Raise any exception to indicate something was very wrong.
-            exc = cast(BaseException, values[0])
+            # Raise any exception to indicate something was wrong.
+            exc = cast(BaseException, current_traffic_state.bytes_received)
             raise exc
 
-        return IgdState(
-            timestamp=timestamp,
-            bytes_received=cast(None | BaseException | int, values[0]),
-            bytes_sent=cast(None | BaseException | int, values[1]),
-            packets_received=cast(None | BaseException | int, values[2]),
-            packets_sent=cast(None | BaseException | int, values[3]),
-            kibibytes_per_sec_received=kibibytes_per_sec_received,
-            kibibytes_per_sec_sent=kibibytes_per_sec_sent,
-            packets_per_sec_received=packets_per_sec_received,
-            packets_per_sec_sent=packets_per_sec_sent,
-            connection_status=(
-                values[4].connection_status if isinstance(values[4], StatusInfo) else connection_status
-            ),
-            last_connection_error=(values[4].last_connection_error if isinstance(values[4], StatusInfo) else None),
-            uptime=values[4].uptime if isinstance(values[4], StatusInfo) else None,
-            external_ip_address=cast(None | BaseException | str, values[5] or external_ip_address),
-            port_mapping_number_of_entries=cast(None | int, values[6] or port_mapping_number_of_entries),
+        return self.build_igd_state(
+            current_traffic=current_traffic_state,
+            last_traffic=last_traffic_state,
+            status_info=status_values[0],
+            external_ip_address=status_values[1] or external_ip_address,
+            port_mapping_number_of_entries=status_values[2] or port_mapping_number_of_entries,
+            connection_status=connection_status,
         )
