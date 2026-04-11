@@ -1,0 +1,17 @@
+Add data/packet rate counters with uint32 overflow support to IGD profile.
+
+New ``IgdStateItem`` variants (``KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW``,
+``KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW``, ``PACKETS_PER_SEC_RECEIVED_UINT32_OVERFLOW``,
+``PACKETS_PER_SEC_SENT_UINT32_OVERFLOW``) compute rates while correctly handling
+32-bit counter rollover, instead of returning ``None`` when the counter wraps around.
+
+Two new methods are also added to ``IgdDevice``:
+
+* ``async_poll_traffic_data()`` — polls the current raw traffic counters from the device.
+* ``build_igd_state()`` — derives an ``IgdState`` (including the overflow-aware rates)
+  from two ``TrafficCounterState`` snapshots.
+
+**Backwards compatibility:** existing code that accesses ``IgdState`` fields by name
+(e.g. ``state.kibibytes_per_sec_received``) or uses ``IgdStateItem`` by name continues
+to work unchanged. Code that constructs ``IgdState`` positionally or unpacks it by
+position will need to be updated to account for the four new fields.
