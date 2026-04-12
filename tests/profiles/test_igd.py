@@ -196,22 +196,22 @@ async def test_derived_rates_with_uint32_overflow() -> None:
             IgdStateItem.KIBIBYTES_PER_SEC_SENT,
             IgdStateItem.PACKETS_PER_SEC_RECEIVED,
             IgdStateItem.PACKETS_PER_SEC_SENT,
-            IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW,
-            IgdStateItem.KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW,
-            IgdStateItem.PACKETS_PER_SEC_RECEIVED_UINT32_OVERFLOW,
-            IgdStateItem.PACKETS_PER_SEC_SENT_UINT32_OVERFLOW,
+            IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED_NO_ROLLOVER,
+            IgdStateItem.KIBIBYTES_PER_SEC_SENT_NO_ROLLOVER,
+            IgdStateItem.PACKETS_PER_SEC_RECEIVED_NO_ROLLOVER,
+            IgdStateItem.PACKETS_PER_SEC_SENT_NO_ROLLOVER,
         },
         force_poll=True,
     )
 
-    assert state.kibibytes_per_sec_received is None
-    assert state.kibibytes_per_sec_sent is None
-    assert state.packets_per_sec_received is None
-    assert state.packets_per_sec_sent is None
+    assert state.kibibytes_per_sec_received_no_rollover is None
+    assert state.kibibytes_per_sec_sent_no_rollover is None
+    assert state.packets_per_sec_received_no_rollover is None
+    assert state.packets_per_sec_sent_no_rollover is None
 
     elapsed_seconds = (current_traffic_state.timestamp - initial_traffic_state.timestamp).total_seconds()
 
-    assert state.kibibytes_per_sec_received_uint32_overflow == pytest.approx((150 / 1024) / elapsed_seconds)
-    assert state.kibibytes_per_sec_sent_uint32_overflow == pytest.approx((225 / 1024) / elapsed_seconds)
-    assert state.packets_per_sec_received_uint32_overflow == pytest.approx(60 / elapsed_seconds)
-    assert state.packets_per_sec_sent_uint32_overflow == pytest.approx(5 / elapsed_seconds)
+    assert state.kibibytes_per_sec_received == pytest.approx((150 / 1024) / elapsed_seconds)
+    assert state.kibibytes_per_sec_sent == pytest.approx((225 / 1024) / elapsed_seconds)
+    assert state.packets_per_sec_received == pytest.approx(60 / elapsed_seconds)
+    assert state.packets_per_sec_sent == pytest.approx(5 / elapsed_seconds)

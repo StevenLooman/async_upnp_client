@@ -21,10 +21,10 @@ KIBIBYTES_PER_SEC_RECEIVED = "kibytes_sec_received"
 KIBIBYTES_PER_SEC_SENT = "kibytes_sec_sent"
 PACKETS_SEC_RECEIVED = "packets_sec_received"
 PACKETS_SEC_SENT = "packets_sec_sent"
-KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW = "kibytes_sec_received_uint32_overflow"
-KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW = "kibytes_sec_sent_uint32_overflow"
-PACKETS_SEC_RECEIVED_UINT32_OVERFLOW = "packets_sec_received_uint32_overflow"
-PACKETS_SEC_SENT_UINT32_OVERFLOW = "packets_sec_sent_uint32_overflow"
+KIBIBYTES_PER_SEC_RECEIVED_NO_ROLLOVER = "kibytes_sec_received_no_rollover"
+KIBIBYTES_PER_SEC_SENT_NO_ROLLOVER = "kibytes_sec_sent_no_rollover"
+PACKETS_SEC_RECEIVED_NO_ROLLOVER = "packets_sec_received_no_rollover"
+PACKETS_SEC_SENT_NO_ROLLOVER = "packets_sec_sent_no_rollover"
 STATUS_INFO = "status_info"
 EXTERNAL_IP_ADDRESS = "external_ip_address"
 
@@ -126,10 +126,10 @@ class IgdState(NamedTuple):
     kibibytes_per_sec_sent: None | float
     packets_per_sec_received: None | float
     packets_per_sec_sent: None | float
-    kibibytes_per_sec_received_uint32_overflow: None | float
-    kibibytes_per_sec_sent_uint32_overflow: None | float
-    packets_per_sec_received_uint32_overflow: None | float
-    packets_per_sec_sent_uint32_overflow: None | float
+    kibibytes_per_sec_received_no_rollover: None | float
+    kibibytes_per_sec_sent_no_rollover: None | float
+    packets_per_sec_received_no_rollover: None | float
+    packets_per_sec_sent_no_rollover: None | float
 
 
 class IgdStateItem(Enum):
@@ -153,10 +153,10 @@ class IgdStateItem(Enum):
     KIBIBYTES_PER_SEC_SENT = 12
     PACKETS_PER_SEC_RECEIVED = 13
     PACKETS_PER_SEC_SENT = 14
-    KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW = 15
-    KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW = 16
-    PACKETS_PER_SEC_RECEIVED_UINT32_OVERFLOW = 17
-    PACKETS_PER_SEC_SENT_UINT32_OVERFLOW = 18
+    KIBIBYTES_PER_SEC_RECEIVED_NO_ROLLOVER = 15
+    KIBIBYTES_PER_SEC_SENT_NO_ROLLOVER = 16
+    PACKETS_PER_SEC_RECEIVED_NO_ROLLOVER = 17
+    PACKETS_PER_SEC_SENT_NO_ROLLOVER = 18
 
 
 def _derive_value_per_second(
@@ -166,7 +166,7 @@ def _derive_value_per_second(
     current_value: None | BaseException | StatusInfo | int | str,
     last_timestamp: None | BaseException | datetime,
     last_value: None | BaseException | StatusInfo | int | str,
-    fix_uint32_overflow: bool = False,
+    fix_uint32_overflow: bool = True,
 ) -> None | float:
     """Calculate average based on current and last value."""
     if (
@@ -793,28 +793,28 @@ class IgdDevice(UpnpProfileDevice):
                 self.async_get_total_bytes_received()
                 if IgdStateItem.BYTES_RECEIVED in items
                 or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
-                or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED_UINT32_OVERFLOW in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED_NO_ROLLOVER in items
                 else nop()
             ),
             (
                 self.async_get_total_bytes_sent()
                 if IgdStateItem.BYTES_SENT in items
                 or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
-                or IgdStateItem.KIBIBYTES_PER_SEC_SENT_UINT32_OVERFLOW in items
+                or IgdStateItem.KIBIBYTES_PER_SEC_SENT_NO_ROLLOVER in items
                 else nop()
             ),
             (
                 self.async_get_total_packets_received()
                 if IgdStateItem.PACKETS_RECEIVED in items
                 or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
-                or IgdStateItem.PACKETS_PER_SEC_RECEIVED_UINT32_OVERFLOW in items
+                or IgdStateItem.PACKETS_PER_SEC_RECEIVED_NO_ROLLOVER in items
                 else nop()
             ),
             (
                 self.async_get_total_packets_sent()
                 if IgdStateItem.PACKETS_SENT in items
                 or IgdStateItem.PACKETS_PER_SEC_SENT in items
-                or IgdStateItem.PACKETS_PER_SEC_SENT_UINT32_OVERFLOW in items
+                or IgdStateItem.PACKETS_PER_SEC_SENT_NO_ROLLOVER in items
                 else nop()
             ),
             return_exceptions=True,
@@ -871,37 +871,37 @@ class IgdDevice(UpnpProfileDevice):
             last_traffic.timestamp,
             last_traffic.packets_sent,
         )
-        kibibytes_per_sec_received_uint32_overflow = _derive_value_per_second(
+        kibibytes_per_sec_received_no_rollover = _derive_value_per_second(
             BYTES_RECEIVED,
             current_traffic.timestamp,
             current_traffic.bytes_received,
             last_traffic.timestamp,
             last_traffic.bytes_received,
-            fix_uint32_overflow=True,
+            fix_uint32_overflow=False,
         )
-        kibibytes_per_sec_sent_uint32_overflow = _derive_value_per_second(
+        kibibytes_per_sec_sent_no_rollover = _derive_value_per_second(
             BYTES_SENT,
             current_traffic.timestamp,
             current_traffic.bytes_sent,
             last_traffic.timestamp,
             last_traffic.bytes_sent,
-            fix_uint32_overflow=True,
+            fix_uint32_overflow=False,
         )
-        packets_per_sec_received_uint32_overflow = _derive_value_per_second(
+        packets_per_sec_received_no_rollover = _derive_value_per_second(
             PACKETS_RECEIVED,
             current_traffic.timestamp,
             current_traffic.packets_received,
             last_traffic.timestamp,
             last_traffic.packets_received,
-            fix_uint32_overflow=True,
+            fix_uint32_overflow=False,
         )
-        packets_per_sec_sent_uint32_overflow = _derive_value_per_second(
+        packets_per_sec_sent_no_rollover = _derive_value_per_second(
             PACKETS_SENT,
             current_traffic.timestamp,
             current_traffic.packets_sent,
             last_traffic.timestamp,
             last_traffic.packets_sent,
-            fix_uint32_overflow=True,
+            fix_uint32_overflow=False,
         )
 
         return IgdState(
@@ -914,10 +914,10 @@ class IgdDevice(UpnpProfileDevice):
             kibibytes_per_sec_sent=kibibytes_per_sec_sent,
             packets_per_sec_received=packets_per_sec_received,
             packets_per_sec_sent=packets_per_sec_sent,
-            kibibytes_per_sec_received_uint32_overflow=kibibytes_per_sec_received_uint32_overflow,
-            kibibytes_per_sec_sent_uint32_overflow=kibibytes_per_sec_sent_uint32_overflow,
-            packets_per_sec_received_uint32_overflow=packets_per_sec_received_uint32_overflow,
-            packets_per_sec_sent_uint32_overflow=packets_per_sec_sent_uint32_overflow,
+            kibibytes_per_sec_received_no_rollover=kibibytes_per_sec_received_no_rollover,
+            kibibytes_per_sec_sent_no_rollover=kibibytes_per_sec_sent_no_rollover,
+            packets_per_sec_received_no_rollover=packets_per_sec_received_no_rollover,
+            packets_per_sec_sent_no_rollover=packets_per_sec_sent_no_rollover,
             connection_status=(
                 status_info.connection_status if isinstance(status_info, StatusInfo) else connection_status
             ),
