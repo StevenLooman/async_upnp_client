@@ -10,6 +10,7 @@ from typing import Mapping, Tuple
 import pytest
 from multidict import CIMultiDict
 
+from async_upnp_client.client import UpnpService
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError
@@ -379,7 +380,10 @@ async def test_has_sender_enabled_when_service_not_present() -> None:
 
 @pytest.mark.asyncio
 async def test_has_product_attributes_when_action_not_present() -> None:
-    """Test has_sender_enabled returns False when service not present."""
+    """Test has_product_attributes returns False when action is not present.
+
+    Product4.xml fixture modified so that Attributes action is not present
+    """
 
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
@@ -403,6 +407,44 @@ async def test_retrieve_state_variable() -> None:
     state_var.value = 12  # could be set by polling or subscribing
 
     assert profile.product_source_count == 12
+
+
+@pytest.mark.asyncio
+async def test_get_service_by_name() -> None:
+    """Test service can be obtained from name."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    svc = profile.get_service_by_name("Product")
+    assert isinstance(svc, UpnpService)
+    assert svc.service_type == "urn:av-openhome-org:service:Product:4"
+
+
+@pytest.mark.asyncio
+async def test_has_service_action() -> None:
+    """Test service has action only when both service and action exist."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    assert profile.has_service_action("Product", "SourceCount")
+    assert not profile.has_service_action("ServiceDoesNotExist", "SourceCount")
+    assert not profile.has_service_action("Product", "ActionDoesNotExist")
+
+
+async def test_get_actions_with_state_variables() -> None:
+    """Test for service that all actions returning state variables are returned."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+    actual = profile.get_actions_with_state_variables("Volume")
+    expected = {"Mute", "VolumeLimit", "UnityGain", "Fade", "Balance", "Volume", "Characteristics"}
+    assert set(actual) == set(expected)
 
 
 # endregion

@@ -211,7 +211,7 @@
       </argumentList>
     </action>
     <action>
-      <!-- Change Name so that action is not present for test-->
+      <!-- Change Name so that action Attributes is not present for test-->
       <name>AttributesRenamedForTestPurposes</name>
       <argumentList>
         <argument>
