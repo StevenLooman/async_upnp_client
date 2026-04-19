@@ -170,7 +170,7 @@ def _derive_value_per_second(
     current_value: None | BaseException | StatusInfo | int | str,
     last_timestamp: None | BaseException | datetime,
     last_value: None | BaseException | StatusInfo | int | str,
-    fix_uint32_overflow: bool = True,
+    handle_uint32_overflow: bool = True,
 ) -> None | float:
     """Calculate average based on current and last value."""
     if (
@@ -181,7 +181,7 @@ def _derive_value_per_second(
         return None
 
     if last_value > current_value:
-        if not fix_uint32_overflow:
+        if not handle_uint32_overflow:
             # Value has overflowed, don't try to calculate anything.
             return None
         # Value overflowed a 32-bit unsigned integer and wrapped around.
@@ -877,7 +877,7 @@ class IgdDevice(UpnpProfileDevice):
             current_traffic.bytes_received,
             last_traffic.timestamp,
             last_traffic.bytes_received,
-            fix_uint32_overflow=False,
+            handle_uint32_overflow=False,
         )
         kibibytes_per_sec_sent_no_rollover = _derive_value_per_second(
             BYTES_SENT,
@@ -885,7 +885,7 @@ class IgdDevice(UpnpProfileDevice):
             current_traffic.bytes_sent,
             last_traffic.timestamp,
             last_traffic.bytes_sent,
-            fix_uint32_overflow=False,
+            handle_uint32_overflow=False,
         )
         packets_per_sec_received_no_rollover = _derive_value_per_second(
             PACKETS_RECEIVED,
@@ -893,7 +893,7 @@ class IgdDevice(UpnpProfileDevice):
             current_traffic.packets_received,
             last_traffic.timestamp,
             last_traffic.packets_received,
-            fix_uint32_overflow=False,
+            handle_uint32_overflow=False,
         )
         packets_per_sec_sent_no_rollover = _derive_value_per_second(
             PACKETS_SENT,
@@ -901,7 +901,7 @@ class IgdDevice(UpnpProfileDevice):
             current_traffic.packets_sent,
             last_traffic.timestamp,
             last_traffic.packets_sent,
-            fix_uint32_overflow=False,
+            handle_uint32_overflow=False,
         )
 
         return IgdState(
