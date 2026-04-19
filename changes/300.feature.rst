@@ -1,3 +1,0 @@
-Improve parsing of state variable type in non-strict mode.
-
-E.g. a state variable declared with type `DateTime` will be parsed as `dateTime` in non-strict mode.
