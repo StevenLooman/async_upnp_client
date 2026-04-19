@@ -159,6 +159,10 @@ class IgdStateItem(Enum):
     PACKETS_PER_SEC_SENT_NO_ROLLOVER = 18
 
 
+async def _nop() -> None:
+    """No-op coroutine used as a placeholder in asyncio.gather calls."""
+
+
 def _derive_value_per_second(
     # pylint: disable=too-many-arguments,too-many-positional-arguments
     value_name: str,
@@ -783,10 +787,6 @@ class IgdDevice(UpnpProfileDevice):
         items: set[IgdStateItem],
     ) -> TrafficCounterState:
         """Poll current traffic counter data from the device."""
-
-        async def nop() -> None:
-            """Pass."""
-
         timestamp = datetime.now()
         values = await asyncio.gather(
             (
@@ -794,28 +794,28 @@ class IgdDevice(UpnpProfileDevice):
                 if IgdStateItem.BYTES_RECEIVED in items
                 or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED in items
                 or IgdStateItem.KIBIBYTES_PER_SEC_RECEIVED_NO_ROLLOVER in items
-                else nop()
+                else _nop()
             ),
             (
                 self.async_get_total_bytes_sent()
                 if IgdStateItem.BYTES_SENT in items
                 or IgdStateItem.KIBIBYTES_PER_SEC_SENT in items
                 or IgdStateItem.KIBIBYTES_PER_SEC_SENT_NO_ROLLOVER in items
-                else nop()
+                else _nop()
             ),
             (
                 self.async_get_total_packets_received()
                 if IgdStateItem.PACKETS_RECEIVED in items
                 or IgdStateItem.PACKETS_PER_SEC_RECEIVED in items
                 or IgdStateItem.PACKETS_PER_SEC_RECEIVED_NO_ROLLOVER in items
-                else nop()
+                else _nop()
             ),
             (
                 self.async_get_total_packets_sent()
                 if IgdStateItem.PACKETS_SENT in items
                 or IgdStateItem.PACKETS_PER_SEC_SENT in items
                 or IgdStateItem.PACKETS_PER_SEC_SENT_NO_ROLLOVER in items
-                else nop()
+                else _nop()
             ),
             return_exceptions=True,
         )
@@ -832,7 +832,7 @@ class IgdDevice(UpnpProfileDevice):
             packets_sent_original=values[3],
         )
 
-    def build_igd_state(
+    def _build_igd_state(
         # pylint: disable=too-many-arguments,too-many-positional-arguments
         self,
         current_traffic: TrafficCounterState,
@@ -957,9 +957,6 @@ class IgdDevice(UpnpProfileDevice):
         # pylint: disable=too-many-locals
         items = items or set(IgdStateItem)
 
-        async def nop() -> None:
-            """Pass."""
-
         external_ip_address: str | None = None
         connection_status: str | None = None
         port_mapping_number_of_entries: int | None = None
@@ -987,13 +984,13 @@ class IgdDevice(UpnpProfileDevice):
                 if IgdStateItem.CONNECTION_STATUS in items
                 or IgdStateItem.LAST_CONNECTION_ERROR in items
                 or IgdStateItem.UPTIME in items
-                else nop()
+                else _nop()
             ),
-            (self.async_get_external_ip_address() if IgdStateItem.EXTERNAL_IP_ADDRESS in items else nop()),
+            (self.async_get_external_ip_address() if IgdStateItem.EXTERNAL_IP_ADDRESS in items else _nop()),
             (
                 self.async_get_port_mapping_number_of_entries()
                 if IgdStateItem.PORT_MAPPING_NUMBER_OF_ENTRIES in items
-                else nop()
+                else _nop()
             ),
             return_exceptions=True,
         )
@@ -1015,7 +1012,7 @@ class IgdDevice(UpnpProfileDevice):
             exc = cast(BaseException, current_traffic_state.bytes_received)
             raise exc
 
-        return self.build_igd_state(
+        return self._build_igd_state(
             current_traffic=current_traffic_state,
             last_traffic=last_traffic_state,
             status_info=status_values[0],
