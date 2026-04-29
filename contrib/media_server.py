@@ -11,16 +11,12 @@ import asyncio
 import logging
 import xml.etree.ElementTree as ET
 from time import time
-from typing import Mapping, Sequence, Type
 from datetime import datetime
 
 from async_upnp_client.client import UpnpRequester, UpnpStateVariable
 from async_upnp_client.const import (
-    STATE_VARIABLE_TYPE_MAPPING,
     DeviceInfo,
     ServiceInfo,
-    StateVariableTypeInfo,
-    EventableStateVariableTypeInfo,
 )
 
 from async_upnp_client.server import (

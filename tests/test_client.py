@@ -319,6 +319,41 @@ class TestUpnpStateVariable:
         device = await factory.async_create_device("http://dlna_dms:1234/device.xml")
         assert device is not None
 
+    @pytest.mark.asyncio
+    async def test_parse_state_variable_datetime_invalid_case_non_strict(self) -> None:
+        """Test that non-standard 'DateTime' is accepted in non-strict mode (issue #299)."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = HttpResponse(
+            200,
+            {},
+            read_file("dlna/dmr/RenderingControl_1_invalid_datetime_case.xml"),
+        )
+
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester, non_strict=True)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        state_var = service.state_variable("SV1")
+
+        state_var.upnp_value = "1985-04-12T10:15:30"
+        assert state_var.value == datetime(1985, 4, 12, 10, 15, 30)
+
+    @pytest.mark.asyncio
+    async def test_parse_state_variable_datetime_invalid_case_strict(self) -> None:
+        """Test that non-standard 'DateTime' fails in strict mode (issue #299)."""
+        responses = dict(RESPONSE_MAP)
+        responses[("GET", "http://dlna_dmr:1234/RenderingControl_1.xml")] = HttpResponse(
+            200,
+            {},
+            read_file("dlna/dmr/RenderingControl_1_invalid_datetime_case.xml"),
+        )
+
+        requester = UpnpTestRequester(responses)
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError, match="Unsupported data type"):
+            await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+
 
 class TestUpnpAction:
     """Tests for UpnpAction."""
