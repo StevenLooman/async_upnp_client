@@ -17,7 +17,7 @@ repos:
     - id: trailing-whitespace
       exclude: setup.cfg
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.15.1'
+    rev: 'v0.15.12'
     hooks:
       - id: ruff
         args: [--fix]
@@ -25,7 +25,7 @@ repos:
       - id: ruff-format
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/codespell-project/codespell
-    rev: 'v2.4.1'
+    rev: 'v2.4.2'
     hooks:
       - id: codespell
         args:
@@ -34,7 +34,7 @@ repos:
         exclude_types: [csv, json]
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/PyCQA/pylint
-    rev: 'v4.0.4'
+    rev: 'v4.0.5'
     hooks:
       - id: pylint
         additional_dependencies:
@@ -47,11 +47,11 @@ repos:
           - pytest-aiohttp >=1.0.5,<1.2.0
         files: ^(async_upnp_client|tests)/.+\.py$
   - repo: https://github.com/fpgmaas/deptry
-    rev: '0.24.0'
+    rev: '0.25.1'
     hooks:
       - id: deptry
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v1.19.1'
+    rev: 'v1.20.2'
     hooks:
       - id: mypy
         args: [--ignore-missing-imports]
