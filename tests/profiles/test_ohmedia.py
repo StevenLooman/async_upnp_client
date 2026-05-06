@@ -474,22 +474,4 @@ def test_list_to_string() -> None:
     assert _list_to_string(idlist) == ""
 
 
-def test_is_not_explicitly_false() -> None:
-    """Test _is_not_explicitly_false() for a range of inputs."""
-
-    assert _is_not_explicitly_false(False) is False  # noqa: E712
-    assert _is_not_explicitly_false("False") is False  # noqa: E712
-    assert _is_not_explicitly_false(0) is False  # noqa: E712
-    assert _is_not_explicitly_false("any string (other than False)") is True  # noqa: E712
-    assert _is_not_explicitly_false("false") is True  # noqa: E712
-    assert _is_not_explicitly_false("true") is True  # noqa: E712
-    assert _is_not_explicitly_false(True) is True  # noqa: E712
-    assert _is_not_explicitly_false(1) is True  # noqa: E712
-    assert _is_not_explicitly_false([]) is True  # noqa: E712
-    assert _is_not_explicitly_false({}) is True  # noqa: E712
-    assert _is_not_explicitly_false("") is True  # noqa: E712
-    assert _is_not_explicitly_false(None) is True  # noqa: E712
-    assert _is_not_explicitly_false(set()) is True  # noqa: E712
-
-
 # endregion

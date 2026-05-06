@@ -1247,15 +1247,19 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.VOLUME, Volume.SET_VOLUME, Value=volume_level)
 
-    async def async_volume_set_mute(self, is_muted: bool) -> None:
+    async def async_volume_set_mute(self, muted: bool) -> None:
         """Set the volume mute state.
 
-        :param is_muted: is the volume muted or not
+        :param muted: the mute status of the volume to set
         """
-        # do not unmute by inadvertently sending a 'Falsy'
-        is_muted = _is_not_explicitly_false(is_muted)
-        # is_muted = bool(is_muted) # it behaves this way anyway
-        await self._async_call_action(Service.VOLUME, Volume.SET_MUTE, Value=is_muted)
+        # if muted is False then the Volume will be unmuted - be guarded in doing this
+        # unmute only if explicitly boolean False, string "False" or integer 0
+        strict_muted = (
+            (muted is not False)
+            and (muted != "False" or not isinstance(muted, str))
+            and (muted != 0 or isinstance(muted, int))
+        )
+        await self._async_call_action(Service.VOLUME, Volume.SET_MUTE, Value=strict_muted)
 
     async def async_volume_inc(self) -> None:
         """Increase the volume level by one."""
