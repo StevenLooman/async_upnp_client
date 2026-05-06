@@ -1937,11 +1937,11 @@ class OhmDevice(UpnpProfileDevice):
             return int(index["Value"])
         return None
 
-    async def async_active_source_name(self) -> str:
+    async def async_active_source_name(self) -> str | None:
         """Get the active source name."""
 
         index = await self.async_active_source_index()
-        source_name = "N/A"  # cover the else cases
+        source_name = None  # cover the else cases
         if index is not None:
             source = await self.async_product_source(index)
             if source is not None:
@@ -2013,7 +2013,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         service = self._service(service_name)
 
-        if service is not None and service.has_state_variable(state_variable_name):
+        if service is not None:
             state_var = self._state_variable(service_name, state_variable_name)
             if not state_var:
                 return None
@@ -2174,8 +2174,10 @@ def _decode_id_array(b64_id_array: str) -> list:
     except binascii.Error as exception:
         raise ValueError("Invalid base64 encoding.") from exception
 
-    if len(decoded) % 4 == 0:  # must be interpreted as 4 byte integers
+    if len(decoded) % 4 == 0:  # must be interpretable as 4 byte integers
         array_int = list(struct.unpack(">" + "I" * (len(decoded) // 4), decoded))
+    else:
+        _LOGGER.warning("Id array not parsable as 4-byte integers: %s", b64_id_array)
 
     return array_int
 
