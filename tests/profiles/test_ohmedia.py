@@ -18,13 +18,6 @@ from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _is_
 
 from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
 
-# pylint: disable=unused-import
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-else:
-    from strenum import StrEnum  # noqa: F401
-
-
 def read_file(filename: str) -> str:
     """Read file."""
     path = os.path.join("tests", "fixtures", "ohmedia", filename)

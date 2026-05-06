@@ -12,6 +12,7 @@ import binascii
 import logging
 import struct
 import sys
+from enum import Enum # py310 replace str, Enum with StrEnum when Python 3.10 becomes end-of-life
 from typing import Any, Mapping, Sequence
 
 import defusedxml.ElementTree as DET
@@ -20,16 +21,11 @@ from async_upnp_client.client import UpnpService
 from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
-if sys.version_info >= (3, 11):
-    from enum import StrEnum
-else:
-    from strenum import StrEnum
-
 _LOGGER = logging.getLogger(__name__)
 
 
 # region Service and other enums
-class Service(StrEnum):
+class Service(str, Enum):
     """Linn/Open Home Network Service Identifiers.
 
     The Service Identifier from the ServiceId
@@ -50,7 +46,7 @@ class Service(StrEnum):
     VOLUME = "Volume"
 
 
-class ServiceId(StrEnum):
+class ServiceId(str, Enum):
     """Linn/Open Home Network Service Ids.
 
     A service ID uniquely identifies a service instance within a device.
@@ -77,7 +73,7 @@ class ServiceId(StrEnum):
     VOLKANO = "urn:linn-co-uk:serviceId:Volkano"
 
 
-class ProductSourceType(StrEnum):
+class ProductSourceType(str, Enum):
     """Supported values for Product Source Type."""
 
     ANALOG = "Analog"  # Specifies an analog external input
@@ -94,7 +90,7 @@ class ProductSourceType(StrEnum):
 
 
 # region Action Enums
-class Credentials(StrEnum):
+class Credentials(str, Enum):
     """Actions for Credentials Service."""
 
     SET = "Set"
@@ -108,7 +104,7 @@ class Credentials(StrEnum):
     GET_SEQUENCE_NUMBER = "GetSequenceNumber"
 
 
-class Info(StrEnum):
+class Info(str, Enum):
     """Actions for Info Service."""
 
     COUNTERS = "Counters"
@@ -117,7 +113,7 @@ class Info(StrEnum):
     METATEXT = "Metatext"
 
 
-class Pins(StrEnum):
+class Pins(str, Enum):
     """Actions for Pins Service."""
 
     GET_DEVICE_MAX = "GetDeviceMax"
@@ -135,7 +131,7 @@ class Pins(StrEnum):
     SWAP = "Swap"
 
 
-class Playlist(StrEnum):
+class Playlist(str, Enum):
     """Actions for Playlist Service."""
 
     PLAY = "Play"
@@ -164,7 +160,7 @@ class Playlist(StrEnum):
     PROTOCOL_INFO = "ProtocolInfo"
 
 
-class Product(StrEnum):
+class Product(str, Enum):
     """Actions for Product Service."""
 
     MANUFACTURER = "Manufacturer"
@@ -185,7 +181,7 @@ class Product(StrEnum):
     GET_IMAGE_URI = "GetImageUri"
 
 
-class Radio(StrEnum):
+class Radio(str, Enum):
     """Actions for Radio Service."""
 
     REFRESH_PRESETS = "RefreshPresets"
@@ -207,7 +203,7 @@ class Radio(StrEnum):
     PROTOCOL_INFO = "ProtocolInfo"
 
 
-class Receiver(StrEnum):
+class Receiver(str, Enum):
     """Actions for Receiver Service."""
 
     PLAY = "Play"
@@ -218,7 +214,7 @@ class Receiver(StrEnum):
     TRANSPORT_STATE = "TransportState"
 
 
-class Sender(StrEnum):
+class Sender(str, Enum):
     """Actions for Sender Service."""
 
     PRESENTATION_URL = "PresentationUrl"
@@ -230,13 +226,13 @@ class Sender(StrEnum):
     ATTRIBUTES = "Attributes"
 
 
-class Time(StrEnum):
+class Time(str, Enum):
     """Actions for Time Service."""
 
     TIME = "Time"
 
 
-class Transport(StrEnum):
+class Transport(str, Enum):
     """Actions for Transport Service."""
 
     PLAY_AS = "PlayAs"
@@ -258,7 +254,7 @@ class Transport(StrEnum):
     SHUFFLE = "Shuffle"
 
 
-class Update(StrEnum):
+class Update(str, Enum):
     """Actions for Update Service."""
 
     GET_SOFTWARE_STATUS = "GetSoftwareStatus"
@@ -276,7 +272,7 @@ class Update(StrEnum):
     GET_RECOVER_SUPPORTED = "GetRecoverSupported"
 
 
-class Volume(StrEnum):
+class Volume(str, Enum):
     """Action names for Volume service."""
 
     CHARACTERISTICS = "Characteristics"
@@ -309,7 +305,7 @@ class Volume(StrEnum):
 
 
 # region State Variable Enums
-class CredentialsState(StrEnum):
+class CredentialsState(str, Enum):
     """State variable names for Credentials service."""
 
     IDS = "Ids"
@@ -317,7 +313,7 @@ class CredentialsState(StrEnum):
     SEQUENCE_NUMBER = "SequenceNumber"
 
 
-class InfoState(StrEnum):
+class InfoState(str, Enum):
     """State variable names for Info service."""
 
     BIT_DEPTH = "BitDepth"
@@ -334,7 +330,7 @@ class InfoState(StrEnum):
     URI = "Uri"
 
 
-class PinsState(StrEnum):
+class PinsState(str, Enum):
     """State variable names for Pins service."""
 
     ACCOUNT_MAX = "AccountMax"
@@ -344,7 +340,7 @@ class PinsState(StrEnum):
     MODES = "Modes"
 
 
-class PlaylistState(StrEnum):
+class PlaylistState(str, Enum):
     """State variable names for Playlist service."""
 
     ID = "Id"
@@ -356,7 +352,7 @@ class PlaylistState(StrEnum):
     TRANSPORT_STATE = "TransportState"
 
 
-class PlaylistStateAllowedValues(StrEnum):
+class PlaylistStateAllowedValues(str, Enum):
     """Allowed values for Playlist service."""
 
     BUFFERING = "Buffering"
@@ -365,7 +361,7 @@ class PlaylistStateAllowedValues(StrEnum):
     STOPPED = "Stopped"
 
 
-class ProductState(StrEnum):
+class ProductState(str, Enum):
     """State variable names for Product service."""
 
     ATTRIBUTES = "Attributes"
@@ -395,7 +391,7 @@ class ProductState(StrEnum):
     STANDBY_TRANSITIONING = "StandbyTransitioning"
 
 
-class RadioState(StrEnum):
+class RadioState(str, Enum):
     """State variable names for Radio service."""
 
     CHANNELS_MAX = "ChannelsMax"
@@ -407,7 +403,7 @@ class RadioState(StrEnum):
     TRANSPORT_STATE = "TransportState"
 
 
-class ReceiverState(StrEnum):
+class ReceiverState(str, Enum):
     """State variable names for Receiver service."""
 
     PROTOCOL_INFO = "ProtocolInfo"
@@ -416,7 +412,7 @@ class ReceiverState(StrEnum):
     TRANSPORT_STATE = "TransportState"
 
 
-class SenderState(StrEnum):
+class SenderState(str, Enum):
     """State variable names for Sender service."""
 
     ATTRIBUTES = "Attributes"
@@ -428,7 +424,7 @@ class SenderState(StrEnum):
     STATUS2 = "Status2"
 
 
-class TimeState(StrEnum):
+class TimeState(str, Enum):
     """State variable names for Time service."""
 
     DURATION = "Duration"
@@ -436,7 +432,7 @@ class TimeState(StrEnum):
     TRACK_COUNT = "TrackCount"
 
 
-class TransportState(StrEnum):
+class TransportState(str, Enum):
     """State variable names for Transport service."""
 
     CAN_PAUSE = "CanPause"
@@ -452,7 +448,7 @@ class TransportState(StrEnum):
     TRANSPORT_STATE = "TransportState"
 
 
-class TransportStateAllowedValues(StrEnum):
+class TransportStateAllowedValues(str, Enum):
     """Allowed values for Transport service."""
 
     BUFFERING = "Buffering"
@@ -462,7 +458,7 @@ class TransportStateAllowedValues(StrEnum):
     WAITING = "Waiting"
 
 
-class UpdateState(StrEnum):
+class UpdateState(str, Enum):
     """State variable names for Update service."""
 
     EXECUTOR_STATUS = "ExecutorStatus"
@@ -471,7 +467,7 @@ class UpdateState(StrEnum):
     SOFTWARE_STATUS = "SoftwareStatus"
 
 
-class VolumeState(StrEnum):
+class VolumeState(str, Enum):
     """State variable names for Volume service."""
 
     BALANCE = "Balance"
