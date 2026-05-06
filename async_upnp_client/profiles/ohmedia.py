@@ -1992,13 +1992,18 @@ class OhmDevice(UpnpProfileDevice):
         :param service_name: name of the service
         :param action_name: name of action to call
 
-        raise exception if neither service nor action are present
+        raise error if service, action or combination is bad
         """
 
-        service = self.get_service_by_name(service_name)
-        if service is None:
-            raise UpnpError(f"Missing service {service_name}")
-        return await service.async_call_action(action_name, **kwargs)
+        action = self._action(service_name, action_name)
+        if not action: # isolate cause of failure and raise appropriate error
+            service = self._service(service_name)
+            if service is None:
+                raise UpnpError(f"Bad service {service_name}")
+            raise UpnpError(f"Bad action {action_name} for service {service_name}")
+
+        result = await action.async_call(**kwargs)
+        return result
 
     def get_state_variable_value(self, service_name: str, state_variable_name: str) -> Any | None:
         """Return value of state variable.
