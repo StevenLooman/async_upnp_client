@@ -1837,729 +1837,89 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
 
-    # region Credentials has action
+    # region some has_* functions purely for convenience
+    # use "self._action(<service>, <action>) is not None" for other combinations
+    # alternatively check service and action independently
+    # using <device>.has_service() and <service>.has_action()
     @property
-    def has_credentials_set(self) -> bool:
-        """Service Credentials has action Set."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.SET)
-
-    @property
-    def has_credentials_clear(self) -> bool:
-        """Service Credentials has action Clear."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.CLEAR)
-
-    @property
-    def has_credentials_set_enabled(self) -> bool:
-        """Service Credentials has action SetEnabled."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.SET_ENABLED)
-
-    @property
-    def has_credentials_get(self) -> bool:
-        """Service Credentials has action Get."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.GET)
-
-    @property
-    def has_credentials_login(self) -> bool:
-        """Service Credentials has action Login."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.LOGIN)
-
-    @property
-    def has_credentials_re_login(self) -> bool:
-        """Service Credentials has action ReLogin."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.RE_LOGIN)
-
-    @property
-    def has_credentials_get_ids(self) -> bool:
-        """Service Credentials has action GetIds."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.GET_IDS)
-
-    @property
-    def has_credentials_get_public_key(self) -> bool:
-        """Service Credentials has action GetPublicKey."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.GET_PUBLIC_KEY)
-
-    @property
-    def has_credentials_get_sequence_number(self) -> bool:
-        """Service Credentials has action GetSequenceNumber."""
-        return self.has_service_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
-
-    # endregion
-
-    # region Info has action
-    @property
-    def has_info_counters(self) -> bool:
-        """Service Info has action Counters."""
-        return self.has_service_action(Service.INFO, Info.COUNTERS)
-
-    @property
-    def has_info_track(self) -> bool:
-        """Service Info has action Track."""
-        return self.has_service_action(Service.INFO, Info.TRACK)
-
-    @property
-    def has_info_details(self) -> bool:
-        """Service Info has action Details."""
-        return self.has_service_action(Service.INFO, Info.DETAILS)
-
-    @property
-    def has_info_metatext(self) -> bool:
-        """Service Info has action Metatext."""
-        return self.has_service_action(Service.INFO, Info.METATEXT)
-
-    # endregion
-
-    # region Pins has action
-    @property
-    def has_pins_get_device_max(self) -> bool:
-        """Service Pins has action GetDeviceMax."""
-        return self.has_service_action(Service.PINS, Pins.GET_DEVICE_MAX)
-
-    @property
-    def has_pins_get_account_max(self) -> bool:
-        """Service Pins has action GetAccountMax."""
-        return self.has_service_action(Service.PINS, Pins.GET_ACCOUNT_MAX)
-
-    @property
-    def has_pins_get_modes(self) -> bool:
-        """Service Pins has action GetModes."""
-        return self.has_service_action(Service.PINS, Pins.GET_MODES)
-
-    @property
-    def has_pins_get_id_array(self) -> bool:
-        """Service Pins has action GetIdArray."""
-        return self.has_service_action(Service.PINS, Pins.GET_ID_ARRAY)
-
-    @property
-    def has_pins_read_list(self) -> bool:
-        """Service Pins has action ReadList."""
-        return self.has_service_action(Service.PINS, Pins.READ_LIST)
-
-    @property
-    def has_pins_invoke_id(self) -> bool:
-        """Service Pins has action InvokeId."""
-        return self.has_service_action(Service.PINS, Pins.INVOKE_ID)
-
-    @property
-    def has_pins_invoke_index(self) -> bool:
-        """Service Pins has action InvokeIndex."""
-        return self.has_service_action(Service.PINS, Pins.INVOKE_INDEX)
-
-    @property
-    def has_pins_invoke_uri(self) -> bool:
-        """Service Pins has action InvokeUri."""
-        return self.has_service_action(Service.PINS, Pins.INVOKE_URI)
-
-    @property
-    def has_pins_set_device(self) -> bool:
-        """Service Pins has action SetDevice."""
-        return self.has_service_action(Service.PINS, Pins.SET_DEVICE)
-
-    @property
-    def has_pins_set_account(self) -> bool:
-        """Service Pins has action SetAccount."""
-        return self.has_service_action(Service.PINS, Pins.SET_ACCOUNT)
-
-    @property
-    def has_pins_clear(self) -> bool:
-        """Service Pins has action Clear."""
-        return self.has_service_action(Service.PINS, Pins.CLEAR)
-
-    @property
-    def has_pins_swap(self) -> bool:
-        """Service Pins has action Swap."""
-        return self.has_service_action(Service.PINS, Pins.SWAP)
-
-    # endregion
-
-    # region Playlist has action
-    @property
-    def has_playlist_play(self) -> bool:
-        """Service Playlist has action Play."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.PLAY)
-
-    @property
-    def has_playlist_pause(self) -> bool:
-        """Service Playlist has action Pause."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.PAUSE)
-
-    @property
-    def has_playlist_stop(self) -> bool:
-        """Service Playlist has action Stop."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.STOP)
-
-    @property
-    def has_playlist_next(self) -> bool:
-        """Service Playlist has action Next."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.NEXT)
-
-    @property
-    def has_playlist_previous(self) -> bool:
-        """Service Playlist has action Previous."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.PREVIOUS)
-
-    @property
-    def has_playlist_set_repeat(self) -> bool:
-        """Service Playlist has action SetRepeat."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SET_REPEAT)
-
-    @property
-    def has_playlist_repeat(self) -> bool:
-        """Service Playlist has action Repeat."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.REPEAT)
-
-    @property
-    def has_playlist_set_shuffle(self) -> bool:
-        """Service Playlist has action SetShuffle."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SET_SHUFFLE)
-
-    @property
-    def has_playlist_shuffle(self) -> bool:
-        """Service Playlist has action Shuffle."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SHUFFLE)
-
-    @property
-    def has_playlist_seek_second_absolute(self) -> bool:
-        """Service Playlist has action SeekSecondAbsolute."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_SECOND_ABSOLUTE)
-
-    @property
-    def has_playlist_seek_second_relative(self) -> bool:
-        """Service Playlist has action SeekSecondRelative."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_SECOND_RELATIVE)
-
-    @property
-    def has_playlist_seek_id(self) -> bool:
-        """Service Playlist has action SeekId."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_ID)
-
-    @property
-    def has_playlist_seek_index(self) -> bool:
-        """Service Playlist has action SeekIndex."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.SEEK_INDEX)
-
-    @property
-    def has_playlist_transport_state(self) -> bool:
-        """Service Playlist has action TransportState."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.TRANSPORT_STATE)
-
-    @property
-    def has_playlist_id(self) -> bool:
-        """Service Playlist has action Id."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.ID)
-
-    @property
-    def has_playlist_read(self) -> bool:
-        """Service Playlist has action Read."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.READ)
-
-    @property
-    def has_playlist_read_list(self) -> bool:
-        """Service Playlist has action ReadList."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.READ_LIST)
-
-    @property
-    def has_playlist_insert(self) -> bool:
-        """Service Playlist has action Insert."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.INSERT)
-
-    @property
-    def has_playlist_delete_id(self) -> bool:
-        """Service Playlist has action DeleteId."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.DELETE_ID)
-
-    @property
-    def has_playlist_delete_all(self) -> bool:
-        """Service Playlist has action DeleteAll."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.DELETE_ALL)
-
-    @property
-    def has_playlist_tracks_max(self) -> bool:
-        """Service Playlist has action TracksMax."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.TRACKS_MAX)
-
-    @property
-    def has_playlist_id_array(self) -> bool:
-        """Service Playlist has action IdArray."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.ID_ARRAY)
-
-    @property
-    def has_playlist_id_array_changed(self) -> bool:
-        """Service Playlist has action IdArrayChanged."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.ID_ARRAY_CHANGED)
-
-    @property
-    def has_playlist_protocol_info(self) -> bool:
-        """Service Playlist has action ProtocolInfo."""
-        return self.has_service_action(Service.PLAYLIST, Playlist.PROTOCOL_INFO)
-
-    # endregion
-
-    # region Product has action
-    @property
-    def has_product_manufacturer(self) -> bool:
-        """Service Product has action Manufacturer."""
-        return self.has_service_action(Service.PRODUCT, Product.MANUFACTURER)
-
-    @property
-    def has_product_model(self) -> bool:
-        """Service Product has action Model."""
-        return self.has_service_action(Service.PRODUCT, Product.MODEL)
-
-    @property
-    def has_product(self) -> bool:
-        """Service Product has action Product."""
-        return self.has_service_action(Service.PRODUCT, Product.PRODUCT)
-
-    @property
-    def has_product_standby(self) -> bool:
-        """Service Product has action Standby."""
-        return self.has_service_action(Service.PRODUCT, Product.STANDBY)
+    def has_product_set_source_index(self) -> bool:
+        """Service Product has action SetSourceIndex."""
+        return self._action(Service.PRODUCT, Product.SET_SOURCE_INDEX) is not None
 
     @property
     def has_product_set_standby(self) -> bool:
         """Service Product has action SetStandby."""
-        return self.has_service_action(Service.PRODUCT, Product.SET_STANDBY)
+        return self._action(Service.PRODUCT, Product.SET_STANDBY) is not None
 
     @property
-    def has_product_source_count(self) -> bool:
-        """Service Product has action SourceCount."""
-        return self.has_service_action(Service.PRODUCT, Product.SOURCE_COUNT)
-
-    @property
-    def has_product_source_xml(self) -> bool:
-        """Service Product has action SourceXml."""
-        return self.has_service_action(Service.PRODUCT, Product.SOURCE_XML)
-
-    @property
-    def has_product_source_index(self) -> bool:
-        """Service Product has action SourceIndex."""
-        return self.has_service_action(Service.PRODUCT, Product.SOURCE_INDEX)
-
-    @property
-    def has_product_set_source_index(self) -> bool:
-        """Service Product has action SetSourceIndex."""
-        return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_INDEX)
-
-    @property
-    def has_product_set_source_by_system_name(self) -> bool:
-        """Service Product has action SetSourceBySystemName."""
-        return self.has_service_action(Service.PRODUCT, Product.SET_SOURCE_BY_SYSTEM_NAME)
-
-    @property
-    def has_product_source(self) -> bool:
-        """Service Product has action Source."""
-        return self.has_service_action(Service.PRODUCT, Product.SOURCE)
-
-    @property
-    def has_product_attributes(self) -> bool:
-        """Service Product has action Attributes."""
-        return self.has_service_action(Service.PRODUCT, Product.ATTRIBUTES)
-
-    @property
-    def has_product_source_xml_change_count(self) -> bool:
-        """Service Product has action SourceXmlChangeCount."""
-        return self.has_service_action(Service.PRODUCT, Product.SOURCE_XML_CHANGE_COUNT)
-
-    # endregion
-
-    # region Radio has action
-    @property
-    def has_radio_refresh_presets(self) -> bool:
-        """Service Radio has action RefreshPresets."""
-        return self.has_service_action(Service.RADIO, Radio.REFRESH_PRESETS)
-
-    @property
-    def has_radio_play(self) -> bool:
-        """Service Radio has action Play."""
-        return self.has_service_action(Service.RADIO, Radio.PLAY)
-
-    @property
-    def has_radio_pause(self) -> bool:
-        """Service Radio has action Pause."""
-        return self.has_service_action(Service.RADIO, Radio.PAUSE)
-
-    @property
-    def has_radio_stop(self) -> bool:
-        """Service Radio has action Stop."""
-        return self.has_service_action(Service.RADIO, Radio.STOP)
-
-    @property
-    def has_radio_seek_second_absolute(self) -> bool:
-        """Service Radio has action SeekSecondAbsolute."""
-        return self.has_service_action(Service.RADIO, Radio.SEEK_SECOND_ABSOLUTE)
-
-    @property
-    def has_radio_seek_second_relative(self) -> bool:
-        """Service Radio has action SeekSecondRelative."""
-        return self.has_service_action(Service.RADIO, Radio.SEEK_SECOND_RELATIVE)
-
-    @property
-    def has_radio_channel(self) -> bool:
-        """Service Radio has action Channel."""
-        return self.has_service_action(Service.RADIO, Radio.CHANNEL)
-
-    @property
-    def has_radio_set_channel(self) -> bool:
-        """Service Radio has action SetChannel."""
-        return self.has_service_action(Service.RADIO, Radio.SET_CHANNEL)
-
-    @property
-    def has_radio_transport_state(self) -> bool:
-        """Service Radio has action TransportState."""
-        return self.has_service_action(Service.RADIO, Radio.TRANSPORT_STATE)
-
-    @property
-    def has_radio_id(self) -> bool:
-        """Service Radio has action Id."""
-        return self.has_service_action(Service.RADIO, Radio.ID)
-
-    @property
-    def has_radio_set_id(self) -> bool:
-        """Service Radio has action SetId."""
-        return self.has_service_action(Service.RADIO, Radio.SET_ID)
-
-    @property
-    def has_radio_read(self) -> bool:
-        """Service Radio has action Read."""
-        return self.has_service_action(Service.RADIO, Radio.READ)
-
-    @property
-    def has_radio_read_list(self) -> bool:
-        """Service Radio has action ReadList."""
-        return self.has_service_action(Service.RADIO, Radio.READ_LIST)
-
-    @property
-    def has_radio_id_array(self) -> bool:
-        """Service Radio has action IdArray."""
-        return self.has_service_action(Service.RADIO, Radio.ID_ARRAY)
-
-    @property
-    def has_radio_id_array_changed(self) -> bool:
-        """Service Radio has action IdArrayChanged."""
-        return self.has_service_action(Service.RADIO, Radio.ID_ARRAY_CHANGED)
-
-    @property
-    def has_radio_channels_max(self) -> bool:
-        """Service Radio has action ChannelsMax."""
-        return self.has_service_action(Service.RADIO, Radio.CHANNELS_MAX)
-
-    @property
-    def has_radio_protocol_info(self) -> bool:
-        """Service Radio has action ProtocolInfo."""
-        return self.has_service_action(Service.RADIO, Radio.PROTOCOL_INFO)
-
-    # endregion
-
-    # region Receiver has action
-    @property
-    def has_receiver_play(self) -> bool:
-        """Service Receiver has action Play."""
-        return self.has_service_action(Service.RECEIVER, Receiver.PLAY)
-
-    @property
-    def has_receiver_stop(self) -> bool:
-        """Service Receiver has action Stop."""
-        return self.has_service_action(Service.RECEIVER, Receiver.STOP)
-
-    @property
-    def has_receiver_set_sender(self) -> bool:
-        """Service Receiver has action SetSender."""
-        return self.has_service_action(Service.RECEIVER, Receiver.SET_SENDER)
-
-    @property
-    def has_receiver_sender(self) -> bool:
-        """Service Receiver has action Sender."""
-        return self.has_service_action(Service.RECEIVER, Receiver.SENDER)
-
-    @property
-    def has_receiver_protocol_info(self) -> bool:
-        """Service Receiver has action ProtocolInfo."""
-        return self.has_service_action(Service.RECEIVER, Receiver.PROTOCOL_INFO)
-
-    @property
-    def has_receiver_transport_state(self) -> bool:
-        """Service Receiver has action TransportState."""
-        return self.has_service_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
-
-    # endregion
-
-    # region Sender has action
-    @property
-    def has_sender_presentation_url(self) -> bool:
-        """Service Sender has action PresentationUrl."""
-        return self.has_service_action(Service.SENDER, Sender.PRESENTATION_URL)
-
-    @property
-    def has_sender_metadata(self) -> bool:
-        """Service Sender has action Metadata."""
-        return self.has_service_action(Service.SENDER, Sender.METADATA)
-
-    @property
-    def has_sender_audio(self) -> bool:
-        """Service Sender has action Audio."""
-        return self.has_service_action(Service.SENDER, Sender.AUDIO)
-
-    @property
-    def has_sender_status(self) -> bool:
-        """Service Sender has action Status."""
-        return self.has_service_action(Service.SENDER, Sender.STATUS)
-
-    @property
-    def has_sender_status2(self) -> bool:
-        """Service Sender has action Status2."""
-        return self.has_service_action(Service.SENDER, Sender.STATUS2)
-
-    @property
-    def has_sender_enabled(self) -> bool:
-        """Service Sender has action Enabled."""
-        return self.has_service_action(Service.SENDER, Sender.ENABLED)
-
-    @property
-    def has_sender_attributes(self) -> bool:
-        """Service Sender has action Attributes."""
-        return self.has_service_action(Service.SENDER, Sender.ATTRIBUTES)
-
-    # endregion
-
-    # region Time has action
-    @property
-    def has_time(self) -> bool:
-        """Service Time has action Time."""
-        return self.has_service_action(Service.TIME, Time.TIME)
-
-    # endregion
-
-    # region Transport has action
-    @property
-    def has_transport_play_as(self) -> bool:
-        """Service Transport has action PlayAs."""
-        return self.has_service_action(Service.TRANSPORT, Transport.PLAY_AS)
+    def has_product_standby(self) -> bool:
+        """Service Product has action Standby."""
+        return self._action(Service.PRODUCT, Product.STANDBY) is not None
 
     @property
     def has_transport_play(self) -> bool:
         """Service Transport has action Play."""
-        return self.has_service_action(Service.TRANSPORT, Transport.PLAY)
+        return self._action(Service.TRANSPORT, Transport.PLAY) is not None
 
     @property
     def has_transport_pause(self) -> bool:
         """Service Transport has action Pause."""
-        return self.has_service_action(Service.TRANSPORT, Transport.PAUSE)
+        return self._action(Service.TRANSPORT, Transport.PAUSE) is not None
 
     @property
     def has_transport_stop(self) -> bool:
         """Service Transport has action Stop."""
-        return self.has_service_action(Service.TRANSPORT, Transport.STOP)
+        return self._action(Service.TRANSPORT, Transport.STOP) is not None
 
     @property
     def has_transport_skip_next(self) -> bool:
         """Service Transport has action SkipNext."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SKIP_NEXT)
+        return self._action(Service.TRANSPORT, Transport.SKIP_NEXT) is not None
 
     @property
     def has_transport_skip_previous(self) -> bool:
         """Service Transport has action SkipPrevious."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
+        return self._action(Service.TRANSPORT, Transport.SKIP_PREVIOUS) is not None
 
     @property
     def has_transport_set_repeat(self) -> bool:
         """Service Transport has action SetRepeat."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SET_REPEAT)
+        return self._action(Service.TRANSPORT, Transport.SET_REPEAT) is not None
 
     @property
     def has_transport_set_shuffle(self) -> bool:
         """Service Transport has action SetShuffle."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SET_SHUFFLE)
+        return self._action(Service.TRANSPORT, Transport.SET_SHUFFLE) is not None
 
     @property
     def has_transport_seek_second_absolute(self) -> bool:
         """Service Transport has action SeekSecondAbsolute."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SEEK_SECOND_ABSOLUTE)
+        return self._action(Service.TRANSPORT, Transport.SEEK_SECOND_ABSOLUTE) is not None
 
     @property
     def has_transport_seek_second_relative(self) -> bool:
         """Service Transport has action SeekSecondRelative."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SEEK_SECOND_RELATIVE)
-
-    @property
-    def has_transport_state(self) -> bool:
-        """Service Transport has action TransportState."""
-        return self.has_service_action(Service.TRANSPORT, Transport.TRANSPORT_STATE)
-
-    @property
-    def has_transport_modes(self) -> bool:
-        """Service Transport has action Modes."""
-        return self.has_service_action(Service.TRANSPORT, Transport.MODES)
-
-    @property
-    def has_transport_mode_info(self) -> bool:
-        """Service Transport has action ModeInfo."""
-        return self.has_service_action(Service.TRANSPORT, Transport.MODE_INFO)
-
-    @property
-    def has_transport_stream_info(self) -> bool:
-        """Service Transport has action StreamInfo."""
-        return self.has_service_action(Service.TRANSPORT, Transport.STREAM_INFO)
-
-    @property
-    def has_transport_stream_id(self) -> bool:
-        """Service Transport has action StreamId."""
-        return self.has_service_action(Service.TRANSPORT, Transport.STREAM_ID)
-
-    @property
-    def has_transport_repeat(self) -> bool:
-        """Service Transport has action Repeat."""
-        return self.has_service_action(Service.TRANSPORT, Transport.REPEAT)
-
-    @property
-    def has_transport_shuffle(self) -> bool:
-        """Service Transport has action Shuffle."""
-        return self.has_service_action(Service.TRANSPORT, Transport.SHUFFLE)
-
-    # endregion
-
-    # region Update has action
-    @property
-    def has_update_get_software_status(self) -> bool:
-        """Service Update has action GetSoftwareStatus."""
-        return self.has_service_action(Service.UPDATE, Update.GET_SOFTWARE_STATUS)
-
-    @property
-    def has_update_apply(self) -> bool:
-        """Service Update has action Apply."""
-        return self.has_service_action(Service.UPDATE, Update.APPLY)
-
-    @property
-    def has_update_apply2(self) -> bool:
-        """Service Update has action Apply2."""
-        return self.has_service_action(Service.UPDATE, Update.APPLY2)
-
-    @property
-    def has_update_check_now(self) -> bool:
-        """Service Update has action CheckNow."""
-        return self.has_service_action(Service.UPDATE, Update.CHECK_NOW)
-
-    # endregion
-
-    # region Volume has action
-    @property
-    def has_volume_characteristics(self) -> bool:
-        """Service Volume has action Characteristics."""
-        return self.has_service_action(Service.VOLUME, Volume.CHARACTERISTICS)
-
-    @property
-    def has_volume_set(self) -> bool:
-        """Service Volume has action SetVolume."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_VOLUME)
-
-    @property
-    def has_volume_inc(self) -> bool:
-        """Service Volume has action VolumeInc."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME_INC)
-
-    @property
-    def has_volume_dec(self) -> bool:
-        """Service Volume has action VolumeDec."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME_DEC)
-
-    @property
-    def has_volume_set_no_unmute(self) -> bool:
-        """Service Volume has action SetVolumeNoUnmute."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_VOLUME_NO_UNMUTE)
-
-    @property
-    def has_volume_inc_no_unmute(self) -> bool:
-        """Service Volume has action VolumeIncNoUnmute."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME_INC_NO_UNMUTE)
-
-    @property
-    def has_volume_dec_no_unmute(self) -> bool:
-        """Service Volume has action VolumeDecNoUnmute."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME_DEC_NO_UNMUTE)
+        return self._action(Service.TRANSPORT, Transport.SEEK_SECOND_RELATIVE) is not None
 
     @property
     def has_volume(self) -> bool:
         """Service Volume has action Volume."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME)
+        return self._action(Service.VOLUME, Volume.VOLUME) is not None
 
     @property
-    def has_volume_set_balance(self) -> bool:
-        """Service Volume has action SetBalance."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_BALANCE)
-
-    @property
-    def has_volume_balance_inc(self) -> bool:
-        """Service Volume has action BalanceInc."""
-        return self.has_service_action(Service.VOLUME, Volume.BALANCE_INC)
-
-    @property
-    def has_volume_balance_dec(self) -> bool:
-        """Service Volume has action BalanceDec."""
-        return self.has_service_action(Service.VOLUME, Volume.BALANCE_DEC)
-
-    @property
-    def has_volume_balance(self) -> bool:
-        """Service Volume has action Balance."""
-        return self.has_service_action(Service.VOLUME, Volume.BALANCE)
-
-    @property
-    def has_volume_set_fade(self) -> bool:
-        """Service Volume has action SetFade."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_FADE)
-
-    @property
-    def has_volume_fade_inc(self) -> bool:
-        """Service Volume has action FadeInc."""
-        return self.has_service_action(Service.VOLUME, Volume.FADE_INC)
-
-    @property
-    def has_volume_fade_dec(self) -> bool:
-        """Service Volume has action FadeDec."""
-        return self.has_service_action(Service.VOLUME, Volume.FADE_DEC)
-
-    @property
-    def has_volume_fade(self) -> bool:
-        """Service Volume has action Fade."""
-        return self.has_service_action(Service.VOLUME, Volume.FADE)
+    def has_volume_set(self) -> bool:
+        """Service Volume has action SetVolume."""
+        return self._action(Service.VOLUME, Volume.SET_VOLUME) is not None
 
     @property
     def has_volume_set_mute(self) -> bool:
         """Service Volume has action SetMute."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_MUTE)
+        return self._action(Service.VOLUME, Volume.SET_MUTE) is not None
 
     @property
     def has_volume_mute(self) -> bool:
         """Service Volume has action Mute."""
-        return self.has_service_action(Service.VOLUME, Volume.MUTE)
-
-    @property
-    def has_volume_limit(self) -> bool:
-        """Service Volume has action VolumeLimit."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME_LIMIT)
-
-    @property
-    def has_volume_unity_gain(self) -> bool:
-        """Service Volume has action UnityGain."""
-        return self.has_service_action(Service.VOLUME, Volume.UNITY_GAIN)
-
-    @property
-    def has_volume_offset(self) -> bool:
-        """Service Volume has action VolumeOffset."""
-        return self.has_service_action(Service.VOLUME, Volume.VOLUME_OFFSET)
-
-    @property
-    def has_volume_set_offset(self) -> bool:
-        """Service Volume has action SetVolumeOffset."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_VOLUME_OFFSET)
-
-    @property
-    def has_volume_trim(self) -> bool:
-        """Service Volume has action Trim."""
-        return self.has_service_action(Service.VOLUME, Volume.TRIM)
-
-    @property
-    def has_volume_set_trim(self) -> bool:
-        """Service Volume has action SetTrim."""
-        return self.has_service_action(Service.VOLUME, Volume.SET_TRIM)
+        return self._action(Service.VOLUME, Volume.MUTE) is not None
 
     # endregion
 
