@@ -3,20 +3,19 @@
 # pylint: disable=protected-access,line-too-long
 
 import os
-import sys
 from copy import copy
 from typing import Mapping, Tuple
 
 import pytest
 from multidict import CIMultiDict
 
-from async_upnp_client.client import UpnpService
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
-from async_upnp_client.exceptions import UpnpActionResponseError
-from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _is_not_explicitly_false, _list_to_string
+from async_upnp_client.exceptions import UpnpActionResponseError, UpnpError
+from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _list_to_string
 
 from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
+
 
 def read_file(filename: str) -> str:
     """Read file."""
@@ -42,6 +41,16 @@ RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
         {},
         read_file("device.xml"),
     ),
+    ("GET", "http://ohmedia:1234/device_no_volume.xml"): HttpResponse(
+        200,
+        {},
+        read_file("device_no_volume.xml"),
+    ),
+    ("GET", "http://ohmedia:1234/device_no_standby.xml"): HttpResponse(
+        200,
+        {},
+        read_file("device_no_standby.xml"),
+    ),
     (
         "GET",
         "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-ConfigApp-1/service.xml",
@@ -57,6 +66,14 @@ RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
         200,
         {},
         read_file("Product4.xml"),
+    ),
+    (
+        "GET",
+        "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_no_standby.xml",
+    ): HttpResponse(
+        200,
+        {},
+        read_file("Product4_no_standby.xml"),
     ),
     (
         "GET",
@@ -248,7 +265,7 @@ async def test_async_call_action_bad_service() -> None:
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
     # raises AttributeError
-    with pytest.raises(Exception):
+    with pytest.raises(UpnpError):
         await profile._async_call_action("NoService", "Action")
 
 
@@ -260,7 +277,7 @@ async def test_async_call_action_bad_action() -> None:
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
     # raises KeyError
-    with pytest.raises(Exception):
+    with pytest.raises(UpnpError):
         await profile._async_call_action("Volume", "Action")
 
 
@@ -350,39 +367,45 @@ async def test_sources_valid_input() -> None:
 
 
 @pytest.mark.asyncio
-async def test_has_product_source_xml() -> None:
-    """Test has_product_model returns True when product_source_xml is present."""
+async def test_has_product_standby() -> None:
+    """Test has_product_standby returns True when service Product and action Standby are present."""
 
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
-    assert profile.has_product_model
+    assert profile.has_product_standby
 
 
 @pytest.mark.asyncio
-async def test_has_sender_enabled_when_service_not_present() -> None:
-    """Test has_sender_enabled returns False when service not present."""
+async def test_has_volume_when_service_not_present() -> None:
+    """Test has_volume returns False when Volume service is not present.
 
-    requester = UpnpTestRequester(RESPONSE_MAP)
-    factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
-    profile = OhmDevice(device, event_handler=None)
-    assert not profile.has_sender_enabled
-
-
-@pytest.mark.asyncio
-async def test_has_product_attributes_when_action_not_present() -> None:
-    """Test has_product_attributes returns False when action is not present.
-
-    Product4.xml fixture modified so that Attributes action is not present
+    device_no_volume.xml modified so that no Volume service is advertised
     """
 
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    device = await factory.async_create_device("http://ohmedia:1234/device_no_volume.xml")
     profile = OhmDevice(device, event_handler=None)
-    assert not profile.has_product_attributes
+
+    assert not profile.has_volume
+
+
+@pytest.mark.asyncio
+async def test_has_product_standby_when_action_not_present() -> None:
+    """Test has_product_standby returns False when action is not present.
+
+    device_no_standby.xml fixture modified to use Product4_no_standby.xml for Product4 service.xml
+    Product4_no_standby.xml fixture modified so that Standby action is not present
+    """
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_no_standby.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    assert not profile.has_product_standby
 
 
 @pytest.mark.asyncio
@@ -400,32 +423,6 @@ async def test_retrieve_state_variable() -> None:
     state_var.value = 12  # could be set by polling or subscribing
 
     assert profile.product_source_count == 12
-
-
-@pytest.mark.asyncio
-async def test_get_service_by_name() -> None:
-    """Test service can be obtained from name."""
-
-    requester = UpnpTestRequester(RESPONSE_MAP)
-    factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
-    profile = OhmDevice(device, event_handler=None)
-    svc = profile.get_service_by_name("Product")
-    assert isinstance(svc, UpnpService)
-    assert svc.service_type == "urn:av-openhome-org:service:Product:4"
-
-
-@pytest.mark.asyncio
-async def test_has_service_action() -> None:
-    """Test service has action only when both service and action exist."""
-
-    requester = UpnpTestRequester(RESPONSE_MAP)
-    factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
-    profile = OhmDevice(device, event_handler=None)
-    assert profile.has_service_action("Product", "SourceCount")
-    assert not profile.has_service_action("ServiceDoesNotExist", "SourceCount")
-    assert not profile.has_service_action("Product", "ActionDoesNotExist")
 
 
 async def test_get_actions_with_state_variables() -> None:
