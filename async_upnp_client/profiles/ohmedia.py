@@ -1996,7 +1996,7 @@ class OhmDevice(UpnpProfileDevice):
         """
 
         action = self._action(service_name, action_name)
-        if not action: # isolate cause of failure and raise appropriate error
+        if not action:  # isolate cause of failure and raise appropriate error
             service = self._service(service_name)
             if service is None:
                 raise UpnpError(f"Bad service {service_name}")
