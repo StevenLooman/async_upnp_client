@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """async_upnp_client profile for Open Home Media players.
 
 This profile has many convenience methods for invoking an action from an Open Home service
@@ -6,18 +5,16 @@ Not all devices will offer all services and actions. If a service or action is n
 then a warning will be issued and no error or action will be taken
 """
 
-# pylint: disable=too-many-public-methods,disable=too-many-lines
+# pylint: disable=too-many-public-methods,too-many-lines
 import base64
 import binascii
 import logging
 import struct
-import sys
-from enum import Enum # py310 replace str, Enum with StrEnum when Python 3.10 becomes end-of-life
+from enum import Enum  # py310 replace str, Enum with StrEnum when Python 3.10 becomes end-of-life
 from typing import Any, Mapping, Sequence
 
 import defusedxml.ElementTree as DET
 
-from async_upnp_client.client import UpnpService
 from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 
@@ -173,7 +170,6 @@ class Product(str, Enum):
     SOURCE_XML = "SourceXml"
     SOURCE_INDEX = "SourceIndex"
     SET_SOURCE_INDEX = "SetSourceIndex"
-    SET_SOURCE_INDEX_BY_NAME = "SetSourceIndexByName"
     SET_SOURCE_BY_SYSTEM_NAME = "SetSourceBySystemName"
     SOURCE = "Source"
     ATTRIBUTES = "Attributes"
@@ -1529,9 +1525,9 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Product Service State Variables
     @property
-    def is_standby(self) -> str | None:
+    def is_standby(self) -> bool | None:
         """Get standby status."""
-        return self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY)
+        return bool(self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY))
 
     @property
     def product_room(self) -> str | None:
@@ -1800,11 +1796,6 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
     # region Update Service State Variables
-    @property
-    def software_status(self) -> dict | None:
-        """Return the software status."""
-        return self.get_state_variable_value(Service.UPDATE, UpdateState.SOFTWARE_STATUS)
-
     @property
     def update_software_status(self) -> str | None:
         """Return the value of the SoftwareStatus state variable."""
