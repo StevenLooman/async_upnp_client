@@ -1937,7 +1937,7 @@ class OhmDevice(UpnpProfileDevice):
             return int(index["Value"])
         return None
 
-    async def async_active_source_name(self) -> str | None:
+    async def async_active_source_name(self) -> str | bool | None:
         """Get the active source name."""
 
         index = await self.async_active_source_index()
