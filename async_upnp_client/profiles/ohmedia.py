@@ -560,7 +560,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.CREDENTIALS, Credentials.SET_ENABLED, Id=ident, Enabled=enabled)
 
-    async def async_credentials_get(self, ident: str) -> Mapping[str, Any] | None:
+    async def async_credentials_get(self, ident: str) -> Mapping[str, str | bool] | None:
         """Retrieve username, password, status and enabled state for a service.
 
         :param ident: the identifier for the service
@@ -587,33 +587,33 @@ class OhmDevice(UpnpProfileDevice):
             CurrentToken=currenttoken,
         )
 
-    async def async_credentials_get_ids(self) -> Mapping[str, Any] | None:
+    async def async_credentials_get_ids(self) -> Mapping[str, str] | None:
         """Return list of identifiers for services whose credentials can be set."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_IDS)
 
-    async def async_credentials_get_public_key(self) -> Mapping[str, Any] | None:
+    async def async_credentials_get_public_key(self) -> Mapping[str, str] | None:
         """Return RSA public key that must be used to encrypt any/all passwords."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_PUBLIC_KEY)
 
-    async def async_credentials_get_sequence_number(self) -> Mapping[str, Any] | None:
+    async def async_credentials_get_sequence_number(self) -> Mapping[str, int] | None:
         """Return Sequence Number."""
         return await self._async_call_action(Service.CREDENTIALS, Credentials.GET_SEQUENCE_NUMBER)
 
     # endregion
     # region Info Service actions
-    async def async_info_counters(self) -> Mapping[str, Any] | None:
+    async def async_info_counters(self) -> Mapping[str, int] | None:
         """Return the counters used to version Track, Details, and Metatext information."""
         return await self._async_call_action(Service.INFO, Info.COUNTERS)
 
-    async def async_info_track(self) -> Mapping[str, Any] | None:
+    async def async_info_track(self) -> Mapping[str, str] | None:
         """Return current track information concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.TRACK)
 
-    async def async_info_details(self) -> Mapping[str, Any] | None:
+    async def async_info_details(self) -> Mapping[str, int | bool | str] | None:
         """Return details concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.DETAILS)
 
-    async def async_info_metatext(self) -> Mapping[str, Any] | None:
+    async def async_info_metatext(self) -> Mapping[str, str] | None:
         """Return dynamic textual information concerning the current media."""
         return await self._async_call_action(Service.INFO, Info.METATEXT)
 
@@ -635,7 +635,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.PINS, Pins.GET_ACCOUNT_MAX)
 
-    async def async_pins_get_modes(self) -> Mapping[str, Any] | None:
+    async def async_pins_get_modes(self) -> Mapping[str, str] | None:
         """Return the value of the Modes state variable.
 
         :return: Modes
@@ -643,14 +643,14 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.PINS, Pins.GET_MODES)
 
-    async def async_pins_get_id_array(self) -> Mapping[str, Any] | None:
+    async def async_pins_get_id_array(self) -> Mapping[str, str] | None:
         """Get pins id array.
 
         :return: IdArray
         """
         return await self._async_call_action(Service.PINS, Pins.GET_ID_ARRAY)
 
-    async def async_pins_read_list(self, ids: str) -> Mapping[str, Any] | None:
+    async def async_pins_read_list(self, ids: str) -> Mapping[str, str] | None:
         """Get pins metadata.
 
         :param ids: string representation of integer array of ids of pins
@@ -789,7 +789,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.PLAYLIST, Playlist.SET_REPEAT, Value=value)
 
-    async def async_playlist_repeat(self) -> Mapping[str, Any] | None:
+    async def async_playlist_repeat(self) -> Mapping[str, bool] | None:
         """Return the value of the Repeat state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.REPEAT)
 
@@ -800,7 +800,7 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.PLAYLIST, Playlist.SET_SHUFFLE, Value=value)
 
-    async def async_playlist_shuffle(self) -> Mapping[str, Any] | None:
+    async def async_playlist_shuffle(self) -> Mapping[str, bool] | None:
         """Return the value of the Shuffle state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.SHUFFLE)
 
@@ -832,29 +832,29 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.PLAYLIST, Playlist.SEEK_INDEX, Value=value)
 
-    async def async_playlist_transport_state(self) -> Mapping[str, Any] | None:
+    async def async_playlist_transport_state(self) -> Mapping[str, str] | None:
         """Return the value of the TransportState state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.TRANSPORT_STATE)
 
-    async def async_playlist_id(self) -> Mapping[str, Any] | None:
+    async def async_playlist_id(self) -> Mapping[str, int] | None:
         """Return the value of the Id state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID)
 
-    async def async_playlist_read(self, ident: int) -> Mapping[str, Any] | None:
+    async def async_playlist_read(self, ident: int) -> Mapping[str, str] | None:
         """Return the uri and metadata for a given track id.
 
         :param ident: track identifier
         """
         return await self._async_call_action(Service.PLAYLIST, Playlist.READ, Id=ident)
 
-    async def async_playlist_read_list(self, idlist: str) -> Mapping[str, Any] | None:
+    async def async_playlist_read_list(self, idlist: str) -> Mapping[str, str] | None:
         """Return associated uri and metadata for a list of track ids.
 
         :param idlist: space separated list of track Ids
         """
         return await self._async_call_action(Service.PLAYLIST, Playlist.READ_LIST, IdList=idlist)
 
-    async def async_playlist_insert(self, afterid: int, uri: str, metadata: str) -> Mapping[str, Any] | None:
+    async def async_playlist_insert(self, afterid: int, uri: str, metadata: str) -> Mapping[str, int] | None:
         """Add the given uri and metadata as a new track to the playlist.
 
         :param afterid: insert track after this identifier; set to 0 to insert at start
@@ -880,47 +880,47 @@ class OhmDevice(UpnpProfileDevice):
         """Delete all tracks from the playlist."""
         await self._async_call_action(Service.PLAYLIST, Playlist.DELETE_ALL)
 
-    async def async_playlist_tracks_max(self) -> Mapping[str, Any] | None:
+    async def async_playlist_tracks_max(self) -> Mapping[str, int] | None:
         """Return the value of the TracksMax state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.TRACKS_MAX)
 
-    async def async_playlist_id_array(self) -> Mapping[str, Any] | None:
+    async def async_playlist_id_array(self) -> Mapping[str, str] | None:
         """Return the value of the IdArray and Token state variables."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID_ARRAY)
 
-    async def async_playlist_id_array_changed(self, token: int) -> Mapping[str, Any] | None:
+    async def async_playlist_id_array_changed(self, token: int) -> Mapping[str, bool] | None:
         """Check if the token has changed.
 
         :param token: value of token
         """
         return await self._async_call_action(Service.PLAYLIST, Playlist.ID_ARRAY_CHANGED, Token=token)
 
-    async def async_playlist_protocol_info(self) -> Mapping[str, Any] | None:
+    async def async_playlist_protocol_info(self) -> Mapping[str, str] | None:
         """Return the value of the ProtocolInfo state variable."""
         return await self._async_call_action(Service.PLAYLIST, Playlist.PROTOCOL_INFO)
 
     # endregion
     # region Product Service actions
 
-    async def async_product_attributes(self) -> Mapping[str, Any] | None:
+    async def async_product_attributes(self) -> Mapping[str, str] | None:
         """Return the value of the Attributes state variable."""
         return await self._async_call_action(Service.PRODUCT, Product.ATTRIBUTES)
 
-    async def async_product(self) -> Mapping[str, Any] | None:
+    async def async_product(self) -> Mapping[str, str] | None:
         """Return the values of the Product state variables.
 
         :return: ProductRoom, ProductName, ProductInfo, ProductUrl, ProductImageUri
         """
         return await self._async_call_action(Service.PRODUCT, Product.PRODUCT)
 
-    async def async_product_manufacturer(self) -> Mapping[str, Any] | None:
+    async def async_product_manufacturer(self) -> Mapping[str, str] | None:
         """Return the values of the Manufacturer state variables.
 
         :return: ManufacturerName, ManufacturerInfo, ManufacturerUrl, ManufacturerImageUri
         """
         return await self._async_call_action(Service.PRODUCT, Product.MANUFACTURER)
 
-    async def async_product_model(self) -> Mapping[str, Any] | None:
+    async def async_product_model(self) -> Mapping[str, str] | None:
         """Return the values of the Model state variables.
 
         :return: ModelName, ModelInfo, ModelUrl, ModelImageUri
@@ -935,11 +935,11 @@ class OhmDevice(UpnpProfileDevice):
         """Set the product to standby."""
         await self._async_call_action(Service.PRODUCT, Product.SET_STANDBY, Value=standby)
 
-    async def async_product_source_count(self) -> Mapping[str, Any] | None:
+    async def async_product_source_count(self) -> Mapping[str, int] | None:
         """Return the SourceCount state variable."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_COUNT)
 
-    async def async_product_source(self, index: int) -> Mapping[str, Any] | None:
+    async def async_product_source(self, index: int) -> Mapping[str, str | bool] | None:
         """Get the details of the source at index.
 
         :param index: the source index
@@ -952,21 +952,21 @@ class OhmDevice(UpnpProfileDevice):
         """Get the current source index."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_INDEX)
 
-    async def async_product_source_xml(self) -> Mapping[str, Any] | None:
+    async def async_product_source_xml(self) -> Mapping[str, str] | None:
         """Get the product source xml."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_XML)
 
-    async def async_product_source_xml_change_count(self) -> Mapping[str, Any] | None:
+    async def async_product_source_xml_change_count(self) -> Mapping[str, int] | None:
         """Get the product source xml change count."""
         return await self._async_call_action(Service.PRODUCT, Product.SOURCE_XML_CHANGE_COUNT)
 
-    async def async_product_standby(self) -> Mapping[str, Any] | None:
+    async def async_product_standby(self) -> Mapping[str, bool] | None:
         """Get the product standby status."""
         return await self._async_call_action(Service.PRODUCT, Product.STANDBY)
 
     # endregion
     # region Radio Service actions
-    async def async_radio_channel(self) -> Mapping[str, Any] | None:
+    async def async_radio_channel(self) -> Mapping[str, str] | None:
         """Return the values of the Uri and Metadata state variables for the Radio source."""
         return await self._async_call_action(Service.RADIO, Radio.CHANNEL)
 
@@ -991,11 +991,11 @@ class OhmDevice(UpnpProfileDevice):
         """Stop any currently playing radio stream."""
         await self._async_call_action(Service.RADIO, Radio.STOP)
 
-    async def async_radio_transport_state(self) -> Mapping[str, Any] | None:
+    async def async_radio_transport_state(self) -> Mapping[str, str] | None:
         """Return the value of the TransportState state variable."""
         return await self._async_call_action(Service.RADIO, Radio.TRANSPORT_STATE)
 
-    async def async_radio_id(self) -> Mapping[str, Any] | None:
+    async def async_radio_id(self) -> Mapping[str, int] | None:
         """Return the value of the Id state variable."""
         return await self._async_call_action(Service.RADIO, Radio.ID)
 
@@ -1007,36 +1007,36 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.RADIO, Radio.SET_ID, Value=value, Uri=uri)
 
-    async def async_radio_read(self, ident: int) -> Mapping[str, Any] | None:
+    async def async_radio_read(self, ident: int) -> Mapping[str, str] | None:
         """Given a channel preset Id, return its associated metadata.
 
         :param ident: the preset identifier
         """
         return await self._async_call_action(Service.RADIO, Radio.READ, Id=ident)
 
-    async def async_radio_read_list(self, idlist: str) -> Mapping[str, Any] | None:
+    async def async_radio_read_list(self, idlist: str) -> Mapping[str, str] | None:
         """Return associated metadata for a list of Ids.
 
         :param idlist: space separated list of Ids
         """
         return await self._async_call_action(Service.RADIO, Radio.READ_LIST, IdList=idlist)
 
-    async def async_radio_id_array(self) -> Mapping[str, Any] | None:
+    async def async_radio_id_array(self) -> Mapping[str, int | str] | None:
         """Return the value of the IdArray and Token state variables."""
         return await self._async_call_action(Service.RADIO, Radio.ID_ARRAY)
 
-    async def async_radio_id_array_changed(self, token: int) -> Mapping[str, Any] | None:
+    async def async_radio_id_array_changed(self, token: int) -> Mapping[str, bool] | None:
         """Get the state variables for IdArrayChanged.
 
         :param token: value of token
         """
         return await self._async_call_action(Service.RADIO, Radio.ID_ARRAY_CHANGED, Token=token)
 
-    async def async_radio_channels_max(self) -> Mapping[str, Any] | None:
+    async def async_radio_channels_max(self) -> Mapping[str, int] | None:
         """Return the value of the ChannelsMax state variable."""
         return await self._async_call_action(Service.RADIO, Radio.CHANNELS_MAX)
 
-    async def async_radio_protocol_info(self) -> Mapping[str, Any] | None:
+    async def async_radio_protocol_info(self) -> Mapping[str, str] | None:
         """Return the value of the ProtocolInfo state variable."""
         return await self._async_call_action(Service.RADIO, Radio.PROTOCOL_INFO)
 
@@ -1076,51 +1076,51 @@ class OhmDevice(UpnpProfileDevice):
         """
         await self._async_call_action(Service.RECEIVER, Receiver.SET_SENDER, Uri=uri, Metadata=metadata)
 
-    async def async_receiver_sender(self) -> Mapping[str, Any] | None:
+    async def async_receiver_sender(self) -> Mapping[str, str] | None:
         """Get the state variables for Sender."""
         return await self._async_call_action(Service.RECEIVER, Receiver.SENDER)
 
-    async def async_receiver_protocol_info(self) -> Mapping[str, Any] | None:
+    async def async_receiver_protocol_info(self) -> Mapping[str, str] | None:
         """Get the state variables for ProtocolInfo."""
         return await self._async_call_action(Service.RECEIVER, Receiver.PROTOCOL_INFO)
 
-    async def async_receiver_transport_state(self) -> Mapping[str, Any] | None:
+    async def async_receiver_transport_state(self) -> Mapping[str, str] | None:
         """Get the state variables for TransportState."""
         return await self._async_call_action(Service.RECEIVER, Receiver.TRANSPORT_STATE)
 
     # endregion
     # region Sender Service actions
-    async def async_sender_presentation_url(self) -> Mapping[str, Any] | None:
+    async def async_sender_presentation_url(self) -> Mapping[str, str] | None:
         """Return the value of the PresentationUrl state variable."""
         return await self._async_call_action(Service.SENDER, Sender.PRESENTATION_URL)
 
-    async def async_sender_metadata(self) -> Mapping[str, Any] | None:
+    async def async_sender_metadata(self) -> Mapping[str, str] | None:
         """Return the value of the Metadata state variable."""
         return await self._async_call_action(Service.SENDER, Sender.METADATA)
 
-    async def async_sender_audio(self) -> Mapping[str, Any] | None:
+    async def async_sender_audio(self) -> Mapping[str, bool] | None:
         """Return the value of the Audio state variable."""
         return await self._async_call_action(Service.SENDER, Sender.AUDIO)
 
-    async def async_sender_status(self) -> Mapping[str, Any] | None:
+    async def async_sender_status(self) -> Mapping[str, str] | None:
         """Return the value of the Status state variable."""
         return await self._async_call_action(Service.SENDER, Sender.STATUS)
 
-    async def async_sender_status2(self) -> Mapping[str, Any] | None:
+    async def async_sender_status2(self) -> Mapping[str, str] | None:
         """Return the value of the Status state variable."""
         return await self._async_call_action(Service.SENDER, Sender.STATUS2)
 
-    async def async_sender_enabled(self) -> Mapping[str, Any] | None:
+    async def async_sender_enabled(self) -> Mapping[str, bool] | None:
         """Is the device capable of acting as a Songcast sender."""
         return await self._async_call_action(Service.SENDER, Sender.ENABLED)
 
-    async def async_sender_attributes(self) -> Mapping[str, Any] | None:
+    async def async_sender_attributes(self) -> Mapping[str, str] | None:
         """Return the value of the Attributes state variable."""
         return await self._async_call_action(Service.SENDER, Sender.ATTRIBUTES)
 
     # endregion
     # region Time Service actions
-    async def async_time(self) -> Mapping[str, Any] | None:
+    async def async_time(self) -> Mapping[str, int] | None:
         """Report time information about progress through a track."""
         return await self._async_call_action(Service.TIME, Time.TIME)
 
@@ -1142,7 +1142,7 @@ class OhmDevice(UpnpProfileDevice):
         """Move to the previous track or stream."""
         await self._async_call_action(Service.TRANSPORT, Transport.SKIP_PREVIOUS)
 
-    async def async_transport_state(self) -> Mapping[str, Any] | None:
+    async def async_transport_state(self) -> Mapping[str, str] | None:
         """Return the current value of the TransportState state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.TRANSPORT_STATE)
 
@@ -1182,33 +1182,33 @@ class OhmDevice(UpnpProfileDevice):
             SecondRelative=secondrelative,
         )
 
-    async def async_transport_modes(self) -> Mapping[str, Any] | None:
+    async def async_transport_modes(self) -> Mapping[str, str] | None:
         """Return the value of the Modes state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.MODES)
 
-    async def async_transport_mode_info(self) -> Mapping[str, Any] | None:
+    async def async_transport_mode_info(self) -> Mapping[str, bool] | None:
         """Return the values of the ModeInfo state variables.
 
         :return: Mode, CanSkipNext, CanSkipPrev, CanRepeat, CanShuffle
         """
         return await self._async_call_action(Service.TRANSPORT, Transport.MODE_INFO)
 
-    async def async_transport_stream_info(self) -> Mapping[str, Any] | None:
+    async def async_transport_stream_info(self) -> Mapping[str, int | bool] | None:
         """Return the values of the StreamInfo state variables.
 
         :return: StreamId, Seekable, Pausable
         """
         return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_INFO)
 
-    async def async_transport_stream_id(self) -> Mapping[str, Any] | None:
+    async def async_transport_stream_id(self) -> Mapping[str, int] | None:
         """Return the current value of the StreamId state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_ID)
 
-    async def async_transport_repeat(self) -> Mapping[str, Any] | None:
+    async def async_transport_repeat(self) -> Mapping[str, bool] | None:
         """Return the current value of the Repeat state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.REPEAT)
 
-    async def async_transport_shuffle(self) -> Mapping[str, Any] | None:
+    async def async_transport_shuffle(self) -> Mapping[str, bool] | None:
         """Return the current value of the Shuffle state variable."""
         return await self._async_call_action(Service.TRANSPORT, Transport.SHUFFLE)
 
@@ -1234,7 +1234,7 @@ class OhmDevice(UpnpProfileDevice):
         """Check the current status of the software."""
         return await self._async_call_action(Service.UPDATE, Update.CHECK_NOW)
 
-    async def async_update_get_software_status(self) -> Mapping[str, Any] | None:
+    async def async_update_get_software_status(self) -> Mapping[str, str] | None:
         """Return the current status of the software."""
         return await self._async_call_action(Service.UPDATE, Update.GET_SOFTWARE_STATUS)
 
@@ -1270,15 +1270,15 @@ class OhmDevice(UpnpProfileDevice):
         await self._async_call_action(Service.VOLUME, Volume.VOLUME_DEC)
 
     # these actions return the values of state variables having been polled
-    async def async_volume(self) -> Mapping[str, Any] | None:
+    async def async_volume(self) -> Mapping[str, int] | None:
         """Return the value of the current volume level."""
         return await self._async_call_action(Service.VOLUME, Volume.VOLUME)
 
-    async def async_volume_mute(self) -> Mapping[str, Any] | None:
+    async def async_volume_mute(self) -> Mapping[str, bool] | None:
         """Return the value of the current volume mute state."""
         return await self._async_call_action(Service.VOLUME, Volume.MUTE)
 
-    async def async_volume_characteristics(self) -> Mapping[str, Any] | None:
+    async def async_volume_characteristics(self) -> Mapping[str, int] | None:
         """Return the value of the Characteristics state variables.
 
         :return: VolumeMax, VolumeUnity, VolumeSteps, VolumeMilliDbPerStep, BalanceMax, FadeMax
@@ -1315,7 +1315,7 @@ class OhmDevice(UpnpProfileDevice):
         """Decrease the balance level by one."""
         await self._async_call_action(Service.VOLUME, Volume.BALANCE_DEC)
 
-    async def async_volume_balance(self) -> Mapping[str, Any] | None:
+    async def async_volume_balance(self) -> Mapping[str, int] | None:
         """Return the value of the Balance state variable."""
         return await self._async_call_action(Service.VOLUME, Volume.BALANCE)
 
@@ -1334,19 +1334,19 @@ class OhmDevice(UpnpProfileDevice):
         """Decrease the value of Fade (front-rear) balance by one."""
         await self._async_call_action(Service.VOLUME, Volume.FADE_DEC)
 
-    async def async_volume_fade(self) -> Mapping[str, Any] | None:
+    async def async_volume_fade(self) -> Mapping[str, int] | None:
         """Return the value of the Fade state variable."""
         return await self._async_call_action(Service.VOLUME, Volume.FADE)
 
-    async def async_volume_limit(self) -> Mapping[str, Any] | None:
+    async def async_volume_limit(self) -> Mapping[str, int] | None:
         """Return value of the VolumeLimit state variable."""
         return await self._async_call_action(Service.VOLUME, Volume.VOLUME_LIMIT)
 
-    async def async_volume_unity_gain(self) -> Mapping[str, Any] | None:
+    async def async_volume_unity_gain(self) -> Mapping[str, bool] | None:
         """Return value of the UnityGain state variable."""
         return await self._async_call_action(Service.VOLUME, Volume.UNITY_GAIN)
 
-    async def async_volume_offset(self, channel: str) -> Mapping[str, Any] | None:
+    async def async_volume_offset(self, channel: str) -> Mapping[str, int] | None:
         """Return value of the VolumeOffset state variable.
 
         :param channel: the channel for which to return the volume offset
@@ -1366,7 +1366,7 @@ class OhmDevice(UpnpProfileDevice):
             VolumeOffsetBinaryMilliDb=volumeoffsetbinarymillidb,
         )
 
-    async def async_volume_trim(self, channel: str) -> Mapping[str, Any] | None:
+    async def async_volume_trim(self, channel: str) -> Mapping[str, int] | None:
         """Get the state variables for Trim.
 
         :param channel: the device channel to report on
