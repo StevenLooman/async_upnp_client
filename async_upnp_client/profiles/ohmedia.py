@@ -1994,15 +1994,40 @@ class OhmDevice(UpnpProfileDevice):
 
     async def async_play(self) -> None:
         """Play."""
-        await self.async_transport_play()
+
+        if self.has_transport_stop:
+            await self.async_transport_play()
+            return
+        active_source_type = await self.async_active_source_type()
+        if active_source_type == ProductSourceType.RADIO:
+            await self.async_radio_play()
+            return
+        await self.async_playlist_play()
 
     async def async_stop(self) -> None:
         """Stop."""
-        await self.async_transport_stop()
+        
+        if self.has_transport_stop and not (self.transport_state == TransportStateAllowedValues.STOPPED):
+            await self.async_transport_stop()
+            return
+        active_source_type = await self.async_active_source_type()
+        if active_source_type == ProductSourceType.RADIO:
+            await self.async_radio_stop()
+            return
+        await self.async_playlist_stop()
 
     async def async_pause(self) -> None:
         """Pause."""
-        await self.async_transport_pause()
+
+        if self.has_transport_pause:
+            await self.async_transport_pause()
+            return
+        active_source_type = await self.async_active_source_type()
+        if active_source_type == ProductSourceType.RADIO:
+            await self.async_radio_pause()
+            return
+        await self.async_playlist_pause()
+
     def has_source_type(self, source_type: str) -> bool:
         """Return True if profile has source type.
 
