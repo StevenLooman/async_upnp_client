@@ -620,7 +620,7 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Pins Service actions
     async def async_pins_get_device_max(self) -> Mapping[str, int] | None:
-        """Return the the value of the DeviceMax state variable.
+        """Return the value of the DeviceMax state variable.
 
         :return: DeviceMax
         DeviceMax is the maximum number of device-specific pins supported
@@ -628,7 +628,7 @@ class OhmDevice(UpnpProfileDevice):
         return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
 
     async def async_pins_get_account_max(self) -> Mapping[str, int] | None:
-        """Return the the value of the AccountMax state variable.
+        """Return the value of the AccountMax state variable.
 
         :return: AccountMax
         AccountMax is the maximum number of account-wide pins supported
@@ -771,7 +771,7 @@ class OhmDevice(UpnpProfileDevice):
         await self._async_call_action(Service.PLAYLIST, Playlist.PAUSE)
 
     async def async_playlist_play(self) -> None:
-        """Start playing the track indicated by the Id state variable.."""
+        """Start playing the track indicated by the Id state variable."""
         await self._async_call_action(Service.PLAYLIST, Playlist.PLAY)
 
     async def async_playlist_next(self) -> None:
@@ -1377,7 +1377,7 @@ class OhmDevice(UpnpProfileDevice):
         """Trim the Volume of the channel.
 
         :param channel: the device channel
-        :param trimbinarymillidb: the trim value in binary milli decibels (mibi dB)
+        :param trimbinarymillidb: the trim value in binary milli decibels (MiBi dB)
         """
         await self._async_call_action(
             Service.VOLUME,
