@@ -1937,19 +1937,39 @@ class OhmDevice(UpnpProfileDevice):
             return int(index["Value"])
         return None
 
-    async def async_active_source_name(self) -> str | bool | None:
-        """Get the active source name."""
+    async def async_active_source(self) -> Mapping[str, str | bool] | None:
+        """Get all details of the active source."""
+
+        index = await self.async_active_source_index()
+        source = None  # cover the else cases
+        if index is not None:
+            source = await self.async_product_source(index)
+        return source
+
+    async def async_active_source_name(self) -> str | None:
+        """Get the name of the active source."""
 
         index = await self.async_active_source_index()
         source_name = None  # cover the else cases
         if index is not None:
             source = await self.async_product_source(index)
             if source is not None:
-                source_name = source["Name"]
+                source_name = source.get("Name")
         return source_name
 
-    async def async_sources(self) -> list[dict[str, Any]]:
-        """Get list of active sources."""
+    async def async_active_source_type(self) -> str | None:
+        """Get the type of the active source."""
+
+        source_type = None
+        index = await self.async_active_source_index()
+        if index is not None:
+            source = await self.async_product_source(index)
+            if source is not None:
+                source_type = source.get("Type")
+        return source_type
+
+    async def async_visible_sources(self) -> list[dict[str, str | int | None]]:
+        """Get list of visible sources."""
         sources = []
         xml = await self.async_product_source_xml()
         if xml is not None:
@@ -1964,6 +1984,7 @@ class OhmDevice(UpnpProfileDevice):
                                 "Index": index,
                                 "Name": source_xml.findtext("Name"),
                                 "Type": source_xml.findtext("Type"),
+                                "SystemName": source_xml.findtext("SystemName"),
                             }
                         )
             except DET.ParseError as error:
