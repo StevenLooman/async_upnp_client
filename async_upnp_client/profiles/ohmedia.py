@@ -2003,6 +2003,19 @@ class OhmDevice(UpnpProfileDevice):
     async def async_pause(self) -> None:
         """Pause."""
         await self.async_transport_pause()
+    def has_source_type(self, source_type: str) -> bool:
+        """Return True if profile has source type.
+
+        :param source_type: the product source type
+        """
+        has_source_type = False
+        try:
+            parsed_xml = DET.fromstring(str(self.source_xml))
+            has_source_type = len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
+        except DET.ParseError() as error:
+            _LOGGER.error("source_xml is not valid XML - %s", error.msg)
+            pass
+        return has_source_type
 
     # endregion
 
