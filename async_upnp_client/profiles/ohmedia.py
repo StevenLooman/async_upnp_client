@@ -1949,27 +1949,24 @@ class OhmDevice(UpnpProfileDevice):
     async def async_active_source_name(self) -> str | None:
         """Get the name of the active source."""
 
-        index = await self.async_active_source_index()
-        source_name = None  # cover the else cases
-        if index is not None:
-            source = await self.async_product_source(index)
-            if source is not None:
-                source_name = source.get("Name")
+        source_name = None
+        active_source = await self.async_active_source()
+        if active_source is not None:
+            source_name = str(active_source.get("Name"))
         return source_name
 
     async def async_active_source_type(self) -> str | None:
         """Get the type of the active source."""
 
         source_type = None
-        index = await self.async_active_source_index()
-        if index is not None:
-            source = await self.async_product_source(index)
-            if source is not None:
-                source_type = source.get("Type")
+        active_source = await self.async_active_source()
+        if active_source is not None:
+            source_type = str(active_source.get("Type"))
         return source_type
 
     async def async_visible_sources(self) -> list[dict[str, str | int | None]]:
         """Get list of visible sources."""
+
         sources = []
         xml = await self.async_product_source_xml()
         if xml is not None:
@@ -2006,8 +2003,8 @@ class OhmDevice(UpnpProfileDevice):
 
     async def async_stop(self) -> None:
         """Stop."""
-        
-        if self.has_transport_stop and not (self.transport_state == TransportStateAllowedValues.STOPPED):
+
+        if self.has_transport_stop and not self.transport_state == TransportStateAllowedValues.STOPPED:
             await self.async_transport_stop()
             return
         active_source_type = await self.async_active_source_type()
@@ -2039,7 +2036,6 @@ class OhmDevice(UpnpProfileDevice):
             has_source_type = len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
         except DET.ParseError() as error:
             _LOGGER.error("source_xml is not valid XML - %s", error.msg)
-            pass
         return has_source_type
 
     # endregion
