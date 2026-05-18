@@ -361,8 +361,9 @@ async def test_sources_valid_input() -> None:
         read_file("response_Product_SourceXml_valid.xml"),
     )
 
-    expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>true</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
+    expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>false</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
     actual = await profile._async_call_action("Product", "SourceXml")
+    # actual = await profile.async_sources("Product", "SourceXml")
     assert str(actual) == expected
 
 
@@ -409,8 +410,49 @@ async def test_has_product_standby_when_action_not_present() -> None:
 
 
 @pytest.mark.asyncio
+async def test_has_source_type() -> None:
+    """Test has_source_type."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    state_var = profile._state_variable("Product", "SourceXml")
+    if state_var is not None:
+        state_var.value = read_file("SourceXml_test.xml")
+
+    assert profile.has_source_type("Playlist")
+    assert not profile.has_source_type("TestSourceNotPresent")
+
+
+@pytest.mark.asyncio
+async def test_async_visible_sources() -> None:
+    """Test async_visible_sources."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("response_Product_SourceXml_valid.xml"),
+    )
+
+    expected = "[{'Index': 0, 'Name': 'Playlist', 'Type': 'Playlist', 'SystemName': 'Playlist'}, {'Index': 1, 'Name': 'Radio', 'Type': 'Radio', 'SystemName': 'Radio'}]"
+    actual = await profile.async_visible_sources()
+    assert str(actual) == expected
+
+
+@pytest.mark.asyncio
 async def test_retrieve_state_variable() -> None:
-    """Test state variable is returned."""
+    """Test state variable is returned from service."""
 
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)

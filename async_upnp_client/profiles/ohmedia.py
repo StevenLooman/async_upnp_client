@@ -620,7 +620,7 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Pins Service actions
     async def async_pins_get_device_max(self) -> Mapping[str, int] | None:
-        """Return the the value of the DeviceMax state variable.
+        """Return the value of the DeviceMax state variable.
 
         :return: DeviceMax
         DeviceMax is the maximum number of device-specific pins supported
@@ -628,7 +628,7 @@ class OhmDevice(UpnpProfileDevice):
         return await self._async_call_action(Service.PINS, Pins.GET_DEVICE_MAX)
 
     async def async_pins_get_account_max(self) -> Mapping[str, int] | None:
-        """Return the the value of the AccountMax state variable.
+        """Return the value of the AccountMax state variable.
 
         :return: AccountMax
         AccountMax is the maximum number of account-wide pins supported
@@ -771,7 +771,7 @@ class OhmDevice(UpnpProfileDevice):
         await self._async_call_action(Service.PLAYLIST, Playlist.PAUSE)
 
     async def async_playlist_play(self) -> None:
-        """Start playing the track indicated by the Id state variable.."""
+        """Start playing the track indicated by the Id state variable."""
         await self._async_call_action(Service.PLAYLIST, Playlist.PLAY)
 
     async def async_playlist_next(self) -> None:
@@ -1377,7 +1377,7 @@ class OhmDevice(UpnpProfileDevice):
         """Trim the Volume of the channel.
 
         :param channel: the device channel
-        :param trimbinarymillidb: the trim value in binary milli decibels (mibi dB)
+        :param trimbinarymillidb: the trim value in binary milli decibels (MiBi dB)
         """
         await self._async_call_action(
             Service.VOLUME,
@@ -1937,19 +1937,36 @@ class OhmDevice(UpnpProfileDevice):
             return int(index["Value"])
         return None
 
-    async def async_active_source_name(self) -> str | bool | None:
-        """Get the active source name."""
+    async def async_active_source(self) -> Mapping[str, str | bool] | None:
+        """Get all details of the active source."""
 
         index = await self.async_active_source_index()
-        source_name = None  # cover the else cases
+        source = None  # cover the else cases
         if index is not None:
             source = await self.async_product_source(index)
-            if source is not None:
-                source_name = source["Name"]
+        return source
+
+    async def async_active_source_name(self) -> str | None:
+        """Get the name of the active source."""
+
+        source_name = None
+        active_source = await self.async_active_source()
+        if active_source is not None:
+            source_name = str(active_source.get("Name"))
         return source_name
 
-    async def async_sources(self) -> list[dict[str, Any]]:
-        """Get list of active sources."""
+    async def async_active_source_type(self) -> str | None:
+        """Get the type of the active source."""
+
+        source_type = None
+        active_source = await self.async_active_source()
+        if active_source is not None:
+            source_type = str(active_source.get("Type"))
+        return source_type
+
+    async def async_visible_sources(self) -> list[dict[str, str | int | None]]:
+        """Get list of visible sources."""
+
         sources = []
         xml = await self.async_product_source_xml()
         if xml is not None:
@@ -1964,6 +1981,7 @@ class OhmDevice(UpnpProfileDevice):
                                 "Index": index,
                                 "Name": source_xml.findtext("Name"),
                                 "Type": source_xml.findtext("Type"),
+                                "SystemName": source_xml.findtext("SystemName"),
                             }
                         )
             except DET.ParseError as error:
@@ -1973,15 +1991,52 @@ class OhmDevice(UpnpProfileDevice):
 
     async def async_play(self) -> None:
         """Play."""
-        await self.async_transport_play()
+
+        if self.has_transport_stop:
+            await self.async_transport_play()
+            return
+        active_source_type = await self.async_active_source_type()
+        if active_source_type == ProductSourceType.RADIO:
+            await self.async_radio_play()
+            return
+        await self.async_playlist_play()
 
     async def async_stop(self) -> None:
         """Stop."""
-        await self.async_transport_stop()
+
+        if self.has_transport_stop and not self.transport_state == TransportStateAllowedValues.STOPPED:
+            await self.async_transport_stop()
+            return
+        active_source_type = await self.async_active_source_type()
+        if active_source_type == ProductSourceType.RADIO:
+            await self.async_radio_stop()
+            return
+        await self.async_playlist_stop()
 
     async def async_pause(self) -> None:
         """Pause."""
-        await self.async_transport_pause()
+
+        if self.has_transport_pause:
+            await self.async_transport_pause()
+            return
+        active_source_type = await self.async_active_source_type()
+        if active_source_type == ProductSourceType.RADIO:
+            await self.async_radio_pause()
+            return
+        await self.async_playlist_pause()
+
+    def has_source_type(self, source_type: str) -> bool:
+        """Return True if profile has source type.
+
+        :param source_type: the product source type
+        """
+        has_source_type = False
+        try:
+            parsed_xml = DET.fromstring(str(self.source_xml))
+            has_source_type = len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
+        except DET.ParseError as error:
+            _LOGGER.error("source_xml is not valid XML - %s", error.msg)
+        return has_source_type
 
     # endregion
 
