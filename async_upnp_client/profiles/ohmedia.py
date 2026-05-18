@@ -2034,7 +2034,7 @@ class OhmDevice(UpnpProfileDevice):
         try:
             parsed_xml = DET.fromstring(str(self.source_xml))
             has_source_type = len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
-        except DET.ParseError() as error:
+        except DET.ParseError as error:
             _LOGGER.error("source_xml is not valid XML - %s", error.msg)
         return has_source_type
 
