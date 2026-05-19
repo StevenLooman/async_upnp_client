@@ -490,6 +490,7 @@ class OhmDevice(UpnpProfileDevice):
 
     # region enums and constants
     DEVICE_TYPES = [
+        "urn:av-openhome-org:device:Source:1",
         "urn:linn-co-uk:device:Source:1",
     ]
 
