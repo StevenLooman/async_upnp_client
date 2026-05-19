@@ -1976,7 +1976,7 @@ class OhmDevice(UpnpProfileDevice):
 
                 for index, source_xml in enumerate(sources_list_xml):
                     visible = source_xml.findtext("Visible")
-                    if visible:
+                    if visible == "true" or visible == "1":
                         sources.append(
                             {
                                 "Index": index,
