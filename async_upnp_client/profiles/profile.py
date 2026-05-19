@@ -240,7 +240,11 @@ class UpnpProfileDevice:
 
         for sid, renewal_time in list(self._subscriptions.items()):
             if renewal_time < renewal_threshold:
-                _LOGGER.debug("Skipping %s with renewal_time %f", sid, renewal_time)
+                _LOGGER.debug("Dropping stale subscription %s with renewal_time %f", sid, renewal_time)
+                del self._subscriptions[sid]
+                service = self._event_handler.service_for_sid(sid)
+                if service and notify_errors:
+                    self._on_event(service, [])
                 continue
 
             _LOGGER.debug("Resubscribing to %s with renewal_time %f", sid, renewal_time)

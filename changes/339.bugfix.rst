@@ -1,0 +1,1 @@
+Drop stale event subscriptions instead of spinning on them, which previously could cause ``UpnpProfileDevice._resubscribe_loop`` to busy-loop and starve the asyncio event loop.

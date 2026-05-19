@@ -352,6 +352,44 @@ class TestUpnpProfileDevice:
         assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
+    async def test_resubscribe_drops_stale_subscription(self) -> None:
+        """Regression test for #302: stale subscriptions must be dropped, not spun on."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        notify_server = UpnpTestNotifyServer(
+            requester=requester,
+            source=("192.168.1.2", 8090),
+        )
+        event_handler = notify_server.event_handler
+        profile = DmrDevice(device, event_handler=event_handler)
+
+        on_event_mock = Mock(return_value=None)
+        profile.on_event = on_event_mock
+
+        await profile.async_subscribe_services(auto_resubscribe=False)
+        assert profile.is_subscribed is True
+
+        # Force every subscription's renewal_time well past the stale threshold.
+        stale_time = time.monotonic() - 3600.0
+        stale_sids = list(profile._subscriptions)
+        for sid in stale_sids:
+            profile._subscriptions[sid] = stale_time
+
+        # Call the resubscribe path directly with notify_errors=True (as the loop does).
+        # Without the fix this would leave the stale entries in place; with the fix every
+        # stale entry is removed and listeners are notified with an empty state change.
+        await profile._async_resubscribe_services(notify_errors=True)
+
+        assert not profile._subscriptions
+
+        notified_services = {call.args[0] for call in on_event_mock.call_args_list}
+        expected_services = {event_handler.service_for_sid(sid) for sid in stale_sids}
+        assert notified_services == expected_services
+        for call in on_event_mock.call_args_list:
+            assert call.args[1] == []
+
+    @pytest.mark.asyncio
     async def test_subscribe_no_event_handler(self) -> None:
         """Test no event handler."""
         requester = UpnpTestRequester(RESPONSE_MAP)
