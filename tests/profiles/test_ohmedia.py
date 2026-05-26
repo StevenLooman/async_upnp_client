@@ -145,7 +145,7 @@ RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
 # region profile tests
 @pytest.mark.asyncio
 async def test_instantiate_ohmdevice_no_handler() -> None:
-    """Test async_wait_for_can_play times out waiting for ability to play."""
+    """Test can instantiate a profile object of OhmDevice."""
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
