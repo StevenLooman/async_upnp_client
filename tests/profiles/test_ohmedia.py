@@ -2,6 +2,7 @@
 
 # pylint: disable=protected-access,line-too-long
 
+import logging
 import os
 from copy import copy
 from typing import Mapping, Tuple
@@ -427,6 +428,24 @@ async def test_has_source_type() -> None:
 
 
 @pytest.mark.asyncio
+async def test_has_source_type_log_error(caplog: pytest.LogCaptureFixture) -> None:
+    """Test has_source_type ignores ParseError exception, returns False and logs error."""
+
+    caplog.set_level(logging.ERROR)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    state_var = profile._state_variable("Product", "SourceXml")
+    if state_var is not None:
+        state_var.value = read_file("SourceXml_malformed_test.xml")
+
+    assert not profile.has_source_type("Playlist")
+    assert "source_xml is not valid" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_async_visible_sources() -> None:
     """Test async_visible_sources."""
     requester = UpnpTestRequester(RESPONSE_MAP)
@@ -477,6 +496,97 @@ async def test_get_actions_with_state_variables() -> None:
     actual = profile.get_actions_with_state_variables("Volume")
     expected = {"Mute", "VolumeLimit", "UnityGain", "Fade", "Balance", "Volume", "Characteristics"}
     assert set(actual) == set(expected)
+
+
+@pytest.mark.asyncio
+async def test_async_active_source_index() -> None:
+    """Test async_active_source_index."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("response_Product_SourceIndexResponse_valid.xml"),
+    )
+
+    actual = await profile.async_active_source_index()
+    expected = 11
+    assert actual == expected
+
+
+@pytest.mark.asyncio
+async def test_async_product_source() -> None:
+    """Test async_active_source_index."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("response_Product_SourceResponse_valid.xml"),
+    )
+    actual = await profile.async_product_source(index=0)  # test fixture is not parameterised by index
+    expected = {"Name": "TV", "SystemName": "TOSLINK1", "Type": "Digital", "Visible": True}
+    assert actual == expected
+
+
+@pytest.mark.asyncio
+async def test_async_playlist_last_id() -> None:
+    """Test async_playlist_last_id."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("response_Playlist_IdArrayResponse_valid.xml"),
+    )
+
+    actual = await profile.async_playlist_last_id()
+    expected = 20
+    assert actual == expected
+
+
+@pytest.mark.asyncio
+async def test_volume() -> None:
+    """Test volume."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    state_var = profile._state_variable("Volume", "Volume")
+    if state_var:
+        state_var.value = 40
+
+    actual_volume = profile.volume
+    assert actual_volume == 40
 
 
 # endregion
