@@ -573,18 +573,6 @@ async def test_async_active_source_index() -> None:
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
 
-    requester.response_map[
-        (
-            "POST",
-            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
-            "urn:av-openhome-org:service:Product:4#SourceIndex",
-        )
-    ] = HttpResponse(
-        200,
-        {},
-        read_file("response_Product_SourceIndexResponse_valid.xml"),
-    )
-
     actual = await profile.async_active_source_index()
     expected = 11
     assert actual == expected
@@ -599,17 +587,6 @@ async def test_async_product_source() -> None:
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
 
-    requester.response_map[
-        (
-            "POST",
-            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
-            "urn:av-openhome-org:service:Product:4#Source",
-        )
-    ] = HttpResponse(
-        200,
-        {},
-        read_file("response_Product_SourceResponse_valid.xml"),
-    )
     actual = await profile.async_product_source(index=0)  # test fixture is not parameterised by index
     expected = {"Name": "TV", "SystemName": "TOSLINK1", "Type": "Digital", "Visible": True}
     assert actual == expected
