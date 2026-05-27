@@ -2,10 +2,13 @@
 
 # pylint: disable=protected-access,line-too-long
 
+import asyncio
 import logging
 import os
-from copy import copy
-from typing import Mapping, Tuple
+from collections import deque
+from copy import copy, deepcopy
+
+from typing import Mapping, MutableMapping, cast
 
 import pytest
 from multidict import CIMultiDict
@@ -15,7 +18,45 @@ from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError, UpnpError
 from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _list_to_string
 
-from ..conftest import UpnpTestNotifyServer, UpnpTestRequester
+from ..conftest import UpnpTestNotifyServer
+
+from async_upnp_client.client import UpnpRequester
+# from async_upnp_client.const import AddressTupleVXType, HttpRequest, HttpResponse
+# from async_upnp_client.event_handler import UpnpEventHandler, UpnpNotifyServer
+
+
+class UpnpTestRequester(UpnpRequester):
+    """Test requester."""
+
+    def __init__(
+        self,
+        response_map: Mapping[tuple[str, ...], HttpResponse],
+    ) -> None:
+        """Class initializer."""
+        self.response_map: MutableMapping[tuple[str, ...], HttpResponse] = deepcopy(cast(MutableMapping, response_map))
+        self.exceptions: deque[Exception | None] = deque()
+
+    async def async_http_request(
+        self,
+        http_request: HttpRequest,
+    ) -> HttpResponse:
+        """Perform an HTTP request."""
+        await asyncio.sleep(0.01)
+        # print(http_request)
+        if self.exceptions:
+            exception = self.exceptions.popleft()
+            if exception is not None:
+                raise exception
+
+        if soap_action := http_request.headers.get("SOAPAction"):
+            key = (http_request.method, http_request.url, soap_action.strip('"'))
+        else:
+            key = (http_request.method, http_request.url)
+
+        if key not in self.response_map:
+            raise KeyError(f"Request not in response map: {key}")
+
+        return self.response_map[key]
 
 
 def read_file(filename: str) -> str:
@@ -35,7 +76,7 @@ NOTIFY_PROPERTY_BODY = """
 
 NOTIFY_HEADERS: CIMultiDict = CIMultiDict([("Nt", "upnp:event"), ("Nts", "upnp:propchange"), ("SID", "dummy-sid")])
 
-RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
+RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
     # OpenHomeMedia
     ("GET", "http://ohmedia:1234/device.xml"): HttpResponse(
         200,
@@ -140,6 +181,24 @@ RESPONSE_MAP: Mapping[Tuple[str, str], HttpResponse] = {
         {"sid": "uuid:dummy-playlist-1"},
         "",
     ),
+    (
+        "POST",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+        "urn:av-openhome-org:service:Product:4#SourceIndex",
+    ): HttpResponse(
+        200,
+        {},
+        read_file("Product_SourceIndexResponse.xml"),
+    ),
+    (
+        "POST",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+        "urn:av-openhome-org:service:Product:4#Source",
+    ): HttpResponse(
+        200,
+        {},
+        read_file("Product_SourceResponse.xml"),
+    ),
 }
 
 
@@ -166,6 +225,7 @@ async def test_async_call_action_no_params() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Volume-4/control",
+            "urn:av-openhome-org:service:Volume:4#Volume",
         )
     ] = HttpResponse(
         200,
@@ -190,6 +250,7 @@ async def test_async_call_action_one_param() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+            "urn:av-openhome-org:service:Playlist:1#IdArrayChanged",
         )
     ] = HttpResponse(
         200,
@@ -213,6 +274,7 @@ async def test_async_call_action_many_params() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+            "urn:av-openhome-org:service:Playlist:1#Insert",
         )
     ] = HttpResponse(
         200,
@@ -295,6 +357,7 @@ async def test_async_call_action_bad_param_value() -> None:
             (
                 "POST",
                 "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+                "urn:av-openhome-org:service:Playlist:1#DeleteId",
             )
         ] = HttpResponse(
             500,
@@ -355,6 +418,7 @@ async def test_sources_valid_input() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+            "urn:av-openhome-org:service:Product:4#SourceXml",
         )
     ] = HttpResponse(
         200,
@@ -457,6 +521,7 @@ async def test_async_visible_sources() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+            "urn:av-openhome-org:service:Product:4#SourceXml",
         )
     ] = HttpResponse(
         200,
@@ -486,6 +551,7 @@ async def test_retrieve_state_variable() -> None:
     assert profile.product_source_count == 12
 
 
+@pytest.mark.asyncio
 async def test_get_actions_with_state_variables() -> None:
     """Test for service that all actions returning state variables are returned."""
 
@@ -511,6 +577,7 @@ async def test_async_active_source_index() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+            "urn:av-openhome-org:service:Product:4#SourceIndex",
         )
     ] = HttpResponse(
         200,
@@ -536,6 +603,7 @@ async def test_async_product_source() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+            "urn:av-openhome-org:service:Product:4#Source",
         )
     ] = HttpResponse(
         200,
@@ -560,6 +628,7 @@ async def test_async_playlist_last_id() -> None:
         (
             "POST",
             "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+            "urn:av-openhome-org:service:Playlist:1#IdArray",
         )
     ] = HttpResponse(
         200,
@@ -587,6 +656,48 @@ async def test_volume() -> None:
 
     actual_volume = profile.volume
     assert actual_volume == 40
+
+
+@pytest.mark.asyncio
+async def test_async_active_source() -> None:
+    """Test async_active_source."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    expected_source = {"Name": "TV", "SystemName": "TOSLINK1", "Type": "Digital", "Visible": True}
+    actual_source = await profile.async_active_source()
+    assert actual_source == expected_source
+
+
+@pytest.mark.asyncio
+async def test_async_active_source_name() -> None:
+    """Test async_active_source_name."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    expected_name = "TV"
+    actual_name = await profile.async_active_source_name()
+    assert actual_name == expected_name
+
+
+@pytest.mark.asyncio
+async def test_async_active_source_type() -> None:
+    """Test async_active_source_type."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    expected_type = "Digital"
+    actual_type = await profile.async_active_source_type()
+    assert actual_type == expected_type
 
 
 # endregion
