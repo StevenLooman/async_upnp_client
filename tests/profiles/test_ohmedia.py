@@ -309,7 +309,6 @@ async def test_async_call_action_bad_service() -> None:
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
-    # raises AttributeError
     with pytest.raises(UpnpError):
         await profile._async_call_action("NoService", "Action")
 
@@ -323,7 +322,7 @@ async def test_async_call_action_bad_action() -> None:
     profile = OhmDevice(device, event_handler=None)
     # raises KeyError
     with pytest.raises(UpnpError):
-        await profile._async_call_action("Volume", "Action")
+        await profile._async_call_action("Volume", "NonexistentAction")
 
 
 @pytest.mark.asyncio
