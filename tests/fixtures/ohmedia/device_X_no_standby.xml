@@ -34,7 +34,7 @@
                 <serviceType>urn:av-openhome-org:service:Product:4</serviceType>
                 <serviceId>urn:av-openhome-org:serviceId:Product</serviceId>
                 <SCPDURL>
-                    /dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_no_standby.xml</SCPDURL>
+                    /dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_service_X_no_standby.xml</SCPDURL>
                 <controlURL>/dummy_device_udn/av.openhome.org-Product-4/control</controlURL>
                 <eventSubURL>/dummy_device_udn/av.openhome.org-Product-4/event</eventSubURL>
             </service>

@@ -83,23 +83,13 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
         {},
         read_file("device.xml"),
     ),
-    ("GET", "http://ohmedia:1234/device_no_volume.xml"): HttpResponse(
-        200,
-        {},
-        read_file("device_no_volume.xml"),
-    ),
-    ("GET", "http://ohmedia:1234/device_no_standby.xml"): HttpResponse(
-        200,
-        {},
-        read_file("device_no_standby.xml"),
-    ),
     (
         "GET",
         "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-ConfigApp-1/service.xml",
     ): HttpResponse(
         200,
         {},
-        read_file("Config1.xml"),
+        read_file("Config1_service.xml"),
     ),
     (
         "GET",
@@ -107,15 +97,7 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
     ): HttpResponse(
         200,
         {},
-        read_file("Product4.xml"),
-    ),
-    (
-        "GET",
-        "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_no_standby.xml",
-    ): HttpResponse(
-        200,
-        {},
-        read_file("Product4_no_standby.xml"),
+        read_file("Product4_service.xml"),
     ),
     (
         "GET",
@@ -123,7 +105,7 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
     ): HttpResponse(
         200,
         {},
-        read_file("Volume4.xml"),
+        read_file("Volume4_service.xml"),
     ),
     (
         "GET",
@@ -131,7 +113,7 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
     ): HttpResponse(
         200,
         {},
-        read_file("Playlist1.xml"),
+        read_file("Playlist1_service.xml"),
     ),
     (
         "SUBSCRIBE",
@@ -230,7 +212,7 @@ async def test_async_call_action_no_params() -> None:
     ] = HttpResponse(
         200,
         {},
-        read_file("response_Volume_Volume.xml"),
+        read_file("Volume_VolumeResponse.xml"),
     )
 
     assert (await profile._async_call_action("Volume", "Volume")) == {"Value": 42}
@@ -255,7 +237,7 @@ async def test_async_call_action_one_param() -> None:
     ] = HttpResponse(
         200,
         {},
-        read_file("response_Playlist_IdArrayChanged.xml"),
+        read_file("Playlist_IdArrayChangedResponse.xml"),
     )
 
     # playlist_id_array_changed
@@ -279,7 +261,7 @@ async def test_async_call_action_many_params() -> None:
     ] = HttpResponse(
         200,
         {},
-        read_file("response_Playlist_Insert.xml"),
+        read_file("Playlist_InsertResponse.xml"),
     )
 
     afterid = 123
@@ -362,7 +344,7 @@ async def test_async_call_action_bad_param_value() -> None:
         ] = HttpResponse(
             500,
             {},
-            read_file("error_Playlist_DeleteId_Id_Not_Found.xml"),
+            read_file("Playlist_DeleteId_X_Id_Not_Found.xml"),
         )
 
         await profile._async_call_action("Playlist", "DeleteId", Value=1)
@@ -423,7 +405,7 @@ async def test_sources_valid_input() -> None:
     ] = HttpResponse(
         200,
         {},
-        read_file("response_Product_SourceXml_valid.xml"),
+        read_file("Product_SourceXmlResponse.xml"),
     )
 
     expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>false</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
@@ -447,12 +429,17 @@ async def test_has_product_standby() -> None:
 async def test_has_volume_when_service_not_present() -> None:
     """Test has_volume returns False when Volume service is not present.
 
-    device_no_volume.xml modified so that no Volume service is advertised
+    device_X_no_volume.xml modified so that no Volume service is advertised
     """
 
     requester = UpnpTestRequester(RESPONSE_MAP)
+    requester.response_map[("GET", "http://ohmedia:1234/device_X_no_volume.xml")] = HttpResponse(
+        200,
+        {},
+        read_file("device_X_no_volume.xml"),
+    )
     factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device_no_volume.xml")
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_volume.xml")
     profile = OhmDevice(device, event_handler=None)
 
     assert not profile.has_volume
@@ -462,13 +449,25 @@ async def test_has_volume_when_service_not_present() -> None:
 async def test_has_product_standby_when_action_not_present() -> None:
     """Test has_product_standby returns False when action is not present.
 
-    device_no_standby.xml fixture modified to use Product4_no_standby.xml for Product4 service.xml
-    Product4_no_standby.xml fixture modified so that Standby action is not present
+    device_X_no_standby.xml fixture modified to request Product4_service_X_no_standby.xml for Product4 service.xml
+    Product4_service_X_no_standby.xml fixture modified so that Standby action is not present
     """
 
     requester = UpnpTestRequester(RESPONSE_MAP)
+    requester.response_map[("GET", "http://ohmedia:1234/device_X_no_standby.xml")] = HttpResponse(
+        200,
+        {},
+        read_file("device_X_no_standby.xml"),
+    )
+    requester.response_map[
+        ("GET", "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_service_X_no_standby.xml")
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("Product4_service_X_no_standby.xml"),
+    )
     factory = UpnpFactory(requester)
-    device = await factory.async_create_device("http://ohmedia:1234/device_no_standby.xml")
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_standby.xml")
     profile = OhmDevice(device, event_handler=None)
 
     assert not profile.has_product_standby
@@ -485,7 +484,7 @@ async def test_has_source_type() -> None:
 
     state_var = profile._state_variable("Product", "SourceXml")
     if state_var is not None:
-        state_var.value = read_file("SourceXml_test.xml")
+        state_var.value = read_file("Product_SourceXml_sv.xml")
 
     assert profile.has_source_type("Playlist")
     assert not profile.has_source_type("TestSourceNotPresent")
@@ -503,7 +502,7 @@ async def test_has_source_type_log_error(caplog: pytest.LogCaptureFixture) -> No
 
     state_var = profile._state_variable("Product", "SourceXml")
     if state_var is not None:
-        state_var.value = read_file("SourceXml_malformed_test.xml")
+        state_var.value = read_file("Product_SourceXml_sv_X_malformed.xml")
 
     assert not profile.has_source_type("Playlist")
     assert "source_xml is not valid" in caplog.text
@@ -526,7 +525,7 @@ async def test_async_visible_sources() -> None:
     ] = HttpResponse(
         200,
         {},
-        read_file("response_Product_SourceXml_valid.xml"),
+        read_file("Product_SourceXmlResponse.xml"),
     )
 
     expected = "[{'Index': 0, 'Name': 'Playlist', 'Type': 'Playlist', 'SystemName': 'Playlist'}, {'Index': 1, 'Name': 'Radio', 'Type': 'Radio', 'SystemName': 'Radio'}]"
@@ -610,7 +609,7 @@ async def test_async_playlist_last_id() -> None:
     ] = HttpResponse(
         200,
         {},
-        read_file("response_Playlist_IdArrayResponse_valid.xml"),
+        read_file("Playlist_IdArrayResponse.xml"),
     )
 
     actual = await profile.async_playlist_last_id()
