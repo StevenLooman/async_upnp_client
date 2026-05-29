@@ -7,22 +7,18 @@ import logging
 import os
 from collections import deque
 from copy import copy, deepcopy
-
 from typing import Mapping, MutableMapping, cast
 
 import pytest
 from multidict import CIMultiDict
 
+from async_upnp_client.client import UpnpRequester
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError, UpnpError
 from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _list_to_string
 
 from ..conftest import UpnpTestNotifyServer
-
-from async_upnp_client.client import UpnpRequester
-# from async_upnp_client.const import AddressTupleVXType, HttpRequest, HttpResponse
-# from async_upnp_client.event_handler import UpnpEventHandler, UpnpNotifyServer
 
 
 class UpnpTestRequester(UpnpRequester):
