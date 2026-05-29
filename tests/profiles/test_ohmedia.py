@@ -44,6 +44,7 @@ class UpnpTestRequester(UpnpRequester):
             if exception is not None:
                 raise exception
 
+        key: tuple[str, ...] = ""
         if soap_action := http_request.headers.get("SOAPAction"):
             key = (http_request.method, http_request.url, soap_action.strip('"'))
         else:
