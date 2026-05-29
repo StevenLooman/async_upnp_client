@@ -1,6 +1,6 @@
 """Unit tests for the Linn/Open Home Media profile."""
 
-# pylint: disable=protected-access,line-too-long
+# pylint: disable=protected-access,line-too-long,too-few-public-methods
 
 import asyncio
 import logging
