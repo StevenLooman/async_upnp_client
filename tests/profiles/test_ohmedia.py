@@ -459,7 +459,10 @@ async def test_has_product_standby_when_action_not_present() -> None:
         read_file("device_X_no_standby.xml"),
     )
     requester.response_map[
-        ("GET", "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_service_X_no_standby.xml")
+        (
+            "GET",
+            "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Product-4/Product4_service_X_no_standby.xml",
+        )
     ] = HttpResponse(
         200,
         {},
