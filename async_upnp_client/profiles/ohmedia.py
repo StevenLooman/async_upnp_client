@@ -1967,9 +1967,10 @@ class OhmDevice(UpnpProfileDevice):
         """Get all details of the active source."""
 
         index = await self.async_active_source_index()
-        source = None  # cover the else cases
         if index is not None:
             source = await self.async_product_source(index)
+        else:
+            source = None
         return source
 
     async def async_active_source_name(self) -> str | None:
@@ -2018,7 +2019,7 @@ class OhmDevice(UpnpProfileDevice):
     async def async_play(self) -> None:
         """Play."""
 
-        if self.has_transport_stop:
+        if self.has_transport_play:
             await self.async_transport_play()
             return
         active_source_type = await self.async_active_source_type()
@@ -2109,7 +2110,7 @@ class OhmDevice(UpnpProfileDevice):
 
         :return: value of state variable or None if state variable does not exist
 
-        Note that the corresponding service-action should be polled, or service subscribed,
+        Note that the corresponding service-action should be polled first, or service subscribed,
         to assign a value to the variable
         """
         service = self._service(service_name)
