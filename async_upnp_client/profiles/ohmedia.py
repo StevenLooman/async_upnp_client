@@ -1532,7 +1532,9 @@ class OhmDevice(UpnpProfileDevice):
     @property
     def is_standby(self) -> bool | None:
         """Get standby status."""
-        return bool(self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY))
+        standby = self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY)
+        if standby is not None:
+            return bool(standby)
 
     @property
     def product_room(self) -> str | None:
