@@ -1788,8 +1788,26 @@ class OhmDevice(UpnpProfileDevice):
 
     @property
     def transport_state(self) -> str | None:
-        """Return the value of the TransportState state variable."""
-        return self.get_state_variable_value(Service.TRANSPORT, TransportState.TRANSPORT_STATE)
+        """Return the value of the TransportState state variable for the active source."""
+        if self.has_transport_state:
+            return self.get_state_variable_value(Service.TRANSPORT, TransportState.TRANSPORT_STATE)
+        # transport service transport_state is not available
+        active_source_type = None
+        if self.product_source_xml is not None:
+            source_xml = DET.fromstring(self.product_source_xml)
+            active_index = self.product_source_index
+            if source_xml is not None:
+                active_source_type = source_xml[active_index].find("Type").text
+
+        match active_source_type:
+            case ProductSourceType.PLAYLIST:
+                return self.playlist_transport_state
+            case ProductSourceType.RADIO:
+                return self.radio_transport_state
+            case ProductSourceType.RECEIVER:
+                return self.receiver_transport_state
+            case _:
+                _LOGGER.warning("Unhandled source type: %s", active_source_type)
 
     @property
     def transport_repeat(self) -> bool | None:
@@ -1868,6 +1886,11 @@ class OhmDevice(UpnpProfileDevice):
     def has_transport_pause(self) -> bool:
         """Service Transport has action Pause."""
         return self._action(Service.TRANSPORT, Transport.PAUSE) is not None
+
+    @property
+    def has_transport_state(self) -> bool:
+        """Service Transport has action Stop."""
+        return self._action(Service.TRANSPORT, Transport.TRANSPORT_STATE) is not None
 
     @property
     def has_transport_stop(self) -> bool:
