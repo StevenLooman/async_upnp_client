@@ -1535,6 +1535,7 @@ class OhmDevice(UpnpProfileDevice):
         standby = self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY)
         if standby is not None:
             return bool(standby)
+        return None
 
     @property
     def product_room(self) -> str | None:
@@ -1808,6 +1809,7 @@ class OhmDevice(UpnpProfileDevice):
                 return self.receiver_transport_state
             case _:
                 _LOGGER.warning("Unhandled source type: %s", active_source_type)
+        return None
 
     @property
     def transport_repeat(self) -> bool | None:
@@ -2063,9 +2065,10 @@ class OhmDevice(UpnpProfileDevice):
                 case ProductSourceType.PLAYLIST:
                     await self.async_playlist_pause()
                 case ProductSourceType.RECEIVER:
-                    await self.async_receiver_stop() # Receiver does not support pause so just stop
+                    await self.async_receiver_stop()  # Receiver does not support pause so just stop
                 case _:
                     _LOGGER.warning("Unhandled source type: %s", active_source_type)
+        return None
 
     def has_source_type(self, source_type: str) -> bool | None:
         """Return True if profile has source type.
@@ -2082,7 +2085,9 @@ class OhmDevice(UpnpProfileDevice):
                 _LOGGER.error("source_xml is not valid XML - %s", error.msg)
         else:
             _LOGGER.warning("source_xml is not populated")
-            return None
+
+        return None
+
     # endregion
 
     # region core methods

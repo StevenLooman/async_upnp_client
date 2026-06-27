@@ -488,6 +488,7 @@ async def test_has_source_type() -> None:
     assert profile.has_source_type("Playlist")
     assert not profile.has_source_type("TestSourceNotPresent")
 
+
 @pytest.mark.asyncio
 async def test_has_source_type_no_sv() -> None:
     """Test has_source_type returns None if SourceXml is not populated."""
