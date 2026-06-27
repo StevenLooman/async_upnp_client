@@ -2021,37 +2021,40 @@ class OhmDevice(UpnpProfileDevice):
 
         if self.has_transport_play:
             await self.async_transport_play()
-            return
-        active_source_type = await self.async_active_source_type()
-        if active_source_type == ProductSourceType.RADIO:
-            await self.async_radio_play()
-            return
-        await self.async_playlist_play()
+        else:
+            active_source_type = await self.async_active_source_type()
+            match active_source_type:
+                case ProductSourceType.RADIO:
+                    await self.async_radio_play()
+                case ProductSourceType.PLAYLIST:
+                    await self.async_playlist_play()
+                case ProductSourceType.RECEIVER:
+                    await self.async_receiver_play()
+                case _:
+                    _LOGGER.warning("Unhandled source type: %s", active_source_type)
 
     async def async_stop(self) -> None:
         """Stop."""
 
         if self.has_transport_stop and not self.transport_state == TransportStateAllowedValues.STOPPED:
             await self.async_transport_stop()
-            return
-        active_source_type = await self.async_active_source_type()
-        if active_source_type == ProductSourceType.RADIO:
-            await self.async_radio_stop()
-            return
-        await self.async_playlist_stop()
+        else:
+            active_source_type = await self.async_active_source_type()
+            match active_source_type:
+                case ProductSourceType.RADIO:
+                    await self.async_radio_stop()
+                case ProductSourceType.PLAYLIST:
+                    await self.async_playlist_stop()
+                case ProductSourceType.RECEIVER:
+                    await self.async_receiver_stop()
+                case _:
+                    _LOGGER.warning("Unhandled source type: %s", active_source_type)
 
     async def async_pause(self) -> None:
         """Pause."""
 
         if self.has_transport_pause:
             await self.async_transport_pause()
-            return
-        active_source_type = await self.async_active_source_type()
-        if active_source_type == ProductSourceType.RADIO:
-            await self.async_radio_pause()
-            return
-        await self.async_playlist_pause()
-
         else:
             active_source_type = await self.async_active_source_type()
             match active_source_type:
