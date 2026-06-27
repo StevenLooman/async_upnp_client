@@ -2026,19 +2026,34 @@ class OhmDevice(UpnpProfileDevice):
             return
         await self.async_playlist_pause()
 
-    def has_source_type(self, source_type: str) -> bool:
+        else:
+            active_source_type = await self.async_active_source_type()
+            match active_source_type:
+                case ProductSourceType.RADIO:
+                    await self.async_radio_pause()
+                case ProductSourceType.PLAYLIST:
+                    await self.async_playlist_pause()
+                case ProductSourceType.RECEIVER:
+                    await self.async_receiver_stop() # Receiver does not support pause so just stop
+                case _:
+                    _LOGGER.warning("Unhandled source type: %s", active_source_type)
+
+    def has_source_type(self, source_type: str) -> bool | None:
         """Return True if profile has source type.
 
+        None indicates not yet possible to determine source types
+        Test for None before using boolean return value
         :param source_type: the product source type
         """
-        has_source_type = False
-        try:
-            parsed_xml = DET.fromstring(str(self.source_xml))
-            has_source_type = len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
-        except DET.ParseError as error:
-            _LOGGER.error("source_xml is not valid XML - %s", error.msg)
-        return has_source_type
-
+        if self.source_xml is not None:
+            try:
+                parsed_xml = DET.fromstring(str(self.source_xml))
+                return len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
+            except DET.ParseError as error:
+                _LOGGER.error("source_xml is not valid XML - %s", error.msg)
+        else:
+            _LOGGER.warning("source_xml is not populated")
+            return None
     # endregion
 
     # region core methods

@@ -488,10 +488,21 @@ async def test_has_source_type() -> None:
     assert profile.has_source_type("Playlist")
     assert not profile.has_source_type("TestSourceNotPresent")
 
+@pytest.mark.asyncio
+async def test_has_source_type_no_sv() -> None:
+    """Test has_source_type returns None if SourceXml is not populated."""
+
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    assert profile.has_source_type("Playlist") is None
+
 
 @pytest.mark.asyncio
 async def test_has_source_type_log_error(caplog: pytest.LogCaptureFixture) -> None:
-    """Test has_source_type ignores ParseError exception, returns False and logs error."""
+    """Test has_source_type ignores ParseError exception, returns None and logs error."""
 
     caplog.set_level(logging.ERROR)
     requester = UpnpTestRequester(RESPONSE_MAP)
@@ -503,7 +514,7 @@ async def test_has_source_type_log_error(caplog: pytest.LogCaptureFixture) -> No
     if state_var is not None:
         state_var.value = read_file("Product_SourceXml_sv_X_malformed.xml")
 
-    assert not profile.has_source_type("Playlist")
+    assert profile.has_source_type("Playlist") is None
     assert "source_xml is not valid" in caplog.text
 
 
