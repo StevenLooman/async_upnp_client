@@ -1,6 +1,6 @@
 """Unit tests for the Linn/Open Home Media profile."""
 
-# pylint: disable=protected-access,line-too-long,too-few-public-methods
+# pylint: disable=protected-access,line-too-long,too-few-public-methods,too-many-lines
 
 import asyncio
 import logging
@@ -16,7 +16,13 @@ from async_upnp_client.client import UpnpRequester
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import UpnpActionResponseError, UpnpError
-from async_upnp_client.profiles.ohmedia import OhmDevice, _decode_id_array, _list_to_string
+from async_upnp_client.profiles.ohmedia import (
+    OhmDevice,
+    ProductSourceType,
+    TransportStateAllowedValues,
+    _decode_id_array,
+    id_list_to_string,
+)
 
 from ..conftest import UpnpTestNotifyServer
 
@@ -38,7 +44,6 @@ class UpnpTestRequester(UpnpRequester):
     ) -> HttpResponse:
         """Perform an HTTP request."""
         await asyncio.sleep(0.01)
-        # print(http_request)
         if self.exceptions:
             exception = self.exceptions.popleft()
             if exception is not None:
@@ -80,6 +85,11 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
         {},
         read_file("device.xml"),
     ),
+    ("GET", "http://ohmedia:1234/device_X_no_transport.xml"): HttpResponse(
+        200,
+        {},
+        read_file("device_X_no_transport.xml"),
+    ),
     (
         "GET",
         "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-ConfigApp-1/service.xml",
@@ -113,6 +123,22 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
         read_file("Playlist1_service.xml"),
     ),
     (
+        "GET",
+        "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Radio-1/service.xml",
+    ): HttpResponse(
+        200,
+        {},
+        read_file("Radio1_service.xml"),
+    ),
+    (
+        "GET",
+        "http://ohmedia:1234/dummy_device_udn/Upnp/av.openhome.org-Transport-1/service.xml",
+    ): HttpResponse(
+        200,
+        {},
+        read_file("Transport1_service.xml"),
+    ),
+    (
         "SUBSCRIBE",
         "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Volume-4/event",
     ): HttpResponse(
@@ -134,6 +160,22 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
     ): HttpResponse(
         200,
         {"sid": "uuid:dummy-playlist-1", "timeout": "Second-300"},
+        "",
+    ),
+    (
+        "SUBSCRIBE",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Transport-1/event",
+    ): HttpResponse(
+        200,
+        {"sid": "uuid:dummy-transport-1", "timeout": "Second-300"},
+        "",
+    ),
+    (
+        "SUBSCRIBE",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Radio-1/event",
+    ): HttpResponse(
+        200,
+        {"sid": "uuid:dummy-radio-1", "timeout": "Second-300"},
         "",
     ),
     (
@@ -161,6 +203,22 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
         "",
     ),
     (
+        "UNSUBSCRIBE",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Transport-1/event",
+    ): HttpResponse(
+        200,
+        {"sid": "uuid:dummy-transport-1"},
+        "",
+    ),
+    (
+        "UNSUBSCRIBE",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Radio-1/event",
+    ): HttpResponse(
+        200,
+        {"sid": "uuid:dummy-radio-1"},
+        "",
+    ),
+    (
         "POST",
         "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
         "urn:av-openhome-org:service:Product:4#SourceIndex",
@@ -177,6 +235,15 @@ RESPONSE_MAP: Mapping[tuple[str, ...], HttpResponse] = {
         200,
         {},
         read_file("Product_SourceResponse.xml"),
+    ),
+    (
+        "POST",
+        "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Volume-4/control",
+        "urn:av-openhome-org:service:Volume:4#SetMute",
+    ): HttpResponse(
+        200,
+        {},
+        read_file("Volume_SetMuteResponse.xml"),
     ),
 }
 
@@ -317,7 +384,6 @@ async def test_async_call_action_bad_action() -> None:
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
-    # raises KeyError
     with pytest.raises(UpnpError):
         await profile._async_call_action("Volume", "NonexistentAction")
 
@@ -325,24 +391,23 @@ async def test_async_call_action_bad_action() -> None:
 @pytest.mark.asyncio
 async def test_async_call_action_bad_param_value() -> None:
     """Test _async_call_action with no kwargs."""
-    with pytest.raises(UpnpActionResponseError) as exinfo:  # call action expecting 800 upnp error
-        requester = UpnpTestRequester(RESPONSE_MAP)
-        factory = UpnpFactory(requester)
-        device = await factory.async_create_device("http://ohmedia:1234/device.xml")
-        profile = OhmDevice(device, event_handler=None)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
 
-        requester.response_map[
-            (
-                "POST",
-                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
-                "urn:av-openhome-org:service:Playlist:1#DeleteId",
-            )
-        ] = HttpResponse(
-            500,
-            {},
-            read_file("Playlist_DeleteId_X_Id_Not_Found.xml"),
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+            "urn:av-openhome-org:service:Playlist:1#DeleteId",
         )
-
+    ] = HttpResponse(
+        500,
+        {},
+        read_file("Playlist_DeleteId_X_Id_Not_Found.xml"),
+    )
+    with pytest.raises(UpnpActionResponseError) as exinfo:  # call action expecting 800 upnp error
         await profile._async_call_action("Playlist", "DeleteId", Value=1)
     assert "upnp error: 800" in str(exinfo.value)
 
@@ -404,10 +469,11 @@ async def test_sources_valid_input() -> None:
         read_file("Product_SourceXmlResponse.xml"),
     )
 
-    expected = "{'Value': '<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>false</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>'}"
+    expected = {
+        "Value": "<SourceList><Source><Name>Playlist</Name><Type>Playlist</Type><Visible>true</Visible><SystemName>Playlist</SystemName></Source><Source><Name>Radio</Name><Type>Radio</Type><Visible>true</Visible><SystemName>Radio</SystemName></Source><Source><Name>UPnP</Name><Type>UpnpAv</Type><Visible>false</Visible><SystemName>UPnP AV</SystemName></Source></SourceList>"
+    }
     actual = await profile._async_call_action("Product", "SourceXml")
-    # actual = await profile.async_sources("Product", "SourceXml")
-    assert str(actual) == expected
+    assert actual == expected
 
 
 @pytest.mark.asyncio
@@ -485,8 +551,8 @@ async def test_has_source_type() -> None:
     if state_var is not None:
         state_var.value = read_file("Product_SourceXml_sv.xml")
 
-    assert profile.has_source_type("Playlist")
-    assert not profile.has_source_type("TestSourceNotPresent")
+    assert profile.has_source_type(ProductSourceType.PLAYLIST)
+    assert not profile.has_source_type(ProductSourceType.NETAUX)
 
 
 @pytest.mark.asyncio
@@ -498,7 +564,7 @@ async def test_has_source_type_no_sv() -> None:
     device = await factory.async_create_device("http://ohmedia:1234/device.xml")
     profile = OhmDevice(device, event_handler=None)
 
-    assert profile.has_source_type("Playlist") is None
+    assert profile.has_source_type(ProductSourceType.PLAYLIST) is None
 
 
 @pytest.mark.asyncio
@@ -515,7 +581,7 @@ async def test_has_source_type_log_error(caplog: pytest.LogCaptureFixture) -> No
     if state_var is not None:
         state_var.value = read_file("Product_SourceXml_sv_X_malformed.xml")
 
-    assert profile.has_source_type("Playlist") is None
+    assert profile.has_source_type(ProductSourceType.PLAYLIST) is None
     assert "source_xml is not valid" in caplog.text
 
 
@@ -539,9 +605,12 @@ async def test_async_visible_sources() -> None:
         read_file("Product_SourceXmlResponse.xml"),
     )
 
-    expected = "[{'Index': 0, 'Name': 'Playlist', 'Type': 'Playlist', 'SystemName': 'Playlist'}, {'Index': 1, 'Name': 'Radio', 'Type': 'Radio', 'SystemName': 'Radio'}]"
+    expected = [
+        {"Index": 0, "Name": "Playlist", "Type": "Playlist", "SystemName": "Playlist"},
+        {"Index": 1, "Name": "Radio", "Type": "Radio", "SystemName": "Radio"},
+    ]
     actual = await profile.async_visible_sources()
-    assert str(actual) == expected
+    assert actual == expected
 
 
 @pytest.mark.asyncio
@@ -687,6 +756,391 @@ async def test_async_active_source_type() -> None:
     assert actual_type == expected_type
 
 
+@pytest.mark.asyncio
+async def test_async_volume_set_mute() -> None:
+    """Test async_volume_set_mute."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    await profile.async_volume_set_mute(True)
+
+
+@pytest.mark.asyncio
+async def test_async_volume_set_mute_not_bool() -> None:
+    """Test async_volume_set_mute.
+
+    Calling with other than bool raises a TypeError
+    """
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    with pytest.raises(TypeError):
+        await profile.async_volume_set_mute("True")  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        await profile.async_volume_set_mute(0)  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+async def test_transport_state() -> None:
+    """Test transport_state.
+
+    Test TransportState property when Transport Service is available
+    """
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    transport_state = profile._state_variable("Transport", "TransportState")
+    assert transport_state is not None
+    transport_state.value = TransportStateAllowedValues.PLAYING.value
+
+    actual = profile.transport_state
+    assert actual == "Playing"
+
+
+@pytest.mark.asyncio
+async def test_transport_state_no_transport_service() -> None:
+    """Test transport_state when no TransportService is available.
+
+    Test TransportState property when Transport Service is not available
+    Transport State returned should be that of active source
+    """
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    # set source xml to have Playlist and Radio available as sources
+    product_source_xml = profile._state_variable("Product", "SourceXml")
+    assert product_source_xml is not None
+    product_source_xml.value = read_file("Product_SourceXml_TransportState.xml")
+    assert product_source_xml.value is not None
+
+    # create source index sv
+    product_source_index = profile._state_variable("Product", "SourceIndex")
+    assert product_source_index is not None
+
+    product_source_index.value = 0  # set active source as Playlist
+    playlist_transport_state = profile._state_variable("Playlist", "TransportState")
+    assert playlist_transport_state is not None
+    playlist_transport_state.value = "Playing"
+
+    actual = profile.transport_state
+    assert actual == "Playing"
+
+    product_source_index.value = 1  # set active source as Radio
+    radio_transport_state = profile._state_variable("Radio", "TransportState")
+    assert radio_transport_state is not None
+    radio_transport_state.value = "Stopped"
+
+    actual = profile.transport_state
+    assert actual == "Stopped"
+
+
+@pytest.mark.asyncio
+async def test_transport_state_parse_error(caplog: pytest.LogCaptureFixture) -> None:
+    """Test transport_state when malformed source xml ParseError is caught."""
+
+    caplog.set_level(logging.ERROR)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    # set source xml to malformed
+    product_source_xml = profile._state_variable("Product", "SourceXml")
+    assert product_source_xml is not None
+    product_source_xml.value = read_file("Product_SourceXml_sv_X_malformed.xml")
+    assert product_source_xml.value is not None
+
+    playlist_transport_state = profile._state_variable("Playlist", "TransportState")
+    assert playlist_transport_state is not None
+    playlist_transport_state.value = "Playing"
+
+    # don't raise error (because @property) but do log error
+    actual = profile.transport_state
+    assert actual is None
+    assert "Value is not valid XML" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_transport_state_no_source_index(caplog: pytest.LogCaptureFixture) -> None:
+    """Test transport_state when active source type is not handled."""
+    caplog.set_level(logging.WARNING)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    product_source_index = profile._state_variable("Product", "SourceIndex")
+    assert product_source_index is not None
+    assert product_source_index.value is None
+
+    # don't raise error (because @property) but do log error
+    assert profile.transport_state is None
+    assert "Unhandled source type" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_transport_state_unhandled_source_type(caplog: pytest.LogCaptureFixture) -> None:
+    """Test transport_state when active source type is not handled."""
+    caplog.set_level(logging.WARNING)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    product_source_index = profile._state_variable("Product", "SourceIndex")
+    assert product_source_index is not None
+    product_source_index.value = 2  # set active source as UpnpAv
+
+    # don't raise error (because @property) but do log error
+    assert profile.transport_state is None
+    assert "Unhandled source type" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_async_play() -> None:
+    """Test async_play.
+
+    Using Transport Service Play
+    """
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Transport-1/control",
+            "urn:av-openhome-org:service:Transport:1#Play",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("Transport1_PlayResponse.xml"),
+    )
+
+    await profile.async_play()
+
+
+@pytest.mark.asyncio
+async def test_async_pause() -> None:
+    """Test async_pause."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Transport-1/control",
+            "urn:av-openhome-org:service:Transport:1#Pause",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("Transport1_PauseResponse.xml"),
+    )
+
+    await profile.async_pause()
+
+
+@pytest.mark.asyncio
+async def test_async_stop() -> None:
+    """Test async_stop."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map[
+        (
+            "POST",
+            "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Transport-1/control",
+            "urn:av-openhome-org:service:Transport:1#Stop",
+        )
+    ] = HttpResponse(
+        200,
+        {},
+        read_file("Transport1_StopResponse.xml"),
+    )
+
+    await profile.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_async_play_no_transport_service() -> None:
+    """Test async_play when Transport service is not available."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map.update(
+        {
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+                "urn:av-openhome-org:service:Product:4#Source",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Product_SourceResponse_Playlist.xml"),
+            ),
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+                "urn:av-openhome-org:service:Playlist:1#Play",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Playlist_PlayResponse.xml"),
+            ),
+        }
+    )
+
+    await profile.async_play()
+
+
+@pytest.mark.asyncio
+async def test_async_pause_no_transport_service() -> None:
+    """Test async_pause when Transport service is not available."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map.update(
+        {
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+                "urn:av-openhome-org:service:Product:4#Source",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Product_SourceResponse_Playlist.xml"),
+            ),
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+                "urn:av-openhome-org:service:Playlist:1#Pause",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Playlist_PauseResponse.xml"),
+            ),
+        }
+    )
+
+    await profile.async_pause()
+
+
+@pytest.mark.asyncio
+async def test_async_stop_no_transport_service() -> None:
+    """Test async_stop when Transport service is not available."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map.update(
+        {
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+                "urn:av-openhome-org:service:Product:4#Source",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Product_SourceResponse_Playlist.xml"),
+            ),
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Playlist-1/control",
+                "urn:av-openhome-org:service:Playlist:1#Stop",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Playlist_StopResponse.xml"),
+            ),
+        }
+    )
+
+    await profile.async_stop()
+
+
+@pytest.mark.asyncio
+async def test_async_play_no_transport_service_unhandled(caplog: pytest.LogCaptureFixture) -> None:
+    """Test async_play when Transport service is not available and source is unhandled."""
+
+    caplog.set_level(logging.WARNING)
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device_X_no_transport.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    requester.response_map.update(
+        {
+            (
+                "POST",
+                "http://ohmedia:1234/dummy_device_udn/av.openhome.org-Product-4/control",
+                "urn:av-openhome-org:service:Product:4#Source",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("Product_SourceResponse.xml"),  # Source is Digital hence unhandled
+            ),
+        }
+    )
+
+    await profile.async_play()
+    assert "Unhandled source type" in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_async_stop_while_stopped() -> None:
+    """Test async_stop when transport state is Stopped."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+    profile = OhmDevice(device, event_handler=None)
+
+    # Transport Service Stop must not be configured, so error will be raised if it is called
+    # Test passes if Transport Service Stop is NOT called and so no error is raised
+    transport_state = profile._state_variable("Transport", "TransportState")
+    assert transport_state is not None
+    transport_state.value = "Stopped"
+    assert profile.transport_state == "Stopped"
+
+    await profile.async_stop()
+
+    @pytest.mark.asyncio
+    async def test_async_pause_while_stopped() -> None:
+        """Test async_pause when transport state is Stopped."""
+        requester = UpnpTestRequester(RESPONSE_MAP)
+        factory = UpnpFactory(requester)
+        device = await factory.async_create_device("http://ohmedia:1234/device.xml")
+        profile = OhmDevice(device, event_handler=None)
+
+        # Transport Service Pause must not be configured, so error will be raised if it is called
+        # Test passes if Transport Service Stop is NOT called and so no error is raised
+        transport_state = profile._state_variable("Transport", "TransportState")
+        assert transport_state is not None
+        transport_state.value = "Stopped"
+        assert profile.transport_state == "Stopped"
+
+        await profile.async_pause()
+
+
 # endregion
 
 
@@ -712,13 +1166,13 @@ def test_decode_id_array_not_an_array() -> None:
     assert _decode_id_array(data) == []  # pylint: disable=use-implicit-booleaness-not-comparison
 
 
-def test_list_to_string() -> None:
+def test_id_list_to_string() -> None:
     """Test list converts to space separated string."""
 
     idlist = [1, 2, 3, 4, 5]
-    assert _list_to_string(idlist) == "1 2 3 4 5"
+    assert id_list_to_string(idlist) == "1 2 3 4 5"
     idlist = []
-    assert _list_to_string(idlist) == ""
+    assert id_list_to_string(idlist) == ""
 
 
 # endregion
