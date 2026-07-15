@@ -1,0 +1,20 @@
+<SourceList>
+	<Source>
+		<Name>PlaylistName</Name>
+		<Type>Playlist</Type>
+		<Visible>true</Visible>
+		<SystemName>PlaylistSystemName</SystemName>
+	</Source>
+    <Source>
+		<Name>Radio</Name>
+		<Type>Radio</Type>
+		<Visible>true</Visible>
+		<SystemName>Radio</SystemName>
+	</Source>
+    <Source>
+		<Name>UPnP</Name>
+		<Type>UpnpAv</Type>
+		<Visible>true</Visible>
+		<SystemName>UPnP AV</SystemName>
+	</Source>
+</SourceList>

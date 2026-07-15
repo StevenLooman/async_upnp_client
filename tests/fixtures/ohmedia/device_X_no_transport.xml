@@ -55,14 +55,6 @@
                 <eventSubURL>/dummy_device_udn/av.openhome.org-Playlist-1/event</eventSubURL>
             </service>
             <service>
-                <serviceType>urn:av-openhome-org:service:Transport:1</serviceType>
-                <serviceId>urn:av-openhome-org:serviceId:Transport</serviceId>
-                <SCPDURL>
-                    /dummy_device_udn/Upnp/av.openhome.org-Transport-1/service.xml</SCPDURL>
-                <controlURL>/dummy_device_udn/av.openhome.org-Transport-1/control</controlURL>
-                <eventSubURL>/dummy_device_udn/av.openhome.org-Transport-1/event</eventSubURL>
-            </service>
-            <service>
                 <serviceType>urn:av-openhome-org:service:Radio:1</serviceType>
                 <serviceId>urn:av-openhome-org:serviceId:Radio</serviceId>
                 <SCPDURL>
