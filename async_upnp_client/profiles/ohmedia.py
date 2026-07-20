@@ -1,6 +1,6 @@
-"""async_upnp_client profile for Open Home Media players.
+"""async_upnp_client profile for OpenHome Media players.
 
-This profile has many convenience methods for invoking an action from an Open Home service
+This profile has many convenience methods for invoking an action from an OpenHome Media service
 Not all devices will offer all services and actions. If a service or action is not available
 then an error will be raised.
 """
@@ -23,7 +23,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # region Service and other enums
 class Service(str, Enum):
-    """Linn/Open Home Network Service Identifiers.
+    """Linn/OpenHome Network Service Identifiers.
 
     The Service Identifier from the ServiceId
     This assumes no collisions if domain namespace is ignored
@@ -44,7 +44,7 @@ class Service(str, Enum):
 
 
 class ServiceId(str, Enum):
-    """Linn/Open Home Network Service Ids.
+    """Linn/OpenHome Network Service Ids.
 
     A service ID uniquely identifies a service instance within a device.
     It follows a URI format of urn:<domain-namespace>:serviceId:<ServiceIdentifier>
@@ -496,7 +496,7 @@ class OhmDevice(UpnpProfileDevice):
         "urn:linn-co-uk:device:Source:1",
     ]
 
-    # Product is the only guaranteed service
+    # Product is the only service which must be available to be OpenHome Media compliant
     SERVICE_IDS = frozenset(("urn:av-openhome-org:serviceId:Product",))
 
     _SERVICE_TYPES = {
@@ -1415,16 +1415,6 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Info Service State Variables
     @property
-    def duration(self) -> int | None:
-        """Get duration of track."""
-        return self.get_state_variable_value(Service.INFO, InfoState.DURATION)
-
-    @property
-    def track_info(self) -> str | None:
-        """Get track metadata information."""
-        return self.get_state_variable_value(Service.INFO, InfoState.METADATA)
-
-    @property
     def info_track_count(self) -> int | None:
         """Return the value of the TrackCount state variable."""
         return self.get_state_variable_value(Service.INFO, InfoState.TRACK_COUNT)
@@ -1531,14 +1521,6 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
     # region Product Service State Variables
     @property
-    def is_standby(self) -> bool | None:
-        """Get standby status."""
-        standby = self.get_state_variable_value(Service.PRODUCT, ProductState.STANDBY)
-        if standby is not None:
-            return bool(standby)
-        return None
-
-    @property
     def product_room(self) -> str | None:
         """Return the room where product is located."""
         return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_ROOM)
@@ -1547,11 +1529,6 @@ class OhmDevice(UpnpProfileDevice):
     def product_name(self) -> str | None:
         """Return the name of the product."""
         return self.get_state_variable_value(Service.PRODUCT, ProductState.PRODUCT_NAME)
-
-    @property
-    def source_xml(self) -> str | None:
-        """Return the source xml of the product."""
-        return self.get_state_variable_value(Service.PRODUCT, ProductState.SOURCE_XML)
 
     @property
     def product_manufacturer_name(self) -> str | None:
@@ -1961,12 +1938,6 @@ class OhmDevice(UpnpProfileDevice):
     # endregion
 
     # region syntactic helpers
-
-    @property
-    def uuid(self) -> str:
-        """Alias for the unique device name."""
-        return self.device.udn
-
     async def async_active_source_index(self) -> int | None:
         """Get the active source index."""
         index = await self.async_product_source_index()
@@ -2088,17 +2059,18 @@ class OhmDevice(UpnpProfileDevice):
                 case _:
                     _LOGGER.warning("Unhandled source type: %s", active_source_type)
 
-    def has_source_type(self, source_type: ProductSourceType) -> bool | None:
+    def has_source_type(self, product_source_type: ProductSourceType) -> bool | None:
         """Return True if profile has source type.
 
         None indicates not yet possible to determine source types
         Test for None before using boolean return value
-        :param source_type: the product source type
+        :param product_source_type: the product source type
         """
-        if self.source_xml is not None:
+        if self.product_source_xml is not None:
+            source_type: str = product_source_type.value  # py310
             try:
-                parsed_xml = DET.fromstring(str(self.source_xml))
-                return len(parsed_xml.findall(f'.//Source[Type="{source_type.value}"]')) > 0  # py310
+                parsed_xml = DET.fromstring(str(self.product_source_xml))
+                return len(parsed_xml.findall(f'.//Source[Type="{source_type}"]')) > 0
             except DET.ParseError as error:
                 _LOGGER.error("source_xml is not valid XML - %s", error.msg)
         else:
@@ -2239,8 +2211,6 @@ class OhmDevice(UpnpProfileDevice):
 
 
 # region functions independent of class
-
-
 def id_list_to_string(list_int: list) -> str:
     """Convert ID list to space separated string."""
     return " ".join(map(str, filter(lambda x: x > 0, list_int)))

@@ -1,4 +1,4 @@
-"""Unit tests for the Linn/Open Home Media profile."""
+"""Unit tests for the Linn/OpenHome Media profile."""
 
 # pylint: disable=protected-access,line-too-long,too-few-public-methods,too-many-lines
 
