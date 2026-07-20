@@ -13,6 +13,7 @@ from async_upnp_client.search import SsdpSearchListener
 from async_upnp_client.ssdp_listener import (
     SsdpDevice,
     SsdpListener,
+    is_valid_location,
     same_headers_differ,
 )
 from async_upnp_client.utils import CaseInsensitiveDict
@@ -72,6 +73,66 @@ async def see_search(ssdp_listener: SsdpListener, request_line: str, headers: Ca
     assert search_listener is not None
     search_listener._on_data(request_line, headers)
     await asyncio.sleep(0)  # Allow callback to run, if called.
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "http://127.0.0.1/desc.xml",
+        "http://127.0.0.2/desc.xml",  # whole 127.0.0.0/8 is loopback, not just .1
+        "http://localhost/desc.xml",
+        "http://LocalHost/desc.xml",
+        "http://[::1]/desc.xml",
+        "http://169.254.169.254/latest/",
+        # Evasions of the old substring filter that still target loopback/link-local:
+        "http://[::ffff:127.0.0.1]/desc.xml",  # IPv4-mapped IPv6 loopback
+        "http://[::ffff:7f00:1]/desc.xml",  # IPv4-mapped IPv6 loopback (hex)
+        "http://user@127.0.0.1/desc.xml",  # credentials in authority
+        "http://0.0.0.0/desc.xml",  # unspecified address
+        "ftp://192.168.1.1/desc.xml",  # not http(s)
+        # Obfuscated IPv4 encodings that resolve to loopback/link-local:
+        "http://2130706433/desc.xml",  # decimal 127.0.0.1
+        "http://0177.0.0.1/desc.xml",  # octal 127.0.0.1
+        "http://0x7f.0.0.1/desc.xml",  # hex 127.0.0.1
+        "http://127.1/desc.xml",  # short form 127.0.0.1
+        "http://%31%32%37.0.0.1/desc.xml",  # percent-encoded 127.0.0.1
+        "http://2852039166/desc.xml",  # decimal 169.254.169.254
+        # Reserved/conventional loopback names and trailing-dot forms:
+        "http://127.0.0.1./desc.xml",  # trailing root-label dot
+        "http://localhost./desc.xml",
+        "http://localhost.localdomain/desc.xml",
+        "http://localhost.localdomain./desc.xml",
+        "http://evil.localhost/desc.xml",  # RFC 6761 reserves *.localhost
+        "http://foo.bar.localhost/desc.xml",
+        # Malformed URLs must be rejected, not raise:
+        "http://[::1/desc.xml",  # unbalanced IPv6 bracket
+        "http://[bad/desc.xml",
+    ],
+)
+def test_is_valid_location_rejects(location: str) -> None:
+    """Locations resolving to loopback/link-local/unspecified must be rejected."""
+    is_valid_location.cache_clear()
+    assert is_valid_location(location) is False
+
+
+@pytest.mark.parametrize(
+    "location",
+    [
+        "http://192.168.1.1/desc.xml",  # RFC1918 — normal LAN device
+        "http://10.0.0.1/desc.xml",
+        "http://172.16.0.1/desc.xml",
+        "http://[fc00::1]/desc.xml",  # IPv6 ULA — normal LAN device
+        "http://[fd00::1]/desc.xml",
+        "http://[fe80::1]/desc.xml",  # IPv6 link-local — normal LAN device
+        "http://dlna_dmr:1234/device.xml",  # DNS name
+        "http://my-device.local./desc.xml",  # trailing-dot FQDN, not loopback
+        "https://192.168.1.1:49152/desc.xml",
+    ],
+)
+def test_is_valid_location_accepts(location: str) -> None:
+    """Normal LAN locations (RFC1918, ULA, DNS names) must be accepted."""
+    is_valid_location.cache_clear()
+    assert is_valid_location(location) is True
 
 
 @pytest.mark.asyncio

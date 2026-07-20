@@ -802,3 +802,165 @@ class TestUpnpService:
         assert device.services["urn:schemas-upnp-org:service:AVTransport:1"]
         # Bad service will also exist, to some extent
         assert device.services["urn:schemas-upnp-org:service:RenderingControl:1"]
+
+
+class TestServiceUrlSsrf:
+    """Tests that absolute service URLs to a foreign host are rejected (SSRF).
+
+    Per UDA 1.1/2.0, SCPDURL/controlURL/eventSubURL must be relative to the
+    device description URL. An absolute URL to a different host is treated as a
+    potential SSRF vector.
+    """
+
+    DEVICE_URL = "http://192.168.1.50:1234/device.xml"
+    SCPD_XML = (
+        '<?xml version="1.0"?>'
+        '<scpd xmlns="urn:schemas-upnp-org:service-1-0">'
+        "<specVersion><major>1</major><minor>0</minor></specVersion>"
+        "<actionList/><serviceStateTable/></scpd>"
+    )
+
+    def _device_xml(
+        self,
+        *,
+        control_url: str = "/svc/control",
+        scpd_url: str = "/svc.xml",
+        event_sub_url: str = "/svc/event",
+    ) -> str:
+        """Build a single-service device description."""
+        return (
+            '<?xml version="1.0"?>'
+            '<root xmlns="urn:schemas-upnp-org:device-1-0">'
+            "<specVersion><major>1</major><minor>0</minor></specVersion>"
+            "<device>"
+            "<deviceType>urn:schemas-upnp-org:device:Foo:1</deviceType>"
+            "<friendlyName>Foo</friendlyName>"
+            "<UDN>uuid:00000000-0000-0000-0000-0000000000aa</UDN>"
+            "<serviceList><service>"
+            "<serviceType>urn:schemas-upnp-org:service:Bar:1</serviceType>"
+            "<serviceId>urn:upnp-org:serviceId:Bar</serviceId>"
+            f"<SCPDURL>{scpd_url}</SCPDURL>"
+            f"<controlURL>{control_url}</controlURL>"
+            f"<eventSubURL>{event_sub_url}</eventSubURL>"
+            "</service></serviceList>"
+            "</device></root>"
+        )
+
+    @pytest.mark.asyncio
+    async def test_foreign_host_control_url_raises_in_strict_mode(self) -> None:
+        """A controlURL pointing at another host raises in strict mode."""
+        xml = self._device_xml(control_url="http://169.254.169.254/latest/meta-data/")
+        requester = UpnpTestRequester({("GET", self.DEVICE_URL): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(self.DEVICE_URL)
+
+    @pytest.mark.asyncio
+    async def test_foreign_host_control_url_skipped_in_non_strict_mode(self) -> None:
+        """A controlURL pointing at another host is skipped (not fetched) in non-strict mode."""
+        xml = self._device_xml(control_url="http://169.254.169.254/latest/meta-data/")
+        # No response registered for the foreign host: if it were requested, it would KeyError.
+        requester = UpnpTestRequester({("GET", self.DEVICE_URL): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(self.DEVICE_URL)
+
+        assert device.services == {}
+
+    @pytest.mark.asyncio
+    async def test_malformed_control_url_raises_upnp_error_not_value_error(self) -> None:
+        """A malformed service URL fails closed as UpnpError, not an unhandled ValueError."""
+        xml = self._device_xml(control_url="http://[::1")  # unbalanced IPv6 bracket
+        requester = UpnpTestRequester({("GET", self.DEVICE_URL): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(self.DEVICE_URL)
+
+    @pytest.mark.asyncio
+    async def test_malformed_control_url_skipped_in_non_strict_mode(self) -> None:
+        """A malformed service URL is skipped (not raised) in non-strict mode."""
+        xml = self._device_xml(control_url="http://[::1")  # unbalanced IPv6 bracket
+        requester = UpnpTestRequester({("GET", self.DEVICE_URL): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(self.DEVICE_URL)
+
+        assert device.services == {}
+
+    @pytest.mark.asyncio
+    async def test_foreign_host_scpd_url_raises_in_strict_mode(self) -> None:
+        """An SCPDURL pointing at another host raises before being fetched."""
+        xml = self._device_xml(scpd_url="http://127.0.0.1:8123/api/states")
+        requester = UpnpTestRequester({("GET", self.DEVICE_URL): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(self.DEVICE_URL)
+
+    @pytest.mark.asyncio
+    async def test_absolute_same_host_urls_allowed(self) -> None:
+        """Absolute URLs to the device's own host are allowed (spec-compliant resolution)."""
+        xml = self._device_xml(
+            scpd_url="http://192.168.1.50:1234/svc.xml",
+            control_url="http://192.168.1.50:1234/svc/control",
+            event_sub_url="http://192.168.1.50:1234/svc/event",
+        )
+        requester = UpnpTestRequester(
+            {
+                ("GET", self.DEVICE_URL): HttpResponse(200, {}, xml),
+                ("GET", "http://192.168.1.50:1234/svc.xml"): HttpResponse(200, {}, self.SCPD_XML),
+            }
+        )
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(self.DEVICE_URL)
+
+        service = device.service("urn:schemas-upnp-org:service:Bar:1")
+        assert service.control_url == "http://192.168.1.50:1234/svc/control"
+        assert service.event_sub_url == "http://192.168.1.50:1234/svc/event"
+
+    @pytest.mark.asyncio
+    async def test_relative_urls_allowed(self) -> None:
+        """Ordinary relative service URLs resolve against the device URL and are allowed."""
+        xml = self._device_xml()
+        requester = UpnpTestRequester(
+            {
+                ("GET", self.DEVICE_URL): HttpResponse(200, {}, xml),
+                ("GET", "http://192.168.1.50:1234/svc.xml"): HttpResponse(200, {}, self.SCPD_XML),
+            }
+        )
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(self.DEVICE_URL)
+
+        service = device.service("urn:schemas-upnp-org:service:Bar:1")
+        assert service.control_url == "http://192.168.1.50:1234/svc/control"
+
+    @pytest.mark.asyncio
+    async def test_absolute_same_host_different_port_allowed(self) -> None:
+        """An absolute URL to the device's host on a different port is allowed.
+
+        The SSRF boundary is the host: a different port on the device's own host
+        is the device talking to itself, not a cross-host request. Some devices
+        legitimately serve control/eventing on a different port than the device
+        description, so the host-only check intentionally permits this.
+        """
+        xml = self._device_xml(
+            scpd_url="http://192.168.1.50:1234/svc.xml",
+            control_url="http://192.168.1.50:8080/svc/control",
+            event_sub_url="http://192.168.1.50:8080/svc/event",
+        )
+        requester = UpnpTestRequester(
+            {
+                ("GET", self.DEVICE_URL): HttpResponse(200, {}, xml),
+                ("GET", "http://192.168.1.50:1234/svc.xml"): HttpResponse(200, {}, self.SCPD_XML),
+            }
+        )
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(self.DEVICE_URL)
+
+        service = device.service("urn:schemas-upnp-org:service:Bar:1")
+        assert service.control_url == "http://192.168.1.50:8080/svc/control"

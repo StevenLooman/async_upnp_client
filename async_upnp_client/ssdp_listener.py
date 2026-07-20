@@ -3,13 +3,14 @@
 import asyncio
 import logging
 import re
+import socket
 from asyncio.events import AbstractEventLoop
 from contextlib import suppress
 from datetime import datetime, timedelta
 from functools import lru_cache
-from ipaddress import ip_address
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from typing import TYPE_CHECKING, Any, Callable, Coroutine, KeysView, Mapping
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 from async_upnp_client.advertisement import SsdpAdvertisementListener
 from async_upnp_client.const import (
@@ -42,18 +43,84 @@ IGNORED_HEADERS = {
     "location",  # Location-header is handled differently!
 }
 
-_INVALID_LOCATIONS = (
-    "://127.",
-    "://[::1]",
-    "://169.254",
-    "://localhost",
-)
+
+# Hostnames that are reserved or conventionally resolve to loopback. RFC 6761
+# additionally reserves the whole ``.localhost`` TLD, handled separately.
+_LOOPBACK_HOSTNAMES = frozenset({"localhost", "localhost.localdomain"})
+
+
+def _parse_ip_literal(hostname: str) -> IPv4Address | IPv6Address | None:
+    """Parse hostname as an IP address, normalising obfuscated IPv4 encodings.
+
+    Returns the address, or None if hostname is a DNS name. Besides the usual
+    dotted-quad and standard IPv6 literals, this recognises the alternative
+    numeric IPv4 encodings the OS resolver accepts -- decimal, octal, hex and
+    short forms such as ``2130706433``, ``0177.0.0.1`` or ``127.1`` -- as well
+    as percent-encoded variants, so that a loopback or link-local address cannot
+    be smuggled past the filter in an obfuscated form. Real LAN devices never
+    advertise these encodings, so normalising them carries no false-positive
+    risk.
+    """
+    hostname = unquote(hostname)
+    try:
+        return ip_address(hostname)
+    except ValueError:
+        pass
+
+    # ip_address() only accepts dotted-quad IPv4; fall back to inet_aton, which
+    # interprets decimal/octal/hex/short forms the same way the resolver will.
+    try:
+        packed = socket.inet_aton(hostname)
+    except OSError:
+        # Not an IP literal in any encoding, but a DNS name.
+        return None
+    return IPv4Address(packed)
 
 
 @lru_cache(maxsize=128)
 def is_valid_location(location: str) -> bool:
-    """Validate if this location is usable."""
-    return location.startswith("http") and not any(invalid in location for invalid in _INVALID_LOCATIONS)
+    """Validate if this location is usable.
+
+    Rejects loopback, unspecified and IPv4 link-local (169.254.0.0/16, which
+    includes cloud-metadata endpoints) addresses. Uses proper URL/IP parsing
+    rather than substring matching, so numeric, obfuscated (decimal/octal/hex)
+    and IPv4-mapped-IPv6 forms of those addresses are caught too. A trailing
+    root-label dot is normalised away, and the reserved loopback names
+    ``localhost``, any ``*.localhost`` name (RFC 6761) and ``localhost.localdomain``
+    are rejected by name. RFC1918/ULA and IPv6 link-local (fe80::/10) addresses
+    are allowed, as those are where regular LAN UPnP devices live.
+
+    This is best-effort defence-in-depth, not a security boundary: an arbitrary
+    DNS name that resolves to a loopback/link-local address (including via DNS
+    rebinding) is allowed here and can only be caught at connect time.
+    """
+    if not location.startswith("http"):
+        return False
+
+    try:
+        hostname = urlparse(location).hostname
+    except ValueError:
+        # Malformed URL (e.g. an unbalanced IPv6 bracket); reject it.
+        return False
+    # Normalise a trailing root-label dot, e.g. "127.0.0.1." or "localhost.",
+    # then reject reserved/conventional loopback names (no DNS resolution needed).
+    hostname = (hostname or "").rstrip(".")
+    if not hostname or hostname in _LOOPBACK_HOSTNAMES or hostname.endswith(".localhost"):
+        return False
+
+    ip_addr = _parse_ip_literal(hostname)
+    if ip_addr is None:
+        # Not an IP literal, but a DNS name; allow it.
+        return True
+
+    # Unwrap IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1) to its embedded IPv4.
+    ip_addr = getattr(ip_addr, "ipv4_mapped", None) or ip_addr
+    if ip_addr.is_loopback or ip_addr.is_unspecified:
+        return False
+
+    # Only IPv4 link-local is rejected (cloud metadata); IPv6 link-local
+    # (fe80::/10) is legitimately used by LAN UPnP devices.
+    return not (ip_addr.version == 4 and ip_addr.is_link_local)
 
 
 def valid_search_headers(headers: CaseInsensitiveDict) -> bool:

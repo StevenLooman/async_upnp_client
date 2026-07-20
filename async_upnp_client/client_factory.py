@@ -103,7 +103,8 @@ class UpnpFactory:
         services = []
         for service_desc_el in device_el.findall("./device:serviceList/device:service", NS):
             service = await self._async_create_service(service_desc_el, description_url)
-            services.append(service)
+            if service is not None:
+                services.append(service)
 
         embedded_devices = []
         for embedded_device_el in device_el.findall("./device:deviceList/device:device", NS):
@@ -152,8 +153,15 @@ class UpnpFactory:
             xml=device_desc_el,
         )
 
-    async def _async_create_service(self, service_description_el: ET.Element, base_url: str) -> UpnpService:
-        """Retrieve the SCPD for a service and create a UpnpService from it."""
+    async def _async_create_service(self, service_description_el: ET.Element, base_url: str) -> UpnpService | None:
+        """Retrieve the SCPD for a service and create a UpnpService from it.
+
+        Returns None if the service is skipped (non-strict mode) because one of
+        its URLs is malformed or resolves to a different host than the device.
+        """
+        if not self._service_urls_valid(service_description_el, base_url):
+            return None
+
         scpd_url = service_description_el.findtext("device:SCPDURL", None, NS)
         scpd_url = urllib.parse.urljoin(base_url, scpd_url)
 
@@ -179,6 +187,41 @@ class UpnpFactory:
             self._on_pre_call_action,
             self._on_post_call_action,
         )
+
+    def _service_urls_valid(self, service_description_el: ET.Element, base_url: str) -> bool:
+        """Validate that a service's URLs resolve to the device's own host.
+
+        Per UDA 1.1/2.0 the SCPDURL/controlURL/eventSubURL elements MUST be
+        relative to the device description URL, so a conformant device never
+        points them at another host. An absolute URL to a different host is a
+        potential SSRF vector (e.g. cloud-metadata or loopback endpoints) and is
+        refused in strict mode or skipped (with a warning) in non-strict mode.
+        """
+        base_host = urllib.parse.urlparse(base_url).hostname
+        for tag in ("SCPDURL", "controlURL", "eventSubURL"):
+            ref = service_description_el.findtext(f"device:{tag}", "", NS)
+            if not ref:
+                continue
+            # A malformed URL (e.g. an unbalanced IPv6 bracket) makes urljoin or
+            # urlparse raise; fail closed and treat it as a refused host.
+            try:
+                resolved = urllib.parse.urljoin(base_url, ref)
+                resolved_host = urllib.parse.urlparse(resolved).hostname
+            except ValueError:
+                resolved_host = None
+            if resolved_host != base_host:
+                reason = (
+                    "is malformed"
+                    if resolved_host is None
+                    else f"resolves to a different host than the device URL {base_url!r}"
+                )
+                message = f"Service {tag} {ref!r} {reason}; refusing as potential SSRF"
+                if not self._non_strict:
+                    raise UpnpError(message)
+
+                _LOGGER.warning("%s; skipping service", message)
+                return False
+        return True
 
     def _parse_service_el(self, service_description_el: ET.Element) -> ServiceInfo:
         """Parse service description XML."""
