@@ -1124,8 +1124,11 @@ class OhmDevice(UpnpProfileDevice):
 
     # endregion
     # region Time Service actions
-    async def async_time(self) -> Mapping[str, str]:
-        """Report time information about progress through a track."""
+    async def async_time(self) -> Mapping[str, int]:
+        """Report time information about progress through a track.
+
+        :return: TrackCount, Duration, Seconds
+        """
         return await self._async_call_action(Service.TIME, Time.TIME)
 
     # endregion
@@ -1204,8 +1207,11 @@ class OhmDevice(UpnpProfileDevice):
         """
         return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_INFO)
 
-    async def async_transport_stream_id(self) -> Mapping[str, str]:
-        """Return the current value of the StreamId state variable."""
+    async def async_transport_stream_id(self) -> Mapping[str, int]:
+        """Return the current value of the StreamId state variable.
+
+        :return: StreamId
+        """
         return await self._async_call_action(Service.TRANSPORT, Transport.STREAM_ID)
 
     async def async_transport_repeat(self) -> Mapping[str, bool]:
@@ -2214,7 +2220,10 @@ class OhmDevice(UpnpProfileDevice):
 
 # region functions independent of class
 def id_list_to_string(list_int: list) -> str:
-    """Convert ID list to space separated string."""
+    """Convert ID list to space separated string.
+
+    Invalid IDs (those that are 0 or negative) are discarded.
+    """
     return " ".join(map(str, filter(lambda x: x > 0, list_int)))
 
 
