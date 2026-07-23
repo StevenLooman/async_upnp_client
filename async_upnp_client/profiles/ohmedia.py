@@ -1977,7 +1977,6 @@ class OhmDevice(UpnpProfileDevice):
 
         source_type = None
         active_source = await self.async_active_source()
-        _LOGGER.warning("Using active_source_type: %s", active_source)
         if active_source is not None:
             source_type = str(active_source.get("Type"))
         return source_type
