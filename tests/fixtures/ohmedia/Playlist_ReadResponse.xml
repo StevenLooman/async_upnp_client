@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+	<s:Body>
+		<u:ReadResponse xmlns:u="urn:av-openhome-org:service:Playlist:1">
+			<Uri>qobuz://track?version=2&amp;trackId=223363655</Uri>
+			<Metadata>&lt;DIDL-Lite xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/&quot;&gt;
+  &lt;item&gt;
+    &lt;dc:title xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot;&gt;The Breath Between&lt;/dc:title&gt;
+    &lt;upnp:class xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot;&gt;object.item.audioItem.musicTrack&lt;/upnp:class&gt;
+    &lt;upnp:albumArtURI xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot;&gt;https://static.qobuz.com/images/covers/gc/ks/b4pl17ryoksgc_230.jpg&lt;/upnp:albumArtURI&gt;
+    &lt;upnp:albumArtURI xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot;&gt;https://static.qobuz.com/images/covers/gc/ks/b4pl17ryoksgc_600.jpg&lt;/upnp:albumArtURI&gt;
+    &lt;upnp:album xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot;&gt;The Breath Between&lt;/upnp:album&gt;
+    &lt;upnp:artist xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot;&gt;David Francey&lt;/upnp:artist&gt;
+    &lt;upnp:artist xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; role=&quot;AlbumArtist&quot;&gt;David Francey&lt;/upnp:artist&gt;
+    &lt;upnp:artist xmlns:upnp=&quot;urn:schemas-upnp-org:metadata-1-0/upnp/&quot; role=&quot;Composer&quot;&gt;David Francey&lt;/upnp:artist&gt;
+    &lt;dc:date xmlns:dc=&quot;http://purl.org/dc/elements/1.1/&quot;&gt;15 September 2023&lt;/dc:date&gt;
+    &lt;res sampleFrequency=&quot;44.1kHz&quot; bitsPerSample=&quot;16&quot; duration=&quot;0:03:34&quot;&gt;qobuz://track?version=2&amp;amp;trackId=223363655&lt;/res&gt;
+    &lt;desc id=&quot;pinsUri&quot; nameSpace=&quot;https://linn.co.uk&quot;&gt;qobuz://track?trackId=223363655&amp;amp;version=1&lt;/desc&gt;
+    &lt;desc id=&quot;pinsMode&quot; nameSpace=&quot;https://linn.co.uk&quot;&gt;qobuz&lt;/desc&gt;
+    &lt;desc id=&quot;pinsType&quot; nameSpace=&quot;https://linn.co.uk&quot;&gt;track&lt;/desc&gt;
+    &lt;desc id=&quot;artistId&quot; nameSpace=&quot;https://linn.co.uk&quot;&gt;891199&lt;/desc&gt;
+    &lt;desc id=&quot;albumId&quot; nameSpace=&quot;https://linn.co.uk&quot;&gt;b4pl17ryoksgc&lt;/desc&gt;
+  &lt;/item&gt;
+&lt;/DIDL-Lite&gt;</Metadata>
+		</u:ReadResponse>
+	</s:Body>
+</s:Envelope>

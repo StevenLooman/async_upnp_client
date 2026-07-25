@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/" s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+	<s:Body>
+		<u:SourceResponse xmlns:u="urn:av-openhome-org:service:Product:4">
+			<SystemName>Playlist</SystemName>
+			<Type>Playlist</Type>
+			<Name>Playlist</Name>
+			<Visible>True</Visible>
+		</u:SourceResponse>
+	</s:Body>
+</s:Envelope>
