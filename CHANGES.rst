@@ -1,3 +1,13 @@
+async_upnp_client 0.48.0 (2026-07-26)
+=====================================
+
+Features
+--------
+
+- Add profile ohmedia for Linn/OpenHome devices
+  Add tests for ohmedia profile (#292)
+
+
 async_upnp_client 0.47.1 (2026-07-20)
 =====================================
 
