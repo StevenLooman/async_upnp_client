@@ -36,7 +36,7 @@ Bugfixes
   resolves to such an address is still allowed, since the UPnP specification
   permits hostnames in URLs and they cannot be distinguished from legitimate
   device names at parse time. Hostname-based SSRF can only be caught by validating
-  the resolved address at connect time. (ghsa-94v4-2fvf-ff8p)
+  the resolved address at connect time. (ghsa-94v4-2fvf-ff8p) (CVE-2026-75515)
 - Drop stale event subscriptions instead of spinning on them, which previously could cause ``UpnpProfileDevice._resubscribe_loop`` to busy-loop and starve the asyncio event loop. (#303)
 
 
