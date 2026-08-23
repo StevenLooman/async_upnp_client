@@ -1009,3 +1009,16 @@ class TestServiceUrlSsrf:
 
         with pytest.raises(UpnpError):
             await factory.async_create_device(device_url)
+
+    @pytest.mark.asyncio
+    async def test_ipv6_service_introduces_zone_rejected(self) -> None:
+        """A service URL that adds a zone ID absent from the device URL is rejected."""
+        device_url = "http://[fe80::1]:80/device.xml"
+        xml = self._device_xml(
+            control_url="http://[fe80::1%252]:80/svc/control",
+        )
+        requester = UpnpTestRequester({("GET", device_url): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(device_url)

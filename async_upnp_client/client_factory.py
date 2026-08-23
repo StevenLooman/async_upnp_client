@@ -73,6 +73,9 @@ def _ipv6_hosts_match(base_host: str | None, resolved_host: str | None) -> bool:
     if base_zone is not None and resolved_zone is not None:
         return base_zone == resolved_zone
 
+    if base_zone is None and resolved_zone is not None:
+        return False
+
     return True
 
 
