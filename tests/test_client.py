@@ -964,3 +964,33 @@ class TestServiceUrlSsrf:
 
         service = device.service("urn:schemas-upnp-org:service:Bar:1")
         assert service.control_url == "http://192.168.1.50:8080/svc/control"
+
+    @pytest.mark.asyncio
+    async def test_ipv6_link_local_zone_id_mismatch_allowed(self) -> None:
+        """Absolute service URLs without a zone ID match a device URL that has one.
+
+        SSDP discovery adds zone IDs to link-local IPv6 device URLs, but
+        devices typically omit them from service URLs in their XML. The SSRF
+        host comparison must strip zone IDs so these are not falsely rejected.
+        """
+        device_url = "http://[fe80::218:ddff:fe0a:517d%252]:80/dms/device.xml"
+        xml = self._device_xml(
+            scpd_url="http://[fe80::218:ddff:fe0a:517d]:80/svc.xml",
+            control_url="http://[fe80::218:ddff:fe0a:517d]:80/dms/control",
+            event_sub_url="http://[fe80::218:ddff:fe0a:517d]:80/dms/event",
+        )
+        requester = UpnpTestRequester(
+            {
+                ("GET", device_url): HttpResponse(200, {}, xml),
+                (
+                    "GET",
+                    "http://[fe80::218:ddff:fe0a:517d]:80/svc.xml",
+                ): HttpResponse(200, {}, self.SCPD_XML),
+            }
+        )
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(device_url)
+
+        service = device.service("urn:schemas-upnp-org:service:Bar:1")
+        assert service.control_url == "http://[fe80::218:ddff:fe0a:517d]:80/dms/control"

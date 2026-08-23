@@ -45,6 +45,20 @@ from async_upnp_client.utils import absolute_url
 _LOGGER = logging.getLogger(__name__)
 
 
+def _strip_ipv6_zone_id(hostname: str | None) -> str | None:
+    """Strip the zone ID from an IPv6 hostname for identity comparison.
+
+    Link-local IPv6 addresses may carry a zone ID (e.g. fe80::1%2) that
+    identifies the local network interface. The zone ID is irrelevant for
+    host identity and is often present in the device description URL
+    (added during SSDP discovery) but absent from absolute service URLs
+    in the device XML.
+    """
+    if hostname is None:
+        return None
+    return hostname.split("%")[0]
+
+
 class UpnpFactory:
     """
     Factory for UpnpService and friends.
@@ -197,7 +211,7 @@ class UpnpFactory:
         potential SSRF vector (e.g. cloud-metadata or loopback endpoints) and is
         refused in strict mode or skipped (with a warning) in non-strict mode.
         """
-        base_host = urllib.parse.urlparse(base_url).hostname
+        base_host = _strip_ipv6_zone_id(urllib.parse.urlparse(base_url).hostname)
         for tag in ("SCPDURL", "controlURL", "eventSubURL"):
             ref = service_description_el.findtext(f"device:{tag}", "", NS)
             if not ref:
@@ -206,7 +220,7 @@ class UpnpFactory:
             # urlparse raise; fail closed and treat it as a refused host.
             try:
                 resolved = urllib.parse.urljoin(base_url, ref)
-                resolved_host = urllib.parse.urlparse(resolved).hostname
+                resolved_host = _strip_ipv6_zone_id(urllib.parse.urlparse(resolved).hostname)
             except ValueError:
                 resolved_host = None
             if resolved_host != base_host:
