@@ -1,5 +1,7 @@
 """Unit tests for client_factory and client modules."""
 
+# pylint: disable=too-many-lines
+
 from datetime import datetime, timedelta, timezone
 from typing import MutableMapping
 
@@ -994,3 +996,16 @@ class TestServiceUrlSsrf:
 
         service = device.service("urn:schemas-upnp-org:service:Bar:1")
         assert service.control_url == "http://[fe80::218:ddff:fe0a:517d]:80/dms/control"
+
+    @pytest.mark.asyncio
+    async def test_ipv6_different_zone_ids_rejected_in_strict_mode(self) -> None:
+        """Service URLs with a different zone ID than the device URL are rejected."""
+        device_url = "http://[fe80::1%251]:80/device.xml"
+        xml = self._device_xml(
+            control_url="http://[fe80::1%252]:80/svc/control",
+        )
+        requester = UpnpTestRequester({("GET", device_url): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(device_url)
