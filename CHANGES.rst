@@ -1,3 +1,12 @@
+async_upnp_client 0.48.1 (2026-08-24)
+=====================================
+
+Bugfixes
+--------
+
+- Fix SSRF false positive on IPv6 link-local addresses where the device description URL carries a zone ID from SSDP discovery but absolute service URLs in the device XML omit it. (#317)
+
+
 async_upnp_client 0.48.0 (2026-07-26)
 =====================================
 
