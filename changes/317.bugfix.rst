@@ -1,0 +1,1 @@
+Fix SSRF false positive on IPv6 link-local addresses where the device description URL carries a zone ID from SSDP discovery but absolute service URLs in the device XML omit it.

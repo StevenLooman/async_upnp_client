@@ -45,6 +45,40 @@ from async_upnp_client.utils import absolute_url
 _LOGGER = logging.getLogger(__name__)
 
 
+def _ipv6_hosts_match(base_host: str | None, resolved_host: str | None) -> bool:
+    """Check whether two hostnames refer to the same IPv6 address.
+
+    SSDP discovery adds zone IDs to link-local device URLs (e.g. fe80::1%2),
+    but devices omit them from absolute service URLs in their XML. A plain
+    string comparison rejects these as different hosts. This function handles
+    the mismatch: if only one side carries a zone ID, compare the bare
+    addresses. If both carry zone IDs, require them to match. Non-IPv6
+    hostnames are not touched (returns False so the caller falls through
+    to normal comparison).
+    """
+    if base_host is None or resolved_host is None:
+        return False
+    if ":" not in base_host or ":" not in resolved_host:
+        return False
+
+    base_parts = base_host.split("%", 1)
+    resolved_parts = resolved_host.split("%", 1)
+
+    if base_parts[0] != resolved_parts[0]:
+        return False
+
+    base_zone = base_parts[1] if len(base_parts) > 1 else None
+    resolved_zone = resolved_parts[1] if len(resolved_parts) > 1 else None
+
+    if base_zone is not None and resolved_zone is not None:
+        return base_zone == resolved_zone
+
+    if base_zone is None and resolved_zone is not None:
+        return False
+
+    return True
+
+
 class UpnpFactory:
     """
     Factory for UpnpService and friends.
@@ -209,7 +243,7 @@ class UpnpFactory:
                 resolved_host = urllib.parse.urlparse(resolved).hostname
             except ValueError:
                 resolved_host = None
-            if resolved_host != base_host:
+            if resolved_host != base_host and not _ipv6_hosts_match(base_host, resolved_host):
                 reason = (
                     "is malformed"
                     if resolved_host is None

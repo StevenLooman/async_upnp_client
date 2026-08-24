@@ -1,5 +1,7 @@
 """Unit tests for client_factory and client modules."""
 
+# pylint: disable=too-many-lines
+
 from datetime import datetime, timedelta, timezone
 from typing import MutableMapping
 
@@ -964,3 +966,72 @@ class TestServiceUrlSsrf:
 
         service = device.service("urn:schemas-upnp-org:service:Bar:1")
         assert service.control_url == "http://192.168.1.50:8080/svc/control"
+
+    @pytest.mark.asyncio
+    async def test_ipv6_link_local_zone_id_mismatch_allowed(self) -> None:
+        """Absolute service URLs without a zone ID match a device URL that has one.
+
+        SSDP discovery adds zone IDs to link-local IPv6 device URLs, but
+        devices typically omit them from service URLs in their XML. The SSRF
+        host comparison must strip zone IDs so these are not falsely rejected.
+        """
+        device_url = "http://[fe80::218:ddff:fe0a:517d%252]:80/dms/device.xml"
+        xml = self._device_xml(
+            scpd_url="http://[fe80::218:ddff:fe0a:517d]:80/svc.xml",
+            control_url="http://[fe80::218:ddff:fe0a:517d]:80/dms/control",
+            event_sub_url="http://[fe80::218:ddff:fe0a:517d]:80/dms/event",
+        )
+        requester = UpnpTestRequester(
+            {
+                ("GET", device_url): HttpResponse(200, {}, xml),
+                (
+                    "GET",
+                    "http://[fe80::218:ddff:fe0a:517d]:80/svc.xml",
+                ): HttpResponse(200, {}, self.SCPD_XML),
+            }
+        )
+        factory = UpnpFactory(requester, non_strict=True)
+
+        device = await factory.async_create_device(device_url)
+
+        service = device.service("urn:schemas-upnp-org:service:Bar:1")
+        assert service.control_url == "http://[fe80::218:ddff:fe0a:517d]:80/dms/control"
+
+    @pytest.mark.asyncio
+    async def test_ipv6_different_zone_ids_rejected_in_strict_mode(self) -> None:
+        """Service URLs with a different zone ID than the device URL are rejected."""
+        device_url = "http://[fe80::1%251]:80/device.xml"
+        xml = self._device_xml(
+            control_url="http://[fe80::1%252]:80/svc/control",
+        )
+        requester = UpnpTestRequester({("GET", device_url): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(device_url)
+
+    @pytest.mark.asyncio
+    async def test_ipv6_service_introduces_zone_rejected(self) -> None:
+        """A service URL that adds a zone ID absent from the device URL is rejected."""
+        device_url = "http://[fe80::1]:80/device.xml"
+        xml = self._device_xml(
+            control_url="http://[fe80::1%252]:80/svc/control",
+        )
+        requester = UpnpTestRequester({("GET", device_url): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(device_url)
+
+    @pytest.mark.asyncio
+    async def test_ipv6_different_addresses_with_zones_rejected(self) -> None:
+        """Different IPv6 addresses are rejected even when both carry zone IDs."""
+        device_url = "http://[fe80::1%251]:80/device.xml"
+        xml = self._device_xml(
+            control_url="http://[fe80::2%251]:80/svc/control",
+        )
+        requester = UpnpTestRequester({("GET", device_url): HttpResponse(200, {}, xml)})
+        factory = UpnpFactory(requester)
+
+        with pytest.raises(UpnpError):
+            await factory.async_create_device(device_url)
