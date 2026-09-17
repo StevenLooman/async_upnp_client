@@ -1,3 +1,12 @@
+async_upnp_client 0.48.2 (2026-09-17)
+=====================================
+
+Bugfixes
+--------
+
+- Gracefully handle malformed DIDL-Lite metadata returned by DLNA renderers. (#320)
+
+
 async_upnp_client 0.48.1 (2026-08-24)
 =====================================
 
