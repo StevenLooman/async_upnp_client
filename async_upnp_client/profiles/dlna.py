@@ -11,9 +11,11 @@ from http import HTTPStatus
 from mimetypes import guess_type
 from time import monotonic as monotonic_timer
 from typing import Any, Iterable, Mapping, MutableMapping, NamedTuple, Sequence
+from xml.etree.ElementTree import ParseError
 from xml.sax.handler import ContentHandler, ErrorHandler
 from xml.sax.xmlreader import AttributesImpl
 
+from defusedxml.common import DefusedXmlException
 from defusedxml.sax import parseString
 from didl_lite import didl_lite
 
@@ -223,7 +225,12 @@ def _lower_split_commas(input_: str) -> set[str]:
 def _cached_from_xml_string(
     xml: str,
 ) -> list[didl_lite.DidlObject | didl_lite.Descriptor]:
-    return didl_lite.from_xml_string(xml, strict=False)
+    try:
+        return didl_lite.from_xml_string(xml, strict=False)
+    except (ParseError, DefusedXmlException):
+        # Invalid XML and XML rejected by the secure parser are unusable metadata.
+        _LOGGER.debug("Unable to parse DIDL-Lite metadata")
+        return []
 
 
 class ConnectionManagerMixin(UpnpProfileDevice):

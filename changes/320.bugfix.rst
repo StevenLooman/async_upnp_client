@@ -1,0 +1,1 @@
+Gracefully handle malformed DIDL-Lite metadata returned by DLNA renderers.

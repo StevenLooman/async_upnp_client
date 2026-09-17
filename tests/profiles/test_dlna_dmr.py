@@ -41,6 +41,104 @@ AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT = """
 </e:propertyset>
 """
 
+UNUSABLE_METADATA = [
+    "not xml at all",
+    "<DIDL-Lite>",
+    '<!DOCTYPE x [<!ENTITY test "value">]><DIDL-Lite>&test;</DIDL-Lite>',
+    "",
+    "NOT_IMPLEMENTED",
+    "<DIDL-Lite/>",
+]
+
+VALID_METADATA = """
+<DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/"
+           xmlns:dc="http://purl.org/dc/elements/1.1/"
+           xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/">
+  <item id="1" parentID="0" restricted="1">
+    <dc:title>Test track</dc:title>
+    <upnp:class>object.item.audioItem.musicTrack</upnp:class>
+    <upnp:artist>Test artist</upnp:artist>
+    <upnp:albumArtURI>/cover.jpg</upnp:albumArtURI>
+  </item>
+</DIDL-Lite>
+"""
+
+
+@pytest.mark.parametrize("metadata", UNUSABLE_METADATA)
+@pytest.mark.asyncio
+async def test_unusable_metadata_event(metadata: str) -> None:
+    """Unusable metadata clears old values without interrupting event processing."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    device = await UpnpFactory(requester).async_create_device("http://dlna_dmr:1234/device.xml")
+    notify_server = UpnpTestNotifyServer(requester=requester, source=("192.168.1.2", 8090))
+    profile = DmrDevice(device, event_handler=notify_server.event_handler)
+    await profile.async_subscribe_services(auto_resubscribe=False)
+    service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+    on_event = mock.Mock()
+    profile.on_event = on_event
+
+    # Repeat valid data after unusable data to verify recovery as well as clearing.
+    for value in (VALID_METADATA, metadata, VALID_METADATA):
+        on_event.reset_mock()
+        service.notify_changed_state_variables(
+            {
+                "CurrentTrackURI": "http://example.com/track.mp3",
+                "AVTransportURI": "http://example.com/playlist",
+                "CurrentTrackMetaData": value,
+                "AVTransportURIMetaData": value,
+                "TransportState": "PLAYING",
+            }
+        )
+        on_event.assert_called_once()
+        assert profile.transport_state == "PLAYING"
+        assert profile.media_title == ("Test track" if value == VALID_METADATA else None)
+        assert profile.media_artist == ("Test artist" if value == VALID_METADATA else None)
+        assert profile.media_playlist_title == ("Test track" if value == VALID_METADATA else None)
+        assert profile.media_image_url == ("http://dlna_dmr:1234/cover.jpg" if value == VALID_METADATA else None)
+
+    await profile.async_unsubscribe_services()
+
+
+@pytest.mark.parametrize("metadata", UNUSABLE_METADATA)
+@pytest.mark.asyncio
+async def test_unusable_metadata_image(metadata: str) -> None:
+    """Image access handles unusable metadata independently of event processing."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    device = await UpnpFactory(requester).async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+    service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+    service.state_variable("CurrentTrackMetaData").value = metadata
+
+    assert profile.media_image_url is None
+
+
+@pytest.mark.asyncio
+async def test_unusable_metadata_poll() -> None:
+    """Malformed track metadata does not interrupt a successful position poll."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    device = await UpnpFactory(requester).async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+    response = defusedxml.ElementTree.fromstring(read_file("dlna/dmr/action_GetPositionInfo.xml"))
+    metadata = response.find(".//TrackMetaData")
+    assert metadata is not None
+    metadata.text = "not xml at all"
+    requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
+        200, {}, defusedxml.ElementTree.tostring(response, encoding="unicode")
+    )
+    on_event = mock.Mock()
+    profile.on_event = on_event
+
+    # pylint: disable=protected-access
+    await profile._async_poll_state_variables("AVT", "GetPositionInfo", InstanceID=0)
+
+    on_event.assert_called_once()
+    assert profile.media_track_number == 1
+    assert profile.media_duration == 194
+    assert profile.current_track_uri == "uri://1.mp3"
+    assert profile.media_title is None
+    assert profile.media_artist is None
+    assert profile.media_image_url is None
+
 
 def assert_xml_equal(left: defusedxml.ElementTree, right: defusedxml.ElementTree) -> None:
     """Check two XML trees are equal."""
