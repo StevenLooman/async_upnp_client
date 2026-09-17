@@ -27,6 +27,20 @@ AVT_NOTIFY_HEADERS = {
     "SID": "uuid:dummy-avt1",
 }
 
+AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT = """
+<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
+    <e:property>
+        <LastChange>
+            &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/AVT/&quot;&gt;
+                &lt;InstanceID val=&quot;0&quot;&gt;
+                    &lt;CurrentTransportActions val=&quot;{actions}&quot;/&gt;
+                    &lt;/InstanceID&gt;
+            &lt;/Event&gt;
+        </LastChange>
+    </e:property>
+</e:propertyset>
+"""
+
 UNUSABLE_METADATA = [
     "not xml at all",
     "<DIDL-Lite>",
@@ -124,21 +138,6 @@ async def test_unusable_metadata_poll() -> None:
     assert profile.media_title is None
     assert profile.media_artist is None
     assert profile.media_image_url is None
-
-
-AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT = """
-<e:propertyset xmlns:e="urn:schemas-upnp-org:event-1-0">
-    <e:property>
-        <LastChange>
-            &lt;Event xmlns=&quot;urn:schemas-upnp-org:metadata-1-0/AVT/&quot;&gt;
-                &lt;InstanceID val=&quot;0&quot;&gt;
-                    &lt;CurrentTransportActions val=&quot;{actions}&quot;/&gt;
-                    &lt;/InstanceID&gt;
-            &lt;/Event&gt;
-        </LastChange>
-    </e:property>
-</e:propertyset>
-"""
 
 
 def assert_xml_equal(left: defusedxml.ElementTree, right: defusedxml.ElementTree) -> None:
