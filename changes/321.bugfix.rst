@@ -1,0 +1,1 @@
+Answer a SUBSCRIBE with an unknown or expired SID, or without a valid CALLBACK, with 412 Precondition Failed (UDA 1.1 section 4.1.2) instead of 404.
