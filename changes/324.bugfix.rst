@@ -1,0 +1,1 @@
+Reply to a device-type or service-type M-SEARCH with the ST spelled as the request spelled it, instead of lower-cased (UDA 2.0 section 1.3.3).
