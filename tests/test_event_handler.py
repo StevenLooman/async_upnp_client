@@ -98,10 +98,11 @@ async def test_subscribe_and_renew_send_a_whole_number_of_seconds() -> None:
     service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
     await event_handler.async_subscribe(service, timeout=timedelta(seconds=1800))
     await event_handler.async_resubscribe(service, timeout=timedelta(seconds=1800))
+    await event_handler.async_subscribe(service, timeout=timedelta(days=2))
     await event_handler.async_resubscribe(service, timeout=timedelta(days=2))
 
     timeouts = [request.headers["TIMEOUT"] for request in requests if request.method == "SUBSCRIBE"]
-    assert timeouts == ["Second-1800", "Second-1800", "Second-172800"]
+    assert timeouts == ["Second-1800", "Second-1800", "Second-172800", "Second-172800"]
 
 
 @pytest.mark.asyncio
