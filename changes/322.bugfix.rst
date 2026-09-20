@@ -1,0 +1,1 @@
+Send the ``TIMEOUT`` header of a subscription renewal as a whole number of seconds, matching what subscribing already sends. Devices which parse the header as an integer, such as those built on ohNet, rejected every renewal.
