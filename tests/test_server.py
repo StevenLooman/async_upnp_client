@@ -422,3 +422,40 @@ def test_send_search_response_st_as_requested(upnp_server: UpnpServerTuple, sear
     assert len(sent) == 1
     st_lines = [line for line in sent[0].decode().split("\r\n") if line.lower().startswith("st:")]
     assert st_lines == [f"ST:{search_target}"]
+
+
+def test_send_search_response_with_mx_is_sent_once(upnp_server: UpnpServerTuple, monkeypatch: Any) -> None:
+    """Test that a search with an MX header is answered once, after the delay, not immediately as well."""
+    # pylint: disable=redefined-outer-name, protected-access
+    server = upnp_server.server
+    search_responder = server._search_responder
+    assert search_responder
+    assert search_responder._response_transport
+    response_transport = cast(Mock, search_responder._response_transport)
+    response_transport.sendto = Mock(side_effect=None)
+
+    scheduled: list[tuple[Callable[..., None], tuple[Any, ...]]] = []
+    loop = Mock()
+    loop.time = Mock(return_value=0.0)
+    loop.call_at = Mock(side_effect=lambda _when, callback, *args: scheduled.append((callback, args)))
+    monkeypatch.setattr(search_responder, "_loop", loop)
+
+    headers = CaseInsensitiveDict(
+        {
+            "HOST": "192.168.1.100",
+            "man": '"ssdp:discover"',
+            "st": "upnp:rootdevice",
+            "mx": "3",
+            "_remote_addr": ("192.168.1.101", 31234),
+        }
+    )
+    search_responder._on_data("M-SEARCH * HTTP/1.1", headers)
+
+    # The response is deferred: scheduled once, nothing on the wire yet.
+    assert len(scheduled) == 1
+    response_transport.sendto.assert_not_called()
+
+    # When the delay elapses, the one response is sent.
+    callback, args = scheduled[0]
+    callback(*args)
+    assert response_transport.sendto.call_count == 1
