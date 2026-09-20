@@ -73,6 +73,9 @@ async def test_subscribe_and_renew_send_a_whole_number_of_seconds() -> None:
     "Second-1800.0" where a subscribe asked for "Second-1800". A device
     parsing the header as an integer rejects the renewal, and the caller
     silently loses and replaces the subscription every time it renews.
+
+    timedelta.seconds is not the whole of it either: it is the seconds
+    component, and is zero for a timeout of a day or more.
     """
     requester = UpnpTestRequester(RESPONSE_MAP)
     factory = UpnpFactory(requester)
@@ -95,9 +98,10 @@ async def test_subscribe_and_renew_send_a_whole_number_of_seconds() -> None:
     service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
     await event_handler.async_subscribe(service, timeout=timedelta(seconds=1800))
     await event_handler.async_resubscribe(service, timeout=timedelta(seconds=1800))
+    await event_handler.async_resubscribe(service, timeout=timedelta(days=2))
 
     timeouts = [request.headers["TIMEOUT"] for request in requests if request.method == "SUBSCRIBE"]
-    assert timeouts == ["Second-1800", "Second-1800"]
+    assert timeouts == ["Second-1800", "Second-1800", "Second-172800"]
 
 
 @pytest.mark.asyncio

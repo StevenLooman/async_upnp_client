@@ -188,7 +188,7 @@ class UpnpEventHandler:
         # do SUBSCRIBE request
         headers = {
             "NT": "upnp:event",
-            "TIMEOUT": "Second-" + str(timeout.seconds),
+            "TIMEOUT": "Second-" + str(int(timeout.total_seconds())),
             "HOST": urlparse(service.event_sub_url).netloc,
             "CALLBACK": f"<{self.callback_url}>",
         }
@@ -238,7 +238,7 @@ class UpnpEventHandler:
         headers = {
             "HOST": urlparse(service.event_sub_url).netloc,
             "SID": sid,
-            "TIMEOUT": "Second-" + str(timeout.seconds),
+            "TIMEOUT": "Second-" + str(int(timeout.total_seconds())),
         }
         request = HttpRequest("SUBSCRIBE", service.event_sub_url, headers, None)
         response = await self._requester.async_http_request(request)
