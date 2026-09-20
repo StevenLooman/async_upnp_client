@@ -238,7 +238,7 @@ class UpnpEventHandler:
         headers = {
             "HOST": urlparse(service.event_sub_url).netloc,
             "SID": sid,
-            "TIMEOUT": "Second-" + str(timeout.total_seconds()),
+            "TIMEOUT": "Second-" + str(timeout.seconds),
         }
         request = HttpRequest("SUBSCRIBE", service.event_sub_url, headers, None)
         response = await self._requester.async_http_request(request)
