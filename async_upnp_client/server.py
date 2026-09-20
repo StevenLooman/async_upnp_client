@@ -525,9 +525,9 @@ class SsdpSearchResponder:
         elif matched_devices := self.device.get_devices_matching_udn(search_target):
             responses.extend(self._build_responses_device_udn(device) for device in matched_devices)
         elif matched_devices := self._matched_devices_by_type(search_target):
-            responses.extend(self._build_responses_device_type(device, search_target) for device in matched_devices)
+            responses.extend(self._build_responses_device_type(device, st_header) for device in matched_devices)
         elif matched_services := self._matched_services_by_type(search_target):
-            responses.extend(self._build_responses_service(service, search_target) for service in matched_services)
+            responses.extend(self._build_responses_service(service, st_header) for service in matched_services)
 
         if self.options.get(SSDP_SEARCH_RESPONDER_OPTION_ALWAYS_REPLY_WITH_ROOT_DEVICE):
             responses.append(self._build_response_rootdevice())

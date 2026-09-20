@@ -389,3 +389,36 @@ def test_send_search_response_oserror(upnp_server: UpnpServerTuple) -> None:
     search_responser._on_data("M-SEARCH * HTTP/1.1", headers)
 
     response_transport.sendto.assert_called()
+
+
+@pytest.mark.parametrize(
+    "search_target",
+    [
+        "urn:schemas-upnp-org:service:TestServerService:1",
+        "urn:schemas-upnp-org:service:testserverservice:1",
+    ],
+)
+def test_send_search_response_st_as_requested(upnp_server: UpnpServerTuple, search_target: str) -> None:
+    """Test that the ST of a search response is the request's ST, spelled as the request spelled it."""
+    # pylint: disable=redefined-outer-name, protected-access
+    server = upnp_server.server
+    search_responder = server._search_responder
+    assert search_responder
+    assert search_responder._response_transport
+    response_transport = cast(Mock, search_responder._response_transport)
+    sent: list[bytes] = []
+    response_transport.sendto = Mock(side_effect=lambda data, _addr: sent.append(data))
+
+    headers = CaseInsensitiveDict(
+        {
+            "HOST": "192.168.1.100",
+            "man": '"ssdp:discover"',
+            "st": search_target,
+            "_remote_addr": ("192.168.1.101", 31234),
+        }
+    )
+    search_responder._on_data("M-SEARCH * HTTP/1.1", headers)
+
+    assert len(sent) == 1
+    st_lines = [line for line in sent[0].decode().split("\r\n") if line.lower().startswith("st:")]
+    assert st_lines == [f"ST:{search_target}"]
