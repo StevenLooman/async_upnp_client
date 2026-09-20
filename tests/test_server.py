@@ -298,6 +298,51 @@ async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
     assert event.is_set()
 
 
+@pytest.mark.asyncio
+async def test_subscribe_renewal_unknown_sid_is_412(upnp_server: UpnpServerTuple) -> None:
+    """A renewal with a SID the server does not know is 412, not 404.
+
+    UDA 1.1 section 4.1.2: "412 Precondition Failed: SID does not correspond
+    to a known, un-expired subscription". 412 is what tells a control point
+    to subscribe afresh; a control point that renews against a restarted
+    server and gets 404 does not.
+    """
+    # pylint: disable=redefined-outer-name
+    http_client = upnp_server.http_client
+
+    # Positive control: a renewal of a live subscription is 200.
+    response = await http_client.request(
+        "SUBSCRIBE",
+        "/upnp/event/TestServerService",
+        headers={"CALLBACK": "</foo/bar>", "NT": "upnp:event", "TIMEOUT": "Second-30"},
+    )
+    assert response.status == 200
+    sid = response.headers.get("SID")
+    assert sid
+    response = await http_client.request(
+        "SUBSCRIBE",
+        "/upnp/event/TestServerService",
+        headers={"SID": sid, "TIMEOUT": "Second-30"},
+    )
+    assert response.status == 200
+
+    # The case under test: a SID from a previous incarnation of the server.
+    response = await http_client.request(
+        "SUBSCRIBE",
+        "/upnp/event/TestServerService",
+        headers={"SID": "uuid:00000000-0000-0000-0000-000000000000", "TIMEOUT": "Second-30"},
+    )
+    assert response.status == 412
+
+    # And a new subscription with no CALLBACK: also 412 per the same table.
+    response = await http_client.request(
+        "SUBSCRIBE",
+        "/upnp/event/TestServerService",
+        headers={"NT": "upnp:event", "TIMEOUT": "Second-30"},
+    )
+    assert response.status == 412
+
+
 def test_send_search_response_ok(upnp_server: UpnpServerTuple) -> None:
     """Test sending search response without any failure."""
     # pylint: disable=redefined-outer-name, protected-access

@@ -1144,7 +1144,10 @@ async def subscribe_handler(service: UpnpServerService, request: Request) -> Res
             subscriber = EventSubscriber(callback_url, timeout_val)
 
     if not subscriber:
-        return Response(status=404)
+        # UDA 1.1 section 4.1.2: an unknown or expired SID, or a new
+        # subscription without a valid CALLBACK, is 412 Precondition Failed.
+        # 412 is what tells a control point to subscribe afresh.
+        return Response(status=412)
 
     headers = {
         "DATE": format_date_time(mktime(datetime.now().timetuple())),
