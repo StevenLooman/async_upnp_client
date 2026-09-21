@@ -89,7 +89,7 @@ class ServerDeviceTest(UpnpServerDevice):
     """Test device."""
 
     DEVICE_DEFINITION = DeviceInfo(
-        device_type=":urn:schemas-upnp-org:device:TestServerDevice:1",
+        device_type="urn:schemas-upnp-org:device:TestServerDevice:1",
         friendly_name="Test Server",
         manufacturer="Test",
         manufacturer_url=None,
@@ -394,6 +394,8 @@ def test_send_search_response_oserror(upnp_server: UpnpServerTuple) -> None:
 @pytest.mark.parametrize(
     "search_target",
     [
+        "urn:schemas-upnp-org:device:TestServerDevice:1",
+        "urn:schemas-upnp-org:device:testserverdevice:1",
         "urn:schemas-upnp-org:service:TestServerService:1",
         "urn:schemas-upnp-org:service:testserverservice:1",
     ],
