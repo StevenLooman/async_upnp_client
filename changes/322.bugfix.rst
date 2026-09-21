@@ -1,0 +1,1 @@
+Send the ``TIMEOUT`` header of a subscription request as a whole number of seconds. A renewal asked for ``Second-1800.0``, which devices parsing the header as an integer reject, and neither request handled a timeout of a day or more.

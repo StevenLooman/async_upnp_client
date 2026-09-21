@@ -8,7 +8,7 @@ import pytest
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
-from async_upnp_client.const import HttpRequest
+from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.event_handler import UpnpEventHandlerRegister
 
 from .conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester
@@ -63,6 +63,46 @@ async def test_subscribe_renew() -> None:
     assert event_handler.service_for_sid("uuid:dummy") == service
     assert sid == "uuid:dummy"
     assert timeout == timedelta(seconds=300)
+
+
+@pytest.mark.asyncio
+async def test_subscribe_and_renew_send_a_whole_number_of_seconds() -> None:
+    """Test the TIMEOUT header is a whole number of seconds on both requests.
+
+    timedelta.total_seconds() is a float, so a renewal asked for
+    "Second-1800.0" where a subscribe asked for "Second-1800". A device
+    parsing the header as an integer rejects the renewal, and the caller
+    silently loses and replaces the subscription every time it renews.
+
+    timedelta.seconds is not the whole of it either: it is the seconds
+    component, and is zero for a timeout of a day or more.
+    """
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+    notify_server = UpnpTestNotifyServer(
+        requester=requester,
+        source=("192.168.1.2", 8090),
+    )
+    event_handler = notify_server.event_handler
+
+    requests: list[HttpRequest] = []
+    original = requester.async_http_request
+
+    async def recording(http_request: HttpRequest) -> HttpResponse:
+        requests.append(http_request)
+        return await original(http_request)
+
+    requester.async_http_request = recording  # type: ignore[method-assign]
+
+    service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+    await event_handler.async_subscribe(service, timeout=timedelta(seconds=1800))
+    await event_handler.async_resubscribe(service, timeout=timedelta(seconds=1800))
+    await event_handler.async_subscribe(service, timeout=timedelta(days=2))
+    await event_handler.async_resubscribe(service, timeout=timedelta(days=2))
+
+    timeouts = [request.headers["TIMEOUT"] for request in requests if request.method == "SUBSCRIBE"]
+    assert timeouts == ["Second-1800", "Second-1800", "Second-172800", "Second-172800"]
 
 
 @pytest.mark.asyncio
