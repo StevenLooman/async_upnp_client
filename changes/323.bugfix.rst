@@ -1,0 +1,1 @@
+Answer an M-SEARCH carrying an MX header once, after the random delay, instead of immediately and again after the delay (UDA 2.0 section 1.3.3).

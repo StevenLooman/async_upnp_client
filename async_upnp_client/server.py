@@ -496,6 +496,8 @@ class SsdpSearchResponder:
                 remote_addr,
                 responses,
             )
+            return
+
         self._send_responses(remote_addr, responses)
 
     def _build_responses(self, headers: CaseInsensitiveDict) -> list[bytes]:
