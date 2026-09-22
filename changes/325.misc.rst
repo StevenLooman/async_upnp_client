@@ -1,0 +1,1 @@
+Fix the test fixture's device type (a stray leading colon) so a device-type M-SEARCH can match it; the device-type search branch is now covered.
