@@ -1,0 +1,1 @@
+``DmrDevice.async_wait_for_can_play`` also polls ``GetTransportInfo`` and stops waiting once the device reports ``PLAYING``, instead of always waiting the full ``max_wait_time`` for devices which start playing by themselves after ``SetAVTransportURI`` and never offer Play.

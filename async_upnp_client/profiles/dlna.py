@@ -847,9 +847,15 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             # Check again before trying to poll, in case variable change event received
             if self._can_transport_action("play"):
                 break
-            # Poll current transport actions, even if we're subscribed, just in
-            # case the device isn't eventing properly.
-            await self._async_poll_state_variables("AVT", "GetCurrentTransportActions", InstanceID=0)
+            # Poll current transport actions and transport state, even if we're
+            # subscribed, just in case the device isn't eventing properly.
+            await self._async_poll_state_variables(
+                "AVT", ["GetCurrentTransportActions", "GetTransportInfo"], InstanceID=0
+            )
+            # Some devices start playing by themselves and never offer Play. Only the
+            # freshly polled state is used: a cached one may predate the new URI.
+            if self.transport_state == TransportState.PLAYING:
+                break
         else:
             _LOGGER.debug("break out of waiting game")
 

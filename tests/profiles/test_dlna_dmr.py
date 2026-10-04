@@ -281,6 +281,50 @@ async def test_on_notify_dlna_event() -> None:
     assert state_var.value == 50
 
 
+GET_TRANSPORT_INFO_RESPONSE_FMT = """<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope
+    s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+    xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetTransportInfoResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+            <CurrentTransportState>{state}</CurrentTransportState>
+            <CurrentTransportStatus>OK</CurrentTransportStatus>
+            <CurrentSpeed>1</CurrentSpeed>
+        </u:GetTransportInfoResponse>
+    </s:Body>
+</s:Envelope>
+"""
+
+
+class SoapActionTestRequester(UpnpTestRequester):
+    """Test requester answering each SOAP action with its own response(s), and recording the actions called."""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self) -> None:
+        """Initialize."""
+        super().__init__(RESPONSE_MAP)
+        # Response bodies per action name, the last one is repeated.
+        self.action_responses: dict[str, list[str]] = {}
+        self.action_calls: list[str] = []
+
+    async def async_http_request(self, http_request: HttpRequest) -> HttpResponse:
+        """Do a HTTP request."""
+        soap_action = http_request.headers.get("SOAPAction", "").strip('"')
+        if not soap_action:
+            return await super().async_http_request(http_request)
+
+        action_name = soap_action.rpartition("#")[2]
+        self.action_calls.append(action_name)
+        responses = self.action_responses.get(action_name)
+        if not responses:
+            return await super().async_http_request(http_request)
+
+        await asyncio.sleep(0.01)
+        body = responses.pop(0) if len(responses) > 1 else responses[0]
+        return HttpResponse(200, {}, body)
+
+
 @pytest.mark.asyncio
 async def test_wait_for_can_play_evented() -> None:
     """Test async_wait_for_can_play with a variable change event."""
@@ -341,7 +385,8 @@ async def test_wait_for_can_play_evented() -> None:
 @pytest.mark.asyncio
 async def test_wait_for_can_play_polled() -> None:
     """Test async_wait_for_can_play polling state variables."""
-    requester = UpnpTestRequester(RESPONSE_MAP)
+    requester = SoapActionTestRequester()
+    requester.action_responses["GetTransportInfo"] = [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="STOPPED")]
 
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -380,7 +425,8 @@ async def test_wait_for_can_play_polled() -> None:
 @pytest.mark.asyncio
 async def test_wait_for_can_play_timeout() -> None:
     """Test async_wait_for_can_play times out waiting for ability to play."""
-    requester = UpnpTestRequester(RESPONSE_MAP)
+    requester = SoapActionTestRequester()
+    requester.action_responses["GetTransportInfo"] = [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="STOPPED")]
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
     profile = DmrDevice(device, event_handler=None)
@@ -406,6 +452,118 @@ async def test_wait_for_can_play_timeout() -> None:
     assert 0.5 <= waited_time <= 1.5
 
     assert not profile.can_play
+
+
+async def _create_waiting_profile(
+    actions_responses: list[str], transport_info_responses: list[str]
+) -> tuple[DmrDevice, SoapActionTestRequester]:
+    """Create a DmrDevice whose CurrentTransportActions were polled once, with no actions called since."""
+    requester = SoapActionTestRequester()
+    requester.action_responses["GetCurrentTransportActions"] = actions_responses
+    requester.action_responses["GetTransportInfo"] = transport_info_responses
+    factory = UpnpFactory(requester)
+    device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+    # pylint: disable=protected-access
+    await profile._async_poll_state_variables("AVT", ["GetCurrentTransportActions"], InstanceID=0)
+    requester.action_calls.clear()
+    return profile, requester
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_play_offered() -> None:
+    """Test async_wait_for_can_play returns at once, without polling, when Play is offered."""
+    profile, requester = await _create_waiting_profile(
+        [read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml")],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="STOPPED")],
+    )
+    assert profile.can_play
+
+    started = time.monotonic()
+    await profile.async_wait_for_can_play()
+    waited_time = time.monotonic() - started
+
+    assert waited_time < 0.1
+    assert requester.action_calls == []
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_playing() -> None:
+    """Test async_wait_for_can_play stops waiting when the device plays without offering Play."""
+    profile, requester = await _create_waiting_profile(
+        [read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml")],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="PLAYING")],
+    )
+    assert not profile.can_play
+
+    started = time.monotonic()
+    await profile.async_wait_for_can_play(max_wait_time=2)
+    waited_time = time.monotonic() - started
+
+    assert waited_time < 1.0
+    assert requester.action_calls.count("GetTransportInfo") == 1
+    assert profile.transport_state == "PLAYING"
+    assert not profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_transitioning_to_playing() -> None:
+    """Test async_wait_for_can_play stops waiting once a transitioning device is polled as playing."""
+    profile, requester = await _create_waiting_profile(
+        [read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml")],
+        [
+            GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="TRANSITIONING"),
+            GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="PLAYING"),
+        ],
+    )
+
+    started = time.monotonic()
+    await profile.async_wait_for_can_play(max_wait_time=2)
+    waited_time = time.monotonic() - started
+
+    assert waited_time < 1.5
+    assert requester.action_calls.count("GetTransportInfo") == 2
+    assert profile.transport_state == "PLAYING"
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_transitioning_timeout() -> None:
+    """Test async_wait_for_can_play still times out when the device stays transitioning."""
+    profile, requester = await _create_waiting_profile(
+        [read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml")],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="TRANSITIONING")],
+    )
+
+    started = time.monotonic()
+    await profile.async_wait_for_can_play(max_wait_time=0.5)
+    waited_time = time.monotonic() - started
+
+    assert 0.5 <= waited_time <= 1.5
+    assert requester.action_calls.count("GetTransportInfo") >= 1
+    assert profile.transport_state == "TRANSITIONING"
+    assert not profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_stale_playing() -> None:
+    """Test async_wait_for_can_play does not trust a PLAYING state from before it was called."""
+    profile, requester = await _create_waiting_profile(
+        [
+            read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
+            read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
+        ],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="STOPPED")],
+    )
+    # E.g. the previous media was still playing when the state was last known
+    service = profile.profile_device.service("urn:schemas-upnp-org:service:AVTransport:1")
+    service.state_variable("TransportState").value = "PLAYING"
+    assert not profile.can_play
+
+    await profile.async_wait_for_can_play(max_wait_time=2)
+
+    assert requester.action_calls.count("GetTransportInfo") == 1
+    assert profile.transport_state == "STOPPED"
+    assert profile.can_play
 
 
 @pytest.mark.asyncio
