@@ -3,14 +3,14 @@
 # pylint: disable=too-many-lines
 
 from datetime import datetime, timedelta, timezone
-from typing import MutableMapping
+from typing import Any, Mapping, MutableMapping
 
 import defusedxml.ElementTree as DET
 import pytest
 
 from async_upnp_client.client import UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
-from async_upnp_client.const import HttpResponse
+from async_upnp_client.const import HttpRequest, HttpResponse
 from async_upnp_client.exceptions import (
     UpnpActionError,
     UpnpActionErrorCode,
@@ -682,6 +682,50 @@ class TestUpnpService:
 
         result = await service.async_call_action(action, InstanceID=0, Channel="Master")
         assert result["CurrentVolume"] == 3
+
+    @pytest.mark.asyncio
+    async def test_call_action_request_timeout(self) -> None:
+        """A per-call request_timeout ends up on the HTTP request, even through a pre-call hook."""
+        responses: MutableMapping = {
+            (
+                "POST",
+                "http://dlna_dmr:1234/upnp/control/RenderingControl1",
+            ): HttpResponse(
+                200,
+                {},
+                read_file("dlna/dmr/action_GetVolume.xml"),
+            )
+        }
+        responses.update(RESPONSE_MAP)
+        seen: list[HttpRequest] = []
+
+        class RecordingRequester(UpnpTestRequester):
+            """Requester remembering the requests it handled."""
+
+            # pylint: disable=too-few-public-methods
+
+            async def async_http_request(self, http_request: HttpRequest) -> HttpResponse:
+                seen.append(http_request)
+                return await super().async_http_request(http_request)
+
+        def rebuilding_hook(_action: Any, _args: Mapping[str, Any], request: HttpRequest) -> HttpRequest:
+            """Rebuild the request like a hook that does not know about the timeout field."""
+            return HttpRequest(request.method, request.url, request.headers, request.body)
+
+        factory = UpnpFactory(RecordingRequester(responses), on_pre_call_action=rebuilding_hook)
+        device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
+        service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
+        action = service.action("GetVolume")
+
+        assert action.create_request(InstanceID=0, Channel="Master").timeout is None
+        assert action.create_request(InstanceID=0, Channel="Master", request_timeout=12.5).timeout == 12.5
+
+        result = await action.async_call(InstanceID=0, Channel="Master", request_timeout=12.5)
+        assert result["CurrentVolume"] == 3
+        assert seen[-1].timeout == 12.5
+
+        await action.async_call(InstanceID=0, Channel="Master")
+        assert seen[-1].timeout is None
 
     @pytest.mark.asyncio
     async def test_soap_fault_http_error(self) -> None:

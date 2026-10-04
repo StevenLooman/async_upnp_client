@@ -1,0 +1,1 @@
+``AiohttpSessionRequester`` no longer re-sends a request after a timeout. The retry is meant for connections closed by the device; re-sending a timed-out action repeated non-idempotent commands (such as Play) while the device was still processing the first one, and multiplied the waiting time.
