@@ -50,7 +50,7 @@ class UpnpTestRequester(UpnpRequester):
         return self.response_map[key]
 
 
-class RecordingRequester(UpnpTestRequester):
+class UpnpRecordingTestRequester(UpnpTestRequester):
     """Test requester that records the requests it handles.
 
     Actions named in `empty_responses` are answered with an empty SOAP response, so a test

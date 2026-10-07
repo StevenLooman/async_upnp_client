@@ -2,6 +2,7 @@
 
 import asyncio
 import time
+from datetime import timedelta
 from typing import Sequence
 from unittest import mock
 
@@ -19,7 +20,7 @@ from async_upnp_client.profiles.dlna import (
     split_commas,
 )
 
-from ..conftest import RESPONSE_MAP, RecordingRequester, UpnpTestNotifyServer, UpnpTestRequester, read_file
+from ..conftest import RESPONSE_MAP, UpnpRecordingTestRequester, UpnpTestNotifyServer, UpnpTestRequester, read_file
 
 AVT_NOTIFY_HEADERS = {
     "NT": "upnp:event",
@@ -749,13 +750,22 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     assert metadata.res[0].protocol_info == "http-get:*:audio/mpeg:*"
 
 
-TRANSPORT_COMMANDS = ("SetAVTransportURI", "Play", "Pause", "Stop", "Next", "Previous")
+TRANSPORT_COMMANDS = (
+    "SetAVTransportURI",
+    "SetNextAVTransportURI",
+    "Play",
+    "Pause",
+    "Stop",
+    "Next",
+    "Previous",
+    "Seek",
+)
 
 
 @pytest.mark.asyncio
 async def test_transport_commands_use_transport_action_timeout() -> None:
     """Transport commands wait up to the UPnP action response time; polling keeps the default."""
-    requester = RecordingRequester(RESPONSE_MAP, empty_responses=TRANSPORT_COMMANDS)
+    requester = UpnpRecordingTestRequester(RESPONSE_MAP, empty_responses=TRANSPORT_COMMANDS)
     requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
         200,
         {},
@@ -767,13 +777,25 @@ async def test_transport_commands_use_transport_action_timeout() -> None:
     assert profile.transport_action_timeout == UDA_ACTION_RESPONSE_TIMEOUT == 30.0
 
     await profile.async_set_transport_uri("http://dlna_dms:4321/media.mp3", "Title", meta_data="")
+    await profile.async_set_next_transport_uri("http://dlna_dms:4321/next.mp3", "Next", meta_data="")
     await profile.async_play()
     await profile.async_pause()
     await profile.async_stop()
     await profile.async_next()
     await profile.async_previous()
+    await profile.async_seek_abs_time(timedelta(seconds=10))
+    assert requester.last_request("Seek").timeout == UDA_ACTION_RESPONSE_TIMEOUT
+    await profile.async_seek_rel_time(timedelta(seconds=20))
     for name in TRANSPORT_COMMANDS:
         assert requester.last_request(name).timeout == UDA_ACTION_RESPONSE_TIMEOUT, name
+    seek_units = [
+        request.body
+        for request in requester.requests
+        if (request.headers or {}).get("SOAPAction", "").strip('"').endswith("#Seek")
+    ]
+    assert len(seek_units) == 2
+    assert "<Unit>ABS_TIME</Unit>" in (seek_units[0] or "")
+    assert "<Unit>REL_TIME</Unit>" in (seek_units[1] or "")
 
     # polling keeps the requester default
     # pylint: disable=protected-access

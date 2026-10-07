@@ -22,7 +22,7 @@ from async_upnp_client.exceptions import (
     UpnpXmlParseError,
 )
 
-from .conftest import RESPONSE_MAP, RecordingRequester, UpnpTestRequester, read_file
+from .conftest import RESPONSE_MAP, UpnpRecordingTestRequester, UpnpTestRequester, read_file
 
 
 class TestUpnpStateVariable:
@@ -697,7 +697,7 @@ class TestUpnpService:
             )
         }
         responses.update(RESPONSE_MAP)
-        requester = RecordingRequester(responses)
+        requester = UpnpRecordingTestRequester(responses)
 
         def rebuilding_hook(_action: Any, _args: Mapping[str, Any], request: HttpRequest) -> HttpRequest:
             """Rebuild the request like a hook that does not know about the timeout field."""
