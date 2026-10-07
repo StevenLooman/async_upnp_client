@@ -20,7 +20,7 @@ from defusedxml.sax import parseString
 from didl_lite import didl_lite
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
-from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING, HttpRequest
+from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING, UDA_ACTION_RESPONSE_TIMEOUT, HttpRequest
 from async_upnp_client.exceptions import UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
@@ -323,6 +323,12 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         },
         **ConnectionManagerMixin._SERVICE_TYPES,
     }
+
+    # Seconds to wait for the response to transport commands (SetAVTransportURI, Play, Pause, Stop,
+    # Seek, Next, Previous). Renderers may answer e.g. Play only once playback has started, which can
+    # take longer than the requester default; UPnP allows up to 30 s (UDA 1.1, section 3.2.2).
+    # Set to None to use the requester default.
+    transport_action_timeout: float | None = UDA_ACTION_RESPONSE_TIMEOUT
 
     _current_track_meta_data: didl_lite.DidlObject | None = None
     _av_transport_uri_meta_data: didl_lite.DidlObject | None = None
@@ -628,7 +634,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "Pause")
         if not action:
             raise UpnpError("Missing action AVT/Pause")
-        await action.async_call(InstanceID=0)
+        await action.async_call(InstanceID=0, request_timeout=self.transport_action_timeout)
 
     @property
     def has_play(self) -> bool:
@@ -649,7 +655,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "Play")
         if not action:
             raise UpnpError("Missing action AVT/Play")
-        await action.async_call(InstanceID=0, Speed="1")
+        await action.async_call(InstanceID=0, Speed="1", request_timeout=self.transport_action_timeout)
 
     @property
     def can_stop(self) -> bool:
@@ -670,7 +676,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "Stop")
         if not action:
             raise UpnpError("Missing action AVT/Stop")
-        await action.async_call(InstanceID=0)
+        await action.async_call(InstanceID=0, request_timeout=self.transport_action_timeout)
 
     @property
     def has_previous(self) -> bool:
@@ -691,7 +697,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "Previous")
         if not action:
             raise UpnpError("Missing action AVT/Previous")
-        await action.async_call(InstanceID=0)
+        await action.async_call(InstanceID=0, request_timeout=self.transport_action_timeout)
 
     @property
     def has_next(self) -> bool:
@@ -712,7 +718,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "Next")
         if not action:
             raise UpnpError("Missing action AVT/Next")
-        await action.async_call(InstanceID=0)
+        await action.async_call(InstanceID=0, request_timeout=self.transport_action_timeout)
 
     def _has_seek_with_mode(self, mode: str) -> bool:
         """Check if device has Seek mode."""
@@ -742,7 +748,9 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if not action:
             raise UpnpError("Missing action AVT/Seek")
         target = time_to_str(time)
-        await action.async_call(InstanceID=0, Unit="ABS_TIME", Target=target)
+        await action.async_call(
+            InstanceID=0, Unit="ABS_TIME", Target=target, request_timeout=self.transport_action_timeout
+        )
 
     @property
     def has_seek_rel_time(self) -> bool:
@@ -764,7 +772,9 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         if not action:
             raise UpnpError("Missing action AVT/Seek")
         target = time_to_str(time)
-        await action.async_call(InstanceID=0, Unit="REL_TIME", Target=target)
+        await action.async_call(
+            InstanceID=0, Unit="REL_TIME", Target=target, request_timeout=self.transport_action_timeout
+        )
 
     @property
     def has_play_media(self) -> bool:
@@ -807,7 +817,12 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "SetAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetAVTransportURI")
-        await action.async_call(InstanceID=0, CurrentURI=media_url, CurrentURIMetaData=meta_data)
+        await action.async_call(
+            InstanceID=0,
+            CurrentURI=media_url,
+            CurrentURIMetaData=meta_data,
+            request_timeout=self.transport_action_timeout,
+        )
 
     @property
     def has_next_transport_uri(self) -> bool:
@@ -833,7 +848,9 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         action = self._action("AVT", "SetNextAVTransportURI")
         if not action:
             raise UpnpError("Missing action AVT/SetNextAVTransportURI")
-        await action.async_call(InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data)
+        await action.async_call(
+            InstanceID=0, NextURI=media_url, NextURIMetaData=meta_data, request_timeout=self.transport_action_timeout
+        )
 
     async def async_wait_for_can_play(self, max_wait_time: float = 5) -> None:
         """Wait for play command to be ready."""

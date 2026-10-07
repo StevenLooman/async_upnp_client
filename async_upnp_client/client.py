@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import io
 import logging
 import urllib.parse
@@ -673,12 +674,18 @@ class UpnpAction:
             return arg
         return None
 
-    async def async_call(self, **kwargs: Any) -> Mapping[str, Any]:
-        """Call an action with arguments."""
+    async def async_call(self, *, request_timeout: float | None = None, **kwargs: Any) -> Mapping[str, Any]:
+        """Call an action with arguments.
+
+        :param request_timeout: Seconds to wait for the response, overriding the requester default.
+        """
         # do request
         _LOGGER.debug("Calling action: %s, args: %s", self.name, kwargs)
-        bare_request = self.create_request(**kwargs)
+        bare_request = self.create_request(request_timeout=request_timeout, **kwargs)
         request = self.service.on_pre_call_action(self, kwargs, bare_request)
+        if request_timeout is not None and request.timeout is None:
+            # keep the timeout if a pre-call hook built a new request
+            request = dataclasses.replace(request, timeout=request_timeout)
         bare_response = await self.service.requester.async_http_request(request)
         response = self.service.on_post_call_action(self, bare_response)
         if not isinstance(response.body, str):
@@ -718,7 +725,7 @@ class UpnpAction:
         )
         return response_args
 
-    def create_request(self, **kwargs: Any) -> HttpRequest:
+    def create_request(self, *, request_timeout: float | None = None, **kwargs: Any) -> HttpRequest:
         """Create HTTP request for this to-be-called UpnpAction."""
         # build URL
         control_url = self.service.control_url
@@ -746,7 +753,7 @@ class UpnpAction:
             "Content-Type": 'text/xml; charset="utf-8"',
         }
 
-        return HttpRequest("POST", control_url, headers, body)
+        return HttpRequest("POST", control_url, headers, body, timeout=request_timeout)
 
     def _format_request_args(self, **kwargs: Any) -> str:
         self.validate_arguments(**kwargs)

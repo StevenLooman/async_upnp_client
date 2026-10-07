@@ -151,6 +151,12 @@ class HttpRequest:
     url: str
     headers: Mapping[str, str]
     body: str | None
+    timeout: float | None = None  # per-request timeout in seconds, overrides the requester default
+
+
+# UPnP Device Architecture 1.1, section 3.2.2 "Action Response": "The service MUST complete invoking
+# the action and respond within 30 seconds, including expected transmission time."
+UDA_ACTION_RESPONSE_TIMEOUT = 30.0
 
 
 @dataclass(frozen=True)
