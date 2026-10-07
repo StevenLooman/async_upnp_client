@@ -22,7 +22,7 @@ from async_upnp_client.exceptions import (
     UpnpXmlParseError,
 )
 
-from .conftest import RESPONSE_MAP, UpnpTestRequester, read_file
+from .conftest import RESPONSE_MAP, RecordingRequester, UpnpTestRequester, read_file
 
 
 class TestUpnpStateVariable:
@@ -697,22 +697,13 @@ class TestUpnpService:
             )
         }
         responses.update(RESPONSE_MAP)
-        seen: list[HttpRequest] = []
-
-        class RecordingRequester(UpnpTestRequester):
-            """Requester remembering the requests it handled."""
-
-            # pylint: disable=too-few-public-methods
-
-            async def async_http_request(self, http_request: HttpRequest) -> HttpResponse:
-                seen.append(http_request)
-                return await super().async_http_request(http_request)
+        requester = RecordingRequester(responses)
 
         def rebuilding_hook(_action: Any, _args: Mapping[str, Any], request: HttpRequest) -> HttpRequest:
             """Rebuild the request like a hook that does not know about the timeout field."""
             return HttpRequest(request.method, request.url, request.headers, request.body)
 
-        factory = UpnpFactory(RecordingRequester(responses), on_pre_call_action=rebuilding_hook)
+        factory = UpnpFactory(requester, on_pre_call_action=rebuilding_hook)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
         service = device.service("urn:schemas-upnp-org:service:RenderingControl:1")
         action = service.action("GetVolume")
@@ -722,10 +713,10 @@ class TestUpnpService:
 
         result = await action.async_call(InstanceID=0, Channel="Master", request_timeout=12.5)
         assert result["CurrentVolume"] == 3
-        assert seen[-1].timeout == 12.5
+        assert requester.last_request("GetVolume").timeout == 12.5
 
         await action.async_call(InstanceID=0, Channel="Master")
-        assert seen[-1].timeout is None
+        assert requester.last_request("GetVolume").timeout is None
 
     @pytest.mark.asyncio
     async def test_soap_fault_http_error(self) -> None:

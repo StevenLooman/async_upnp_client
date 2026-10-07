@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from typing import Mapping, Sequence
+from typing import Sequence
 from unittest import mock
 
 import defusedxml.ElementTree
@@ -19,7 +19,7 @@ from async_upnp_client.profiles.dlna import (
     split_commas,
 )
 
-from ..conftest import RESPONSE_MAP, UpnpTestNotifyServer, UpnpTestRequester, read_file
+from ..conftest import RESPONSE_MAP, RecordingRequester, UpnpTestNotifyServer, UpnpTestRequester, read_file
 
 AVT_NOTIFY_HEADERS = {
     "NT": "upnp:event",
@@ -749,45 +749,13 @@ async def test_construct_play_media_metadata_meta_data() -> None:
     assert metadata.res[0].protocol_info == "http-get:*:audio/mpeg:*"
 
 
-class _RecordingRequester(UpnpTestRequester):
-    """Test requester that records requests and answers transport commands with an empty response."""
-
-    TRANSPORT_COMMANDS = {"SetAVTransportURI", "Play", "Pause", "Stop", "Next", "Previous"}
-
-    def __init__(self, response_map: Mapping[tuple[str, str], HttpResponse]) -> None:
-        """Initialize."""
-        super().__init__(response_map)
-        self.requests: list[HttpRequest] = []
-
-    async def async_http_request(self, http_request: HttpRequest) -> HttpResponse:
-        """Record the request; answer transport commands generically."""
-        self.requests.append(http_request)
-        soap_action = (http_request.headers or {}).get("SOAPAction", "").strip('"')
-        if "#" in soap_action:
-            service_type, name = soap_action.split("#", 1)
-            if name in self.TRANSPORT_COMMANDS:
-                body = (
-                    '<?xml version="1.0"?>'
-                    '<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"'
-                    ' s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><s:Body>'
-                    f'<u:{name}Response xmlns:u="{service_type}"></u:{name}Response>'
-                    "</s:Body></s:Envelope>"
-                )
-                return HttpResponse(200, {}, body)
-        return await super().async_http_request(http_request)
-
-    def timeout_of(self, action_name: str) -> float | None:
-        """Timeout of the last request for the given action."""
-        for request in reversed(self.requests):
-            if (request.headers or {}).get("SOAPAction", "").strip('"').endswith(f"#{action_name}"):
-                return request.timeout
-        raise AssertionError(f"no request for {action_name}")
+TRANSPORT_COMMANDS = ("SetAVTransportURI", "Play", "Pause", "Stop", "Next", "Previous")
 
 
 @pytest.mark.asyncio
 async def test_transport_commands_use_transport_action_timeout() -> None:
     """Transport commands wait up to the UPnP action response time; polling keeps the default."""
-    requester = _RecordingRequester(RESPONSE_MAP)
+    requester = RecordingRequester(RESPONSE_MAP, empty_responses=TRANSPORT_COMMANDS)
     requester.response_map[("POST", "http://dlna_dmr:1234/upnp/control/AVTransport1")] = HttpResponse(
         200,
         {},
@@ -804,15 +772,15 @@ async def test_transport_commands_use_transport_action_timeout() -> None:
     await profile.async_stop()
     await profile.async_next()
     await profile.async_previous()
-    for name in ("SetAVTransportURI", "Play", "Pause", "Stop", "Next", "Previous"):
-        assert requester.timeout_of(name) == UDA_ACTION_RESPONSE_TIMEOUT, name
+    for name in TRANSPORT_COMMANDS:
+        assert requester.last_request(name).timeout == UDA_ACTION_RESPONSE_TIMEOUT, name
 
     # polling keeps the requester default
     # pylint: disable=protected-access
     await profile._async_poll_state_variables("AVT", ["GetCurrentTransportActions"], InstanceID=0)
-    assert requester.timeout_of("GetCurrentTransportActions") is None
+    assert requester.last_request("GetCurrentTransportActions").timeout is None
 
     # consumers can fall back to the requester default
     profile.transport_action_timeout = None
     await profile.async_play()
-    assert requester.timeout_of("Play") is None
+    assert requester.last_request("Play").timeout is None

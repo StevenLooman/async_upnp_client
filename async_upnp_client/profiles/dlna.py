@@ -294,12 +294,6 @@ class ConnectionManagerMixin(UpnpProfileDevice):
 class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     """Representation of a DLNA DMR device."""
 
-    # Seconds to wait for the response to transport commands (SetAVTransportURI, Play, Pause, Stop,
-    # Seek, Next, Previous). Renderers may answer e.g. Play only once playback has started, which can
-    # take longer than the requester default; UPnP allows up to 30 s (UDA 1.1, section 3.2.2).
-    # Set to None to use the requester default.
-    transport_action_timeout: float | None = UDA_ACTION_RESPONSE_TIMEOUT
-
     # pylint: disable=too-many-public-methods
 
     DEVICE_TYPES = [
@@ -329,6 +323,12 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         },
         **ConnectionManagerMixin._SERVICE_TYPES,
     }
+
+    # Seconds to wait for the response to transport commands (SetAVTransportURI, Play, Pause, Stop,
+    # Seek, Next, Previous). Renderers may answer e.g. Play only once playback has started, which can
+    # take longer than the requester default; UPnP allows up to 30 s (UDA 1.1, section 3.2.2).
+    # Set to None to use the requester default.
+    transport_action_timeout: float | None = UDA_ACTION_RESPONSE_TIMEOUT
 
     _current_track_meta_data: didl_lite.DidlObject | None = None
     _av_transport_uri_meta_data: didl_lite.DidlObject | None = None
