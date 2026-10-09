@@ -1,4 +1,5 @@
 """Unit tests for the DLNA DMR profile."""
+# pylint: disable=too-many-lines
 
 import asyncio
 import time
@@ -13,6 +14,7 @@ from didl_lite import didl_lite
 from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.client_factory import UpnpFactory
 from async_upnp_client.const import UDA_ACTION_RESPONSE_TIMEOUT, HttpRequest, HttpResponse
+from async_upnp_client.exceptions import UpnpConnectionTimeoutError
 from async_upnp_client.profiles.dlna import (
     DmrDevice,
     _parse_last_change_event,
@@ -296,6 +298,39 @@ GET_TRANSPORT_INFO_RESPONSE_FMT = """<?xml version="1.0" encoding="UTF-8"?>
 </s:Envelope>
 """
 
+GET_MEDIA_INFO_RESPONSE_FMT = """<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope
+    s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+    xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:GetMediaInfoResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">
+            <NrTracks>1</NrTracks>
+            <MediaDuration>00:00:01</MediaDuration>
+            <CurrentURI>{uri}</CurrentURI>
+            <CurrentURIMetaData></CurrentURIMetaData>
+            <NextURI></NextURI>
+            <NextURIMetaData></NextURIMetaData>
+            <PlayMedium>NETWORK</PlayMedium>
+            <RecordMedium>NOT_IMPLEMENTED</RecordMedium>
+            <WriteStatus>NOT_IMPLEMENTED</WriteStatus>
+        </u:GetMediaInfoResponse>
+    </s:Body>
+</s:Envelope>
+"""
+
+SET_AV_TRANSPORT_URI_RESPONSE = """<?xml version="1.0" encoding="UTF-8"?>
+<s:Envelope
+    s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"
+    xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
+    <s:Body>
+        <u:SetAVTransportURIResponse xmlns:u="urn:schemas-upnp-org:service:AVTransport:1"/>
+    </s:Body>
+</s:Envelope>
+"""
+
+PREVIOUS_MEDIA_URI = "http://192.0.2.1/previous.mp3"
+NEW_MEDIA_URI = "http://192.0.2.1/new.mp3"
+
 
 class SoapActionTestRequester(UpnpTestRequester):
     """Test requester answering each SOAP action with its own response(s), and recording the actions called."""
@@ -305,8 +340,8 @@ class SoapActionTestRequester(UpnpTestRequester):
     def __init__(self) -> None:
         """Initialize."""
         super().__init__(RESPONSE_MAP)
-        # Response bodies per action name, the last one is repeated.
-        self.action_responses: dict[str, list[str]] = {}
+        # Response bodies (or exceptions to raise) per action name, the last one is repeated.
+        self.action_responses: dict[str, list[str | Exception]] = {}
         self.action_calls: list[str] = []
 
     async def async_http_request(self, http_request: HttpRequest) -> HttpResponse:
@@ -323,6 +358,8 @@ class SoapActionTestRequester(UpnpTestRequester):
 
         await asyncio.sleep(0.01)
         body = responses.pop(0) if len(responses) > 1 else responses[0]
+        if isinstance(body, Exception):
+            raise body
         return HttpResponse(200, {}, body)
 
 
@@ -456,17 +493,29 @@ async def test_wait_for_can_play_timeout() -> None:
 
 
 async def _create_waiting_profile(
-    actions_responses: list[str], transport_info_responses: list[str]
+    actions_responses: list[str | Exception],
+    transport_info_responses: list[str | Exception],
+    media_info_responses: list[str | Exception] | None = None,
+    set_transport_uri: bool = True,
 ) -> tuple[DmrDevice, SoapActionTestRequester]:
-    """Create a DmrDevice whose CurrentTransportActions were polled once, with no actions called since."""
+    """Create a DmrDevice whose CurrentTransportActions were polled once, then set to NEW_MEDIA_URI.
+
+    No action calls are recorded up to that point.
+    """
     requester = SoapActionTestRequester()
     requester.action_responses["GetCurrentTransportActions"] = actions_responses
     requester.action_responses["GetTransportInfo"] = transport_info_responses
+    requester.action_responses["GetMediaInfo"] = media_info_responses or [
+        GET_MEDIA_INFO_RESPONSE_FMT.format(uri=NEW_MEDIA_URI)
+    ]
+    requester.action_responses["SetAVTransportURI"] = [SET_AV_TRANSPORT_URI_RESPONSE]
     factory = UpnpFactory(requester)
     device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
     profile = DmrDevice(device, event_handler=None)
     # pylint: disable=protected-access
     await profile._async_poll_state_variables("AVT", ["GetCurrentTransportActions"], InstanceID=0)
+    if set_transport_uri:
+        await profile.async_set_transport_uri(NEW_MEDIA_URI, "New media", "")
     requester.action_calls.clear()
     return profile, requester
 
@@ -503,7 +552,9 @@ async def test_wait_for_can_play_playing() -> None:
 
     assert waited_time < 1.0
     assert requester.action_calls.count("GetTransportInfo") == 1
+    assert requester.action_calls.count("GetMediaInfo") == 1
     assert profile.transport_state == "PLAYING"
+    assert profile.av_transport_uri == NEW_MEDIA_URI
     assert not profile.can_play
 
 
@@ -524,6 +575,7 @@ async def test_wait_for_can_play_transitioning_to_playing() -> None:
 
     assert waited_time < 1.5
     assert requester.action_calls.count("GetTransportInfo") == 2
+    assert requester.action_calls.count("GetMediaInfo") == 1
     assert profile.transport_state == "PLAYING"
 
 
@@ -564,6 +616,64 @@ async def test_wait_for_can_play_stale_playing() -> None:
 
     assert requester.action_calls.count("GetTransportInfo") == 1
     assert profile.transport_state == "STOPPED"
+    assert profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_playing_previous_media() -> None:
+    """Test async_wait_for_can_play keeps waiting while the device still plays the previous media."""
+    profile, requester = await _create_waiting_profile(
+        [
+            read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
+            read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
+            read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
+        ],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="PLAYING")],
+        [GET_MEDIA_INFO_RESPONSE_FMT.format(uri=PREVIOUS_MEDIA_URI)],
+    )
+
+    await profile.async_wait_for_can_play(max_wait_time=2)
+
+    # Play is offered on the second poll: async_play() will not skip it
+    assert requester.action_calls.count("GetCurrentTransportActions") == 2
+    assert requester.action_calls.count("GetMediaInfo") == 2
+    assert profile.av_transport_uri == PREVIOUS_MEDIA_URI
+    assert profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_playing_without_requested_uri() -> None:
+    """Test async_wait_for_can_play does not trust PLAYING when no URI was set through it."""
+    profile, requester = await _create_waiting_profile(
+        [read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml")],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="PLAYING")],
+        set_transport_uri=False,
+    )
+
+    started = time.monotonic()
+    await profile.async_wait_for_can_play(max_wait_time=0.5)
+    waited_time = time.monotonic() - started
+
+    assert 0.5 <= waited_time <= 1.5
+    assert requester.action_calls.count("GetMediaInfo") == 0
+    assert not profile.can_play
+
+
+@pytest.mark.asyncio
+async def test_wait_for_can_play_poll_timeout() -> None:
+    """Test async_wait_for_can_play keeps waiting when a poll times out."""
+    profile, requester = await _create_waiting_profile(
+        [
+            read_file("dlna/dmr/action_GetCurrentTransportActions_Stop.xml"),
+            UpnpConnectionTimeoutError("timed out"),
+            read_file("dlna/dmr/action_GetCurrentTransportActions_PlaySeek.xml"),
+        ],
+        [GET_TRANSPORT_INFO_RESPONSE_FMT.format(state="STOPPED")],
+    )
+
+    await profile.async_wait_for_can_play(max_wait_time=2)
+
+    assert requester.action_calls.count("GetCurrentTransportActions") == 2
     assert profile.can_play
 
 
