@@ -63,6 +63,12 @@ class AiohttpRequester(UpnpRequester):
         self._timeout = ClientTimeout(total=float(timeout))
         self._http_headers = http_headers or {}
 
+    def _timeout_for(self, http_request: HttpRequest) -> ClientTimeout:
+        """Get the timeout for a request: its own, if set, else the requester default."""
+        if http_request.timeout is not None:
+            return ClientTimeout(total=float(http_request.timeout))
+        return self._timeout
+
     async def async_http_request(
         self,
         http_request: HttpRequest,
@@ -91,7 +97,7 @@ class AiohttpRequester(UpnpRequester):
                     http_request.url,
                     headers=req_headers,
                     data=http_request.body,
-                    timeout=self._timeout,
+                    timeout=self._timeout_for(http_request),
                 ) as response:
                     status = response.status
                     resp_headers: Mapping = response.headers or {}
@@ -150,6 +156,12 @@ class AiohttpSessionRequester(UpnpRequester):
         self._timeout = ClientTimeout(total=float(timeout))
         self._http_headers = http_headers or {}
 
+    def _timeout_for(self, http_request: HttpRequest) -> ClientTimeout:
+        """Get the timeout for a request: its own, if set, else the requester default."""
+        if http_request.timeout is not None:
+            return ClientTimeout(total=float(http_request.timeout))
+        return self._timeout
+
     async def async_http_request(
         self,
         http_request: HttpRequest,
@@ -158,10 +170,16 @@ class AiohttpSessionRequester(UpnpRequester):
 
         The HTTP/1.1 spec allows the server to disconnect at any time.
         We want to retry the request in this event.
+
+        A timeout is not retried: the device may still be processing the request (e.g. a renderer
+        that answers Play only once playback has started), and re-sending it would repeat a
+        non-idempotent action and multiply the waiting time.
         """
         for _ in range(2):
             try:
                 return await self._async_http_request(http_request)
+            except UpnpConnectionTimeoutError:
+                raise
             except ClientConnectionError as err:
                 _LOGGER.debug(
                     "%r during request %s %s; retrying",
@@ -171,6 +189,8 @@ class AiohttpSessionRequester(UpnpRequester):
                 )
         try:
             return await self._async_http_request(http_request)
+        except UpnpConnectionTimeoutError:
+            raise
         except ClientConnectionError as err:
             raise UpnpConnectionError(repr(err)) from err
 
@@ -205,7 +225,7 @@ class AiohttpSessionRequester(UpnpRequester):
                 http_request.url,
                 headers=req_headers,
                 data=http_request.body,
-                timeout=self._timeout,
+                timeout=self._timeout_for(http_request),
             ) as response:
                 status = response.status
                 resp_headers: Mapping = response.headers or {}
