@@ -21,7 +21,7 @@ from didl_lite import didl_lite
 
 from async_upnp_client.client import UpnpService, UpnpStateVariable
 from async_upnp_client.const import MIME_TO_UPNP_CLASS_MAPPING, UDA_ACTION_RESPONSE_TIMEOUT, HttpRequest
-from async_upnp_client.exceptions import UpnpError
+from async_upnp_client.exceptions import UpnpCommunicationError, UpnpError
 from async_upnp_client.profiles.profile import UpnpProfileDevice
 from async_upnp_client.utils import absolute_url, str_to_time, time_to_str
 
@@ -332,6 +332,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
 
     _current_track_meta_data: didl_lite.DidlObject | None = None
     _av_transport_uri_meta_data: didl_lite.DidlObject | None = None
+    _requested_transport_uri: str | None = None
     __did_first_update: bool = False
 
     async def async_update(self, do_ping: bool = True) -> None:
@@ -810,6 +811,7 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
         """Play a piece of media."""
         # escape media_url
         _LOGGER.debug("Set transport uri: %s", media_url)
+        self._requested_transport_uri = media_url
 
         # queue media
         if not isinstance(meta_data, str):
@@ -864,11 +866,29 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
             # Check again before trying to poll, in case variable change event received
             if self._can_transport_action("play"):
                 break
-            # Poll current transport actions, even if we're subscribed, just in
-            # case the device isn't eventing properly.
-            await self._async_poll_state_variables("AVT", "GetCurrentTransportActions", InstanceID=0)
+            # Poll current transport actions and transport state, even if we're
+            # subscribed, just in case the device isn't eventing properly.
+            try:
+                await self._async_poll_state_variables(
+                    "AVT", ["GetCurrentTransportActions", "GetTransportInfo"], InstanceID=0
+                )
+                # Some devices start playing by themselves and never offer Play. Only the
+                # freshly polled state is used: a cached one may predate the new URI.
+                if await self._async_is_playing_requested_uri():
+                    break
+            except UpnpCommunicationError as err:
+                # A slow or failed poll is no reason to stop waiting
+                _LOGGER.debug("Failed to poll while waiting for play: %r", err)
         else:
             _LOGGER.debug("break out of waiting game")
+
+    async def _async_is_playing_requested_uri(self) -> bool:
+        """Check if the freshly polled state is PLAYING the URI set by async_set_transport_uri."""
+        if self.transport_state != TransportState.PLAYING or self._requested_transport_uri is None:
+            return False
+        # Right after SetAVTransportURI, the device may still be playing the previous media
+        await self._async_poll_state_variables("AVT", "GetMediaInfo", InstanceID=0)
+        return self.av_transport_uri == self._requested_transport_uri
 
     async def _fetch_headers(self, url: str, headers: Mapping[str, str]) -> Mapping[str, str] | None:
         """Do a HEAD/GET to get resources headers."""
