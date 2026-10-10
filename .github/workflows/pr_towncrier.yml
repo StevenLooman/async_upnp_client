@@ -3,12 +3,23 @@ name: Pull Request requires towncrier file
 on:
   - pull_request
 
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pr_require_towncrier_file:
+    name: Require towncrier file
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: github.event.pull_request.user.login != 'dependabot[bot]' && github.event.pull_request.user.login != 'pre-commit-ci[bot]'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Ensure towncrier file exists
         env:
           PR_NUMBER: ${{ github.event.number }}
