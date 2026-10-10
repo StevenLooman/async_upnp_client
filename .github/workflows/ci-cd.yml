@@ -4,6 +4,8 @@ on:
   - push
   - pull_request
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -13,14 +15,19 @@ env:
 
 jobs:
   lint_test_build:
+    name: Lint, test and build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
@@ -35,12 +42,12 @@ jobs:
       - name: Build package
         run: python -m build
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: python-package-distributions-${{ matrix.python-version }}
           path: dist/
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         if: ${{ hashFiles('coverage-py312.xml') != '' }}
         with:
           files: coverage-py312.xml
@@ -57,31 +64,32 @@ jobs:
       name: pypi
       url: https://pypi.org/p/async-upnp-client
     permissions:
-      id-token: write
+      id-token: write  # Trusted publishing to PyPI
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: python-package-distributions-${{ env.publish-python-version }}
           path: dist/
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
 
   github-release:
+    name: Create GitHub Release
     needs:
       - publish-to-pypi
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      id-token: write
+      contents: write  # Create the GitHub Release and upload its assets
+      id-token: write  # Sign the dists with Sigstore
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: python-package-distributions-${{ env.publish-python-version }}
           path: dist/
       - name: Sign the dists with Sigstore
-        uses: sigstore/gh-action-sigstore-python@v3.5.0
+        uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
         with:
           inputs: >-
             ./dist/*.tar.gz
@@ -91,16 +99,16 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           gh release create
-          '${{ github.ref_name }}'
-          --repo '${{ github.repository }}'
+          "${GITHUB_REF_NAME}"
+          --repo "${GITHUB_REPOSITORY}"
           --notes ""
       - name: Upload artifact signatures to GitHub Release
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: >-
           gh release upload
-          '${{ github.ref_name }}' dist/**
-          --repo '${{ github.repository }}'
+          "${GITHUB_REF_NAME}" dist/**
+          --repo "${GITHUB_REPOSITORY}"
 
   publish-to-testpypi:
     name: Publish to TestPyPI
@@ -112,15 +120,15 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/async-upnp-client
     permissions:
-      id-token: write
+      id-token: write  # Trusted publishing to PyPI
     steps:
       - name: Download all the dists
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: python-package-distributions-${{ env.publish-python-version }}
           path: dist/
       - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
         with:
           repository-url: https://test.pypi.org/legacy/
         continue-on-error: true
