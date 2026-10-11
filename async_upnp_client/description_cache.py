@@ -25,12 +25,20 @@ def _description_xml_to_dict(description_xml: str) -> Mapping[str, str] | None:
     """Convert description (XML) to dict."""
     try:
         tree = DET.fromstring(description_xml)
-    except DET.ParseError as err:
+    except (DET.ParseError, ValueError) as err:
+        # ValueError covers defusedxml's forbidden-construct errors and
+        # UnicodeError from undecodable input.
         _LOGGER.debug("Error parsing %s: %s", description_xml, err)
         return None
 
-    root = etree_to_dict(tree).get("root")
-    if root is None:
+    try:
+        root = etree_to_dict(tree).get("root")
+    except RecursionError as err:
+        _LOGGER.debug("Error converting %s: %s", description_xml, err)
+        return None
+
+    # root can be a bare string for a well-formed but unexpected document.
+    if not isinstance(root, dict):
         return None
 
     return root.get("device")
@@ -80,16 +88,31 @@ class DescriptionCache:
             evt = self._cache_dict[location] = asyncio.Event()
             try:
                 description_xml = await self.async_get_description_xml(location)
-            except UpnpResponseError:
-                self._cache_dict[location] = None
-            else:
                 if description_xml:
                     self._cache_dict[location] = _description_xml_to_dict(description_xml)
                 else:
                     self._cache_dict[location] = None
-            evt.set()
+            except UpnpResponseError:
+                self._cache_dict[location] = None
+            except asyncio.CancelledError:
+                # Do not cache a cancelled fetch, so a later lookup retries it.
+                if self._cache_dict.get(location) is evt:
+                    del self._cache_dict[location]
+                raise
+            finally:
+                # Ensure the event is always set and the location is never left
+                # cached as an unset Event, even if conversion raises; otherwise
+                # later lookups of this location would await it forever.
+                if self._cache_dict.get(location) is evt:
+                    self._cache_dict[location] = None
+                evt.set()
 
-        return cast(DescriptionType, self._cache_dict[location])
+        # A waiter may find no result if the fetch it awaited was cancelled
+        # (entry removed, or replaced by a new fetch's Event).
+        description = self._cache_dict.get(location)
+        if isinstance(description, asyncio.Event):
+            return None
+        return description
 
     def uncache_description(self, location: str) -> None:
         """Uncache a description."""
