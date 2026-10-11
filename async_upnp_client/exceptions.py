@@ -1,6 +1,5 @@
 """async_upnp_client.exceptions module."""
 
-import asyncio
 from enum import IntEnum
 from typing import Any
 from xml.etree import ElementTree as ET
@@ -149,7 +148,7 @@ class UpnpConnectionError(UpnpCommunicationError, aiohttp.ClientConnectionError)
     """
 
 
-class UpnpConnectionTimeoutError(UpnpConnectionError, aiohttp.ServerTimeoutError, asyncio.TimeoutError):
+class UpnpConnectionTimeoutError(UpnpConnectionError, aiohttp.ServerTimeoutError, TimeoutError):
     """Timeout while communicating with the device."""
 
 

@@ -285,7 +285,7 @@ async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
     assert not data
     sid = response.headers.get("SID")
     assert sid
-    with suppress(asyncio.TimeoutError):
+    with suppress(TimeoutError):
         await asyncio.wait_for(event.wait(), 2)
     assert event.is_set()
 
@@ -293,7 +293,7 @@ async def test_subscribe(upnp_server: UpnpServerTuple) -> None:
     while not service.get_subscriber(sid):
         await asyncio.sleep(0)
     service.set_eventable(1)
-    with suppress(asyncio.TimeoutError):
+    with suppress(TimeoutError):
         await asyncio.wait_for(event.wait(), 2)
     assert event.is_set()
 

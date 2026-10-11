@@ -9,7 +9,7 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 from asyncio.transports import DatagramTransport
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from functools import partial, wraps
 from itertools import cycle
 from random import randrange
@@ -51,6 +51,7 @@ from async_upnp_client.const import (
     DeviceInfo,
     EventableStateVariableTypeInfo,
     HttpRequest,
+    HttpResponse,
     NotificationSubType,
     ServiceInfo,
     StateVariableInfo,
@@ -95,6 +96,13 @@ _LOGGER_TRAFFIC_UPNP.info = _LOGGER_TRAFFIC_UPNP.debug  # type: ignore
 
 class NopRequester(UpnpRequester):  # pylint: disable=too-few-public-methods
     """NopRequester, does nothing."""
+
+    async def async_http_request(
+        self,
+        http_request: HttpRequest,
+    ) -> HttpResponse:
+        """Do nothing, return an empty response."""
+        return HttpResponse(200, {}, None)
 
 
 class EventSubscriber:
@@ -153,7 +161,7 @@ class UpnpEventableStateVariable(UpnpStateVariable):
     def __init__(self, state_variable_info: StateVariableInfo, schema: vol.Schema) -> None:
         """Initialize."""
         super().__init__(state_variable_info, schema)
-        self._last_sent = datetime.fromtimestamp(0, timezone.utc)
+        self._last_sent = datetime.fromtimestamp(0, UTC)
         self._defered_event: asyncio.TimerHandle | None = None
         self._sent_event = asyncio.Event()
 
@@ -191,7 +199,7 @@ class UpnpEventableStateVariable(UpnpStateVariable):
 
     async def trigger_event(self) -> None:
         """Update any waiting subscribers."""
-        self._last_sent = datetime.now(timezone.utc)
+        self._last_sent = datetime.now(UTC)
         service = self.service
         assert isinstance(service, UpnpServerService)
         self._sent_event.set()
