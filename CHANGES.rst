@@ -1,3 +1,46 @@
+async_upnp_client 0.49.0 (2026-10-11)
+=====================================
+
+Features
+--------
+
+- Transport commands of ``DmrDevice`` (SetAVTransportURI, Play, Pause, Stop, Seek, Next, Previous) now wait up to 30 seconds for the response, the action response time allowed by UPnP Device Architecture 1.1 section 3.2.2, instead of the requester default (5 seconds). Some renderers answer Play only once playback has started. The timeout can be changed via ``DmrDevice.transport_action_timeout``; ``UpnpAction.async_call`` accepts a per-call ``request_timeout``. (#327)
+
+
+Bugfixes
+--------
+
+- **Prevent denial of service from malformed device descriptions (GHSA-3w9h-mmq8-jq86, CVE-TBD, CWE-674)**
+
+  A deeply nested device description made ``DescriptionCache`` raise an unhandled
+  ``RecursionError`` and left the description lookup for that location stuck, so
+  every later lookup of it hung forever. The same happened for descriptions with
+  an unexpected structure, descriptions rejected by defusedxml or containing
+  undecodable characters, and cancelled description fetches.
+
+  Such descriptions now resolve to ``None`` instead of raising, and a cancelled
+  fetch is no longer cached, so the next lookup retries it. (ghsa-3w9h-mmq8-jq86)
+- Answer a SUBSCRIBE with an unknown or expired SID, or without a valid CALLBACK, with 412 Precondition Failed (UDA 1.1 section 4.1.2) instead of 404. (#321)
+- Send the ``TIMEOUT`` header of a subscription request as a whole number of seconds. A renewal asked for ``Second-1800.0``, which devices parsing the header as an integer reject, and neither request handled a timeout of a day or more. (#322)
+- Answer an M-SEARCH carrying an MX header once, after the random delay, instead of immediately and again after the delay (UDA 2.0 section 1.3.3). (#323)
+- Reply to a device-type or service-type M-SEARCH with the ST spelled as the request spelled it, instead of lower-cased (UDA 2.0 section 1.3.3). (#324)
+- ``AiohttpSessionRequester`` no longer re-sends a request after a timeout. The retry is meant for connections closed by the device; re-sending a timed-out action repeated non-idempotent commands (such as Play) while the device was still processing the first one, and multiplied the waiting time. (#327)
+- ``DmrDevice.async_wait_for_can_play`` also polls ``GetTransportInfo`` and stops waiting once the device reports ``PLAYING`` the URI set by ``async_set_transport_uri``, instead of always waiting the full ``max_wait_time`` for devices which start playing by themselves after ``SetAVTransportURI`` and never offer Play. A poll that fails while waiting no longer aborts the wait. (#328)
+- ``DmrDevice.can_stop`` returns ``False`` when the transport state is ``NO_MEDIA_PRESENT``, even when current transport actions are empty, unknown, or still advertise Stop. This prevents consumers from sending an invalid preliminary Stop before loading media. (#334)
+
+
+Deprecations and Removals
+-------------------------
+
+- Drop Python 3.10 support, add Python 3.15 support. (#332)
+
+
+Misc
+----
+
+- #325, #330
+
+
 async_upnp_client 0.48.2 (2026-09-17)
 =====================================
 

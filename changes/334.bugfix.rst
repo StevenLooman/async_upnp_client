@@ -1,1 +1,0 @@
-``DmrDevice.can_stop`` returns ``False`` when the transport state is ``NO_MEDIA_PRESENT``, even when current transport actions are empty, unknown, or still advertise Stop. This prevents consumers from sending an invalid preliminary Stop before loading media.
