@@ -57,6 +57,26 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  propose-version:
+    name: Propose next version
+    runs-on: ubuntu-latest
+    if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0  # The API is compared to the latest release tag
+          persist-credentials: false
+      - name: Set up Python ${{ env.publish-python-version }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.publish-python-version }}
+      - name: Install dependencies
+        run: python -m pip install -r requirements/tox-griffe/requirements.txt
+      - name: Propose next version
+        run: python scripts/next_bump.py --ci
+
   publish-to-pypi:
     name: Publish to PyPI
     runs-on: ubuntu-latest

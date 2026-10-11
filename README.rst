@@ -100,10 +100,12 @@ Steps for releasing:
 
 - Switch to development: ``git checkout development``
 - Do a pull: ``git pull``
-- Run towncrier: ``towncrier build --version <version>``
-- Commit towncrier results: ``git commit -m "Towncrier"``
-- Run bump2version (note that this creates a new commit + tag): ``bump2version --tag major/minor/patch``
+- Release: ``python scripts/release.py``. This proposes a version, and after confirmation runs towncrier, commits the result, and runs bump2version (note that this creates a new commit + tag)
 - Push to github: ``git push && git push --tags``
+
+The version is proposed from the pending changes and a comparison of the public API with the latest release, done by `griffe <https://mkdocstrings.github.io/griffe/>`_. The "Propose next version" job of each build shows the same proposal. To release another version, use ``python scripts/release.py --version <version>``; ``--dry-run`` only shows what would be done.
+
+The script needs ``towncrier``, ``bump2version`` and ``griffe`` to be installed.
 
 
 Profiling

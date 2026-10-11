@@ -63,6 +63,7 @@ min-similarity-lines = 8
 
 [tool.deptry]
 known_first_party = ["async_upnp_client"]
+extend_exclude = ["scripts"]
 
 [tool.deptry.package_module_name_map]
 python-didl-lite = ["didl_lite"]
