@@ -114,7 +114,7 @@ class AiohttpRequester(UpnpRequester):
                         )
 
                     resp_body_text = await response.text()
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             raise UpnpConnectionTimeoutError(repr(err)) from err
         except ClientConnectionError as err:
             raise UpnpConnectionError(repr(err)) from err
@@ -242,7 +242,7 @@ class AiohttpSessionRequester(UpnpRequester):
                     )
 
                 resp_body_text = await response.text()
-        except asyncio.TimeoutError as err:
+        except TimeoutError as err:
             raise UpnpConnectionTimeoutError(repr(err)) from err
         except ClientConnectionError:
             raise

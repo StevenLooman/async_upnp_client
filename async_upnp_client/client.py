@@ -7,7 +7,7 @@ import io
 import logging
 import urllib.parse
 from abc import ABC
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from types import TracebackType
 from typing import Any, Callable, Generic, Mapping, Sequence, Type, TypeVar
 from xml.etree import ElementTree as ET
@@ -1057,7 +1057,7 @@ class UpnpStateVariable(Generic[T]):
         """Set value, python typed."""
         self.validate_value(value)
         self._value = value
-        self._updated_at = datetime.now(timezone.utc)
+        self._updated_at = datetime.now(UTC)
 
     @property
     def value_unchecked(self) -> T | None:
