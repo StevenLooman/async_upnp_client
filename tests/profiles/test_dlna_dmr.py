@@ -44,6 +44,70 @@ AVT_CURRENT_TRANSPORT_ACTIONS_NOTIFY_BODY_FMT = """
 </e:propertyset>
 """
 
+
+@pytest.mark.parametrize(
+    "transport_state, actions, expected",
+    [
+        pytest.param("NO_MEDIA_PRESENT", "", False, id="no-media-empty-actions"),
+        pytest.param("NO_MEDIA_PRESENT", "Stop", False, id="no-media-stale-stop-action"),
+        pytest.param("STOPPED", "", True, id="stopped-empty-actions"),
+        pytest.param("STOPPED", "Play", False, id="stopped-without-stop-action"),
+        pytest.param("PLAYING", "", True, id="playing-empty-actions"),
+        pytest.param("PLAYING", "Pause,Stop", True, id="playing-stop-action"),
+        pytest.param("PLAYING", "Pause", False, id="playing-without-stop-action"),
+        pytest.param("PAUSED_PLAYBACK", "Play,Stop", True, id="paused-stop-action"),
+        pytest.param("TRANSITIONING", "Stop", True, id="transitioning-stop-action"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_can_stop(transport_state: str, actions: str, expected: bool) -> None:
+    """Stop is unavailable without media; other states keep the action-list fallback."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    device = await UpnpFactory(requester).async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+    service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+    service.state_variable("TransportState").value = transport_state
+    service.state_variable("CurrentTransportActions").value = actions
+
+    assert profile.has_stop
+    assert profile.can_stop is expected
+
+
+@pytest.mark.parametrize(
+    "transport_state, expected",
+    [
+        pytest.param("NO_MEDIA_PRESENT", False, id="no-media"),
+        pytest.param("PLAYING", True, id="playing"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_can_stop_unknown_actions(transport_state: str, expected: bool) -> None:
+    """Only the no-media state disables Stop when transport actions are unknown."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    device = await UpnpFactory(requester).async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+    service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+    service.state_variable("TransportState").value = transport_state
+
+    assert service.state_variable("CurrentTransportActions").value is None
+    assert profile.can_stop is expected
+
+
+@pytest.mark.asyncio
+async def test_can_stop_missing_transport_state() -> None:
+    """A device without transport state or action information retains the fallback."""
+    requester = UpnpTestRequester(RESPONSE_MAP)
+    device = await UpnpFactory(requester).async_create_device("http://dlna_dmr:1234/device.xml")
+    profile = DmrDevice(device, event_handler=None)
+    service = device.service("urn:schemas-upnp-org:service:AVTransport:1")
+    del service.state_variables["TransportState"]
+    del service.state_variables["CurrentTransportActions"]
+
+    assert profile.transport_state is None
+    assert profile.has_stop
+    assert profile.can_stop
+
+
 UNUSABLE_METADATA = [
     "not xml at all",
     "<DIDL-Lite>",
