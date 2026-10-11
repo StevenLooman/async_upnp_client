@@ -1,1 +1,1 @@
-Drop Python 3.10 support, add Python 3.15 support. The OpenHome Media profile enums are now ``StrEnum``, so ``str()`` on a member returns its value.
+Drop Python 3.10 support, add Python 3.15 support.
