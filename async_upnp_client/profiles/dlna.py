@@ -661,7 +661,11 @@ class DmrDevice(ConnectionManagerMixin, UpnpProfileDevice):
     @property
     def can_stop(self) -> bool:
         """Check if the device can currently stop."""
-        return self.has_stop and self._can_transport_action("stop")
+        return (
+            self.transport_state != TransportState.NO_MEDIA_PRESENT
+            and self.has_stop
+            and self._can_transport_action("stop")
+        )
 
     @property
     def has_stop(self) -> bool:
