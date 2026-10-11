@@ -6,7 +6,7 @@ import socket
 from collections import defaultdict
 from collections.abc import Mapping as abcMapping
 from collections.abc import MutableMapping as abcMutableMapping
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from socket import AddressFamily  # pylint: disable=no-name-in-module
 from typing import Any, Callable, Generator
 from urllib.parse import urljoin, urlsplit
@@ -17,7 +17,6 @@ from voluptuous import Invalid
 EXTERNAL_IP = "1.1.1.1"
 EXTERNAL_PORT = 80
 
-UTC = timezone(timedelta(hours=0))
 _UNCOMPILED_MATCHERS: dict[str, Callable] = {
     # date
     r"\d{4}-\d{2}-\d{2}$": lambda value: datetime.strptime(value, "%Y-%m-%d").date(),

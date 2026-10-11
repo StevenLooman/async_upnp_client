@@ -1,6 +1,5 @@
 """Unit tests for description_cache."""
 
-import asyncio
 from unittest.mock import patch
 
 import aiohttp
@@ -58,7 +57,7 @@ async def test_fetch_parse_success_invalid_chars() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("exc", [asyncio.TimeoutError, aiohttp.ClientError])
+@pytest.mark.parametrize("exc", [TimeoutError, aiohttp.ClientError])
 async def test_fetch_fail(exc: Exception) -> None:
     """Test fail fetching a description."""
     xml = ""

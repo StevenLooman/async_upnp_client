@@ -108,7 +108,7 @@ class DescriptionCache:
                 return response.body
                 # Samsung Smart TV sometimes returns an empty document the
                 # first time. Retry once.
-        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (aiohttp.ClientError, TimeoutError) as err:
             _LOGGER.debug("Error fetching %s: %s", location, err)
 
         return None
