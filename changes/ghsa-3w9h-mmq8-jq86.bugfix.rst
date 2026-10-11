@@ -1,4 +1,4 @@
-**Prevent denial of service from malformed device descriptions (CWE-674)**
+**Prevent denial of service from malformed device descriptions (GHSA-3w9h-mmq8-jq86, CVE-TBD, CWE-674)**
 
 A deeply nested device description made ``DescriptionCache`` raise an unhandled
 ``RecursionError`` and left the description lookup for that location stuck, so
