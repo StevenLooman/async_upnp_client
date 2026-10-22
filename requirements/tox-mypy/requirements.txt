@@ -1,6 +1,6 @@
 mypy == 2.4.0
 python-didl-lite == 1.5.1
 pytest == 9.1.1
-aiohttp == 3.14.3
+aiohttp == 3.14.4
 pytest-asyncio == 1.4.0
 pytest-aiohttp == 1.1.1
