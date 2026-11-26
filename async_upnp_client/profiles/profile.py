@@ -347,7 +347,8 @@ class UpnpProfileDevice:
             if isinstance(err, UpnpResponseError) and not self._subscriptions:
                 _LOGGER.debug("Device rejected subscription request: %r", err)
             else:
-                _LOGGER.warning("Failed subscribing to service: %r", err)
+                # The error is raised, so the caller decides how to report it
+                _LOGGER.debug("Failed subscribing to service: %r", err)
             # Unsubscribe anything that was subscribed, no half-done subscriptions
             try:
                 await self.async_unsubscribe_services()

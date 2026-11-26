@@ -1,0 +1,1 @@
+``UpnpProfileDevice.async_subscribe_services()`` logs a failed subscription at debug level instead of warning, since the error is raised to the caller. This stops callers that retry periodically from flooding the log.

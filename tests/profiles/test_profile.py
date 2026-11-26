@@ -3,6 +3,7 @@
 # pylint: disable=protected-access
 
 import asyncio
+import logging
 import time
 from datetime import timedelta
 from unittest.mock import Mock
@@ -254,8 +255,9 @@ class TestUpnpProfileDevice:
         assert profile.is_subscribed is False
 
     @pytest.mark.asyncio
-    async def test_subscribe_fail(self) -> None:
+    async def test_subscribe_fail(self, caplog: pytest.LogCaptureFixture) -> None:
         """Test subscribing fails with UpnpError if device is offline."""
+        caplog.set_level(logging.DEBUG)
         requester = UpnpTestRequester(RESPONSE_MAP)
         factory = UpnpFactory(requester)
         device = await factory.async_create_device("http://dlna_dmr:1234/device.xml")
@@ -277,6 +279,10 @@ class TestUpnpProfileDevice:
         assert not profile._subscriptions
         assert profile._resubscriber_task is None
         assert profile.is_subscribed is False
+
+        # The error is raised, so it is only logged at debug level
+        assert "Failed subscribing to service" in caplog.text
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
 
     @pytest.mark.asyncio
     async def test_subscribe_rejected(self) -> None:
